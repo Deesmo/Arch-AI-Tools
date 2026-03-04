@@ -102,6 +102,7 @@ app.use(
       req.rawBody = buf;
     },
   })
+);
 
 // URL-encoded bodies (rare, but safe)
 app.use(express.urlencoded({ extended: false, limit: "256kb" }));
