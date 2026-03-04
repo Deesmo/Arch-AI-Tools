@@ -46,7 +46,8 @@ async function main() {
   }
 }
 
-if (process.env.RUN_PARTITION_MAINTENANCE !== "false") {
-  // Run by default when invoked as a script
+// Only run when invoked directly (not when imported by admin.ts / index.ts)
+const isDirectRun = process.argv[1]?.replace(/\\/g, "/").includes("monthlyPartitions");
+if (isDirectRun) {
   main();
 }

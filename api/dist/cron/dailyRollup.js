@@ -127,16 +127,20 @@ async function main() {
     await recordJobRun({ jobName: "daily_rollup", status: "ok", durationMs: Date.now() - start, meta: out });
     console.log(JSON.stringify(out, null, 2));
 }
-main()
-    .catch(async (err) => {
-    try {
-        await recordJobRun({ jobName: "daily_rollup", status: "error", message: String(err?.message || err) });
-    }
-    catch { }
-    console.error("dailyRollup failed", err);
-    process.exit(1);
-})
-    .finally(async () => {
-    await prisma.$disconnect();
-});
+// Only run when invoked directly (not when imported by admin.ts / index.ts)
+const isDirectRun = process.argv[1]?.replace(/\\/g, "/").includes("dailyRollup");
+if (isDirectRun) {
+    main()
+        .catch(async (err) => {
+        try {
+            await recordJobRun({ jobName: "daily_rollup", status: "error", message: String(err?.message || err) });
+        }
+        catch { }
+        console.error("dailyRollup failed", err);
+        process.exit(1);
+    })
+        .finally(async () => {
+        await prisma.$disconnect();
+    });
+}
 //# sourceMappingURL=dailyRollup.js.map
