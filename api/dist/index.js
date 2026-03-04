@@ -1,6 +1,9 @@
 import "dotenv/config";
 import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import cors from "cors";
 import helmet from "helmet";
 import { LANDING_HTML } from "./assets/landingHtml.js";
