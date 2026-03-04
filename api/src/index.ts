@@ -105,7 +105,6 @@ app.use(
 
 // URL-encoded bodies (rare, but safe)
 app.use(express.urlencoded({ extended: false, limit: "256kb" }));
-);
 
 // ─── Discovery & Meta Endpoints ───
 
