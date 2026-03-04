@@ -112,7 +112,7 @@ adminRouter.get("/v1/admin/stats", requireScope("system:read"), async (req: any,
     by: ["toolName"],
     where: { createdAt: { gte: since } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 12,
   });
 
@@ -126,8 +126,8 @@ adminRouter.get("/v1/admin/stats", requireScope("system:read"), async (req: any,
     window_hours: hours,
     since: since.toISOString(),
     total_requests: total,
-    status_counts: byStatus.map((x) => ({ status: x.status ?? null, count: x._count._all })),
-    top_tools: topTools.map((x) => ({ tool: x.toolName ?? null, count: x._count._all })),
+    status_counts: byStatus.map((x) => ({ status: x.status ?? null, count: (x._count! as any) })),
+    top_tools: topTools.map((x) => ({ tool: x.toolName ?? null, count: (x._count! as any) })),
     credits_used_sum: credits._sum.creditsUsed ?? 0,
   });
 });
@@ -205,7 +205,7 @@ adminRouter.get("/v1/admin/billing-report", requireScope("billing:read"), async 
     where: { createdAt: { gte: since } },
     _count: { _all: true },
     _sum: { creditsUsed: true, latencyMs: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 200,
   });
 
@@ -213,19 +213,19 @@ adminRouter.get("/v1/admin/billing-report", requireScope("billing:read"), async 
     by: [byField as any],
     where: { createdAt: { gte: since }, status: { gte: 400 } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 200,
   });
 
   const errMap = new Map<string, number>();
   for (const e of errors) {
     const k = String((e as any)[byField] ?? "");
-    errMap.set(k, e._count._all);
+    errMap.set(k, (e._count! as any));
   }
 
   const rows = totals.map((t: any) => {
     const key = String(t[byField] ?? "");
-    const requests = t._count._all || 0;
+    const requests = (t._count! as any) || 0;
     const errorCount = errMap.get(key) || 0;
     const credits = t._sum?.creditsUsed ?? 0;
     const latencySum = t._sum?.latencyMs ?? 0;
@@ -298,7 +298,7 @@ adminRouter.get("/v1/admin/billing-report.csv", requireScope("billing:read"), as
       where: { createdAt: { gte: since } },
       _count: { _all: true },
       _sum: { creditsUsed: true, latencyMs: true },
-      orderBy: { _count: { _all: "desc" } },
+      orderBy: { _count: "desc" },
       take: 200,
     });
 
@@ -306,19 +306,19 @@ adminRouter.get("/v1/admin/billing-report.csv", requireScope("billing:read"), as
       by: [byField as any],
       where: { createdAt: { gte: since }, status: { gte: 400 } },
       _count: { _all: true },
-      orderBy: { _count: { _all: "desc" } },
+      orderBy: { _count: "desc" },
       take: 200,
     });
 
     const errMap = new Map<string, number>();
     for (const e of errors) {
       const k = String((e as any)[byField] ?? "");
-      errMap.set(k, e._count._all);
+      errMap.set(k, (e._count! as any));
     }
 
     rows = totals.map((t: any) => {
       const key = String(t[byField] ?? "");
-      const requests = t._count._all || 0;
+      const requests = (t._count! as any) || 0;
       const errorCount = errMap.get(key) || 0;
       const credits = t._sum?.creditsUsed ?? 0;
       const latencySum = t._sum?.latencyMs ?? 0;
@@ -364,7 +364,7 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
     by: ["toolName"],
     where: { createdAt: { gte: since }, status: { gte: 400 } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 12,
   });
 
@@ -373,7 +373,7 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
     by: ["ip"],
     where: { createdAt: { gte: since }, status: { gte: 400 }, ip: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 12,
   });
 
@@ -382,7 +382,7 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
     by: ["agentId"],
     where: { createdAt: { gte: since }, status: 429, agentId: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 12,
   });
 
@@ -391,7 +391,7 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
     by: ["apiKeyPrefix"],
     where: { createdAt: { gte: since }, status: { in: [401, 403] }, apiKeyPrefix: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 12,
   });
 
@@ -400,7 +400,7 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
     by: ["agentId"],
     where: { createdAt: { gte: since }, agentId: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 200,
   });
 
@@ -408,16 +408,16 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
     by: ["agentId"],
     where: { createdAt: { gte: since }, agentId: { not: null }, status: { gte: 400 } },
     _count: { _all: true },
-    orderBy: { _count: { _all: "desc" } },
+    orderBy: { _count: "desc" },
     take: 200,
   });
 
   const errMap = new Map<string, number>();
-  for (const e of errorsByAgent) errMap.set(String(e.agentId), e._count._all);
+  for (const e of errorsByAgent) errMap.set(String(e.agentId), (e._count! as any));
 
   const highErrorAgents = totalsByAgent
     .map((t) => {
-      const total = t._count._all || 0;
+      const total = (t._count! as any) || 0;
       const err = errMap.get(String(t.agentId)) || 0;
       const rate = total ? err / total : 0;
       return { agentId: t.agentId, requests: total, error_count: err, error_rate: Number(rate.toFixed(4)) };
@@ -446,10 +446,10 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
       ratio: spikeRatio,
       note: "ratio > 2.0 can indicate sudden traffic spikes",
     },
-    failing_tools: failingTools.map((x) => ({ tool: x.toolName ?? "(unknown)", error_count: x._count._all })),
-    noisy_ips: noisyIps.map((x) => ({ ip: x.ip, error_count: x._count._all })),
-    offenders_429: offenders429.map((x) => ({ agentId: x.agentId, count: x._count._all })),
-    offenders_auth: offendersAuth.map((x) => ({ apiKeyPrefix: x.apiKeyPrefix, count: x._count._all })),
+    failing_tools: failingTools.map((x) => ({ tool: x.toolName ?? "(unknown)", error_count: (x._count! as any) })),
+    noisy_ips: noisyIps.map((x) => ({ ip: x.ip, error_count: (x._count! as any) })),
+    offenders_429: offenders429.map((x) => ({ agentId: x.agentId, count: (x._count! as any) })),
+    offenders_auth: offendersAuth.map((x) => ({ apiKeyPrefix: x.apiKeyPrefix, count: (x._count! as any) })),
     high_error_agents: highErrorAgents,
   });
 });
