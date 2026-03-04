@@ -45,6 +45,7 @@ model EmailVerification {
 }
 
 model Agent {
+  apiRequests  ApiRequest[]
   id            String   @id @default(cuid())
   name          String
   email         String?  @unique
