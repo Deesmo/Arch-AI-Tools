@@ -108,11 +108,11 @@ adminRouter.get("/v1/admin/stats", requireScope("system:read"), async (req: any,
     orderBy: { status: "asc" },
   });
 
-  const topTools = await prisma.apiRequestLog.groupBy({
+  const topTools: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["toolName"],
     where: { createdAt: { gte: since } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 12,
   });
 
@@ -200,27 +200,27 @@ adminRouter.get("/v1/admin/billing-report", requireScope("billing:read"), async 
   }
 
   // Fallback: raw logs (more accurate for tiny windows, slower at scale)
-  const totals = await prisma.apiRequestLog.groupBy({
-    by: [byField as any],
+  const totals: any[] = await (prisma.apiRequestLog.groupBy as any)({
+    by: [byField],
     where: { createdAt: { gte: since } },
     _count: { _all: true },
     _sum: { creditsUsed: true, latencyMs: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 200,
   });
 
-  const errors = await prisma.apiRequestLog.groupBy({
-    by: [byField as any],
+  const errors: any[] = await (prisma.apiRequestLog.groupBy as any)({
+    by: [byField],
     where: { createdAt: { gte: since }, status: { gte: 400 } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 200,
   });
 
   const errMap = new Map<string, number>();
   for (const e of errors) {
-    const k = String((e as any)[byField] ?? "");
-    errMap.set(k, (e._count! as any));
+    const k = String(e[byField] ?? "");
+    errMap.set(k, e._count);
   }
 
   const rows = totals.map((t: any) => {
@@ -293,27 +293,27 @@ adminRouter.get("/v1/admin/billing-report.csv", requireScope("billing:read"), as
     );
   } else {
     // raw logs
-    const totals = await prisma.apiRequestLog.groupBy({
-      by: [byField as any],
+    const totals: any[] = await (prisma.apiRequestLog.groupBy as any)({
+      by: [byField],
       where: { createdAt: { gte: since } },
       _count: { _all: true },
       _sum: { creditsUsed: true, latencyMs: true },
-      orderBy: { _count: "desc" },
+      orderBy: { _count: { _all: "desc" } },
       take: 200,
     });
 
-    const errors = await prisma.apiRequestLog.groupBy({
-      by: [byField as any],
+    const errors: any[] = await (prisma.apiRequestLog.groupBy as any)({
+      by: [byField],
       where: { createdAt: { gte: since }, status: { gte: 400 } },
       _count: { _all: true },
-      orderBy: { _count: "desc" },
+      orderBy: { _count: { _all: "desc" } },
       take: 200,
     });
 
     const errMap = new Map<string, number>();
     for (const e of errors) {
-      const k = String((e as any)[byField] ?? "");
-      errMap.set(k, (e._count! as any));
+      const k = String(e[byField] ?? "");
+      errMap.set(k, e._count);
     }
 
     rows = totals.map((t: any) => {
@@ -360,64 +360,64 @@ adminRouter.get("/v1/admin/fraud-signals", requireScope("fraud:read"), async (re
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
   // Top failing tools
-  const failingTools = await prisma.apiRequestLog.groupBy({
+  const failingTools: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["toolName"],
     where: { createdAt: { gte: since }, status: { gte: 400 } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 12,
   });
 
   // Top noisy IPs (errors)
-  const noisyIps = await prisma.apiRequestLog.groupBy({
+  const noisyIps: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["ip"],
     where: { createdAt: { gte: since }, status: { gte: 400 }, ip: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 12,
   });
 
   // 429 offenders (rate limit)
-  const offenders429 = await prisma.apiRequestLog.groupBy({
+  const offenders429: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["agentId"],
     where: { createdAt: { gte: since }, status: 429, agentId: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 12,
   });
 
   // 401/403 offenders (bad keys)
-  const offendersAuth = await prisma.apiRequestLog.groupBy({
+  const offendersAuth: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["apiKeyPrefix"],
     where: { createdAt: { gte: since }, status: { in: [401, 403] }, apiKeyPrefix: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 12,
   });
 
   // Error-rate by agent (min volume)
-  const totalsByAgent = await prisma.apiRequestLog.groupBy({
+  const totalsByAgent: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["agentId"],
     where: { createdAt: { gte: since }, agentId: { not: null } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 200,
   });
 
-  const errorsByAgent = await prisma.apiRequestLog.groupBy({
+  const errorsByAgent: any[] = await (prisma.apiRequestLog.groupBy as any)({
     by: ["agentId"],
     where: { createdAt: { gte: since }, agentId: { not: null }, status: { gte: 400 } },
     _count: { _all: true },
-    orderBy: { _count: "desc" },
+    orderBy: { _count: { _all: "desc" } },
     take: 200,
   });
 
   const errMap = new Map<string, number>();
-  for (const e of errorsByAgent) errMap.set(String(e.agentId), (e._count! as any));
+  for (const e of errorsByAgent) errMap.set(String(e.agentId), e._count);
 
   const highErrorAgents = totalsByAgent
-    .map((t) => {
-      const total = (t._count! as any) || 0;
+    .map((t: any) => {
+      const total = t._count || 0;
       const err = errMap.get(String(t.agentId)) || 0;
       const rate = total ? err / total : 0;
       return { agentId: t.agentId, requests: total, error_count: err, error_rate: Number(rate.toFixed(4)) };
@@ -466,7 +466,7 @@ adminRouter.post("/v1/admin/rollup/run", requireScope("ops:write"), async (req: 
 
   try {
     const out = await runDailyRollup({ daysBack });
-    res.json({ ok: true, ...out, triggered_by: "admin" });
+    res.json({ ...out, triggered_by: "admin" });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: "rollup_failed", message: String(err?.message || err) });
   }

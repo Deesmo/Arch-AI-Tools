@@ -15,7 +15,10 @@ export type ApiErrorCode =
   | "internal_server_error"
   | "scrape_disabled"
   | "scrape_domain_not_allowed"
-  | "invalid_url";
+  | "invalid_url"
+  | "invalid_request"
+  | "agent_execution_failed"
+  | "workflow_failed";
 
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
   const incoming = (req.headers["x-request-id"] as string | undefined)?.trim();
