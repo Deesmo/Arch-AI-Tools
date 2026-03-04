@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arch Tools — The Tool Belt Your AI Agent Needs</title>
+  <meta name="description" content="30 production-ready API tools for developers and AI agents. Web scraping, QR codes, AI generation, data validation and more. Dual payment rails: Stripe + x402 USDC.">
+  <meta property="og:title" content="Arch Tools — 30 API Tools for AI Agents">
+  <meta property="og:description" content="Pay-per-use API tools for developers and AI agents. 100 free credits to start.">
+  <meta property="og:url" content="https://archtools.dev">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Reset & Base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #05080f;
+      --bg2:       #090d18;
+      --bg3:       #0d1220;
+      --border:    #1a2236;
+      --border2:   #243047;
+      --indigo:    #6366f1;
+      --indigo2:   #818cf8;
+      --cyan:      #22d3ee;
+      --green:     #34d399;
+      --amber:     #fbbf24;
+      --red:       #f87171;
+      --text:      #f1f5f9;
+      --muted:     #94a3b8;
+      --dimmer:    #475569;
+      --max:       1240px;
+      --mono:      'JetBrains Mono', monospace;
+      --display:   'Syne', sans-serif;
+      --body:      'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── Background Grid Texture ──────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Noise Overlay ─────────────────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    * { position: relative; z-index: 1; }
+
+    /* ─── Container ─────────────────────────────────────────────────────────── */
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 32px; }
+    @media (max-width: 768px) { .wrap { padding: 0 20px; } }
+
+    /* ─── Nav ───────────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(5,8,15,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, var(--indigo), var(--cyan));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+    .nav-cta {
+      background: var(--indigo);
+      color: #fff !important;
+      padding: 7px 16px !important;
+      border-radius: 8px !important;
+      font-weight: 500;
+      transition: background 0.15s, transform 0.15s !important;
+    }
+
+    .nav-cta:hover { background: var(--indigo2) !important; transform: translateY(-1px); }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+    }
+
+    /* ─── Hero ──────────────────────────────────────────────────────────────── */
+    .hero {
+      padding: 96px 0 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding: 60px 0 48px; gap: 40px; }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-family: var(--mono);
+      color: var(--indigo2);
+      margin-bottom: 24px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 2s ease infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero-headline {
+      font-family: var(--display);
+      font-size: clamp(2.6rem, 5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+
+    .grad-text {
+      background: linear-gradient(135deg, #fff 0%, var(--indigo2) 50%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 460px;
+      margin-bottom: 36px;
+      font-weight: 300;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      animation: fadeUp 0.6s ease 0.3s both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--indigo);
+      color: #fff;
+      padding: 13px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { background: #5558e3; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(99,102,241,0.4); }
+    .btn-primary:hover::before { opacity: 1; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--muted);
+      padding: 13px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 400;
+      font-size: 15px;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover { color: var(--text); border-color: var(--dimmer); background: rgba(255,255,255,0.03); }
+
+    /* ─── Terminal Window ───────────────────────────────────────────────────── */
+    .terminal {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(99,102,241,0.1),
+        0 32px 80px rgba(0,0,0,0.5),
+        0 0 80px rgba(99,102,241,0.05);
+      animation: fadeUp 0.6s ease 0.2s both, float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .t-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .t-dot.r { background: #ff5f57; }
+    .t-dot.y { background: #ffbd2e; }
+    .t-dot.g { background: #28ca42; }
+
+    .terminal-url {
+      flex: 1;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dimmer);
+    }
+
+    .terminal-body {
+      padding: 20px 22px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.8;
+      overflow: hidden;
+    }
+
+    .t-comment { color: var(--dimmer); }
+    .t-cmd { color: var(--muted); }
+    .t-key { color: var(--cyan); }
+    .t-val { color: var(--green); }
+    .t-str { color: #fca5a5; }
+    .t-num { color: var(--amber); }
+    .t-punc { color: var(--dimmer); }
+    .t-prompt { color: var(--indigo2); }
+
+    .t-line { display: block; animation: typeIn 0.1s ease both; }
+    .t-line:nth-child(1)  { animation-delay: 0.5s; }
+    .t-line:nth-child(2)  { animation-delay: 0.7s; }
+    .t-line:nth-child(3)  { animation-delay: 0.9s; }
+    .t-line:nth-child(4)  { animation-delay: 1.1s; }
+    .t-line:nth-child(5)  { animation-delay: 1.3s; }
+    .t-line:nth-child(6)  { animation-delay: 1.5s; }
+    .t-line:nth-child(7)  { animation-delay: 1.7s; }
+    .t-line:nth-child(8)  { animation-delay: 1.9s; }
+    .t-line:nth-child(9)  { animation-delay: 2.1s; }
+    .t-line:nth-child(10) { animation-delay: 2.3s; }
+    .t-line:nth-child(11) { animation-delay: 2.5s; }
+    .t-line:nth-child(12) { animation-delay: 2.7s; }
+    .t-line:nth-child(13) { animation-delay: 2.9s; }
+    .t-line:nth-child(14) { animation-delay: 3.1s; }
+    .t-line:nth-child(15) { animation-delay: 3.3s; }
+    .t-line:nth-child(16) { animation-delay: 3.5s; }
+
+    @keyframes typeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .t-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background: var(--indigo2);
+      border-radius: 2px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+      animation-delay: 3.7s;
+      opacity: 0;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* ─── Stats Bar ─────────────────────────────────────────────────────────── */
+    .stats-bar {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 0;
+      margin-bottom: 96px;
+    }
+
+    .stats-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .stat-num {
+      font-family: var(--display);
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text), var(--indigo2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--dimmer);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--mono);
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* ─── Section Headers ───────────────────────────────────────────────────── */
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--indigo2);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 16px;
+    }
+
+    .section-tag::before {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 1px;
+      background: var(--indigo2);
+    }
+
+    h2.section-title {
+      font-family: var(--display);
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 14px;
+      line-height: 1.15;
+    }
+
+    .section-sub {
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 520px;
+      line-height: 1.7;
+    }
+
+    /* ─── How It Works ──────────────────────────────────────────────────────── */
+    .section { margin-bottom: 96px; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 48px;
+      background: var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 700px) {
+      .steps { grid-template-columns: 1fr; }
+    }
+
+    .step {
+      background: var(--bg2);
+      padding: 36px 32px;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .step:hover { background: var(--bg3); }
+
+    .step-num {
+      font-family: var(--display);
+      font-size: 4rem;
+      font-weight: 800;
+      color: rgba(99,102,241,0.12);
+      line-height: 1;
+      margin-bottom: 16px;
+      letter-spacing: -2px;
+    }
+
+    .step h3 {
+      font-family: var(--display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .step p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .step-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+
+    /* ─── Tools Grid ────────────────────────────────────────────────────────── */
+    .category-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--dimmer);
+      margin-bottom: 12px;
+      margin-top: 32px;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-top: 48px;
+    }
+
+    .tool-card {
+      background: var(--bg2);
+      padding: 24px;
+      transition: background 0.2s;
+      cursor: default;
+    }
+
+    .tool-card:hover {
+      background: var(--bg3);
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .tool-icon-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .tool-name {
+      font-family: var(--display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+      padding-top: 8px;
+    }
+
+    .tool-credits {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dimmer);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .tool-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .tool-endpoint {
+      margin-top: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--indigo2);
+      opacity: 0.7;
+    }
+
+    /* Category icon backgrounds */
+    .cat-ai     { background: rgba(99,102,241,0.12); }
+    .cat-web    { background: rgba(34,211,238,0.1); }
+    .cat-data   { background: rgba(251,191,36,0.1); }
+    .cat-text   { background: rgba(52,211,153,0.1); }
+    .cat-net    { background: rgba(248,113,113,0.1); }
+    .cat-util   { background: rgba(167,139,250,0.1); }
+    .cat-sec    { background: rgba(248,113,113,0.12); }
+    .cat-fin    { background: rgba(52,211,153,0.12); }
+    .cat-media  { background: rgba(251,191,36,0.12); }
+
+    /* ─── Pricing ───────────────────────────────────────────────────────────── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+
+    @media (max-width: 700px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+
+    .pricing-card {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 32px 28px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .pricing-card:hover {
+      border-color: var(--indigo);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(99,102,241,0.08);
+    }
+
+    .pricing-card.featured {
+      border-color: var(--indigo);
+      background: linear-gradient(135deg, rgba(99,102,241,0.06), var(--bg2));
+      box-shadow: 0 0 60px rgba(99,102,241,0.1);
+    }
+
+    .featured-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--indigo);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 100px;
+      white-space: nowrap;
+      font-family: var(--mono);
+    }
+
+    .plan-name {
+      font-family: var(--mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--dimmer);
+      margin-bottom: 12px;
+    }
+
+    .plan-price {
+      font-family: var(--display);
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .plan-credits {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .plan-per {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--dimmer);
+      margin-bottom: 28px;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 28px;
+    }
+
+    .plan-features li {
+      font-size: 14px;
+      color: var(--muted);
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .plan-features li:last-child { border-bottom: none; }
+
+    .plan-features li::before {
+      content: '✓';
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .btn-plan {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-plan-outline {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+    }
+
+    .btn-plan-outline:hover { border-color: var(--indigo2); color: var(--text); }
+
+    .btn-plan-solid {
+      background: var(--indigo);
+      color: #fff;
+    }
+
+    .btn-plan-solid:hover { background: #5558e3; box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
+
+    /* ─── x402 Section ──────────────────────────────────────────────────────── */
+    .x402-section {
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 56px 48px;
+      margin-bottom: 96px;
+      background: linear-gradient(135deg, rgba(34,211,238,0.03), var(--bg2), rgba(99,102,241,0.04));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .x402-section::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99,102,241,0.06), transparent 70%);
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      .x402-section { padding: 32px 24px; }
+    }
+
+    .x402-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    @media (max-width: 800px) {
+      .x402-inner { grid-template-columns: 1fr; }
+    }
+
+    .x402-content h2 { margin-bottom: 16px; }
+
+    .x402-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .x402-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--border2);
+      color: var(--dimmer);
+    }
+
+    .x402-tag.active { border-color: var(--cyan); color: var(--cyan); background: rgba(34,211,238,0.06); }
+
+    /* ─── MCP Section ───────────────────────────────────────────────────────── */
+    .mcp-section {
+      margin-bottom: 96px;
+    }
+
+    .mcp-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: center;
+      margin-top: 48px;
+    }
+
+    @media (max-width: 800px) {
+      .mcp-inner { grid-template-columns: 1fr; }
+    }
+
+    .code-block {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .code-lang {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dimmer);
+    }
+
+    .copy-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dimmer);
+      background: none;
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover { color: var(--text); border-color: var(--dimmer); }
+
+    .code-body {
+      padding: 20px 22px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.85;
+      overflow-x: auto;
+    }
+
+    .mcp-features {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .mcp-feat {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .mcp-feat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .mcp-feat-text h4 {
+      font-family: var(--display);
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .mcp-feat-text p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ─── CTA Section ───────────────────────────────────────────────────────── */
+    .cta-section {
+      margin-bottom: 96px;
+    }
+
+    .cta-box {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(34,211,238,0.05));
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 20px;
+      padding: 64px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.08), transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-box h2 {
+      font-family: var(--display);
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      margin-bottom: 14px;
+    }
+
+    .cta-box p {
+      color: var(--muted);
+      font-size: 16px;
+      margin-bottom: 36px;
+      font-weight: 300;
+    }
+
+    .cta-form {
+      display: flex;
+      gap: 10px;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 500px) {
+      .cta-form { flex-direction: column; }
+      .cta-box { padding: 40px 24px; }
+    }
+
+    .cta-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 13px 18px;
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .cta-input::placeholder { color: var(--dimmer); }
+    .cta-input:focus { border-color: var(--indigo); }
+
+    #api-result {
+      margin-top: 20px;
+      padding: 16px 20px;
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.2);
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--green);
+      text-align: left;
+      display: none;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ─── Footer ────────────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--dimmer);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--dimmer);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover { color: var(--muted); }
+
+    .footer-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--green);
+    }
+
+    /* ─── Animations ────────────────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Scrollbar ─────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--dimmer); }
+
+    /* Glow on hover for primary sections */
+    .glow-hover { transition: box-shadow 0.3s; }
+    .glow-hover:hover { box-shadow: 0 0 40px rgba(99,102,241,0.12); }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAV ──────────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="wrap nav-inner">
+    <a href="/" class="logo">
+      <div class="logo-icon">⚡</div>
+      Arch Tools
+    </a>
+    <ul class="nav-links">
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#mcp">MCP</a></li>
+      <li><a href="/v1/tools">API Docs</a></li>
+      <li><a href="#signup" class="nav-cta">Get API Key →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ─── HERO ─────────────────────────────────────────────────────────────── -->
+<section>
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          30 tools · live on Render · v1.5
+        </div>
+        <h1 class="hero-headline">
+          The Tool Belt<br>
+          <span class="grad-text">Your AI Agent</span><br>
+          Needs
+        </h1>
+        <p class="hero-sub">
+          30 production-ready API tools for developers and AI agents.
+          Web scraping, QR codes, AI generation, data validation and more —
+          all behind one key. Dual payment rails: Stripe + x402 USDC.
+        </p>
+        <div class="hero-actions">
+          <a href="#signup" class="btn-primary">Get 100 Free Credits →</a>
+          <a href="/v1/tools" class="btn-secondary">View All Tools</a>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="t-dot r"></span>
+            <span class="t-dot y"></span>
+            <span class="t-dot g"></span>
+            <span class="terminal-url">arch-ai-tools.onrender.com</span>
+          </div>
+          <div class="terminal-body">
+            <span class="t-line"><span class="t-comment"># 1. Register — get 100 free credits</span></span>
+            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl -X POST https://arch-ai-tools.onrender.com/v1/agent/register</span></span>
+            <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'{"email":"agent@example.com"}'</span></span>
+            <span class="t-line">&nbsp;</span>
+            <span class="t-line"><span class="t-punc">{</span></span>
+            <span class="t-line">&nbsp;&nbsp;<span class="t-key">"api_key"</span><span class="t-punc">:</span> <span class="t-str">"arch_a1b2c3..."</span><span class="t-punc">,</span></span>
+            <span class="t-line">&nbsp;&nbsp;<span class="t-key">"credits"</span><span class="t-punc">:</span> <span class="t-num">100</span></span>
+            <span class="t-line"><span class="t-punc">}</span></span>
+            <span class="t-line">&nbsp;</span>
+            <span class="t-line"><span class="t-comment"># 2. Scrape any URL (5 credits)</span></span>
+            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl -X POST .../v1/tools/web-scrape</span></span>
+            <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"Authorization: Bearer arch_a1b2c3..."</span></span>
+            <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'{"url":"https://example.com"}'</span></span>
+            <span class="t-line">&nbsp;</span>
+            <span class="t-line"><span class="t-comment"># ✓ JSON response — clean text, links, meta</span></span>
+            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cursor"></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── STATS BAR ──────────────────────────────────────────────────────────── -->
+<div class="stats-bar">
+  <div class="wrap">
+    <div class="stats-inner">
+      <div class="stat">
+        <span class="stat-num">30</span>
+        <span class="stat-label">API Tools</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">2</span>
+        <span class="stat-label">Payment Rails</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">100</span>
+        <span class="stat-label">Free Credits</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">$0.001</span>
+        <span class="stat-label">Per Credit</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">99.9%</span>
+        <span class="stat-label">Uptime</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HOW IT WORKS ──────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-tag">How it works</div>
+    <h2 class="section-title">Three steps to your first API call</h2>
+    <p class="section-sub">Register, buy credits (or pay per call with USDC), call tools. No infrastructure. No setup. Just POST requests.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-icon cat-ai">🔑</div>
+        <h3>Register</h3>
+        <p>POST your email to <code style="font-family:var(--mono);font-size:12px;color:var(--indigo2)">/v1/agent/register</code>. Get an API key + 100 free credits in milliseconds.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-icon cat-fin">💳</div>
+        <h3>Fund</h3>
+        <p>Buy credit packs via Stripe ($9 / $49 / $199), or let AI agents pay per-call with USDC on Base via x402 — zero friction, zero signup.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-icon cat-web">⚡</div>
+        <h3>Call Tools</h3>
+        <p>Hit any endpoint with your API key. JSON in, JSON out. Credits auto-deduct. Track usage at <code style="font-family:var(--mono);font-size:12px;color:var(--indigo2)">/v1/agent/usage</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TOOLS ─────────────────────────────────────────────────────────────── -->
+<section class="section" id="tools">
+  <div class="wrap">
+    <div class="section-tag">Tool Suite</div>
+    <h2 class="section-title">Everything your agent needs</h2>
+    <p class="section-sub">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too.</p>
+
+    <div class="tools-grid">
+
+      <!-- AI Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">🤖</div>
+          <div class="tool-name">AI Generate</div>
+          <span class="tool-credits">20 cr</span>
+        </div>
+        <div class="tool-desc">Claude-powered text generation. Any prompt, any format. Supports system prompts and model selection.</div>
+        <div class="tool-endpoint">POST /v1/tools/ai-generate</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">👁️</div>
+          <div class="tool-name">OCR Extract</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Extract text from any image via URL or base64. Uses Claude vision — handles handwriting, receipts, screenshots.</div>
+        <div class="tool-endpoint">POST /v1/tools/ocr-extract</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">🧠</div>
+          <div class="tool-name">Summarize</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">5 summary styles: paragraph, bullets, TL;DR, headline, executive. Pass any text up to 8,000 words.</div>
+        <div class="tool-endpoint">POST /v1/tools/summarize</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">💬</div>
+          <div class="tool-name">Sentiment Analysis</div>
+          <span class="tool-credits">8 cr</span>
+        </div>
+        <div class="tool-desc">Sentiment score + 6 emotion dimensions (joy, anger, fear, sadness, surprise, disgust). Returns confidence scores.</div>
+        <div class="tool-endpoint">POST /v1/tools/sentiment-analysis</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">🏷️</div>
+          <div class="tool-name">Extract Entities</div>
+          <span class="tool-credits">8 cr</span>
+        </div>
+        <div class="tool-desc">NER: extracts people, organizations, locations, dates, and money values from unstructured text.</div>
+        <div class="tool-endpoint">POST /v1/tools/extract-entities</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">🌐</div>
+          <div class="tool-name">Web Search (AI)</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Real-time web search with AI-synthesized answer. Pass a query, get a clean summary backed by live results.</div>
+        <div class="tool-endpoint">POST /v1/tools/web-search</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">🌍</div>
+          <div class="tool-name">Language Detect</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Detect language of any text. 100+ languages with confidence score. Uses Claude for accuracy on short strings.</div>
+        <div class="tool-endpoint">POST /v1/tools/language-detect</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-ai">🔲</div>
+          <div class="tool-name">Regex Generate</div>
+          <span class="tool-credits">8 cr</span>
+        </div>
+        <div class="tool-desc">Natural language → validated regex with explanation and test examples. "Match US phone numbers" just works.</div>
+        <div class="tool-endpoint">POST /v1/tools/regex-generate</div>
+      </div>
+
+      <!-- Web Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-web">🕷️</div>
+          <div class="tool-name">Web Scrape</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Extract structured content from any public URL. Returns clean text, links, images. Supports CSS selectors.</div>
+        <div class="tool-endpoint">POST /v1/tools/web-scrape</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-web">📄</div>
+          <div class="tool-name">Extract Page</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Clean text, links, metadata, and images from any webpage. Strips nav, footer, ads. Reader-mode output.</div>
+        <div class="tool-endpoint">POST /v1/tools/extract-page</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-web">🔍</div>
+          <div class="tool-name">Search Web</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Web search with structured results — title, URL, snippet. Up to 10 results. No API key needed for basic use.</div>
+        <div class="tool-endpoint">POST /v1/tools/search-web</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-web">🖥️</div>
+          <div class="tool-name">Browser Task</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Headless browser automation — extract, click, type, scrape JS-rendered pages and SPAs. Playwright-powered.</div>
+        <div class="tool-endpoint">POST /v1/tools/browser-task</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-web">📡</div>
+          <div class="tool-name">RSS Parse</div>
+          <span class="tool-credits">4 cr</span>
+        </div>
+        <div class="tool-desc">Parse RSS and Atom feeds into clean structured JSON. Returns title, link, description, pubDate per item.</div>
+        <div class="tool-endpoint">POST /v1/tools/rss-parse</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-web">📑</div>
+          <div class="tool-name">Extract PDF</div>
+          <span class="tool-credits">6 cr</span>
+        </div>
+        <div class="tool-desc">Extract text from PDFs via URL or base64. Handles scanned PDFs with Claude vision. Word count included.</div>
+        <div class="tool-endpoint">POST /v1/tools/extract-pdf</div>
+      </div>
+
+      <!-- Data Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-data">✅</div>
+          <div class="tool-name">Validate Data</div>
+          <span class="tool-credits">1 cr</span>
+        </div>
+        <div class="tool-desc">Validate JSON against a JSON Schema. Returns structured errors with path locations. Used by agents for input checks.</div>
+        <div class="tool-endpoint">POST /v1/tools/validate-data</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-data">🔄</div>
+          <div class="tool-name">Convert Format</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Convert between JSON, YAML, CSV, and XML. Bi-directional. Preserves types. Handles nested structures.</div>
+        <div class="tool-endpoint">POST /v1/tools/convert-format</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-data">🔗</div>
+          <div class="tool-name">Extract Metadata</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Extract Open Graph, title, description, meta tags, word count, and links from any HTML or URL.</div>
+        <div class="tool-endpoint">POST /v1/tools/extract-metadata</div>
+      </div>
+
+      <!-- Security Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-sec">🔐</div>
+          <div class="tool-name">Generate Hash</div>
+          <span class="tool-credits">1 cr</span>
+        </div>
+        <div class="tool-desc">SHA-256, SHA-512, SHA-1, MD5, SHA-384 hashes. Hex or base64 output. For checksums, signatures, deduplication.</div>
+        <div class="tool-endpoint">POST /v1/tools/generate-hash</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-sec">🕵️</div>
+          <div class="tool-name">PII Detect</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Detect and optionally redact PII: email, phone, SSN, credit cards, names, addresses. Position-aware output.</div>
+        <div class="tool-endpoint">POST /v1/tools/pii-detect</div>
+      </div>
+
+      <!-- Text Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-text">✏️</div>
+          <div class="tool-name">Transform Text</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">12 modes: uppercase, lowercase, titlecase, slug, camelCase, snake_case, kebab-case, base64 encode/decode, reverse, trim, word count.</div>
+        <div class="tool-endpoint">POST /v1/tools/transform-text</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-text">📊</div>
+          <div class="tool-name">Readability Score</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Flesch-Kincaid ease + grade level. Returns avg words/sentence, avg syllables/word, grade label (Elementary to College+).</div>
+        <div class="tool-endpoint">POST /v1/tools/readability-score</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-text">↔️</div>
+          <div class="tool-name">Diff Text</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Structured text diff in unified, words, chars, or JSON format. Added/removed counts included. Perfect for change detection.</div>
+        <div class="tool-endpoint">POST /v1/tools/diff-text</div>
+      </div>
+
+      <!-- Network Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-net">📍</div>
+          <div class="tool-name">IP Lookup</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Geo, ISP, org, timezone, VPN/proxy/hosting detection for any IPv4 or IPv6 address. Used for fraud prevention.</div>
+        <div class="tool-endpoint">POST /v1/tools/ip-lookup</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-net">🌐</div>
+          <div class="tool-name">Whois Lookup</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Domain registration date, expiry, nameservers via RDAP. Clean structured JSON — no parsing messy whois text.</div>
+        <div class="tool-endpoint">POST /v1/tools/whois-lookup</div>
+      </div>
+
+      <!-- Validation Tools -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-sec">📧</div>
+          <div class="tool-name">Email Verify</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Format check + MX record lookup + disposable domain detection. Returns deliverable: true/false with breakdown.</div>
+        <div class="tool-endpoint">POST /v1/tools/email-verify</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-sec">📱</div>
+          <div class="tool-name">Phone Validate</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">E.164 formatting, type (mobile/landline/VOIP), country code from any phone number. Powered by libphonenumber.</div>
+        <div class="tool-endpoint">POST /v1/tools/phone-validate</div>
+      </div>
+
+      <!-- Finance / Utility -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-fin">💱</div>
+          <div class="tool-name">Currency Convert</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">170+ currencies with live exchange rates. Returns converted amount + rate. Useful for pricing agents and invoicing tools.</div>
+        <div class="tool-endpoint">POST /v1/tools/currency-convert</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-util">🕐</div>
+          <div class="tool-name">Timezone Convert</div>
+          <span class="tool-credits">1 cr</span>
+        </div>
+        <div class="tool-desc">Convert any datetime between IANA timezones. "America/New_York" → "Asia/Tokyo". Returns formatted local time.</div>
+        <div class="tool-endpoint">POST /v1/tools/timezone-convert</div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-util">🎲</div>
+          <div class="tool-name">Generate UUID</div>
+          <span class="tool-credits">1 cr</span>
+        </div>
+        <div class="tool-desc">UUIDs (v1/v4), random tokens (hex), API-key format strings. Generate up to 100 at once. Batch-friendly.</div>
+        <div class="tool-endpoint">POST /v1/tools/generate-uuid</div>
+      </div>
+
+      <!-- Media -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon-wrap cat-media">◼️</div>
+          <div class="tool-name">QR Code</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Generate QR codes as PNG data URL or SVG. Configurable size and error correction level. Works for URLs, text, VCards.</div>
+        <div class="tool-endpoint">POST /v1/tools/qr-code</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── x402 SECTION ─────────────────────────────────────────────────────── -->
+<div class="wrap">
+  <div class="x402-section">
+    <div class="x402-inner">
+      <div class="x402-content">
+        <div class="section-tag">x402 Protocol</div>
+        <h2 class="section-title">AI agents pay with USDC. Automatically.</h2>
+        <p class="section-sub">No API key. No signup. An agent hits your endpoint, gets a 402, signs a USDC payment on Base, gets the data. Money in your wallet in seconds.</p>
+        <div class="x402-tags">
+          <span class="x402-tag active">Base Network</span>
+          <span class="x402-tag active">USDC</span>
+          <span class="x402-tag active">$0.001–$0.02 per call</span>
+          <span class="x402-tag">Fee-free settlement</span>
+          <span class="x402-tag">Coinbase facilitator</span>
+        </div>
+      </div>
+      <div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">x402 Discovery · /.well-known/x402</span>
+          </div>
+          <div class="code-body">
+            <span style="color:var(--punc)"></span>
+            <span style="color:var(--cyan)">GET</span> <span style="color:var(--muted)">/.well-known/x402</span><br><br>
+            <span style="color:var(--dimmer)">{</span><br>
+            &nbsp;&nbsp;<span style="color:var(--cyan)">"x402Version"</span><span style="color:var(--dimmer)">:</span> <span style="color:var(--amber)">1</span><span style="color:var(--dimmer)">,</span><br>
+            &nbsp;&nbsp;<span style="color:var(--cyan)">"accepts"</span><span style="color:var(--dimmer)">: [{</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"scheme"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"exact"</span><span style="color:var(--dimmer)">,</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"network"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"eip155:8453"</span><span style="color:var(--dimmer)">,</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"asset"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"USDC"</span><span style="color:var(--dimmer)">,</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"maxAmountRequired"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"5000"</span><br>
+            &nbsp;&nbsp;<span style="color:var(--dimmer)">}]</span><br>
+            <span style="color:var(--dimmer)">}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MCP SECTION ───────────────────────────────────────────────────────── -->
+<section class="section mcp-section" id="mcp">
+  <div class="wrap">
+    <div class="section-tag">MCP Compatible</div>
+    <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
+    <p class="section-sub">All 30 tools available as MCP tools. Drop the config into your AI client and your agent can call any tool — no wrapper code needed.</p>
+
+    <div class="mcp-inner">
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">claude_desktop_config.json</span>
+          <button class="copy-btn" onclick="copyMCP()">Copy</button>
+        </div>
+        <div class="code-body" id="mcp-code">
+          <span style="color:var(--dimmer)">{</span><br>
+          &nbsp;&nbsp;<span style="color:var(--cyan)">"mcpServers"</span><span style="color:var(--dimmer)">: {</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"arch-tools"</span><span style="color:var(--dimmer)">: {</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"type"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"url"</span><span style="color:var(--dimmer)">,</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"url"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"https://arch-tools-mcp.onrender.com/mcp"</span><span style="color:var(--dimmer)">,</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"name"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"arch-tools"</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--dimmer)">}</span><br>
+          &nbsp;&nbsp;<span style="color:var(--dimmer)">}</span><br>
+          <span style="color:var(--dimmer)">}</span>
+        </div>
+      </div>
+
+      <div class="mcp-features">
+        <div class="mcp-feat">
+          <div class="mcp-feat-icon">🤖</div>
+          <div class="mcp-feat-text">
+            <h4>Claude Desktop</h4>
+            <p>All 30 tools appear as native tools. Claude can call web-scrape, ai-generate, pii-detect — anything — without leaving the conversation.</p>
+          </div>
+        </div>
+        <div class="mcp-feat">
+          <div class="mcp-feat-icon">⌨️</div>
+          <div class="mcp-feat-text">
+            <h4>Cursor & Windsurf</h4>
+            <p>Coding agents can scrape docs, validate emails, convert formats, and generate UUIDs directly from their AI context.</p>
+          </div>
+        </div>
+        <div class="mcp-feat">
+          <div class="mcp-feat-icon">🔗</div>
+          <div class="mcp-feat-text">
+            <h4>Any MCP Client</h4>
+            <p>SSE transport at <span style="font-family:var(--mono);color:var(--indigo2);font-size:12px">arch-tools-mcp.onrender.com/mcp</span>. Stdio also supported for local agents.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PRICING ───────────────────────────────────────────────────────────── -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-tag">Pricing</div>
+    <h2 class="section-title">No subscriptions. Just credits.</h2>
+    <p class="section-sub">Buy once, use whenever. Credits never expire. Or pay per call with USDC — no wallet, no signup, no friction.</p>
+
+    <div class="pricing-grid">
+      <div class="pricing-card glow-hover">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">$9</div>
+        <div class="plan-credits">1,000 credits</div>
+        <div class="plan-per">$0.009 per credit</div>
+        <ul class="plan-features">
+          <li>~200 web scrapes</li>
+          <li>~45 AI generations</li>
+          <li>~1,000 hash/validate calls</li>
+          <li>Credits never expire</li>
+          <li>API key on purchase</li>
+        </ul>
+        <a href="#signup" class="btn-plan btn-plan-outline">Get Started</a>
+      </div>
+
+      <div class="pricing-card featured glow-hover">
+        <div class="featured-badge">Best Value · 46% off</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$49</div>
+        <div class="plan-credits">10,000 credits</div>
+        <div class="plan-per">$0.0049 per credit</div>
+        <ul class="plan-features">
+          <li>~2,000 web scrapes</li>
+          <li>~500 AI generations</li>
+          <li>~10,000 hash/validate calls</li>
+          <li>Credits never expire</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#signup" class="btn-plan btn-plan-solid">Get Pro</a>
+      </div>
+
+      <div class="pricing-card glow-hover">
+        <div class="plan-name">Business</div>
+        <div class="plan-price">$199</div>
+        <div class="plan-credits">100,000 credits</div>
+        <div class="plan-per">$0.002 per credit · 78% off</div>
+        <ul class="plan-features">
+          <li>~20,000 web scrapes</li>
+          <li>~5,000 AI generations</li>
+          <li>~100,000 hash/validate calls</li>
+          <li>Credits never expire</li>
+          <li>Volume pricing available</li>
+        </ul>
+        <a href="#signup" class="btn-plan btn-plan-outline">Get Business</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA / SIGNUP ──────────────────────────────────────────────────────── -->
+<section class="cta-section" id="signup">
+  <div class="wrap">
+    <div class="cta-box">
+      <div class="hero-badge" style="margin: 0 auto 20px; display:inline-flex;">
+        <span class="badge-dot"></span>
+        100 free credits — no credit card required
+      </div>
+      <h2>Start building in <span class="grad-text">60 seconds</span></h2>
+      <p>Enter your email. Get an API key + 100 free credits instantly.</p>
+      <div class="cta-form">
+        <input type="email" class="cta-input" id="email-input" placeholder="agent@example.com">
+        <button class="btn-primary" onclick="register()">Get API Key →</button>
+      </div>
+      <div id="api-result"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <a href="/" class="logo" style="margin-bottom: 4px;">
+          <div class="logo-icon">⚡</div>
+          Arch Tools
+        </a>
+        <span class="footer-copy">Built by Arch Enterprises LLC · Columbia, SC</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="/v1/tools">API Docs</a></li>
+        <li><a href="/openapi.json">OpenAPI</a></li>
+        <li><a href="/.well-known/x402">x402</a></li>
+        <li><a href="/llms.txt">llms.txt</a></li>
+        <li><a href="/legal/terms">Terms</a></li>
+        <li><a href="/legal/privacy">Privacy</a></li>
+      </ul>
+      <div class="footer-status">
+        <span class="badge-dot"></span>
+        All systems operational
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ─── Registration ────────────────────────────────────────────────────────── */
+  async function register() {
+    const email = document.getElementById('email-input').value.trim();
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    const btn = event.target;
+    btn.textContent = 'Registering…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/v1/agent/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+
+      const resultEl = document.getElementById('api-result');
+      resultEl.style.display = 'block';
+
+      if (data.ok) {
+        resultEl.style.borderColor = 'rgba(52,211,153,0.3)';
+        resultEl.style.background = 'rgba(52,211,153,0.06)';
+        resultEl.style.color = '#34d399';
+        resultEl.innerHTML = `✓ Registered!<br><br>
+          <strong style="color:#fff">API Key:</strong> ${data.api_key}<br>
+          <strong style="color:#fff">Credits:</strong> ${data.credits}<br><br>
+          <span style="color:#94a3b8;font-size:11px">Save this key — it won't be shown again.</span>`;
+      } else {
+        resultEl.style.borderColor = 'rgba(248,113,113,0.3)';
+        resultEl.style.background = 'rgba(248,113,113,0.06)';
+        resultEl.style.color = '#f87171';
+        resultEl.textContent = '✗ ' + (data.message || JSON.stringify(data));
+      }
+    } catch (e) {
+      const resultEl = document.getElementById('api-result');
+      resultEl.style.display = 'block';
+      resultEl.style.color = '#f87171';
+      resultEl.textContent = '✗ ' + e.message;
+    }
+
+    btn.textContent = 'Get API Key →';
+    btn.disabled = false;
+  }
+
+  /* ─── Copy MCP Config ─────────────────────────────────────────────────────── */
+  function copyMCP() {
+    const config = `{
+  "mcpServers": {
+    "arch-tools": {
+      "type": "url",
+      "url": "https://arch-tools-mcp.onrender.com/mcp",
+      "name": "arch-tools"
+    }
+  }
+}`;
+    navigator.clipboard.writeText(config).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  }
+
+  /* ─── Enter key on email input ───────────────────────────────────────────── */
+  document.getElementById('email-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') register();
+  });
+
+  /* ─── Smooth scroll for CTA ──────────────────────────────────────────────── */
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>

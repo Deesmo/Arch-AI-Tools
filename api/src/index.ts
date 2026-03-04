@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -334,34 +335,8 @@ app.get("/dashboard", (_req, res) => {
   return res.send(dashboardHtml);
 });
 
-// API info / root — HTML for browsers, JSON for API clients
-app.get("/", (req, res) => {
-  const accept = req.headers["accept"] || "";
-  const wantsHtml = accept.includes("text/html") && !accept.startsWith("application/json");
-  if (wantsHtml && landingHtml) {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(landingHtml);
-  }
-  res.json({
-    name: "Arch Tools API",
-    version: "1.0.0",
-    docs: "https://archtools.dev",
-    legal: {
-      terms: "/legal/terms",
-      privacy: "/legal/privacy",
-    },
-    openapi: "/openapi.json",
-    api_docs: "/docs",
-    endpoints: {
-      health: "GET /health",
-      tools: "GET /v1/tools",
-      register: "POST /v1/agent/register",
-      usage: "GET /v1/agent/usage",
-      checkout: "POST /v1/checkout",
-      invoke: "POST /v1/tools/:toolName",
-    },
-  });
-});
+// Serve static landing page assets
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Health endpoint — includes DB connectivity check
 app.get("/health", async (_req, res) => {
