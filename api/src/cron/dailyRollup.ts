@@ -62,9 +62,9 @@ export async function rollupDay(dayStart: Date) {
       where: {
         day_agentId_apiKeyId_toolName: {
           day: dayStart,
-          agentId: r.agentId ?? null,
-          apiKeyId: r.apiKeyId ?? null,
-          toolName: r.toolName ?? null,
+          agentId: r.agentId ?? undefined,
+          apiKeyId: r.apiKeyId ?? undefined,
+          toolName: r.toolName ?? undefined,
         },
       },
       create: {
