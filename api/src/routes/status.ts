@@ -23,7 +23,7 @@ statusRouter.get("/v1/status", async (_req, res) => {
   res.json({
     ok: true,
     service: "arch-tools-api",
-    version: "13",
+    version: "1.5",
     db,
     tools_active: toolCount,
     uptime_seconds: Math.floor(process.uptime()),

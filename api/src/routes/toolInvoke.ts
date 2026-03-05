@@ -242,6 +242,28 @@ async function handleInvoke(req: any, res: any, next: any, toolNameParam: string
   });
 }
 
+// ─── Public GET demo endpoints (no auth required) ───
+invokeRouter.get("/tools/qr-code", async (req, res) => {
+  const data = String(req.query.data || req.query.text || "");
+  if (!data) return res.status(400).json({ ok: false, error: "missing_data", hint: "Pass ?data=your-text" });
+  const result = await builtin.qrCode({ data, format: String(req.query.format || "png") });
+  return res.json({ ok: true, result });
+});
+
+invokeRouter.get("/tools/hash", async (req, res) => {
+  const input = String(req.query.input || req.query.text || "");
+  if (!input) return res.status(400).json({ ok: false, error: "missing_input", hint: "Pass ?input=your-text" });
+  const result = await builtin.generateHash({ input, algorithm: String(req.query.algorithm || "sha256") });
+  return res.json({ ok: true, result });
+});
+
+invokeRouter.get("/tools/text-transform", async (req, res) => {
+  const text = String(req.query.text || "");
+  if (!text) return res.status(400).json({ ok: false, error: "missing_text", hint: "Pass ?text=your-text" });
+  const result = await builtin.transformText({ text, mode: String(req.query.mode || "uppercase") });
+  return res.json({ ok: true, result });
+});
+
 invokeRouter.post("/v1/tools/:toolName", requireApiKey, async (req: any, res, next) => {
   return handleInvoke(req, res, next, req.params.toolName);
 });
