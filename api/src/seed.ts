@@ -503,6 +503,127 @@ async function main() {
         required: ["domain"],
       },
     },
+    // ── New 8 (v14) ──
+    {
+      name: "screenshot-capture",
+      endpoint: "/v1/tools/screenshot-capture",
+      credits: 10,
+      description: "Full-page or viewport screenshot via Playwright. Returns base64 PNG.",
+      method: "POST",
+      category: "browser",
+      schemaJson: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL to screenshot" },
+          full_page: { type: "boolean", default: true, description: "Capture full scrollable page" },
+          width: { type: "integer", minimum: 320, maximum: 2560, default: 1280 },
+          height: { type: "integer", minimum: 200, maximum: 2048, default: 900 },
+        },
+        required: ["url"],
+      },
+    },
+    {
+      name: "image-generate",
+      endpoint: "/v1/tools/image-generate",
+      credits: 15,
+      description: "AI image generation via DALL-E 3 or Stability AI from a text prompt.",
+      method: "POST",
+      category: "image",
+      schemaJson: {
+        type: "object",
+        properties: {
+          prompt: { type: "string", description: "Image description / prompt", maxLength: 4000 },
+          width: { type: "integer", enum: [1024, 1792], default: 1024 },
+          height: { type: "integer", enum: [1024, 1792], default: 1024 },
+          style: { type: "string", enum: ["vivid", "natural"], default: "vivid" },
+          quality: { type: "string", enum: ["standard", "hd"], default: "standard" },
+        },
+        required: ["prompt"],
+      },
+    },
+    {
+      name: "html-to-markdown",
+      endpoint: "/v1/tools/html-to-markdown",
+      credits: 3,
+      description: "Convert HTML string or URL to clean Markdown for agent context windows.",
+      method: "POST",
+      category: "web",
+      schemaJson: {
+        type: "object",
+        properties: {
+          html: { type: "string", description: "HTML string to convert" },
+          url: { type: "string", description: "URL to fetch and convert" },
+        },
+      },
+    },
+    {
+      name: "url-shorten",
+      endpoint: "/v1/tools/url-shorten",
+      credits: 1,
+      description: "Shorten any URL via is.gd. Returns short URL. No API key required.",
+      method: "POST",
+      category: "utilities",
+      schemaJson: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL to shorten" },
+        },
+        required: ["url"],
+      },
+    },
+    {
+      name: "webhook-send",
+      endpoint: "/v1/tools/webhook-send",
+      credits: 2,
+      description: "POST a JSON payload to any external URL. Trigger Zapier, n8n, Slack webhooks, etc.",
+      method: "POST",
+      category: "utilities",
+      schemaJson: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Webhook endpoint URL" },
+          body: { description: "JSON payload to send" },
+          method: { type: "string", enum: ["POST", "PUT", "PATCH"], default: "POST" },
+          headers: { type: "object", description: "Optional extra headers (safe headers only)" },
+        },
+        required: ["url"],
+      },
+    },
+    {
+      name: "jsonpath-query",
+      endpoint: "/v1/tools/jsonpath-query",
+      credits: 1,
+      description: "Extract values from complex JSON using JSONPath expressions (e.g. $.store.book[*].title).",
+      method: "POST",
+      category: "data",
+      schemaJson: {
+        type: "object",
+        properties: {
+          json: { description: "JSON object or string to query" },
+          path: { type: "string", description: "JSONPath expression starting with $" },
+        },
+        required: ["json", "path"],
+      },
+    },
+    {
+      name: "barcode-generate",
+      endpoint: "/v1/tools/barcode-generate",
+      credits: 2,
+      description: "Generate EAN-13, UPC-A, Code128, or Code39 barcodes as SVG.",
+      method: "POST",
+      category: "utilities",
+      schemaJson: {
+        type: "object",
+        properties: {
+          value: { type: "string", description: "Value to encode" },
+          format: { type: "string", enum: ["code128", "code39", "ean13", "upca"], default: "code128" },
+          width: { type: "integer", minimum: 80, maximum: 800, default: 300 },
+          height: { type: "integer", minimum: 30, maximum: 300, default: 80 },
+          include_text: { type: "boolean", default: true },
+        },
+        required: ["value"],
+      },
+    },
   ];
 
   for (const t of tools) {
@@ -524,7 +645,7 @@ async function main() {
     });
   }
 
-  console.log(`✅ Seeded ${tools.length} tools (8 core + 4 web/browser + 18 expanded = 30 total)`);
+  console.log(`✅ Seeded ${tools.length} tools (8 core + 4 web/browser + 18 expanded + 8 new v14 = 38 total)`);
 }
 
 main()

@@ -317,7 +317,15 @@ async function dispatchTool(toolName: string, endpoint: string, body: any) {
     case "generate-uuid":      return builtin.generateUuid(body);
     case "regex-generate":     return builtin.regexGenerate(body);
     case "diff-text":          return builtin.diffText(body);
-    case "whois-lookup":       return builtin.whoisLookup(body);
+    case "whois-lookup":          return builtin.whoisLookup(body);
+    // ── New 8 (v14) ──
+    case "screenshot-capture":     return builtin.screenshotCapture(body);
+    case "image-generate":         return builtin.imageGenerate(body);
+    case "html-to-markdown":       return builtin.htmlToMarkdown(body);
+    case "url-shorten":            return builtin.urlShorten(body);
+    case "webhook-send":           return builtin.webhookSend(body);
+    case "jsonpath-query":         return builtin.jsonpathQuery(body);
+    case "barcode-generate":       return builtin.barcodeGenerate(body);
     default:
       return {
         ok: false,

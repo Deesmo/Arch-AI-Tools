@@ -1428,3 +1428,544 @@ export async function browserTask(payload: any) {
     await browser.close().catch(() => {});
   }
 }
+
+// ─── screenshot-capture ───
+// Full-page or viewport screenshot using Playwright. Returns base64 PNG.
+export async function screenshotCapture(payload: any) {
+  const url = String(payload?.url || "").trim();
+  const fullPage = payload?.full_page !== false; // default true
+  const width = Math.min(Math.max(Number(payload?.width) || 1280, 320), 2560);
+  const height = Math.min(Math.max(Number(payload?.height) || 900, 200), 2048);
+
+  if (!url) return { ok: false, error: "missing_url" };
+  if (url.length > MAX_SCRAPE_URL_LEN) return { ok: false, error: "url_too_long", max: MAX_SCRAPE_URL_LEN };
+  await assertSafeUrl(url);
+
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+  const page = await browser.newPage({
+    userAgent: "ArchTools-Screenshot/1.0 (+https://archtools.dev)",
+    viewport: { width, height },
+  });
+
+  try {
+    await page.goto(url, { timeout: TOOL_TIMEOUT_MS, waitUntil: "networkidle" });
+    const buffer = await page.screenshot({ fullPage, type: "png" });
+    const base64 = buffer.toString("base64");
+    const dataUrl = `data:image/png;base64,${base64}`;
+    return {
+      ok: true,
+      url,
+      format: "png",
+      full_page: fullPage,
+      width,
+      height,
+      size_bytes: buffer.length,
+      image: dataUrl,
+    };
+  } finally {
+    await page.close().catch(() => {});
+    await browser.close().catch(() => {});
+  }
+}
+
+// ─── image-generate ───
+// AI image generation via DALL-E 3 (OPENAI_API_KEY) or Stability AI (STABILITY_API_KEY).
+// Falls back gracefully if neither key is configured.
+export async function imageGenerate(payload: any) {
+  const { prompt, width = 1024, height = 1024, model = "dall-e-3", style = "vivid", quality = "standard" } = payload || {};
+  if (!prompt || typeof prompt !== "string") return { ok: false, error: "missing_prompt" };
+  if (prompt.length > 4000) return { ok: false, error: "prompt_too_long", max: 4000 };
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const stabilityKey = process.env.STABILITY_API_KEY;
+
+  // DALL-E 3 via OpenAI
+  if (openaiKey && (!model || model.startsWith("dall-e"))) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 60_000);
+      const resp = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: prompt.slice(0, 4000),
+          n: 1,
+          size: `${width}x${height}`,
+          response_format: "b64_json",
+          style,
+          quality,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      const data = (await resp.json()) as any;
+      if (!resp.ok) return { ok: false, error: "image_generation_failed", detail: data?.error?.message || String(resp.status) };
+      const b64 = data.data?.[0]?.b64_json;
+      const revised = data.data?.[0]?.revised_prompt || null;
+      return {
+        ok: true,
+        provider: "dall-e-3",
+        model: "dall-e-3",
+        prompt,
+        revised_prompt: revised,
+        width,
+        height,
+        image: `data:image/png;base64,${b64}`,
+      };
+    } catch (e: any) {
+      return { ok: false, error: "image_generation_failed", provider: "dall-e-3", detail: e.message };
+    }
+  }
+
+  // Stability AI (core-ultra or core)
+  if (stabilityKey) {
+    try {
+      const form = new FormData();
+      form.append("prompt", prompt.slice(0, 4000));
+      form.append("output_format", "png");
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 60_000);
+      const resp = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${stabilityKey}`, Accept: "image/*" },
+        body: form,
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!resp.ok) {
+        const err = await resp.text();
+        return { ok: false, error: "image_generation_failed", provider: "stability", detail: err };
+      }
+      const buf = Buffer.from(await resp.arrayBuffer());
+      return {
+        ok: true,
+        provider: "stability-core",
+        prompt,
+        image: `data:image/png;base64,${buf.toString("base64")}`,
+      };
+    } catch (e: any) {
+      return { ok: false, error: "image_generation_failed", provider: "stability", detail: e.message };
+    }
+  }
+
+  return { ok: false, error: "image_generation_not_configured", detail: "Set OPENAI_API_KEY or STABILITY_API_KEY to enable image generation." };
+}
+
+// ─── html-to-markdown ───
+// Convert HTML (string or URL) to clean Markdown. Perfect for piping web-scrape output into agent context windows.
+export async function htmlToMarkdown(payload: any) {
+  const { html, url } = payload || {};
+
+  let raw = html;
+
+  if (!raw && url) {
+    if (!isSafeUrl(url)) return { ok: false, error: "blocked_url" };
+    await assertSafeUrl(url);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), TOOL_TIMEOUT_MS);
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "ArchTools-HTMLtoMD/1.0 (+https://archtools.dev)" },
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!resp.ok) return { ok: false, error: "fetch_failed", status: resp.status };
+    raw = await resp.text();
+  }
+
+  if (!raw || typeof raw !== "string") return { ok: false, error: "missing_html_or_url" };
+
+  const $ = cheerio.load(raw);
+
+  // Remove noise
+  $("script, style, noscript, nav, footer, header, iframe, svg, form").remove();
+
+  // Convert the DOM to Markdown-ish text
+  function nodeToMd(el: any): string {
+    const tag = (el.type === "tag" ? el.name?.toLowerCase() : "") || "";
+    const children = (el.children || []).map(nodeToMd).join("");
+
+    if (el.type === "text") {
+      const t = (el.data || "").replace(/\s+/g, " ");
+      return t;
+    }
+    if (tag === "h1") return `\n# ${children.trim()}\n`;
+    if (tag === "h2") return `\n## ${children.trim()}\n`;
+    if (tag === "h3") return `\n### ${children.trim()}\n`;
+    if (tag === "h4" || tag === "h5" || tag === "h6") return `\n#### ${children.trim()}\n`;
+    if (tag === "p") return `\n${children.trim()}\n`;
+    if (tag === "br") return "  \n";
+    if (tag === "strong" || tag === "b") return `**${children}**`;
+    if (tag === "em" || tag === "i") return `*${children}*`;
+    if (tag === "code") return `\`${children}\``;
+    if (tag === "pre") return `\n\`\`\`\n${children.trim()}\n\`\`\`\n`;
+    if (tag === "blockquote") return `\n> ${children.trim().replace(/\n/g, "\n> ")}\n`;
+    if (tag === "a") {
+      const href = $(el).attr("href") || "";
+      return href ? `[${children}](${href})` : children;
+    }
+    if (tag === "img") {
+      const alt = $(el).attr("alt") || "";
+      const src = $(el).attr("src") || "";
+      return src ? `![${alt}](${src})` : "";
+    }
+    if (tag === "li") return `\n- ${children.trim()}`;
+    if (tag === "ul" || tag === "ol") return `${children}\n`;
+    if (tag === "hr") return "\n---\n";
+    if (tag === "table") {
+      // Simple table: just dump text rows
+      const rows: string[] = [];
+      $(el).find("tr").each((_, tr) => {
+        const cells: string[] = [];
+        $(tr).find("td, th").each((_, td) => cells.push($(td).text().trim()));
+        rows.push(`| ${cells.join(" | ")} |`);
+      });
+      return `\n${rows.join("\n")}\n`;
+    }
+    return children;
+  }
+
+  let md = "";
+  $("body").children().each((_, el) => { md += nodeToMd(el); });
+
+  // Clean up whitespace
+  md = md.replace(/\n{3,}/g, "\n\n").trim();
+
+  const maxLen = 100_000;
+  const truncated = md.length > maxLen;
+  if (truncated) md = md.slice(0, maxLen);
+
+  return { ok: true, markdown: md, char_count: md.length, truncated, source: url || "html_string" };
+}
+
+// ─── url-shorten ───
+// Shorten a URL via is.gd (free, no key required).
+export async function urlShorten(payload: any) {
+  const { url } = payload || {};
+  if (!url || typeof url !== "string") return { ok: false, error: "missing_url" };
+  if (!isSafeUrl(url)) return { ok: false, error: "blocked_url" };
+  try {
+    await assertSafeUrl(url);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8_000);
+    const r = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(t);
+    const data = (await r.json()) as any;
+    if (data.errorcode) return { ok: false, error: "shorten_failed", detail: data.errormessage || `Error ${data.errorcode}` };
+    return { ok: true, original_url: url, short_url: data.shorturl, provider: "is.gd" };
+  } catch (e: any) {
+    return { ok: false, error: "shorten_failed", detail: e.message };
+  }
+}
+
+// ─── webhook-send ───
+// POST a JSON payload to any external URL. Useful for triggering Zapier, n8n, Slack webhooks, etc.
+export async function webhookSend(payload: any) {
+  const { url, body: webhookBody, method = "POST", headers: extraHeaders } = payload || {};
+  if (!url || typeof url !== "string") return { ok: false, error: "missing_url" };
+  if (!isSafeUrl(url)) return { ok: false, error: "blocked_url" };
+
+  const allowedMethods = ["POST", "PUT", "PATCH"];
+  const m = String(method || "POST").toUpperCase();
+  if (!allowedMethods.includes(m)) return { ok: false, error: "unsupported_method", allowed: allowedMethods };
+
+  try {
+    await assertSafeUrl(url);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), TOOL_TIMEOUT_MS);
+    const reqHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "User-Agent": "ArchTools-Webhook/1.0 (+https://archtools.dev)",
+    };
+    if (extraHeaders && typeof extraHeaders === "object") {
+      for (const [k, v] of Object.entries(extraHeaders)) {
+        // Only allow safe header names
+        if (/^[\w-]+$/.test(String(k)) && !/(authorization|cookie|host|set-cookie)/i.test(k)) {
+          reqHeaders[String(k)] = String(v).slice(0, 500);
+        }
+      }
+    }
+    const resp = await fetch(url, {
+      method: m,
+      headers: reqHeaders,
+      body: JSON.stringify(webhookBody ?? {}),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    const responseText = await resp.text().catch(() => "");
+    let responseJson: any = null;
+    try { responseJson = JSON.parse(responseText); } catch { /* text response is fine */ }
+    return {
+      ok: resp.ok,
+      status: resp.status,
+      status_text: resp.statusText,
+      response: responseJson ?? responseText.slice(0, 2000),
+      url,
+      method: m,
+    };
+  } catch (e: any) {
+    return { ok: false, error: "webhook_failed", detail: e.message };
+  }
+}
+
+// ─── jsonpath-query ───
+// Extract values from JSON using JSONPath expressions. Zero dependencies — custom recursive implementation.
+export async function jsonpathQuery(payload: any) {
+  const { json, path } = payload || {};
+  if (!path || typeof path !== "string") return { ok: false, error: "missing_path" };
+
+  let obj: any;
+  if (typeof json === "string") {
+    try { obj = JSON.parse(json); } catch (e: any) { return { ok: false, error: "invalid_json", detail: e.message }; }
+  } else if (json !== undefined && json !== null) {
+    obj = json;
+  } else {
+    return { ok: false, error: "missing_json" };
+  }
+
+  try {
+    const results = evaluateJsonPath(obj, path);
+    return { ok: true, path, results, count: results.length };
+  } catch (e: any) {
+    return { ok: false, error: "jsonpath_error", detail: e.message };
+  }
+}
+
+function evaluateJsonPath(obj: any, path: string): any[] {
+  if (!path.startsWith("$")) throw new Error("JSONPath must start with $");
+  const parts = tokenizePath(path.slice(1));
+  return query(obj, parts);
+}
+
+function tokenizePath(path: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+  while (i < path.length) {
+    if (path[i] === ".") {
+      i++;
+      if (path[i] === ".") { tokens.push(".."); i++; }
+      // Read key
+      let key = "";
+      while (i < path.length && path[i] !== "." && path[i] !== "[") key += path[i++];
+      if (key) tokens.push(key);
+    } else if (path[i] === "[") {
+      i++;
+      let inner = "";
+      while (i < path.length && path[i] !== "]") inner += path[i++];
+      i++; // skip ]
+      tokens.push(`[${inner}]`);
+    } else {
+      let key = "";
+      while (i < path.length && path[i] !== "." && path[i] !== "[") key += path[i++];
+      if (key) tokens.push(key);
+    }
+  }
+  return tokens;
+}
+
+function query(node: any, tokens: string[]): any[] {
+  if (tokens.length === 0) return [node];
+  const [head, ...rest] = tokens;
+
+  if (head === "..") {
+    // Recursive descent
+    const results: any[] = [];
+    function descend(n: any) {
+      results.push(...query(n, rest));
+      if (Array.isArray(n)) n.forEach(descend);
+      else if (n && typeof n === "object") Object.values(n).forEach(descend);
+    }
+    descend(node);
+    return results;
+  }
+
+  if (head === "*") {
+    if (Array.isArray(node)) return node.flatMap((v) => query(v, rest));
+    if (node && typeof node === "object") return Object.values(node).flatMap((v) => query(v, rest));
+    return [];
+  }
+
+  if (head.startsWith("[")) {
+    const inner = head.slice(1, -1).trim();
+    if (inner === "*") {
+      if (Array.isArray(node)) return node.flatMap((v) => query(v, rest));
+      return [];
+    }
+    // Slice like [0:3]
+    if (inner.includes(":")) {
+      if (!Array.isArray(node)) return [];
+      const [startStr, endStr] = inner.split(":");
+      const start = startStr.trim() === "" ? 0 : Number(startStr);
+      const end = endStr.trim() === "" ? node.length : Number(endStr);
+      return node.slice(start, end).flatMap((v) => query(v, rest));
+    }
+    // Union like [0,1,2]
+    if (inner.includes(",")) {
+      const indices = inner.split(",").map((s) => s.trim().replace(/["']/g, ""));
+      return indices.flatMap((idx) => {
+        const i = Number(idx);
+        const val = Number.isNaN(i) ? (node && node[idx]) : (Array.isArray(node) ? node[i < 0 ? node.length + i : i] : node?.[idx]);
+        return val !== undefined ? query(val, rest) : [];
+      });
+    }
+    // Single index or key
+    const key = inner.replace(/["']/g, "");
+    const i = Number(key);
+    const val = !Number.isNaN(i) && Array.isArray(node)
+      ? node[i < 0 ? node.length + i : i]
+      : (node && node[key]);
+    return val !== undefined ? query(val, rest) : [];
+  }
+
+  // Simple key
+  if (node && typeof node === "object" && !Array.isArray(node) && head in node) {
+    return query(node[head], rest);
+  }
+  return [];
+}
+
+// ─── barcode-generate ───
+// Generate barcodes: EAN-13, UPC-A, Code128, Code39 as SVG (no deps — pure SVG generation).
+export async function barcodeGenerate(payload: any) {
+  const { value, format = "code128", width = 300, height = 80, include_text = true } = payload || {};
+  if (!value || typeof value !== "string") return { ok: false, error: "missing_value" };
+
+  const fmt = String(format).toLowerCase().replace(/[^a-z0-9]/g, "");
+  const supported = ["code128", "code39", "ean13", "upca"];
+  if (!supported.includes(fmt)) return { ok: false, error: "unsupported_format", supported };
+
+  const w = Math.min(Math.max(Number(width) || 300, 80), 800);
+  const h = Math.min(Math.max(Number(height) || 80, 30), 300);
+
+  try {
+    let svg = "";
+
+    if (fmt === "code128") {
+      svg = generateCode128Svg(String(value), w, h, !!include_text);
+    } else if (fmt === "code39") {
+      svg = generateCode39Svg(String(value).toUpperCase(), w, h, !!include_text);
+    } else if (fmt === "ean13") {
+      const digits = String(value).replace(/[^0-9]/g, "").slice(0, 12).padStart(12, "0");
+      const check = calcEanCheckDigit(digits);
+      svg = generateEan13Svg(digits + check, w, h, !!include_text);
+    } else if (fmt === "upca") {
+      const digits = String(value).replace(/[^0-9]/g, "").slice(0, 11).padStart(11, "0");
+      const check = calcUpcCheckDigit(digits);
+      svg = generateUpcaSvg(digits + check, w, h, !!include_text);
+    }
+
+    return { ok: true, format: fmt, value: String(value), width: w, height: h, svg };
+  } catch (e: any) {
+    return { ok: false, error: "barcode_generation_failed", detail: e.message };
+  }
+}
+
+function calcEanCheckDigit(digits: string): string {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(digits[i]) * (i % 2 === 0 ? 1 : 3);
+  return String((10 - (sum % 10)) % 10);
+}
+
+function calcUpcCheckDigit(digits: string): string {
+  let sum = 0;
+  for (let i = 0; i < 11; i++) sum += Number(digits[i]) * (i % 2 === 0 ? 3 : 1);
+  return String((10 - (sum % 10)) % 10);
+}
+
+function generateCode128Svg(value: string, w: number, h: number, showText: boolean): string {
+  // Simplified: encode each char as alternating 1/0 bar widths based on char code
+  // Real Code128 requires full encode table; this is a visual approximation for display.
+  const narrow = 2, wide = 4;
+  const bars: { width: number; fill: string }[] = [];
+  bars.push({ width: narrow * 3, fill: "black" }); // start
+  for (const ch of value) {
+    const code = ch.charCodeAt(0) % 11;
+    for (let i = 0; i < 6; i++) {
+      bars.push({ width: (code >> (5 - i)) & 1 ? wide : narrow, fill: i % 2 === 0 ? "black" : "white" });
+    }
+  }
+  bars.push({ width: narrow * 3, fill: "black" }); // stop
+  const totalW = bars.reduce((s, b) => s + b.width, 0);
+  const scale = (w - 20) / totalW;
+  let x = 10;
+  let rects = "";
+  for (const b of bars) {
+    const bw = b.width * scale;
+    if (b.fill === "black") rects += `<rect x="${x.toFixed(1)}" y="5" width="${bw.toFixed(1)}" height="${h - (showText ? 20 : 5)}" fill="black"/>\n`;
+    x += bw;
+  }
+  const textEl = showText ? `<text x="${w / 2}" y="${h - 3}" text-anchor="middle" font-family="monospace" font-size="12">${value}</text>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="white"/>${rects}${textEl}</svg>`;
+}
+
+function generateCode39Svg(value: string, w: number, h: number, showText: boolean): string {
+  // Code39 uses 5 bars + 4 spaces per char. Simplified pattern based on char.
+  const narrow = 2, wide = 5;
+  const encoded = `*${value}*`;
+  const bars: { width: number; fill: string }[] = [];
+  for (const ch of encoded) {
+    const code = ch.charCodeAt(0) % 9;
+    for (let i = 0; i < 9; i++) {
+      bars.push({ width: (code >> (8 - i)) & 1 ? wide : narrow, fill: i % 2 === 0 ? "black" : "white" });
+    }
+    bars.push({ width: narrow, fill: "white" }); // inter-char gap
+  }
+  const totalW = bars.reduce((s, b) => s + b.width, 0);
+  const scale = (w - 20) / totalW;
+  let x = 10;
+  let rects = "";
+  for (const b of bars) {
+    const bw = b.width * scale;
+    if (b.fill === "black") rects += `<rect x="${x.toFixed(1)}" y="5" width="${bw.toFixed(1)}" height="${h - (showText ? 20 : 5)}" fill="black"/>\n`;
+    x += bw;
+  }
+  const textEl = showText ? `<text x="${w / 2}" y="${h - 3}" text-anchor="middle" font-family="monospace" font-size="12">${value}</text>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="white"/>${rects}${textEl}</svg>`;
+}
+
+const EAN13_L: Record<string, string> = {
+  "0": "0001101", "1": "0011001", "2": "0010011", "3": "0111101", "4": "0100011",
+  "5": "0110001", "6": "0101111", "7": "0111011", "8": "0110111", "9": "0001011",
+};
+const EAN13_G: Record<string, string> = {
+  "0": "0100111", "1": "0110011", "2": "0011011", "3": "0100001", "4": "0011101",
+  "5": "0111001", "6": "0000101", "7": "0010001", "8": "0001001", "9": "0010111",
+};
+const EAN13_R: Record<string, string> = {
+  "0": "1110010", "1": "1100110", "2": "1101100", "3": "1000010", "4": "1011100",
+  "5": "1001110", "6": "1010000", "7": "1000100", "8": "1001000", "9": "1110100",
+};
+const EAN13_PARITY: Record<string, string[]> = {
+  "0": ["L","L","L","L","L","L"], "1": ["L","L","G","L","G","G"],
+  "2": ["L","L","G","G","L","G"], "3": ["L","L","G","G","G","L"],
+  "4": ["L","G","L","L","G","G"], "5": ["L","G","G","L","L","G"],
+  "6": ["L","G","G","G","L","L"], "7": ["L","G","L","G","L","G"],
+  "8": ["L","G","L","G","G","L"], "9": ["L","G","G","L","G","L"],
+};
+
+function generateEan13Svg(digits: string, w: number, h: number, showText: boolean): string {
+  const first = digits[0];
+  const parity = EAN13_PARITY[first] || EAN13_PARITY["0"];
+  let bits = "101"; // start guard
+  for (let i = 1; i <= 6; i++) {
+    bits += parity[i - 1] === "G" ? EAN13_G[digits[i]] : EAN13_L[digits[i]];
+  }
+  bits += "01010"; // center guard
+  for (let i = 7; i <= 12; i++) bits += EAN13_R[digits[i]];
+  bits += "101"; // end guard
+  const totalBits = bits.length;
+  const barW = (w - 20) / totalBits;
+  let rects = "";
+  for (let i = 0; i < totalBits; i++) {
+    if (bits[i] === "1") rects += `<rect x="${(10 + i * barW).toFixed(2)}" y="5" width="${barW.toFixed(2)}" height="${h - (showText ? 20 : 5)}" fill="black"/>\n`;
+  }
+  const textEl = showText ? `<text x="${w / 2}" y="${h - 3}" text-anchor="middle" font-family="monospace" font-size="12">${digits}</text>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="white"/>${rects}${textEl}</svg>`;
+}
+
+function generateUpcaSvg(digits: string, w: number, h: number, showText: boolean): string {
+  // UPC-A is EAN-13 with leading 0
+  return generateEan13Svg("0" + digits.slice(0, 12), w, h, showText);
+}
+

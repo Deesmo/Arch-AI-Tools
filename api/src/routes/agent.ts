@@ -414,6 +414,15 @@ agentRouter.post("/v1/agent/:agentId/reverse", requireAdminKey, async (req, res)
 });
 
 /**
+ * GET /v1/agent/balance — lightweight credit balance check
+ */
+agentRouter.get("/v1/agent/balance", requireApiKey, async (req: any, res) => {
+  const agentId = req.agentId as string;
+  const balance = await getCreditBalance(agentId);
+  return ok(res, { credits_remaining: balance });
+});
+
+/**
  * GET /v1/agent/usage — credit balance and call stats
  */
 agentRouter.get("/v1/agent/usage", requireApiKey, async (req: any, res) => {
