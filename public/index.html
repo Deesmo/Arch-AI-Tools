@@ -1057,6 +1057,9 @@
     /* Glow on hover for primary sections */
     .glow-hover { transition: box-shadow 0.3s; }
     .glow-hover:hover { box-shadow: 0 0 40px rgba(99,102,241,0.12); }
+
+    /* Fix 1: Sticky nav scroll offset — prevent sections landing behind 60px nav */
+    #tools, #pricing, #mcp, #signup { scroll-margin-top: 70px; }
   </style>
 </head>
 <body>
@@ -1673,7 +1676,7 @@
 <section class="cta-section" id="signup">
   <div class="wrap">
     <div class="cta-box">
-      <div class="hero-badge" style="margin: 0 auto 20px; display:inline-flex;">
+      <div class="hero-badge" style="display:inline-flex;">
         <span class="badge-dot"></span>
         100 free credits — no credit card required
       </div>
@@ -1681,7 +1684,7 @@
       <p>Enter your email. Get an API key + 100 free credits instantly.</p>
       <div class="cta-form">
         <input type="email" class="cta-input" id="email-input" placeholder="agent@example.com">
-        <button class="btn-primary" onclick="register()">Get API Key →</button>
+        <button class="btn-primary" id="register-btn" onclick="register(this)">Get API Key →</button>
       </div>
       <div id="api-result"></div>
     </div>
@@ -1717,14 +1720,12 @@
 
 <script>
   /* ─── Registration ────────────────────────────────────────────────────────── */
-  async function register() {
+  async function register(btn) {
     const email = document.getElementById('email-input').value.trim();
     if (!email || !email.includes('@')) {
       alert('Please enter a valid email address');
       return;
     }
-
-    const btn = event.target;
     btn.textContent = 'Registering…';
     btn.disabled = true;
 
@@ -1784,7 +1785,7 @@
 
   /* ─── Enter key on email input ───────────────────────────────────────────── */
   document.getElementById('email-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') register();
+    if (e.key === 'Enter') register(document.getElementById('register-btn'));
   });
 
   /* ─── Smooth scroll for CTA ──────────────────────────────────────────────── */
