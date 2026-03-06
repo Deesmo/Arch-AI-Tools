@@ -1,0 +1,29 @@
+export declare const config: {
+    port: number;
+    nodeEnv: string;
+    adminKey: string;
+    publicSiteUrl: string;
+    corsOrigin: string;
+    freeMonthlyCredits: number;
+    stripe: {
+        secretKey: string;
+        webhookSecret: string;
+    };
+    anthropic: {
+        apiKey: string;
+    };
+    resend: {
+        apiKey: string;
+    };
+    x402: {
+        walletAddress: string;
+        network: string;
+        facilitatorUrl: string;
+    };
+    rateLimits: {
+        free: number;
+        pro: number;
+        business: number;
+    };
+};
+//# sourceMappingURL=config.d.ts.map
