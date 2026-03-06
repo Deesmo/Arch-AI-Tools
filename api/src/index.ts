@@ -36,7 +36,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // ─── Static files (landing page) ─────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, "../../public")));
+app.use(express.static(path.join(__dirname, "../public")));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
