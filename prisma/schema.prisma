@@ -1,0 +1,88 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id           String       @id @default(cuid())
+  apiKey       String       @unique
+  email        String       @unique
+  name         String?
+  credits      Int          @default(0)
+  tier         String       @default("free")
+  totalCalls   Int          @default(0)
+  lastSeenAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  // back-references — required for Prisma v5 relations
+  apiRequests  ApiRequest[]
+  purchases    Purchase[]
+}
+
+model Tool {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String
+  category    String
+  credits     Int
+  schemaJson  Json?
+  enabled     Boolean @default(true)
+}
+
+model ApiRequest {
+  id           String   @id @default(cuid())
+  agentId      String
+  agent        Agent    @relation(fields: [agentId], references: [id])
+  toolName     String
+  creditsUsed  Int
+  status       String   @default("SUCCESS")  // SUCCESS | ERROR | RATE_LIMITED
+  responseMs   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([agentId])
+  @@index([toolName])
+  @@index([createdAt])
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  stripeId  String   @unique
+  credits   Int
+  amountCents Int
+  status    String   @default("pending")  // pending | completed | refunded
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
+}
+
+model DailyUsage {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD
+  toolName  String
+  callCount Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, toolName])
+  @@index([date])
+}
+
+model X402Payment {
+  id          String   @id @default(cuid())
+  agentId     String?
+  toolName    String
+  amountUsdc  String
+  txHash      String?
+  network     String   @default("base")
+  status      String   @default("settled")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}

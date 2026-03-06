@@ -1,149 +1,54 @@
-import { Router } from "express";
-import { prisma } from "../db.js";
-import { requireApiKey } from "../middleware/auth.js";
-import { getCreditBalance, debitCredits } from "../middleware/credits.js";
-import * as builtin from "../tools/builtin.js";
-import { v4 as uuidv4 } from "uuid";
-import { ok, fail } from "../lib/http.js";
-import { logger } from "../lib/logger.js";
+import { Router, Response } from "express";
+import { requireAuth, AuthedRequest } from "../middleware/auth";
+import { reqId } from "../utils/credits";
+import axios from "axios";
 
-export const workflowsRouter = Router();
+const router = Router();
 
-// Multi-step workflow runner: execute up to N tools sequentially.
-// Each step can reference prior output via "$last" template variable.
+const API_BASE = process.env.PUBLIC_SITE_URL
+  ? `https://arch-ai-tools.onrender.com`
+  : "http://localhost:3000";
 
-const MAX_STEPS = Number(process.env.WORKFLOW_MAX_STEPS || 8);
+// POST /v1/workflows/run
+router.post("/run", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+  const agent = req.agent;
+  if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 
-function safeToolName(name: any): string {
-  return String(name || "").trim().toLowerCase();
-}
-
-async function dispatch(toolName: string, body: any) {
-  switch (toolName) {
-    // ── Core 8 ──
-    case "validate-data":      return builtin.validateData(body);
-    case "generate-hash":      return builtin.generateHash(body);
-    case "qr-code":            return builtin.qrCode(body);
-    case "convert-format":     return builtin.convertFormat(body);
-    case "transform-text":     return builtin.transformText(body);
-    case "extract-metadata":   return builtin.extractMetadata(body);
-    case "web-scrape":         return builtin.webScrape(body);
-    case "ai-generate":        return builtin.aiGenerate(body);
-    // ── Web/Browser ──
-    case "search-web":         return builtin.searchWeb(body);
-    case "extract-page":       return builtin.extractPage(body);
-    case "extract-pdf":        return builtin.extractPdf(body);
-    case "browser-task":       return builtin.browserTask(body);
-    // ── Tier 1: High-demand ──
-    case "ocr-extract":        return builtin.ocrExtract(body);
-    case "ip-lookup":          return builtin.ipLookup(body);
-    case "email-verify":       return builtin.emailVerify(body);
-    case "phone-validate":     return builtin.phoneValidate(body);
-    case "currency-convert":   return builtin.currencyConvert(body);
-    case "timezone-convert":   return builtin.timezoneConvert(body);
-    case "web-search":         return builtin.webSearch(body);
-    // ── Tier 2: AI-powered ──
-    case "sentiment-analysis": return builtin.sentimentAnalysis(body);
-    case "summarize":          return builtin.summarize(body);
-    case "extract-entities":   return builtin.extractEntities(body);
-    case "language-detect":    return builtin.languageDetect(body);
-    case "pii-detect":         return builtin.piiDetect(body);
-    case "readability-score":  return builtin.readabilityScore(body);
-    case "rss-parse":          return builtin.rssParse(body);
-    // ── Tier 3: Differentiators ──
-    case "generate-uuid":      return builtin.generateUuid(body);
-    case "regex-generate":     return builtin.regexGenerate(body);
-    case "diff-text":          return builtin.diffText(body);
-    case "whois-lookup":       return builtin.whoisLookup(body);
-    default:
-      return { ok: false, error: "unsupported_tool_in_workflow", tool: toolName };
+  const { steps } = req.body as { steps?: Array<{ tool: string; input: Record<string, unknown> }> };
+  if (!Array.isArray(steps) || steps.length === 0) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "steps array is required", request_id: reqId() });
+    return;
   }
-}
-
-/**
- * POST /v1/workflows/run
- * Body: { steps: Array<{ tool: string, input?: any }> }
- *
- * Supports $last templating: reference prior step output in string fields.
- * Example: { tool: "summarize", input: { text: "$last" } }
- */
-workflowsRouter.post("/v1/workflows/run", requireApiKey, async (req: any, res) => {
-  const agentId = req.agentId as string;
-  const steps = Array.isArray(req.body?.steps) ? req.body.steps : null;
-  if (!steps) return fail(req, res, 400, "invalid_request", "Missing steps[]");
-  if (steps.length === 0) return fail(req, res, 400, "invalid_request", "steps[] cannot be empty");
-  if (steps.length > MAX_STEPS) return fail(req, res, 400, "invalid_request", `Max ${MAX_STEPS} steps`);
-
-  const toolNames = steps.map((s: any) => safeToolName(s.tool));
-  if (toolNames.some((t: string) => !t)) return fail(req, res, 400, "invalid_request", "Each step must include tool");
-
-  const toolRows = await prisma.tool.findMany({ where: { name: { in: toolNames }, active: true } });
-  const toolMap = new Map(toolRows.map((t) => [t.name, t]));
-
-  for (const t of toolNames) {
-    if (!toolMap.has(t)) return fail(req, res, 404, "tool_not_found", `Tool not found or inactive: ${t}`);
+  if (steps.length > 8) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "Maximum 8 steps per workflow", request_id: reqId() });
+    return;
   }
 
-  const totalCost = toolNames.reduce((sum: number, t: string) => sum + (toolMap.get(t)!.credits || 0), 0);
-  const balance = await getCreditBalance(agentId);
-  if (balance < totalCost) {
-    return fail(req, res, 402, "insufficient_credits", "Not enough credits to run workflow", {
-      credits_required: totalCost,
-      credits_remaining: balance,
-    });
-  }
+  const results: unknown[] = [];
+  let lastResult: unknown = null;
 
-  const workflowId = (req as any).requestId || uuidv4();
-  const startedAt = Date.now();
-  const outputs: any[] = [];
-  let context: any = { last: null, outputs: [] };
-
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i] || {};
-    const toolName = safeToolName(step.tool);
-    const tool = toolMap.get(toolName)!;
-
-    // Simple $last templating in string fields
-    const input = step.input ?? step.payload ?? {};
-    const resolved = JSON.parse(
-      JSON.stringify(input, (_k, v) => {
-        if (typeof v === "string" && v.includes("$last")) {
-          return v.replaceAll("$last", typeof context.last === "string" ? context.last : JSON.stringify(context.last));
-        }
-        return v;
-      })
-    );
-
-    const stepId = `${workflowId}:${i + 1}:${toolName}`;
-    const stepStart = Date.now();
+  for (const step of steps) {
+    // Replace $last with previous step output
+    const input = JSON.parse(
+      JSON.stringify(step.input).replace(/"\$last"/g, JSON.stringify(lastResult))
+    ) as Record<string, unknown>;
 
     try {
-      const result = await dispatch(toolName, resolved);
-      outputs.push({ step: i + 1, tool: toolName, credits: tool.credits, latency_ms: Date.now() - stepStart, result });
-      context.last = result;
-      context.outputs.push(result);
-
-      await debitCredits(agentId, toolName, tool.credits, stepId, {
-        workflow_id: workflowId,
-        step: i + 1,
-        latency_ms: Date.now() - stepStart,
-      });
-    } catch (e: any) {
-      logger.error({ workflowId, tool: toolName, step: i + 1, error: e.message }, "Workflow step failed");
-      return fail(req, res, 500, "workflow_failed", "Workflow step failed", {
-        workflow_id: workflowId,
-        step: i + 1,
-        tool: toolName,
-      });
+      const resp = await axios.post(
+        `${API_BASE}/v1/tools/${step.tool}`,
+        input,
+        { headers: { "Authorization": `Bearer ${agent.apiKey}`, "Content-Type": "application/json" }, timeout: 20000 }
+      );
+      lastResult = resp.data;
+      results.push({ tool: step.tool, ok: true, result: resp.data });
+    } catch (e) {
+      const errMsg = axios.isAxiosError(e) ? (e.response?.data ?? String(e)) : String(e);
+      results.push({ tool: step.tool, ok: false, error: errMsg });
+      break; // Stop on first failure
     }
   }
 
-  const after = await getCreditBalance(agentId);
-  return ok(res, {
-    workflow_id: workflowId,
-    steps: outputs,
-    credits_used: totalCost,
-    credits_remaining: after,
-    latency_ms: Date.now() - startedAt,
-  });
+  res.json({ ok: true, steps_completed: results.length, total_steps: steps.length, results, request_id: reqId() });
 });
+
+export default router;
