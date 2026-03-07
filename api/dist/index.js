@@ -20,6 +20,8 @@ const workflows_1 = __importDefault(require("./routes/workflows"));
 const seo_1 = __importDefault(require("./routes/seo"));
 const legal_1 = __importDefault(require("./routes/legal"));
 const oauth_1 = __importDefault(require("./routes/oauth"));
+const signupHtml_1 = require("./assets/signupHtml");
+const dashboardHtml_1 = require("./assets/dashboardHtml");
 const app = (0, express_1.default)();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
@@ -97,6 +99,10 @@ app.use("/admin", admin_1.default);
 app.use("/v1/workflows", workflows_1.default);
 // Legal
 app.use("/legal", legal_1.default);
+// ─── Frontend pages ───────────────────────────────────────────────────────────
+app.get("/signup", (_req, res) => res.type("text/html").send(signupHtml_1.SIGNUP_HTML));
+app.get("/login", (_req, res) => res.type("text/html").send(signupHtml_1.SIGNUP_HTML));
+app.get("/dashboard", (_req, res) => res.type("text/html").send(dashboardHtml_1.DASHBOARD_HTML));
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
     res.status(404).json({

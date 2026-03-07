@@ -116,7 +116,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
 
       <div class="row">
         <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
-        <button id="btn" onclick="sendLink()">Send link</button>
+        <button id="btn" onclick="sendLink()">Get API Key</button>
       </div>
 
       <div id="status" class="status"></div>
@@ -147,22 +147,33 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
         return;
       }
       btn.disabled = true;
-      btn.textContent = 'Sending…';
+      btn.textContent = 'Creating account…';
 
       try {
-        const res = await fetch('/v1/auth/signup', {
+        const res = await fetch('/v1/agent/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email, plan: 'free' })
         });
         const data = await res.json().catch(() => ({}));
-        // Always show the same response to avoid account enumeration
-        showStatus('If that email is valid, we sent a verification link. <br/><span class="mono">Check your inbox</span> (and spam) then click the link to activate your API key.');
+        if (res.ok && data.api_key) {
+          showStatus(
+            '<strong>✅ Account created!</strong><br/>' +
+            'Your API key: <span class="mono" style="background:#111;padding:4px 8px;border-radius:4px;user-select:all">' + data.api_key + '</span><br/>' +
+            '<span style="color:#8b8ba6;font-size:13px">You have <strong>' + (data.credits || 100) + ' free credits</strong>. Save this key — it won\'t be shown again.</span><br/>' +
+            '<a href="/dashboard" style="color:#00e5b0">→ Open Dashboard</a>'
+          );
+        } else {
+          const msg = data.error === 'email_exists'
+            ? 'An account with that email already exists. <a href="/dashboard" style="color:#00e5b0">Go to dashboard</a>'
+            : (data.message || 'Something went wrong. Please try again.');
+          showStatus('<strong>⚠️ ' + msg + '</strong>');
+        }
       } catch (e) {
         showStatus('<strong>Something went wrong.</strong> Please try again.');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Send link';
+        btn.textContent = 'Get API Key';
       }
     }
   </script>
