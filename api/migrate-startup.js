@@ -80,13 +80,69 @@ async function migrate() {
 
     console.log('[migrate] OAuth 2.0 tables created');
 
-    // Add agent fingerprinting columns to ApiRequest
-    await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerType" TEXT`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerName" TEXT`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerVersion" TEXT`);
-    // Add index for callerName (best-effort — ignore if exists)
+    // Ensure ApiRequest table exists (CREATE before ALTER)
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ApiRequest" (
+      "id" TEXT PRIMARY KEY,
+      "agentId" TEXT NOT NULL REFERENCES "Agent"("id"),
+      "toolName" TEXT NOT NULL,
+      "creditsUsed" INTEGER NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'SUCCESS',
+      "responseMs" INTEGER,
+      "callerType" TEXT,
+      "callerName" TEXT,
+      "callerVersion" TEXT,
+      "createdAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ApiRequest_agentId_idx" ON "ApiRequest"("agentId")`); } catch {}
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ApiRequest_toolName_idx" ON "ApiRequest"("toolName")`); } catch {}
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ApiRequest_createdAt_idx" ON "ApiRequest"("createdAt")`); } catch {}
+    console.log('[migrate] ApiRequest table ensured');
+
+    // Add agent fingerprinting columns to ApiRequest (safe if already there)
+    try { await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerType" TEXT`); } catch {}
+    try { await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerName" TEXT`); } catch {}
+    try { await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerVersion" TEXT`); } catch {}
     try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ApiRequest_callerName_idx" ON "ApiRequest"("callerName")`); } catch {}
-    console.log('[migrate] Agent fingerprinting columns added to ApiRequest');
+    console.log('[migrate] Agent fingerprinting columns ensured on ApiRequest');
+
+    // Ensure Purchase table exists
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "Purchase" (
+      "id" TEXT PRIMARY KEY,
+      "agentId" TEXT NOT NULL REFERENCES "Agent"("id"),
+      "stripeId" TEXT UNIQUE NOT NULL,
+      "credits" INTEGER NOT NULL,
+      "amountCents" INTEGER NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "createdAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Purchase_agentId_idx" ON "Purchase"("agentId")`); } catch {}
+    console.log('[migrate] Purchase table ensured');
+
+    // Ensure DailyUsage table exists
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "DailyUsage" (
+      "id" TEXT PRIMARY KEY,
+      "date" TEXT NOT NULL,
+      "toolName" TEXT NOT NULL,
+      "callCount" INTEGER NOT NULL DEFAULT 0,
+      "updatedAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "DailyUsage_date_toolName_key" ON "DailyUsage"("date","toolName")`); } catch {}
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DailyUsage_date_idx" ON "DailyUsage"("date")`); } catch {}
+    console.log('[migrate] DailyUsage table ensured');
+
+    // Ensure X402Payment table exists
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "X402Payment" (
+      "id" TEXT PRIMARY KEY,
+      "agentId" TEXT,
+      "toolName" TEXT NOT NULL,
+      "amountUsdc" TEXT NOT NULL,
+      "txHash" TEXT,
+      "network" TEXT NOT NULL DEFAULT 'base',
+      "status" TEXT NOT NULL DEFAULT 'settled',
+      "createdAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "X402Payment_createdAt_idx" ON "X402Payment"("createdAt")`); } catch {}
+    console.log('[migrate] X402Payment table ensured');
 
     // Seed new crypto tools (upsert — safe to run multiple times)
     const cryptoTools = [
