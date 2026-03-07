@@ -8,9 +8,7 @@ const auth_1 = require("../middleware/auth");
 const credits_1 = require("../utils/credits");
 const axios_1 = __importDefault(require("axios"));
 const router = (0, express_1.Router)();
-const API_BASE = process.env.PUBLIC_SITE_URL
-    ? `https://arch-ai-tools.onrender.com`
-    : "http://localhost:3000";
+const API_BASE = process.env.PUBLIC_SITE_URL ?? "http://localhost:3000";
 // POST /v1/workflows/run
 router.post("/run", auth_1.requireAuth, async (req, res) => {
     const agent = req.agent;

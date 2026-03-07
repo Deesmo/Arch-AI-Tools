@@ -5,9 +5,7 @@ import axios from "axios";
 
 const router = Router();
 
-const API_BASE = process.env.PUBLIC_SITE_URL
-  ? `https://arch-ai-tools.onrender.com`
-  : "http://localhost:3000";
+const API_BASE = process.env.PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 // POST /v1/workflows/run
 router.post("/run", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {

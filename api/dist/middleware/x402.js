@@ -88,7 +88,7 @@ function buildPaymentRequired(toolName, price) {
                 scheme: "exact",
                 network: chainId,
                 maxAmountRequired: amountAtomic,
-                resource: `https://arch-ai-tools.onrender.com/v1/tools/${toolName}`,
+                resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`,
                 description: `Arch Tools — ${toolName}`,
                 mimeType: "application/json",
                 payTo: config_1.config.x402.walletAddress,
@@ -107,7 +107,7 @@ async function verifyPayment(paymentHeader, toolName) {
     if (!config_1.config.x402.facilitatorUrl)
         return false;
     try {
-        const res = await axios_1.default.post(`${config_1.config.x402.facilitatorUrl}/verify`, { payment: paymentHeader, resource: `https://arch-ai-tools.onrender.com/v1/tools/${toolName}` }, { timeout: 8000 });
+        const res = await axios_1.default.post(`${config_1.config.x402.facilitatorUrl}/verify`, { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` }, { timeout: 8000 });
         return res.data?.isValid === true;
     }
     catch {
@@ -118,7 +118,7 @@ async function settlePayment(paymentHeader, toolName) {
     if (!config_1.config.x402.facilitatorUrl)
         return null;
     try {
-        const res = await axios_1.default.post(`${config_1.config.x402.facilitatorUrl}/settle`, { payment: paymentHeader, resource: `https://arch-ai-tools.onrender.com/v1/tools/${toolName}` }, { timeout: 10000 });
+        const res = await axios_1.default.post(`${config_1.config.x402.facilitatorUrl}/settle`, { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` }, { timeout: 10000 });
         return res.data?.txHash ?? null;
     }
     catch {

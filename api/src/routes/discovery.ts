@@ -5,7 +5,7 @@ import { X402_PRICES } from "../middleware/x402";
 const router = Router();
 
 const BASE_URL = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
-const API_BASE = "https://arch-ai-tools.onrender.com";
+const API_BASE = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const NETWORK = process.env.X402_NETWORK ?? "base";
 
 // GET /health

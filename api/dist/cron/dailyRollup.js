@@ -1,152 +1,47 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rollupDay = rollupDay;
-exports.enforceRetention = enforceRetention;
-exports.runDailyRollup = runDailyRollup;
 // @ts-nocheck
 /**
- * Daily Usage Rollups + Retention
+ * Daily Usage Rollup
  *
- * Produces daily aggregates from ApiRequestLog into DailyUsageRollup for fast billing reports.
- * Also enforces retention:
- *   - Raw logs: LOG_RETENTION_DAYS (default 30)
- *   - Rollups: ROLLUP_RETENTION_DAYS (default 365)
+ * Aggregates ApiRequest rows into DailyUsage for fast reporting.
+ * Render Cron Job: Schedule 20 0 * * * | Command: node dist/cron/dailyRollup.js
  *
- * Intended to run as a Render Cron Job:
- *   Schedule: 20 0 * * *   (daily at 00:20 UTC)
- *   Command: npm run rollup-daily
- *
- * Safe to run multiple times — upserts by (day, agentId, apiKeyId, toolName).
+ * Safe to run multiple times — upserts by (date, toolName).
  */
 require("dotenv/config");
-const db_js_1 = require("../db.js");
-const partitioning_js_1 = require("../lib/partitioning.js");
-const systemJobs_js_1 = require("../lib/systemJobs.js");
-function startOfDayUTC(d) {
-    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-}
-function addDaysUTC(d, days) {
-    const x = new Date(d);
-    x.setUTCDate(x.getUTCDate() + days);
-    return x;
-}
-async function rollupDay(dayStart) {
-    const dayEnd = addDaysUTC(dayStart, 1);
-    // Aggregate raw logs into groups (agentId/apiKeyId/toolName)
-    const rows = await db_js_1.prisma.$queryRaw `
-    SELECT
-      "agentId",
-      "apiKeyId",
-      "toolName",
-      COUNT(*)::int AS "requestCount",
-      SUM(CASE WHEN COALESCE("status", 0) > 0 AND "status" < 400 THEN 1 ELSE 0 END)::int AS "successCount",
-      SUM(CASE WHEN COALESCE("status", 0) >= 400 THEN 1 ELSE 0 END)::int AS "errorCount",
-      COALESCE(SUM(COALESCE("creditsUsed", 0)), 0)::int AS "creditsUsedSum",
-      COALESCE(AVG(COALESCE("latencyMs", 0)), 0)::int AS "latencyAvgMs",
-      COALESCE(MAX(COALESCE("latencyMs", 0)), 0)::int AS "latencyMaxMs"
-    FROM "ApiRequestLog"
-    WHERE "createdAt" >= ${dayStart} AND "createdAt" < ${dayEnd}
-    GROUP BY "agentId", "apiKeyId", "toolName"
-  `;
-    for (const r of rows) {
-        await db_js_1.prisma.dailyUsageRollup.upsert({
-            where: {
-                day_agentId_apiKeyId_toolName: {
-                    day: dayStart,
-                    agentId: r.agentId ?? "",
-                    apiKeyId: r.apiKeyId ?? "",
-                    toolName: r.toolName ?? "",
-                },
-            },
-            create: {
-                day: dayStart,
-                agentId: r.agentId ?? null,
-                apiKeyId: r.apiKeyId ?? null,
-                toolName: r.toolName ?? null,
-                requestCount: r.requestCount,
-                successCount: r.successCount,
-                errorCount: r.errorCount,
-                creditsUsedSum: r.creditsUsedSum,
-                latencyAvgMs: r.latencyAvgMs,
-                latencyMaxMs: r.latencyMaxMs,
-            },
-            update: {
-                requestCount: r.requestCount,
-                successCount: r.successCount,
-                errorCount: r.errorCount,
-                creditsUsedSum: r.creditsUsedSum,
-                latencyAvgMs: r.latencyAvgMs,
-                latencyMaxMs: r.latencyMaxMs,
-            },
-        });
-    }
-    return { groups: rows.length, dayStart, dayEnd };
-}
-async function enforceRetention() {
-    const logDays = Math.min(Math.max(Number(process.env.LOG_RETENTION_DAYS) || 30, 1), 3650);
-    const rollupDays = Math.min(Math.max(Number(process.env.ROLLUP_RETENTION_DAYS) || 365, 7), 3650);
-    const logCutoff = new Date(Date.now() - logDays * 24 * 60 * 60 * 1000);
-    const rollupCutoff = startOfDayUTC(new Date(Date.now() - rollupDays * 24 * 60 * 60 * 1000));
-    // If partitioning is enabled and ApiRequestLog is partitioned, dropping old partitions is much faster than DELETEs.
-    const partitioningEnabled = String(process.env.ENABLE_PARTITIONING || "").toLowerCase() === "true";
-    let droppedPartitions = null;
-    if (partitioningEnabled) {
-        const partitioned = await (0, partitioning_js_1.isApiRequestLogPartitioned)();
-        if (partitioned) {
-            droppedPartitions = await (0, partitioning_js_1.dropOldApiRequestLogPartitions)(logCutoff);
-        }
-    }
-    // If we did not drop partitions (not enabled / not partitioned), fall back to deleting rows.
-    const delLogs = (!droppedPartitions || droppedPartitions?.partitioned === false)
-        ? await db_js_1.prisma.apiRequestLog.deleteMany({ where: { createdAt: { lt: logCutoff } } })
-        : { count: 0 };
-    const delRollups = await db_js_1.prisma.dailyUsageRollup.deleteMany({ where: { day: { lt: rollupCutoff } } });
-    return {
-        logDays,
-        rollupDays,
-        logCutoff,
-        rollupCutoff,
-        deletedLogs: delLogs.count,
-        deletedRollups: delRollups.count,
-        droppedPartitions,
-    };
-}
-/**
- * Programmatic entrypoint for admin-triggered or cron-triggered rollups.
- * Rolls up a backfill window of days ending at today (UTC start-of-day).
- */
-async function runDailyRollup(opts) {
-    const daysBack = Math.min(Math.max(Number(opts?.daysBack ?? process.env.ROLLUP_DAYS_BACK ?? 3) || 3, 1), 30);
-    const today = startOfDayUTC(new Date());
-    const firstDay = addDaysUTC(today, -daysBack);
-    const rolled = [];
-    for (let i = 0; i < daysBack; i++) {
-        const day = addDaysUTC(firstDay, i);
-        rolled.push(await rollupDay(day));
-    }
-    const retention = await enforceRetention();
-    return { ok: true, daysBack, rolled_up: rolled, retention };
-}
+const prisma_1 = require("../lib/prisma");
 async function main() {
-    const start = Date.now();
-    const out = await runDailyRollup();
-    await (0, systemJobs_js_1.recordJobRun)({ jobName: "daily_rollup", status: "ok", durationMs: Date.now() - start, meta: out });
-    console.log(JSON.stringify(out, null, 2));
-}
-// Only run when invoked directly (not when imported by admin.ts / index.ts)
-const isDirectRun = process.argv[1]?.replace(/\\/g, "/").includes("dailyRollup");
-if (isDirectRun) {
-    main()
-        .catch(async (err) => {
-        try {
-            await (0, systemJobs_js_1.recordJobRun)({ jobName: "daily_rollup", status: "error", message: String(err?.message || err) });
-        }
-        catch { }
-        console.error("dailyRollup failed", err);
-        process.exit(1);
-    })
-        .finally(async () => {
-        await db_js_1.prisma.$disconnect();
+    const today = new Date().toISOString().slice(0, 10);
+    const logDays = Number(process.env.LOG_RETENTION_DAYS ?? 30);
+    const cutoff = new Date(Date.now() - logDays * 24 * 60 * 60 * 1000);
+    // Aggregate today's ApiRequest rows into DailyUsage
+    const rows = await prisma_1.prisma.$queryRaw `
+    SELECT "toolName", COUNT(*)::int AS "callCount"
+    FROM "ApiRequest"
+    WHERE "createdAt" >= ${new Date(today)}
+    GROUP BY "toolName"
+  `;
+    let upserted = 0;
+    for (const row of rows) {
+        await prisma_1.prisma.dailyUsage.upsert({
+            where: { date_toolName: { date: today, toolName: row.toolName } },
+            update: { callCount: Number(row.callCount) },
+            create: { date: today, toolName: row.toolName, callCount: Number(row.callCount) },
+        });
+        upserted++;
+    }
+    // Prune old ApiRequest rows beyond retention window
+    const deleted = await prisma_1.prisma.apiRequest.deleteMany({
+        where: { createdAt: { lt: cutoff } },
     });
+    console.log(JSON.stringify({ ok: true, date: today, upserted, deleted_logs: deleted.count }));
 }
+main()
+    .then(() => prisma_1.prisma.$disconnect())
+    .catch(async (e) => {
+    console.error("dailyRollup failed:", e);
+    await prisma_1.prisma.$disconnect();
+    process.exit(1);
+});
 //# sourceMappingURL=dailyRollup.js.map

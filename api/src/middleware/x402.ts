@@ -87,7 +87,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
         scheme: "exact",
         network: chainId,
         maxAmountRequired: amountAtomic,
-        resource: `https://arch-ai-tools.onrender.com/v1/tools/${toolName}`,
+        resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`,
         description: `Arch Tools — ${toolName}`,
         mimeType: "application/json",
         payTo: config.x402.walletAddress,
@@ -108,7 +108,7 @@ async function verifyPayment(paymentHeader: string, toolName: string): Promise<b
   try {
     const res = await axios.post(
       `${config.x402.facilitatorUrl}/verify`,
-      { payment: paymentHeader, resource: `https://arch-ai-tools.onrender.com/v1/tools/${toolName}` },
+      { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` },
       { timeout: 8000 }
     );
     return res.data?.isValid === true;
@@ -122,7 +122,7 @@ async function settlePayment(paymentHeader: string, toolName: string): Promise<s
   try {
     const res = await axios.post(
       `${config.x402.facilitatorUrl}/settle`,
-      { payment: paymentHeader, resource: `https://arch-ai-tools.onrender.com/v1/tools/${toolName}` },
+      { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` },
       { timeout: 10000 }
     );
     return res.data?.txHash ?? null;

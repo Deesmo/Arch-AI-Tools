@@ -1,14 +1,10 @@
 /**
  * Monthly Free Credit Refresh
  *
- * Grants FREE_MONTHLY_CREDITS to all free-plan agents
- * who haven't received a monthly_free grant in the current month.
+ * Resets credits for all free-tier agents to FREE_MONTHLY_CREDITS on the 1st of each month.
+ * Render Cron Job: Schedule 0 0 1 * * | Command: node dist/cron/refreshCredits.js
  *
- * Render Cron Job setup:
- *   Schedule: 0 0 1 * *  (1st of each month at midnight UTC)
- *   Command: npm run refresh-credits
- *
- * Safe to run multiple times — idempotent via month-based reference.
+ * Safe to run multiple times — uses updatedAt guard to prevent double-grants in same month.
  */
 import "dotenv/config";
 //# sourceMappingURL=refreshCredits.d.ts.map
