@@ -16,8 +16,8 @@ async function migrate() {
       `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "api_key" TEXT`,
       `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "tier" TEXT NOT NULL DEFAULT 'free'`,
       `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "credits" INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "total_calls" INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "last_seen_at" TIMESTAMP`,
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "totalCalls" INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP`,
       // Unique index on api_key
       `CREATE UNIQUE INDEX IF NOT EXISTS "Agent_api_key_key" ON "Agent"("api_key")`,
     ];
