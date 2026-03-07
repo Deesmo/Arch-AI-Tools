@@ -32,6 +32,29 @@ async function migrate() {
       }
     }
 
+    // Seed new crypto tools (upsert — safe to run multiple times)
+    const cryptoTools = [
+      { name: "crypto-price", description: "Real-time price, 24h change, market cap, and volume for any cryptocurrency", category: "crypto", credits: 1 },
+      { name: "crypto-ohlcv", description: "OHLCV candlestick data for any crypto over 1-90 days", category: "crypto", credits: 2 },
+      { name: "crypto-market-cap", description: "Top N cryptocurrencies by market cap with price, volume, and 24h change", category: "crypto", credits: 1 },
+      { name: "crypto-fear-greed", description: "Crypto Fear & Greed Index with historical data", category: "crypto", credits: 1 },
+      { name: "crypto-sentiment", description: "Community sentiment, social stats, and price momentum for any cryptocurrency", category: "crypto", credits: 2 },
+      { name: "crypto-news", description: "Latest crypto news headlines. Filter by token symbol", category: "crypto", credits: 2 },
+      { name: "token-lookup", description: "Search for any token by name or ticker, returns CoinGecko IDs", category: "crypto", credits: 1 },
+    ];
+    for (const tool of cryptoTools) {
+      try {
+        await prisma.tool.upsert({
+          where: { name: tool.name },
+          update: { description: tool.description, category: tool.category, credits: tool.credits },
+          create: { ...tool, enabled: true },
+        });
+        console.log('[migrate] Tool upserted:', tool.name);
+      } catch (err) {
+        console.warn('[migrate] Tool upsert skip:', tool.name, err.message.slice(0, 60));
+      }
+    }
+
     console.log('[migrate] All migrations complete.');
   } catch (err) {
     console.error('[migrate] Fatal migration error:', err.message);

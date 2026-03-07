@@ -1171,4 +1171,124 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
   }
 });
 
+// ─── CRYPTO TOOLS (read-only, no API keys required) ──────────────────────────
+
+// ─── crypto-price ────────────────────────────────────────────────────────────
+router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-price", 1); if (!ok) return; }
+  const { symbol, currency = "usd" } = req.body as { symbol?: string; currency?: string };
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
+  try {
+    const id = symbol.toLowerCase().trim();
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`);
+    const data = await r.json() as Record<string, Record<string, number>>;
+    if (!data[id]) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found. Use CoinGecko ID (e.g. bitcoin, ethereum, solana)`, request_id: reqId() }); return; }
+    const d = data[id];
+    res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
+// ─── crypto-ohlcv ────────────────────────────────────────────────────────────
+router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-ohlcv", 2); if (!ok) return; }
+  const { symbol, days = 7, currency = "usd" } = req.body as { symbol?: string; days?: number; currency?: string };
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
+  try {
+    const id = symbol.toLowerCase().trim();
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`);
+    if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
+    const raw = await r.json() as number[][];
+    const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
+    res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
+// ─── crypto-market-cap ───────────────────────────────────────────────────────
+router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-market-cap", 1); if (!ok) return; }
+  const { limit = 10, currency = "usd" } = req.body as { limit?: number; currency?: string };
+  try {
+    const n = Math.min(Math.max(1, limit), 100);
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`);
+    const data = await r.json() as { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number }[];
+    const coins = data.map(c => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
+    res.json({ ok: true, currency, coins, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
+// ─── crypto-fear-greed ───────────────────────────────────────────────────────
+router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-fear-greed", 1); if (!ok) return; }
+  const { limit = 7 } = req.body as { limit?: number };
+  try {
+    const n = Math.min(Math.max(1, limit), 30);
+    const r = await fetch(`https://api.alternative.me/fng/?limit=${n}`);
+    const data = await r.json() as { data: { value: string; value_classification: string; timestamp: string }[] };
+    const history = data.data.map(d => ({ value: Number(d.value), classification: d.value_classification, date: new Date(Number(d.timestamp) * 1000).toISOString().split("T")[0] }));
+    const latest = history[0];
+    res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
+// ─── crypto-sentiment ────────────────────────────────────────────────────────
+router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-sentiment", 2); if (!ok) return; }
+  const { symbol } = req.body as { symbol?: string };
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
+  try {
+    const id = symbol.toLowerCase().trim();
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false`);
+    if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
+    const data = await r.json() as { sentiment_votes_up_percentage?: number; sentiment_votes_down_percentage?: number; community_data?: { twitter_followers?: number; reddit_subscribers?: number; reddit_active_accounts?: number }; market_data?: { price_change_percentage_24h?: number; price_change_percentage_7d?: number } };
+    res.json({
+      ok: true, symbol: id,
+      sentiment: { votes_up_pct: data.sentiment_votes_up_percentage ?? null, votes_down_pct: data.sentiment_votes_down_percentage ?? null, overall: (data.sentiment_votes_up_percentage ?? 50) > 60 ? "bullish" : (data.sentiment_votes_up_percentage ?? 50) < 40 ? "bearish" : "neutral" },
+      community: { twitter_followers: data.community_data?.twitter_followers ?? null, reddit_subscribers: data.community_data?.reddit_subscribers ?? null, reddit_active: data.community_data?.reddit_active_accounts ?? null },
+      price_momentum: { change_24h: data.market_data?.price_change_percentage_24h ?? null, change_7d: data.market_data?.price_change_percentage_7d ?? null },
+      request_id: reqId()
+    });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
+// ─── crypto-news ─────────────────────────────────────────────────────────────
+router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-news", 2); if (!ok) return; }
+  const { symbol, limit = 10 } = req.body as { symbol?: string; limit?: number };
+  try {
+    const n = Math.min(Math.max(1, limit), 20);
+    const url = symbol ? `https://cryptopanic.com/api/free/v1/posts/?auth_token=free&currencies=${symbol.toUpperCase()}&limit=${n}&public=true` : `https://cryptopanic.com/api/free/v1/posts/?auth_token=free&limit=${n}&public=true`;
+    const r = await fetch(url, { headers: { "User-Agent": "ArchTools/1.0" } });
+    if (!r.ok) {
+      // Fallback: CoinGecko news endpoint
+      const r2 = await fetch(`https://api.coingecko.com/api/v3/news?per_page=${n}`);
+      const d2 = await r2.json() as { data?: { title: string; url: string; published_at: string; author?: { name?: string } }[] };
+      const articles = (d2.data ?? []).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.author?.name ?? "CoinGecko" }));
+      res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() }); return;
+    }
+    const data = await r.json() as { results?: { title: string; url: string; published_at: string; source?: { title?: string } }[] };
+    const articles = (data.results ?? []).slice(0, n).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.source?.title ?? "Unknown" }));
+    res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
+// ─── token-lookup ─────────────────────────────────────────────────────────────
+router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "token-lookup", 1); if (!ok) return; }
+  const { query } = req.body as { query?: string };
+  if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+    const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
+    const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
+    res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+});
+
 export default router;

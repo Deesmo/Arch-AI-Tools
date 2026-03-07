@@ -41,6 +41,14 @@ const TOOLS = [
     { name: "image-generate", description: "Generate SVG images from text prompts via Claude", category: "ai", credits: 15 },
     { name: "barcode-generate", description: "Generate Code128 barcodes as SVG", category: "media", credits: 2 },
     { name: "workflow-agent", description: "Multi-step autonomous AI agent pipeline", category: "ai", credits: 25 },
+    // Crypto data tools
+    { name: "crypto-price", description: "Real-time price, 24h change, market cap, and volume for any cryptocurrency via CoinGecko", category: "crypto", credits: 1 },
+    { name: "crypto-ohlcv", description: "OHLCV candlestick data for any crypto over 1–90 days. Used by trading agents for technical analysis", category: "crypto", credits: 2 },
+    { name: "crypto-market-cap", description: "Top N cryptocurrencies by market cap with price, volume, and 24h change", category: "crypto", credits: 1 },
+    { name: "crypto-fear-greed", description: "Crypto Fear & Greed Index with historical data. Contrarian sentiment signal for trading agents", category: "crypto", credits: 1 },
+    { name: "crypto-sentiment", description: "Community sentiment, social stats, and price momentum for any cryptocurrency", category: "crypto", credits: 2 },
+    { name: "crypto-news", description: "Latest crypto news headlines with source and timestamp. Filter by token symbol", category: "crypto", credits: 2 },
+    { name: "token-lookup", description: "Search for any token by name or ticker. Returns CoinGecko IDs for use with other crypto tools", category: "crypto", credits: 1 },
 ];
 async function main() {
     console.log("Seeding tools…");
