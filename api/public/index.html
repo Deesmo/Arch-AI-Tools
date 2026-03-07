@@ -439,7 +439,7 @@
 <nav>
   <div class="wrap">
     <div class="nav-inner">
-      <a class="logo" href="#" aria-label="Arch Tools home">
+      <a class="logo" href="/" aria-label="Arch Tools home">
         <svg class="logo-mark" viewBox="0 10 100 90" overflow="visible" aria-hidden="true">
           <use href="#arch-mark"/>
         </svg>
@@ -450,7 +450,7 @@
           <li><a href="#tools">tools</a></li>
           <li><a href="#pricing">pricing</a></li>
           <li><a href="#mcp">mcp</a></li>
-          <li><a href="#">api docs</a></li>
+          <li><a href="/openapi.json" target="_blank">api docs</a></li>
         </ul>
         <a href="#register" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
       </div>
@@ -1312,13 +1312,13 @@
         <span class="prompt-text">arch@tools:~$</span>&nbsp;<span class="footer-cursor"></span>
       </div>
       <div class="footer-links">
-        <a href="#">API Docs</a>
-        <a href="#">OpenAPI</a>
-        <a href="#">x402</a>
-        <a href="#">llms.txt</a>
-        <a href="#">Terms</a>
-        <a href="#">Privacy</a>
-        <a href="#" style="color:var(--green);">● Operational</a>
+        <a href="/openapi.json" target="_blank">API Docs</a>
+        <a href="/openapi.json" target="_blank">OpenAPI</a>
+        <a href="/.well-known/x402" target="_blank">x402</a>
+        <a href="/llms.txt" target="_blank">llms.txt</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/privacy.html">Privacy</a>
+        <span style="color:var(--green);cursor:default;">● Operational</span>
       </div>
     </div>
   </div>
@@ -1341,29 +1341,49 @@ function goToCategory(cat) {
   filterTools(cat, null);
   document.getElementById('tools').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-function handleRegister() {
+async function handleRegister() {
   const input = document.getElementById('reg-email');
+  const btn = document.querySelector('#register .btn-primary');
   const val = input.value.trim();
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const toast = document.getElementById('reg-toast');
-  if (!val) {
-    showToast(toast, 'Enter your email address.', 'error');
-    input.focus();
-    return;
+  if (!val) { showToast(toast, 'Enter your email address.', 'error'); input.focus(); return; }
+  if (!emailRe.test(val)) { showToast(toast, 'That doesn\'t look like a valid email.', 'error'); input.focus(); return; }
+  btn.textContent = '$ registering...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/v1/agent/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: val })
+    });
+    const data = await res.json();
+    if (data.ok && data.api_key) {
+      input.value = '';
+      toast.innerHTML = '✓ You\'re in! Your API key:<br><span style="color:#FF9010;font-size:12px;word-break:break-all;">' + data.api_key + '</span><br><span style="color:#6B6A8A;font-size:11px;">Save this — it won\'t be shown again. ' + (data.credits || 100) + ' free credits loaded.</span>';
+      toast.className = 'reg-toast reg-toast-success';
+      toast.style.display = 'block';
+      btn.textContent = '$ registered ✓';
+    } else if (data.error === 'email_exists' || (data.message && data.message.includes('Unique constraint'))) {
+      showToast(toast, '✓ Account exists — check your email for your API key.', 'success');
+      btn.textContent = '$ register';
+      btn.disabled = false;
+    } else {
+      showToast(toast, 'Registration failed: ' + (data.message || 'Please try again.'), 'error');
+      btn.textContent = '$ register';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    showToast(toast, 'Network error — please try again.', 'error');
+    btn.textContent = '$ register';
+    btn.disabled = false;
   }
-  if (!emailRe.test(val)) {
-    showToast(toast, 'That doesn\'t look like a valid email.', 'error');
-    input.focus();
-    return;
-  }
-  showToast(toast, '✓ You\'re on the list. API key incoming.', 'success');
-  input.value = '';
 }
 function showToast(el, msg, type) {
-  el.textContent = msg;
+  el.innerHTML = msg;
   el.className = 'reg-toast reg-toast-' + type;
   el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 4000);
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
 }
 </script>
 </body>
