@@ -44,6 +44,21 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
 
     const totalRevenueCents = recentPurchases.reduce((s, p) => s + p.amountCents, 0);
 
+    // Agent fingerprinting breakdown
+    const [callerBreakdown, callerTypeBreakdown] = await Promise.all([
+      prisma.apiRequest.groupBy({
+        by: ["callerName"],
+        _count: { callerName: true },
+        orderBy: { _count: { callerName: "desc" } },
+        take: 20,
+      }),
+      prisma.apiRequest.groupBy({
+        by: ["callerType"],
+        _count: { callerType: true },
+        orderBy: { _count: { callerType: "desc" } },
+      }),
+    ]);
+
     res.json({
       ok: true,
       summary: {
@@ -55,6 +70,8 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
         revenue_sample_cents: totalRevenueCents,
       },
       top_tools: topTools.map(t => ({ tool: t.toolName, calls: t._count.toolName })),
+      caller_breakdown: callerBreakdown.map(c => ({ caller: c.callerName ?? "unknown", calls: c._count.callerName })),
+      caller_types: callerTypeBreakdown.map(c => ({ type: c.callerType ?? "unknown", calls: c._count.callerType })),
       recent_purchases: recentPurchases,
       request_id: reqId(),
     });
