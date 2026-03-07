@@ -11,7 +11,7 @@ datasource db {
 
 model Agent {
   id           String       @id @default(cuid())
-  apiKey       String       @unique
+  apiKey       String       @unique @map("api_key")
   email        String       @unique
   name         String?
   credits      Int          @default(0)
