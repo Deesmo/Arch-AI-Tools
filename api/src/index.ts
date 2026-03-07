@@ -1,5 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import path from "path";
 import { config } from "./config";
@@ -20,9 +22,71 @@ const app = express();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
 
+// ─── Security headers (helmet) ────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],  // landing page inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,  // needed for fonts/CDN
+}));
+
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// Global limit (all routes) — stops bots and DoS
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const auth = req.headers.authorization;
+    return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
+  },
+  message: { ok: false, error: "rate_limited", message: "Too many requests. Slow down." },
+  skip: (req) => req.path === "/health" || req.path.startsWith("/.well-known"),
+});
+
+// Tool-specific limit — per API key, respects tier
+const toolLimiter = rateLimit({
+  windowMs: 60 * 1000,  // 1 minute window
+  max: (req) => {
+    const tier = (req as { agent?: { tier?: string } }).agent?.tier ?? "free";
+    return tier === "business" ? config.rateLimits.business
+         : tier === "pro"      ? config.rateLimits.pro
+         : config.rateLimits.free;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const auth = req.headers.authorization;
+    return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
+  },
+  message: { ok: false, error: "rate_limited", message: "Rate limit exceeded for your plan. Upgrade for higher limits at archtools.dev." },
+  handler: (_req, res, _next, options) => {
+    res.status(429).json(options.message);
+  },
+});
+
+// Auth endpoint limit — prevent brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many auth attempts. Try again in 15 minutes." },
+});
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(morgan("combined"));
+app.use(globalLimiter);
 
 // Stripe webhook needs raw body — must come before express.json()
 app.use("/webhooks/stripe", express.raw({ type: "application/json" }));
@@ -48,11 +112,14 @@ app.use("/", discoveryRouter);
 app.use("/tools", seoRouter);
 app.use("/v1/tools", seoRouter);  // Free endpoint proxies
 
-// Agent registration & usage
-app.use("/v1/agent", agentRouter);
+// Agent registration & usage (rate limited to prevent brute force)
+app.use("/v1/agent", authLimiter, agentRouter);
 
-// Tool calls (auth via middleware in each route)
-app.use("/v1/tools", toolsRouter);
+// OAuth (rate limited to prevent brute force)
+app.use("/oauth", authLimiter, oauthRouter);
+
+// Tool calls (tier-based rate limiting)
+app.use("/v1/tools", toolLimiter, toolsRouter);
 
 // Billing
 app.use("/v1/billing", billingRouter);
@@ -68,8 +135,7 @@ app.use("/v1/workflows", workflowsRouter);
 // Legal
 app.use("/legal", legalRouter);
 
-// OAuth 2.0 (Claude Connector + future integrations)
-app.use("/oauth", oauthRouter);
+
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

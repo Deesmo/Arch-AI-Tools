@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const helmet_1 = __importDefault(require("helmet"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const morgan_1 = __importDefault(require("morgan"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("./config");
@@ -21,9 +23,67 @@ const oauth_1 = __importDefault(require("./routes/oauth"));
 const app = (0, express_1.default)();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
+// ─── Security headers (helmet) ────────────────────────────────────────────────
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"], // landing page inline scripts
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // needed for fonts/CDN
+}));
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// Global limit (all routes) — stops bots and DoS
+const globalLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000, // 1 minute
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        const auth = req.headers.authorization;
+        return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
+    },
+    message: { ok: false, error: "rate_limited", message: "Too many requests. Slow down." },
+    skip: (req) => req.path === "/health" || req.path.startsWith("/.well-known"),
+});
+// Tool-specific limit — per API key, respects tier
+const toolLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000, // 1 minute window
+    max: (req) => {
+        const tier = req.agent?.tier ?? "free";
+        return tier === "business" ? config_1.config.rateLimits.business
+            : tier === "pro" ? config_1.config.rateLimits.pro
+                : config_1.config.rateLimits.free;
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        const auth = req.headers.authorization;
+        return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
+    },
+    message: { ok: false, error: "rate_limited", message: "Rate limit exceeded for your plan. Upgrade for higher limits at archtools.dev." },
+    handler: (_req, res, _next, options) => {
+        res.status(429).json(options.message);
+    },
+});
+// Auth endpoint limit — prevent brute force
+const authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.ip ?? "unknown",
+    message: { ok: false, error: "rate_limited", message: "Too many auth attempts. Try again in 15 minutes." },
+});
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use((0, cors_1.default)({ origin: config_1.config.corsOrigin, credentials: true }));
 app.use((0, morgan_1.default)("combined"));
+app.use(globalLimiter);
 // Stripe webhook needs raw body — must come before express.json()
 app.use("/webhooks/stripe", express_1.default.raw({ type: "application/json" }));
 app.use(express_1.default.json({ limit: "10mb" }));
@@ -41,10 +101,12 @@ app.use("/", discovery_1.default);
 // SEO free tool pages + no-auth API endpoints
 app.use("/tools", seo_1.default);
 app.use("/v1/tools", seo_1.default); // Free endpoint proxies
-// Agent registration & usage
-app.use("/v1/agent", agent_1.default);
-// Tool calls (auth via middleware in each route)
-app.use("/v1/tools", index_1.default);
+// Agent registration & usage (rate limited to prevent brute force)
+app.use("/v1/agent", authLimiter, agent_1.default);
+// OAuth (rate limited to prevent brute force)
+app.use("/oauth", authLimiter, oauth_1.default);
+// Tool calls (tier-based rate limiting)
+app.use("/v1/tools", toolLimiter, index_1.default);
 // Billing
 app.use("/v1/billing", billing_1.default);
 app.use("/webhooks", billing_1.default);
@@ -55,8 +117,6 @@ app.use("/admin", admin_1.default);
 app.use("/v1/workflows", workflows_1.default);
 // Legal
 app.use("/legal", legal_1.default);
-// OAuth 2.0 (Claude Connector + future integrations)
-app.use("/oauth", oauth_1.default);
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
     res.status(404).json({

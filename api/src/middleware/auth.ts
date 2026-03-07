@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma";
+import { timingSafeEqual } from "crypto";
 
 export interface AuthedRequest extends Request {
   agent?: {
@@ -95,12 +96,15 @@ export function requireAdmin(
   res: Response,
   next: NextFunction
 ): void {
-  const key =
+  const key = String(
     req.headers["x-admin-key"] ??
     req.headers.authorization?.replace("Bearer ", "") ??
-    req.query["key"];
+    req.query["key"] ?? ""
+  );
 
-  if (key !== process.env.ADMIN_KEY) {
+  const expected = process.env.ADMIN_KEY ?? "";
+  // Timing-safe comparison to prevent timing attacks
+  if (!expected || key.length !== expected.length || !timingSafeEqual(Buffer.from(key), Buffer.from(expected))) {
     res.status(403).json({ ok: false, error: "forbidden" });
     return;
   }

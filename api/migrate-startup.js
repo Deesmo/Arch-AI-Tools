@@ -111,6 +111,14 @@ async function migrate() {
       }
     }
 
+    // Clean up expired OAuth codes and tokens
+    try {
+      const now = new Date().toISOString();
+      await prisma.$executeRawUnsafe(`DELETE FROM "OAuthAuthCode" WHERE "expiresAt" < $1 OR "used" = true`, now);
+      await prisma.$executeRawUnsafe(`DELETE FROM "OAuthToken" WHERE "expiresAt" < $1`, now);
+      console.log('[migrate] Expired OAuth codes/tokens cleaned up');
+    } catch(e) { console.warn('[migrate] OAuth cleanup skip:', e.message?.slice(0,60)); }
+
     console.log('[migrate] All migrations complete.');
   } catch (err) {
     console.error('[migrate] Fatal migration error:', err.message);

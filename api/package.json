@@ -25,6 +25,7 @@
     "express-rate-limit": "^7.5.0",
     "fast-xml-parser": "^5.4.2",
     "franc": "^6.2.0",
+    "helmet": "^8.1.0",
     "js-yaml": "^4.1.0",
     "libphonenumber-js": "^1.11.18",
     "lru-cache": "^11.0.2",

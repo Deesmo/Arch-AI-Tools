@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuth = requireAuth;
 exports.requireAdmin = requireAdmin;
 const prisma_1 = require("../lib/prisma");
+const crypto_1 = require("crypto");
 async function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -72,10 +73,12 @@ async function requireAuth(req, res, next) {
     }
 }
 function requireAdmin(req, res, next) {
-    const key = req.headers["x-admin-key"] ??
+    const key = String(req.headers["x-admin-key"] ??
         req.headers.authorization?.replace("Bearer ", "") ??
-        req.query["key"];
-    if (key !== process.env.ADMIN_KEY) {
+        req.query["key"] ?? "");
+    const expected = process.env.ADMIN_KEY ?? "";
+    // Timing-safe comparison to prevent timing attacks
+    if (!expected || key.length !== expected.length || !(0, crypto_1.timingSafeEqual)(Buffer.from(key), Buffer.from(expected))) {
         res.status(403).json({ ok: false, error: "forbidden" });
         return;
     }

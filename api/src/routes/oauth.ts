@@ -4,7 +4,14 @@ import crypto from "crypto";
 
 const router = Router();
 
-const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, error?: string) => `<!DOCTYPE html>
+// HTML escape to prevent XSS injection in consent page
+function esc(s: string): string {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
+}
+
+const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, error?: string) => {
+const safeClient = esc(clientName), safeScope = esc(scope), safeClientId = esc(clientId), safeRedirect = esc(redirectUri), safeState = esc(state);
+return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -43,36 +50,37 @@ const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redir
     <div class="logo">
       <span class="logo-arch">Arch<span>Tools</span></span>
       <span class="connector-arrow">↔</span>
-      <span class="logo-client">${clientName}</span>
+      <span class="logo-client">${safeClient}</span>
     </div>
     <h1>Connect your account</h1>
-    <p class="subtitle">${clientName} is requesting access to your Arch Tools account.</p>
+    <p class="subtitle">${safeClient} is requesting access to your Arch Tools account.</p>
     <div class="scope-box">
       <div class="scope-title">Permissions requested</div>
-      ${scope.includes("tools:read") ? '<div class="scope-item"><span class="scope-dot"></span>View available tools and your usage</div>' : ""}
-      ${scope.includes("tools:execute") ? '<div class="scope-item"><span class="scope-dot"></span>Execute tools using your credits</div>' : ""}
+      ${safeScope.includes("tools:read") ? '<div class="scope-item"><span class="scope-dot"></span>View available tools and your usage</div>' : ""}
+      ${safeScope.includes("tools:execute") ? '<div class="scope-item"><span class="scope-dot"></span>Execute tools using your credits</div>' : ""}
     </div>
     ${error ? `<div class="error">${error}</div>` : ""}
     <form method="POST" action="/oauth/authorize">
-      <input type="hidden" name="client_id" value="${clientId}">
-      <input type="hidden" name="redirect_uri" value="${redirectUri}">
-      <input type="hidden" name="scope" value="${scope}">
-      <input type="hidden" name="state" value="${state}">
+      <input type="hidden" name="client_id" value="${safeClientId}">
+      <input type="hidden" name="redirect_uri" value="${safeRedirect}">
+      <input type="hidden" name="scope" value="${safeScope}">
+      <input type="hidden" name="state" value="${safeState}">
       <label for="email">Your Arch Tools email</label>
       <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
       <label for="apiKey">Your API key</label>
       <input type="password" id="apiKey" name="apiKey" placeholder="at_..." required autocomplete="current-password">
-      <button type="submit" class="btn-approve">Authorize → Connect to ${clientName}</button>
+      <button type="submit" class="btn-approve">Authorize → Connect to ${safeClient}</button>
     </form>
-    <form method="GET" action="${redirectUri}">
+    <form method="GET" action="${safeRedirect}">
       <input type="hidden" name="error" value="access_denied">
-      <input type="hidden" name="state" value="${state}">
+      <input type="hidden" name="state" value="${safeState}">
       <button type="submit" class="btn-deny">Cancel</button>
     </form>
     <p class="footer-note">By authorizing, you agree to Arch Tools <a href="/terms.html">Terms of Service</a>.</p>
   </div>
 </body>
 </html>`;
+};
 
 // ─── GET /oauth/authorize ─────────────────────────────────────────────────────
 router.get("/authorize", async (req: Request, res: Response): Promise<void> => {

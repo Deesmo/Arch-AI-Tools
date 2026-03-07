@@ -955,6 +955,11 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
         return;
     }
+    const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
+    if (prompt.length > MAX_PROMPT) {
+        res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: (0, credits_1.reqId)() });
+        return;
+    }
     const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
     const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
     const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
