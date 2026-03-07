@@ -801,17 +801,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   const maxTok = Math.min(max_tokens, 4096);
 
   try {
-    // ── Claude (default) ──
-    if (CLAUDE_MODELS.includes(model) || !GPT_MODELS.includes(model) && !GEMINI_MODELS.includes(model) && !GROK_MODELS.includes(model)) {
-      if (!anthropic) { res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: reqId() }); return; }
-      const selectedModel = CLAUDE_MODELS.includes(model) ? model : "claude-sonnet-4-6";
-      const msg = await anthropic.messages.create({ model: selectedModel, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
-      const text = msg.content.find(b => b.type === "text")?.text ?? "";
-      res.json({ ok: true, text, model: selectedModel, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
-      return;
-    }
-
-    // ── OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) ──
+    // ── OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) — check before Claude to avoid default fallthrough ──
     if (GPT_MODELS.includes(model)) {
       const openaiKey = process.env.OPENAI_API_KEY;
       if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set", request_id: reqId() }); return; }
@@ -857,7 +847,18 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       return;
     }
 
-    res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Supported: ${[...CLAUDE_MODELS,...GPT_MODELS,...GEMINI_MODELS,...GROK_MODELS].join(", ")}`, request_id: reqId() });
+    // ── Claude (default — known Claude models OR unknown model name falls here) ──
+    if (CLAUDE_MODELS.includes(model) || true) {  // true = default fallthrough to Claude
+      if (!anthropic) { res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: reqId() }); return; }
+      const selectedModel = CLAUDE_MODELS.includes(model) ? model : "claude-sonnet-4-6";
+      const msg = await anthropic.messages.create({ model: selectedModel, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+      const text = msg.content.find(b => b.type === "text")?.text ?? "";
+      res.json({ ok: true, text, model: selectedModel, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
+      return;
+    }
+
+    // Should never reach here (Claude block above has || true fallthrough)
+    res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'.`, request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "generation_error", message: String(e), request_id: reqId() });
   }
