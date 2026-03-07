@@ -59,6 +59,21 @@ exports.X402_PRICES = {
     "ocr-extract": "0.010",
     "browser-task": "0.010",
     "extract-pdf": "0.006",
+    "screenshot-capture": "0.010",
+    "html-to-markdown": "0.002",
+    "url-shorten": "0.001",
+    "webhook-send": "0.002",
+    "jsonpath-query": "0.001",
+    "image-generate": "0.015",
+    "barcode-generate": "0.002",
+    "workflow-agent": "0.025",
+    "crypto-price": "0.001",
+    "crypto-ohlcv": "0.002",
+    "crypto-market-cap": "0.001",
+    "crypto-fear-greed": "0.001",
+    "crypto-sentiment": "0.002",
+    "crypto-news": "0.002",
+    "token-lookup": "0.001",
 };
 function buildPaymentRequired(toolName, price) {
     const network = config_1.config.x402.network;

@@ -32,7 +32,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   res.json({
     name: "Arch Tools",
-    description: "30 production-ready API tools for developers and AI agents",
+    description: "The first API platform built for autonomous agent payments. 44 production tools, USDC on Base via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
     version: "1",
@@ -222,7 +222,7 @@ Privacy: ${BASE_URL}/privacy.html
 
 const OPENAPI_STUB = {
   openapi: "3.0.3",
-  info: { title: "Arch Tools API", version: "1.5.0", description: "30 production-ready API tools for developers and AI agents.", contact: { name: "Arch Tools", url: BASE_URL } },
+  info: { title: "Arch Tools API", version: "1.5.0", description: "44 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
   servers: [{ url: API_BASE }],
   tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
   components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
