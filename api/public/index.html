@@ -583,6 +583,7 @@
     .tools-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      width: 100%; max-width: 100%;
       gap: 1px;
       background: var(--border);
       border: 1px solid var(--border);
@@ -1044,10 +1045,7 @@
       background-clip: text !important;
     }
 
-    /* Floating particles */
-    .particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-    .particle{position:absolute;border-radius:50%;animation:particleRise linear infinite;opacity:0;}
-    @keyframes particleRise{0%{transform:translateY(105vh) scale(0);opacity:0}8%{opacity:1}88%{opacity:0.7}100%{transform:translateY(-10vh) scale(1.2);opacity:0}}
+
 
     /* Halo/glow animation classes */
     @keyframes glow-pulse{0%,100%{opacity:.65}50%{opacity:1.0}}
@@ -1177,7 +1175,7 @@
 
 <!-- canvas background: waves + orbs + sparks -->
 <div id="cursor-glow"></div>
-<canvas id="bg-canvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
 <!-- particles removed -->
 <!-- shared SVG filter/gradient defs -->
 <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden;" aria-hidden="true">
@@ -2245,29 +2243,7 @@
     document.querySelectorAll('.stat-num[data-count]').forEach(el => so.observe(el));
   })();
 
-  /* ── FLOATING PARTICLES ── */
-  (function() {
-    const container = document.getElementById('particles');
-    if (!container) return;
-    const colors = ['#FF8000','#FF2896','#7040FF','#1860FF','#FF9010','#AA77FF'];
-    for (let i = 0; i < 26; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      const size = Math.random() * 3 + 1.5;
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      const dur = Math.random() * 18 + 12;
-      const delay = Math.random() * 20;
-      p.style.cssText = [
-        `width:${size}px`, `height:${size}px`,
-        `left:${Math.random() * 100}%`,
-        `background:${color}`,
-        `box-shadow:0 0 ${size * 4}px ${color},0 0 ${size * 8}px ${color}`,
-        `animation-duration:${dur}s`,
-        `animation-delay:-${delay}s`
-      ].join(';');
-      container.appendChild(p);
-    }
-  })();
+  
 
   /* ── MAGNETIC BUTTONS ── */
   document.querySelectorAll('.btn-primary').forEach(btn => {
@@ -2282,135 +2258,7 @@
 
 </script>
 
-<!-- ── CANVAS: waves + orbs + sparks ── -->
-<script>
-(function() {
-  const canvas = document.getElementById('bg-canvas');
-  const ctx = canvas.getContext('2d');
-  let W, H, t = 0;
-  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-  window.addEventListener('resize', resize);
-  resize();
 
-  const COLORS = [[255,144,16],[255,40,150],[136,68,255],[24,96,255],[255,80,200]];
-
-  class Wave {
-    constructor(i, total) { this.reset(i, total); }
-    reset(i, total) {
-      this.color = COLORS[i % COLORS.length];
-      this.speed = 0.00015 + Math.random() * 0.00022;
-      this.amp = 70 + Math.random() * 160;
-      this.freq = 0.0018 + Math.random() * 0.003;
-      this.phase = Math.random() * Math.PI * 2;
-      this.yBase = H * (0.15 + (i / Math.max(total-1,1)) * 0.75);
-      this.width = 1.2 + Math.random() * 2.0;
-      this.alpha = 0.22 + Math.random() * 0.22;
-      this.glowW = this.width * (8 + Math.random() * 12);
-      this.glowA = this.alpha * 0.65;
-    }
-    draw(ctx, t) {
-      const [r,g,b] = this.color;
-      const phase = this.phase + t * this.speed * 1000;
-      ctx.beginPath(); ctx.lineWidth = this.glowW;
-      ctx.strokeStyle = `rgba(${r},${g},${b},${this.glowA})`;
-      this._path(ctx, phase); ctx.stroke();
-      ctx.beginPath(); ctx.lineWidth = this.width;
-      ctx.strokeStyle = `rgba(${r},${g},${b},${this.alpha})`;
-      this._path(ctx, phase); ctx.stroke();
-    }
-    _path(ctx, phase) {
-      const step = W / (Math.floor(W/3)+2);
-      ctx.moveTo(0, this.yBase + Math.sin(phase) * this.amp);
-      for (let x = 0; x <= W; x += step) {
-        const y = this.yBase
-          + Math.sin(x * this.freq + phase) * this.amp
-          + Math.sin(x * this.freq * 2.3 + phase * 1.7) * (this.amp * 0.28)
-          + Math.sin(x * this.freq * 0.5 + phase * 0.6) * (this.amp * 0.45);
-        ctx.lineTo(x, y);
-      }
-    }
-  }
-
-  class Orb {
-    constructor() { this.reset(); }
-    reset() {
-      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      this.x = Math.random() * W; this.y = Math.random() * H * 0.8;
-      this.r = 50 + Math.random() * 140;
-      this.alpha = 0.03 + Math.random() * 0.07;
-      this.speed = 0.00006 + Math.random() * 0.00012;
-      this.phase = Math.random() * Math.PI * 2;
-      this.vx = (Math.random() - 0.5) * 0.08;
-      this.vy = (Math.random() - 0.5) * 0.05;
-    }
-    draw(ctx, t) {
-      const [r,g,b] = this.color;
-      const pulse = 0.7 + 0.3 * Math.sin(t * this.speed * 1000 + this.phase);
-      const rad = this.r * pulse;
-      const grad = ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,rad);
-      grad.addColorStop(0, `rgba(${r},${g},${b},${this.alpha * pulse})`);
-      grad.addColorStop(0.4, `rgba(${r},${g},${b},${this.alpha * 0.4})`);
-      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.beginPath(); ctx.arc(this.x,this.y,rad,0,Math.PI*2);
-      ctx.fillStyle = grad; ctx.fill();
-      this.x += this.vx; this.y += this.vy;
-      if (this.x < -rad || this.x > W+rad || this.y < -rad || this.y > H+rad) this.reset();
-    }
-  }
-
-  class Spark {
-    constructor() { this.reset(); }
-    reset() {
-      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      this.x = Math.random() * W; this.y = H * 0.1 + Math.random() * H * 0.8;
-      this.vx = (Math.random()-0.5)*0.4; this.vy = -0.10-Math.random()*0.25;
-      this.life = 0; this.maxLife = 200+Math.random()*280;
-      this.r = 1.5+Math.random()*2.5;
-    }
-    draw(ctx) {
-      this.life++;
-      if (this.life > this.maxLife) { this.reset(); return; }
-      const prog = this.life / this.maxLife;
-      const alpha = prog < 0.2 ? prog/0.2 : 1-(prog-0.2)/0.8;
-      const [r,g,b] = this.color;
-      ctx.beginPath(); ctx.arc(this.x,this.y,this.r*(1-prog*0.5),0,Math.PI*2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${alpha*0.7})`;
-      ctx.shadowColor = `rgba(${r},${g},${b},0.9)`; ctx.shadowBlur = 8;
-      ctx.fill(); ctx.shadowBlur = 0;
-      this.x += this.vx; this.y += this.vy;
-      this.vx *= 0.99; this.vy *= 0.99;
-    }
-  }
-
-  let waves, orbs, sparks;
-  function init() {
-    waves  = Array.from({length:5}, (_,i) => new Wave(i, 5));
-    orbs   = Array.from({length:6}, () => new Orb());
-    sparks = Array.from({length:20}, () => new Spark());
-  }
-  init();
-  window.addEventListener('resize', () => { resize(); init(); });
-
-  let last = 0;
-  function frame(ts) {
-    if (!last) last = ts;
-    const dt = Math.min(ts - last, 50); last = ts;  // cap dt at 50ms to prevent jumps
-    t += dt * 0.001;
-    /* Paint dark background each frame — no clearRect white flash */
-    ctx.fillStyle = '#07061A';
-    ctx.fillRect(0, 0, W, H);
-    for (const o of orbs) o.draw(ctx, t);
-    ctx.save(); ctx.globalCompositeOperation = 'screen';
-    for (const w of waves) w.draw(ctx, t);
-    ctx.restore();
-    ctx.save(); ctx.globalCompositeOperation = 'screen';
-    for (const s of sparks) s.draw(ctx);
-    ctx.restore();
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
 
 <!-- ── SVG TOOL ICONS ── -->
 <script>
