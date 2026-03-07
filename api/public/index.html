@@ -5,6 +5,12 @@
   <meta name="color-scheme" content="dark">
   <style>html,body{background:#07061A!important;}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Arch Tools">
+  <meta name="theme-color" content="#07061A">
   <title>Arch Tools — 61 AI Agent Tools. One Key.</title>
   <meta name="description" content="61 production-ready API tools for developers and AI agents. Multi-model AI, voice, memory, web scraping, communication, data validation and more. Dual payment rails: Stripe + x402 USDC.">
   <meta property="og:title" content="Arch Tools — 61 API Tools for AI Agents">
@@ -44,7 +50,6 @@
       background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
       background-size:48px 48px;pointer-events:none;z-index:0;
     }
-    *{position:relative;}
     .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;}
     @media(max-width:768px){.wrap{padding:0 20px;}}
     [id]{scroll-margin-top:80px;}
@@ -54,7 +59,7 @@
     .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
     .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
     .logo-mark{width:32px;height:32px;flex-shrink:0;}
-    .logo-arch-path{filter:drop-shadow(0 0 4px rgba(255,144,16,0.6)) drop-shadow(0 0 8px rgba(255,40,150,0.4));}
+    .logo-arch-path{filter:drop-shadow(0 0 6px rgba(255,144,16,0.65));will-change:auto;}
     .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
     .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
     .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
@@ -141,8 +146,8 @@
     @media(max-width:640px){.stats-inner{flex-wrap:wrap;}.stat-item{min-width:50%;border-bottom:1px solid var(--border);}}
 
     /* MARQUEE */
-    .marquee-section{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;}
-    .mq-row{display:flex;gap:10px;animation:marquee 32s linear infinite;white-space:nowrap;will-change:transform;}
+    .marquee-section{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;contain:layout;}
+    .mq-row{display:flex;gap:10px;animation:marquee 32s linear infinite;white-space:nowrap;will-change:transform;transform:translateZ(0);contain:layout style;}
     .mq-row.rev{animation-direction:reverse;margin-top:10px;}
     @keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
     .mq-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;font-size:12px;font-family:var(--mono);border:1px solid var(--border2);color:var(--muted);flex-shrink:0;background:rgba(12,11,34,0.4);;cursor:pointer;transition:background 0.15s,border-color 0.15s,color 0.15s,transform 0.15s;-webkit-appearance:none;appearance:none;}
@@ -171,8 +176,8 @@
     .cat-pill:hover{color:var(--c,var(--text));border-color:var(--c,var(--purple));background:color-mix(in srgb,var(--c,#8844FF) 10%,transparent);}
     .cat-pill.active{color:var(--c,var(--purple));border-color:var(--c,var(--purple));background:color-mix(in srgb,var(--c,#8844FF) 12%,transparent);}
     .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;}
-    .tool-card{isolation:isolate;will-change:transform;
-      background:rgba(12,11,34,0.6);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)
+    .tool-card{isolation:isolate;
+      background:rgba(12,11,34,0.72);
       border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;
       transition:transform 0.22s ease,box-shadow 0.22s ease,border-color 0.22s ease,background 0.22s ease;
       cursor:default;
