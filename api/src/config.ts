@@ -25,7 +25,8 @@ export const config = {
     apiKey: process.env.RESEND_API_KEY ?? "",
   },
   x402: {
-    walletAddress: process.env.WALLET_ADDRESS ?? "",
+    // Only use wallet address if it looks like a real Ethereum/Base address (0x + 40 hex chars)
+    walletAddress: /^0x[a-fA-F0-9]{40}$/.test(process.env.WALLET_ADDRESS ?? "") ? (process.env.WALLET_ADDRESS ?? "") : "",
     network: process.env.X402_NETWORK ?? "base",
     facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator",
   },

@@ -40,6 +40,7 @@ const express_1 = require("express");
 const auth_1 = require("../../middleware/auth");
 const x402_1 = require("../../middleware/x402");
 const credits_1 = require("../../utils/credits");
+const config_1 = require("../../config");
 const crypto_1 = __importDefault(require("crypto"));
 const uuid_1 = require("uuid");
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
@@ -48,9 +49,50 @@ const router = (0, express_1.Router)();
 const anthropic = process.env.ANTHROPIC_API_KEY
     ? new sdk_1.default({ apiKey: process.env.ANTHROPIC_API_KEY })
     : null;
-// ─── Helper: combined x402 + auth middleware ─────────────────────────────────
+// ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
+const requestCounts = new Map();
+// Clean up expired rate limit entries every 5 minutes to prevent memory leak
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of requestCounts.entries()) {
+        if (now > record.resetAt)
+            requestCounts.delete(key);
+    }
+}, 5 * 60 * 1000);
+function tierRateLimiter(req, res, next) {
+    const agent = req.agent;
+    const key = agent?.apiKey?.slice(0, 20) ?? req.ip ?? "anon";
+    const tier = agent?.tier ?? "free";
+    const limit = tier === "business" ? config_1.config.rateLimits.business
+        : tier === "pro" ? config_1.config.rateLimits.pro
+            : config_1.config.rateLimits.free;
+    const now = Date.now();
+    const record = requestCounts.get(key);
+    if (!record || now > record.resetAt) {
+        requestCounts.set(key, { count: 1, resetAt: now + 60_000 });
+        next();
+        return;
+    }
+    record.count++;
+    if (record.count > limit) {
+        res.setHeader("X-RateLimit-Limit", limit);
+        res.setHeader("X-RateLimit-Remaining", "0");
+        res.setHeader("X-RateLimit-Reset", Math.ceil(record.resetAt / 1000).toString());
+        res.status(429).json({
+            ok: false,
+            error: "rate_limited",
+            message: `Rate limit of ${limit} req/min exceeded for ${tier} tier. Upgrade at archtools.dev.`,
+            request_id: (0, credits_1.reqId)(),
+        });
+        return;
+    }
+    res.setHeader("X-RateLimit-Limit", limit);
+    res.setHeader("X-RateLimit-Remaining", limit - record.count);
+    next();
+}
+// ─── Helper: combined x402 + auth + rate limit middleware ────────────────────
 function toolMiddleware(toolName) {
-    return [(0, x402_1.x402Middleware)(toolName), auth_1.requireAuth];
+    return [(0, x402_1.x402Middleware)(toolName), auth_1.requireAuth, tierRateLimiter];
 }
 function isX402Paid(req) {
     return !!req.x402Paid;

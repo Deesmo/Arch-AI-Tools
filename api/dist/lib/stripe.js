@@ -7,6 +7,6 @@ exports.stripe = void 0;
 const stripe_1 = __importDefault(require("stripe"));
 const config_1 = require("../config");
 exports.stripe = config_1.config.stripe.secretKey
-    ? new stripe_1.default(config_1.config.stripe.secretKey, { apiVersion: "2024-06-20" })
+    ? new stripe_1.default(config_1.config.stripe.secretKey, { apiVersion: "2025-02-24.acacia" })
     : null;
 //# sourceMappingURL=stripe.js.map

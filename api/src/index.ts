@@ -52,26 +52,7 @@ const globalLimiter = rateLimit({
   skip: (req) => req.path === "/health" || req.path.startsWith("/.well-known"),
 });
 
-// Tool-specific limit — per API key, respects tier
-const toolLimiter = rateLimit({
-  windowMs: 60 * 1000,  // 1 minute window
-  max: (req) => {
-    const tier = (req as { agent?: { tier?: string } }).agent?.tier ?? "free";
-    return tier === "business" ? config.rateLimits.business
-         : tier === "pro"      ? config.rateLimits.pro
-         : config.rateLimits.free;
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    const auth = req.headers.authorization;
-    return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
-  },
-  message: { ok: false, error: "rate_limited", message: "Rate limit exceeded for your plan. Upgrade for higher limits at archtools.dev." },
-  handler: (_req, res, _next, options) => {
-    res.status(429).json(options.message);
-  },
-});
+
 
 // Auth endpoint limit — prevent brute force
 const authLimiter = rateLimit({
@@ -118,8 +99,8 @@ app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
 
-// Tool calls (tier-based rate limiting)
-app.use("/v1/tools", toolLimiter, toolsRouter);
+// Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
+app.use("/v1/tools", toolsRouter);
 
 // Billing
 app.use("/v1/billing", billingRouter);

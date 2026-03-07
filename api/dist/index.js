@@ -51,26 +51,6 @@ const globalLimiter = (0, express_rate_limit_1.default)({
     message: { ok: false, error: "rate_limited", message: "Too many requests. Slow down." },
     skip: (req) => req.path === "/health" || req.path.startsWith("/.well-known"),
 });
-// Tool-specific limit — per API key, respects tier
-const toolLimiter = (0, express_rate_limit_1.default)({
-    windowMs: 60 * 1000, // 1 minute window
-    max: (req) => {
-        const tier = req.agent?.tier ?? "free";
-        return tier === "business" ? config_1.config.rateLimits.business
-            : tier === "pro" ? config_1.config.rateLimits.pro
-                : config_1.config.rateLimits.free;
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req) => {
-        const auth = req.headers.authorization;
-        return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
-    },
-    message: { ok: false, error: "rate_limited", message: "Rate limit exceeded for your plan. Upgrade for higher limits at archtools.dev." },
-    handler: (_req, res, _next, options) => {
-        res.status(429).json(options.message);
-    },
-});
 // Auth endpoint limit — prevent brute force
 const authLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -105,8 +85,8 @@ app.use("/v1/tools", seo_1.default); // Free endpoint proxies
 app.use("/v1/agent", authLimiter, agent_1.default);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauth_1.default);
-// Tool calls (tier-based rate limiting)
-app.use("/v1/tools", toolLimiter, index_1.default);
+// Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
+app.use("/v1/tools", index_1.default);
 // Billing
 app.use("/v1/billing", billing_1.default);
 app.use("/webhooks", billing_1.default);
