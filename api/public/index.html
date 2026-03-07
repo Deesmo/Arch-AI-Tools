@@ -11,15 +11,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Arch Tools">
   <meta name="theme-color" content="#07061A">
-  <title>Arch Tools — 61 AI Agent Tools. One Key.</title>
-  <meta name="description" content="61 production-ready API tools for developers and AI agents. Multi-model AI, voice, memory, web scraping, communication, data validation and more. Dual payment rails: Stripe + x402 USDC.">
+  <title>Arch Tools — The First API Platform AI Agents Can Pay Autonomously</title>
+  <meta name="description" content="The first API platform where AI agents pay autonomously with USDC via x402. 61 production tools, one key, no human credit card required. Built for the agent economy.">
   <meta property="og:title" content="Arch Tools — 61 API Tools for AI Agents">
-  <meta property="og:description" content="Pay-per-use API tools for developers and AI agents. 100 free credits to start.">
+  <meta property="og:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 61 tools, one key.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Arch Tools — 61 API Tools for AI Agents">
-  <meta name="twitter:description" content="Pay-per-use API tools for developers and AI agents. 100 free credits to start.">
+  <meta name="twitter:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 61 tools, one key.">
   <link rel="canonical" href="https://archtools.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -467,19 +467,19 @@
       <div class="hero-left">
         <div class="hero-badge">
           <span class="dot"></span>
-          Live · 61 tools · one key to access them all
+          First API platform built for autonomous agent payments
         </div>
         <h1 class="hero-h1">
-          One Key.<br>
-          <span class="grad">61 Tools.</span><br>
-          Everything Your<br>Agent Needs.
+          AI Agents Pay.<br>
+          <span class="grad">No Human</span><br>
+          Required.
         </h1>
         <p class="hero-sub">
-          Most agents need 8–12 separate APIs to function. Scraping, OCR, voice, memory, email, SMS, multi-model AI — each one its own account, key, and bill. Arch replaces all of them. One key, one credit balance, one bill.
+          Your AI agent can register, pay, and call 61 production tools without a human in the loop. USDC on Base via x402 — accepted natively. Every competitor is Stripe-only. You're not.
         </p>
         <div class="hero-btns">
           <a class="btn-primary" href="#register">$ get-api-key →</a>
-          <a class="btn-ghost" href="#tools">view all tools</a>
+          <a class="btn-ghost" href="#x402">how x402 works</a>
         </div>
       </div>
 
@@ -492,7 +492,7 @@
           </div>
           <div class="dash-stats-row">
             <div class="dash-stat-box">
-              <div class="dash-stat-num g-am">61</div>
+              <div class="dash-stat-num g-am">44</div>
               <div class="dash-stat-label">Tools</div>
             </div>
             <div class="dash-stat-box">
@@ -510,16 +510,19 @@
               <span class="terminal-url">archtools.dev — zsh</span>
             </div>
             <div class="terminal-body">
-              <span class="t-line"><span class="t-comment"># 1. Register — get 100 free credits</span></span>
-              <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl -X POST https://archtools.dev/v1/agent/register</span></span>
-              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"email":"<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="224345474c5662475a434f524e470c414d4f">[email&#160;protected]</a>"&#125;'</span></span>
+              <span class="t-line"><span class="t-comment"># Agent pays autonomously — no human card</span></span>
+              <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl https://archtools.dev/v1/tools/web-scrape</span></span>
+              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"X-PAYMENT: $USDC_PAYMENT_HEADER"</span></span>
+              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
               <span class="t-line">&nbsp;</span>
-              <span class="t-line"><span class="t-comment"># 2. Call any tool with your key</span></span>
+              <span class="t-line"><span class="t-comment"># x402 protocol — USDC on Base, settled instantly</span></span>
+              <span class="t-line"><span class="t-out" style="color:#34d399;">&#123;"content":"...","paid_via":"x402","amount":"0.001 USDC"&#125;</span></span>
+              <span class="t-line">&nbsp;</span>
+              <span class="t-line"><span class="t-comment"># Or use API key + Stripe if you prefer</span></span>
               <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl https://archtools.dev/v1/tools/web-scrape</span></span>
               <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"Authorization: Bearer $ARCH_KEY"</span></span>
               <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
-              <span class="t-line">&nbsp;</span>
-              <span class="t-line"><span class="t-out">&#123;"content":"...","credits_used":5,"remaining":95&#125;</span> <span class="t-cursor"></span></span>
+              <span class="t-line"><span class="t-out">&#123;"content":"...","credits_used":5,"remaining":9995&#125;</span> <span class="t-cursor"></span></span>
             </div>
           </div>
         </div>
@@ -538,11 +541,11 @@
       </div>
       <div class="stat-item">
         <div class="stat-label-top">PAYMENT_RAILS</div>
-        <div class="stat-val g-bl">2</div>
+        <div class="stat-val g-bl">x402 + Stripe</div>
       </div>
       <div class="stat-item">
-        <div class="stat-label-top">FREE_CREDITS</div>
-        <div class="stat-val g-cy">100</div>
+        <div class="stat-label-top">AGENT_PAYMENT</div>
+        <div class="stat-val g-cy">USDC · Base</div>
       </div>
       <div class="stat-item">
         <div class="stat-label-top">CREDIT_PRICE</div>
@@ -577,10 +580,10 @@
         <div class="step-desc">Sign up with your email. You instantly receive an API key and 100 free credits — no credit card required to start.</div>
       </div>
       <div class="step-card">
-        <div class="step-icon">💳</div>
+        <div class="step-icon">⟠</div>
         <div class="step-num">Step 02</div>
-        <div class="step-title">Add credits your way</div>
-        <div class="step-desc">Buy a credit pack with Stripe, or top up automatically with USDC via the x402 protocol. Credits never expire.</div>
+        <div class="step-title">Pay with USDC or Stripe</div>
+        <div class="step-desc">Agents pay autonomously with USDC on Base via x402 — no human card needed. Humans can use Stripe. Both rails, one platform.</div>
       </div>
       <div class="step-card">
         <div class="step-icon">⚡</div>
