@@ -107,40 +107,33 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 };
 
 const LLMS_TXT = `# Arch Tools
-> 30 production-ready API tools for developers and AI agents.
+> The first API platform built for autonomous agent payments.
+> 44 production-ready tools. One key. USDC on Base via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
-> MCP: https://arch-tools-mcp.onrender.com/mcp
+> MCP SSE: https://arch-tools-mcp.onrender.com/sse
 
 ## Authentication
-All tool endpoints require an API key via header:
+All tool endpoints require an API key:
   Authorization: Bearer YOUR_API_KEY
 
-Get a key at ${BASE_URL}/signin
+Get a free key (100 credits) at ${BASE_URL}/#register
+
+## x402 Autonomous Payment (no key required)
+AI agents can pay per-call with USDC on Base via the x402 protocol.
+No API key, no signup, no human credit card needed.
+Discovery: ${API_BASE}/.well-known/x402
+Protocol: https://x402.org
 
 ## Credit System
-Tools cost credits per call. Credits never expire.
+Tools cost credits per call. Credits never expire. Non-transferable.
 
-  Starter Pack:   1,000 credits — $9
-  Pro Pack:      10,000 credits — $49
-  Business Pack: 100,000 credits — $199
+  Starter Pack:    10,000 credits — $9    ($0.0009/credit)
+  Pro Pack:        60,000 credits — $49   ($0.00082/credit)
+  Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (30 total)
-
-### Data
-POST /v1/tools/validate-data        (1 credit)  — Validate JSON against a JSON Schema
-POST /v1/tools/convert-format       (2 credits) — Convert between JSON, YAML, CSV, XML
-POST /v1/tools/extract-metadata     (3 credits) — Extract OG tags, word count, links from text or URLs
-
-### Security
-POST /v1/tools/generate-hash        (1 credit)  — sha256, sha512, md5, sha1
-POST /v1/tools/pii-detect           (10 credits) — Detect and optionally redact PII
-
-### Text
-POST /v1/tools/transform-text       (3 credits) — uppercase, slug, camel, snake, base64, and more
-POST /v1/tools/readability-score    (2 credits) — Flesch-Kincaid grade and reading ease
-POST /v1/tools/diff-text            (2 credits) — Structured diff: unified, words, chars, or JSON
+## All Tools (44 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -150,15 +143,44 @@ POST /v1/tools/summarize            (10 credits) — paragraph, bullets, tldr, h
 POST /v1/tools/extract-entities     (8 credits)  — NER: people, orgs, locations, dates, money
 POST /v1/tools/language-detect      (3 credits)  — 100+ languages with confidence score
 POST /v1/tools/regex-generate       (8 credits)  — Natural language → validated regex with tests
+POST /v1/tools/pii-detect           (10 credits) — Detect and optionally redact PII
+POST /v1/tools/image-generate       (15 credits) — Generate SVG images from text prompts
+POST /v1/tools/workflow-agent       (25 credits) — Multi-step autonomous AI agent pipeline
 
 ### Web
 POST /v1/tools/web-scrape           (5 credits)  — Scrape any public URL with optional CSS selector
 POST /v1/tools/search-web           (5 credits)  — Search results (DuckDuckGo)
 POST /v1/tools/web-search           (10 credits) — Real-time search with AI-synthesized answer
 POST /v1/tools/extract-page         (5 credits)  — Clean text, links, and metadata from any webpage
-POST /v1/tools/extract-pdf          (6 credits)  — Extract text from a PDF
-POST /v1/tools/browser-task         (10 credits) — Headless browser automation (click/type/extract)
+POST /v1/tools/extract-pdf          (6 credits)  — Extract text from a PDF (URL or base64)
+POST /v1/tools/browser-task         (10 credits) — Headless browser automation via Playwright
 POST /v1/tools/rss-parse            (4 credits)  — Parse RSS or Atom feeds into structured JSON
+POST /v1/tools/screenshot-capture   (10 credits) — Screenshot any URL
+POST /v1/tools/html-to-markdown     (2 credits)  — Convert HTML to clean Markdown
+POST /v1/tools/url-shorten          (1 credit)   — Shorten any URL
+POST /v1/tools/webhook-send         (2 credits)  — Send HTTP webhooks with payload
+
+### Crypto (read-only, no key required — uses CoinGecko + Alternative.me)
+POST /v1/tools/crypto-price         (1 credit)   — Real-time price, 24h change, market cap, volume
+POST /v1/tools/crypto-market-cap    (1 credit)   — Top N coins by market cap
+POST /v1/tools/crypto-fear-greed    (1 credit)   — Fear & Greed Index with historical data
+POST /v1/tools/token-lookup         (1 credit)   — Search any token by name or ticker
+POST /v1/tools/crypto-ohlcv         (2 credits)  — OHLCV candlestick data for technical analysis
+POST /v1/tools/crypto-sentiment     (2 credits)  — Community sentiment + social stats
+POST /v1/tools/crypto-news          (2 credits)  — Latest news headlines, filterable by symbol
+
+### Data & Validation
+POST /v1/tools/validate-data        (1 credit)   — Validate JSON against a JSON Schema
+POST /v1/tools/convert-format       (2 credits)  — Convert between JSON, YAML, CSV, XML
+POST /v1/tools/extract-metadata     (3 credits)  — Extract OG tags, word count, links
+POST /v1/tools/jsonpath-query       (1 credit)   — JSONPath queries on any JSON payload
+POST /v1/tools/barcode-generate     (2 credits)  — Generate Code128 barcodes as SVG
+POST /v1/tools/qr-code              (2 credits)  — PNG data URL or SVG output
+
+### Text
+POST /v1/tools/transform-text       (3 credits)  — uppercase, slug, camel, snake, base64, and more
+POST /v1/tools/readability-score    (2 credits)  — Flesch-Kincaid grade and reading ease
+POST /v1/tools/diff-text            (2 credits)  — Structured diff: unified, words, chars, or JSON
 
 ### Network
 POST /v1/tools/ip-lookup            (2 credits)  — Geo, ISP, VPN/proxy detection
@@ -168,6 +190,9 @@ POST /v1/tools/whois-lookup         (3 credits)  — Domain registration and exp
 POST /v1/tools/email-verify         (3 credits)  — MX check + disposable domain detection
 POST /v1/tools/phone-validate       (2 credits)  — E.164 format, type, country code
 
+### Security
+POST /v1/tools/generate-hash        (1 credit)   — sha256, sha512, md5, sha1
+
 ### Finance
 POST /v1/tools/currency-convert     (2 credits)  — 170+ currencies with live rates
 
@@ -175,33 +200,24 @@ POST /v1/tools/currency-convert     (2 credits)  — 170+ currencies with live r
 POST /v1/tools/timezone-convert     (1 credit)   — Any IANA timezone pair
 POST /v1/tools/generate-uuid        (1 credit)   — v1/v4, random tokens, API-key format
 
-### Media
-POST /v1/tools/qr-code              (2 credits)  — PNG data URL or SVG output
-
 ## Workflows
 POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps)
 
 ## Discovery Endpoints
-GET  /v1/tools       — Full tool list with schemas
-GET  /openapi.json   — OpenAPI 3.0 spec
-GET  /health         — Service health + tool count
-GET  /v1/agent/usage — Credit balance
+GET  /v1/tools        — Full tool list with schemas
+GET  /openapi.json    — OpenAPI 3.0 spec
+GET  /health          — Service health + tool count
+GET  /v1/agent/usage  — Credit balance for your key
 
 ## MCP Integration
-SSE endpoint: https://arch-tools-mcp.onrender.com/mcp
-All 30 tools available. Compatible with Claude Desktop, Cursor, Windsurf.
-
-## x402 / USDC Autonomous Payment
-AI agents can self-fund via x402 protocol using USDC on Base.
-Discovery: ${API_BASE}/.well-known/x402
-
-## SDKs
-Python: pip install archtools
-Node:   npm install @archtools/sdk
+SSE endpoint: https://arch-tools-mcp.onrender.com/sse
+Registry: io.github.Deesmo/arch-tools-mcp
+Compatible with: Claude Desktop, Cursor, Windsurf, any MCP client
 
 ## Legal
-Terms:   ${API_BASE}/legal/terms
-Privacy: ${API_BASE}/legal/privacy
+Credits are non-transferable, non-refundable, tied to one API key.
+Terms:   ${BASE_URL}/terms.html
+Privacy: ${BASE_URL}/privacy.html
 `;
 
 const OPENAPI_STUB = {
