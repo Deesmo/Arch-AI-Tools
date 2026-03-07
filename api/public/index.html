@@ -3,7 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="color-scheme" content="dark">
-  <style>html,body{background:#07061A!important;}</style>
+  <style>html,body{background:#07061A!important;}
+    @media (max-width: 640px) {
+      .hero-visual { animation: none !important; }
+      .stat-row { gap: 16px; }
+      .stat-num { font-size: 1.6rem; }
+      .tools-grid { grid-template-columns: 1fr 1fr; }
+      .section { padding: 48px 0; }
+    }
+    @media (max-width: 400px) {
+      .tools-grid { grid-template-columns: 1fr; }
+    }
+    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arch Tools — Everything Your Agent Needs. One Key.</title>
   <meta name="description" content="38 production-ready API tools for developers and AI agents. Web scraping, QR codes, AI generation, data validation and more. Dual payment rails: Stripe + x402 USDC.">
@@ -72,26 +83,16 @@
     body {
       font-family: var(--body);
       background: var(--bg);
-      background-image: radial-gradient(ellipse 90% 55% at 50% -5%, rgba(136,68,255,0.22) 0%, rgba(255,40,150,0.08) 40%, transparent 70%);
+      background-image: radial-gradient(ellipse 80% 45% at 50% -5%, rgba(136,68,255,0.12) 0%, rgba(255,40,150,0.04) 40%, transparent 70%);
       color: var(--text);
       line-height: 1.6;
       overflow-x: hidden;
     }
 
     /* ─── Grid Texture ──────────────────────────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(136,68,255,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(136,68,255,0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
-    }
+    /* body::before grid removed — too busy */
 
-    * { position: relative; z-index: 1; }
+    /* z-index layering handled per-element — removed nuclear position:relative */
 
     /* ─── Container ─────────────────────────────────────────────────────────── */
     .wrap { max-width: var(--max); margin: 0 auto; padding: 0 32px; }
@@ -581,13 +582,14 @@
     /* ─── Tools Grid ────────────────────────────────────────────────────────── */
     .tools-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 1px;
       background: var(--border);
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
       margin-top: 48px;
+      grid-auto-rows: 1fr;
     }
 
     .tool-card {
@@ -1176,8 +1178,7 @@
 <!-- canvas background: waves + orbs + sparks -->
 <div id="cursor-glow"></div>
 <canvas id="bg-canvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
-<!-- floating particles -->
-<div class="particles" id="particles" aria-hidden="true"></div>
+<!-- particles removed -->
 <!-- shared SVG filter/gradient defs -->
 <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden;" aria-hidden="true">
 <defs>
