@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The First Developer Tool API Natively Accepting Crypto from AI Agents — Arch Tools</title>
+  <meta name="description" content="AI agents can now pay autonomously with USDC on Base via the x402 protocol. No human credit card. No subscription. This is how the agent economy works.">
+  <meta property="og:title" content="The First Developer Tool API Natively Accepting Crypto from AI Agents">
+  <meta property="og:description" content="AI agents can now pay autonomously with USDC on Base via x402. No human credit card. No subscription. Arch Tools is the first.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://archtools.dev/blog/x402">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#07061A;--text:#E0DFF5;--muted:#8B8AA8;--dimmer:#6B6A8A;--purple:#8844FF;--green:#34d399;--amber:#FF9010;--border:rgba(255,255,255,0.08);--mono:'Fira Code','Cascadia Code','Courier New',monospace;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;line-height:1.75;padding:0;}
+    nav{position:sticky;top:0;z-index:100;background:rgba(7,6,26,0.97);border-bottom:1px solid var(--border);padding:0 24px;}
+    .nav-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+    .nav-logo{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);text-decoration:none;letter-spacing:-0.3px;}
+    .nav-logo span{color:var(--purple);}
+    .nav-cta{background:var(--purple);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-family:var(--mono);cursor:pointer;text-decoration:none;}
+    .wrap{max-width:760px;margin:0 auto;padding:0 24px;}
+    .hero-blog{padding:64px 0 48px;}
+    .blog-tag{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    h1{font-size:clamp(28px,5vw,46px);font-weight:800;line-height:1.12;letter-spacing:-1.5px;margin-bottom:24px;}
+    .byline{color:var(--dimmer);font-size:14px;font-family:var(--mono);margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+    h2{font-size:22px;font-weight:700;color:var(--amber);margin:48px 0 16px;}
+    h3{font-size:17px;font-weight:700;margin:32px 0 12px;}
+    p{color:#C0BFDB;margin-bottom:20px;}
+    strong{color:var(--text);}
+    ul,ol{padding-left:24px;margin-bottom:20px;}
+    li{color:#C0BFDB;margin-bottom:8px;}
+    code{font-family:var(--mono);font-size:13px;background:rgba(136,68,255,0.12);color:#c4b5fd;padding:2px 7px;border-radius:4px;}
+    pre{background:rgba(12,11,34,0.8);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;margin:24px 0;}
+    pre code{background:none;padding:0;color:#E0DFF5;font-size:13px;line-height:1.7;}
+    .comment{color:#6B6A8A;}
+    .key{color:#FF9010;}
+    .str{color:#34d399;}
+    .out{color:#8844FF;}
+    blockquote{border-left:3px solid var(--purple);padding-left:20px;margin:32px 0;color:var(--muted);font-style:italic;}
+    .callout{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout strong{color:var(--purple);}
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:40px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;}
+    .btn{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:600;}
+    .btn-ghost{display:inline-block;border:1px solid var(--border);color:var(--muted);text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;margin-left:12px;}
+    footer{padding:32px 24px;border-top:1px solid var(--border);color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    .footer-inner{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    footer a{color:var(--dimmer);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+    @media(max-width:640px){h1{font-size:clamp(26px,8vw,38px);}.btn-ghost{margin-left:0;margin-top:10px;}.cta-section{padding:28px 20px;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">Arch<span>Tools</span></a>
+    <a class="nav-cta" href="/#register">Get API Key →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <article class="hero-blog">
+    <div class="blog-tag">Engineering · March 2026</div>
+    <h1>The First Developer Tool API Natively Accepting Crypto from AI Agents</h1>
+    <p class="byline">archtools.dev · March 7, 2026 · 5 min read</p>
+
+    <p>Every major API platform — AbstractAPI, RapidAPI, ApyHub, Eden AI, APILayer — has one thing in common: they require a human with a credit card to fund API access.</p>
+
+    <p>That made sense in 2015. It doesn't make sense in 2026.</p>
+
+    <p>AI agents are calling APIs at scale, autonomously, without a human in the loop. They need to pay the same way. Today, Arch Tools is the first developer tool API platform to accept USDC on Base via the <strong>x402 payment protocol</strong> — natively, from day one.</p>
+
+    <h2>Why This Matters</h2>
+
+    <p>If you've built an AI agent that calls external APIs, you've hit this problem: your agent needs a pre-loaded credit account, a human-managed API key, and a Stripe subscription attached to someone's personal card. The agent can't self-fund. It can't pay per-call. It's dependent on a human to keep the lights on.</p>
+
+    <p>x402 changes that. An AI agent can now:</p>
+    <ol>
+      <li>Discover that a tool accepts x402 payments via <code>/.well-known/x402</code></li>
+      <li>Pay the exact amount per call in USDC on Base</li>
+      <li>Get the tool result — all in a single HTTP round-trip</li>
+    </ol>
+
+    <p>No signup. No API key. No human card. Just crypto, settled on-chain in milliseconds.</p>
+
+    <blockquote>The agent economy doesn't run on credit cards. It runs on programmable money. x402 is the protocol that makes that work.</blockquote>
+
+    <h2>How It Works on Arch Tools</h2>
+
+    <p>Every tool on Arch Tools supports two payment paths:</p>
+
+    <div class="callout">
+      <strong>Path 1 — x402 (Autonomous Agent Payments)</strong><br><br>
+      The agent includes a signed x402 payment header with each request. The facilitator verifies the USDC transfer on Base. The tool executes and returns results. No account required.
+    </div>
+
+    <div class="callout">
+      <strong>Path 2 — API Key + Credits (Human Developer Flow)</strong><br><br>
+      Register with your email, get an API key and 100 free credits. Buy credit packs via Stripe. Every tool call deducts from your balance. Credits never expire.
+    </div>
+
+    <p>Both paths hit the same endpoints. Your agent doesn't need special integration — just a different payment header.</p>
+
+    <h3>Code: x402 Payment Flow</h3>
+    <pre><code><span class="comment"># Step 1: Agent discovers x402 pricing</span>
+curl https://archtools.dev/.well-known/x402
+
+<span class="comment"># Returns:</span>
+<span class="out">{
+  "accepts": [{
+    "scheme": "exact",
+    "network": "base-mainnet",
+    "maxAmountRequired": "1000",
+    "asset": "USDC",
+    "payTo": "0x..."
+  }]
+}</span>
+
+<span class="comment"># Step 2: Agent constructs payment header and calls tool</span>
+curl https://archtools.dev/v1/tools/web-scrape \
+  <span class="key">-H</span> <span class="str">"X-PAYMENT: $USDC_PAYMENT_HEADER"</span> \
+  <span class="key">-d</span> <span class="str">'{"url":"https://example.com"}'</span>
+
+<span class="comment"># Returns tool result + payment receipt:</span>
+<span class="out">{
+  "content": "...",
+  "paid_via": "x402",
+  "amount": "0.001 USDC",
+  "receipt": "0x..."
+}</span></code></pre>
+
+    <h2>Why Every Competitor Is Stripe-Only</h2>
+
+    <p>The honest answer: crypto payments are hard to integrate correctly, and most API platforms are building for human developers, not autonomous agents. Stripe is familiar, it handles fraud, it works with every bank on earth.</p>
+
+    <p>But x402 isn't competing with Stripe. It's serving a market that Stripe can't reach: agents that need to pay programmatically, without a human account owner. These are fundamentally different use cases.</p>
+
+    <p>We support both because both users exist:</p>
+    <ul>
+      <li><strong>Human developers</strong> → Stripe credit packs, API key, never expires</li>
+      <li><strong>AI agents</strong> → x402, USDC on Base, per-call settlement</li>
+    </ul>
+
+    <h2>The Numbers Behind the Decision</h2>
+
+    <p>x402 processed over <strong>115 million micropayments</strong> in its first months. That number doubled in weeks. Coinbase's Base network is the primary settlement layer. Pantera Capital has said Solana USDC volume may eventually surpass Base — we're watching that closely and plan to add Solana support in v2.</p>
+
+    <p>The market signal is clear: agent-to-agent and agent-to-API payments are real, they're growing fast, and the infrastructure is here. Being first on the platform side matters.</p>
+
+    <h2>What's Next</h2>
+
+    <ul>
+      <li><strong>x402 Bazaar listing</strong> — Coinbase's agentic commerce directory, live soon</li>
+      <li><strong>Solana USDC support</strong> — x402 v2.0 adds Solana; we'll add it when it ships</li>
+      <li><strong>Agentic Wallets via CDP</strong> — Agents can spin up custodial wallets and fund themselves via Coinbase Developer Platform</li>
+      <li><strong>Per-call pricing transparency</strong> — Every tool will expose its x402 price in <code>/.well-known/x402</code> so agents can budget before calling</li>
+    </ul>
+
+    <h2>Start Building</h2>
+
+    <p>44 tools. One key. USDC accepted natively. Start with 100 free credits and no credit card required — or connect your agent wallet and pay per call.</p>
+
+  </article>
+</div>
+
+<div class="wrap">
+  <div class="cta-section">
+    <h2>The agent economy needs infrastructure.</h2>
+    <p>Get your API key and 100 free credits. Or connect your agent wallet and pay with USDC.</p>
+    <a class="btn" href="/#register">$ get-api-key →</a>
+    <a class="btn-ghost" href="/#x402">x402 docs</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>© 2026 Arch Tools</span>
+    <span>
+      <a href="/">Home</a> ·
+      <a href="/terms.html">Terms</a> ·
+      <a href="/privacy.html">Privacy</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
