@@ -55,7 +55,9 @@
     [id]{scroll-margin-top:80px;}
 
     /* NAV */
-    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);-webkit-transform:translateZ(0);transform:translateZ(0);}
+    /* iOS Safari: backdrop-filter on sticky nav causes scroll blanking — disable on mobile */
+    @media(max-width:768px){nav{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(7,6,26,0.97);}}
     .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
     .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
     .logo-mark{width:32px;height:32px;flex-shrink:0;}
@@ -107,7 +109,7 @@
 
     /* GLASS DASHBOARD */
     .glass-dashboard{
-      background:rgba(12,11,34,0.65);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)
+      background:rgba(12,11,34,0.65);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);-webkit-transform:translateZ(0);transform:translateZ(0)
       border:1px solid rgba(136,68,255,0.22);border-radius:24px;padding:28px;
       box-shadow:0 0 60px rgba(136,68,255,0.12),0 0 120px rgba(255,40,150,0.06),inset 0 1px 0 rgba(255,255,255,0.06);
     }
