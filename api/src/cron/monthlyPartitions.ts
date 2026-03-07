@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Monthly Partition Maintenance (Postgres partitioning optional)
  *

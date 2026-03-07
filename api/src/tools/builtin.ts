@@ -1401,7 +1401,8 @@ export async function browserTask(payload: any) {
   if (url.length > MAX_SCRAPE_URL_LEN) throw new Error("url_too_long");
   await assertSafeUrl(url);
 
-  const { chromium } = await import("playwright");
+  // @ts-ignore — playwright is an optional runtime dependency
+  const { chromium } = await import("playwright" as string);
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
   const page = await browser.newPage({ userAgent: "ArchToolsBrowserTask/1.0 (+https://archtools.dev)" });
 
@@ -1441,7 +1442,8 @@ export async function screenshotCapture(payload: any) {
   if (url.length > MAX_SCRAPE_URL_LEN) return { ok: false, error: "url_too_long", max: MAX_SCRAPE_URL_LEN };
   await assertSafeUrl(url);
 
-  const { chromium } = await import("playwright");
+  // @ts-ignore — playwright is an optional runtime dependency
+  const { chromium } = await import("playwright" as string);
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
   const page = await browser.newPage({
     userAgent: "ArchTools-Screenshot/1.0 (+https://archtools.dev)",
@@ -1530,7 +1532,7 @@ export async function imageGenerate(payload: any) {
       const resp = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
         method: "POST",
         headers: { Authorization: `Bearer ${stabilityKey}`, Accept: "image/*" },
-        body: form,
+        body: form as any,
         signal: ctrl.signal,
       });
       clearTimeout(t);

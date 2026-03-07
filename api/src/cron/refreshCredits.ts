@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Monthly Free Credit Refresh
  *

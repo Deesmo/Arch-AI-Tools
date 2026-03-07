@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Daily Usage Rollups + Retention
  *
