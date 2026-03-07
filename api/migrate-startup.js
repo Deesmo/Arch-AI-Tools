@@ -11,27 +11,30 @@ async function migrate() {
   try {
     console.log('[migrate] Running startup migrations...');
 
-    // Add api_key column to Agent if it doesn't exist
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "api_key" TEXT;
-    `);
-    console.log('[migrate] api_key column ensured on Agent');
+    const migrations = [
+      // Agent table — add all columns that Windows schema is missing
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "api_key" TEXT`,
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "tier" TEXT NOT NULL DEFAULT 'free'`,
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "credits" INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "total_calls" INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "last_seen_at" TIMESTAMP`,
+      // Unique index on api_key
+      `CREATE UNIQUE INDEX IF NOT EXISTS "Agent_api_key_key" ON "Agent"("api_key")`,
+    ];
 
-    // Add unique index if it doesn't exist
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "Agent_api_key_key" ON "Agent"("api_key");
-    `);
-    console.log('[migrate] Unique index on Agent.api_key ensured');
-
-    // Add tier column if it doesn't exist (Windows schema uses "plan" not "tier")
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "tier" TEXT NOT NULL DEFAULT 'free';
-    `);
-    console.log('[migrate] tier column ensured on Agent');
+    for (const sql of migrations) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        console.log('[migrate] OK:', sql.slice(0, 60));
+      } catch (err) {
+        // Non-fatal — column/index may already exist with a slightly different state
+        console.warn('[migrate] SKIP (non-fatal):', err.message.slice(0, 100));
+      }
+    }
 
     console.log('[migrate] All migrations complete.');
   } catch (err) {
-    console.error('[migrate] Migration error (non-fatal, continuing):', err.message);
+    console.error('[migrate] Fatal migration error:', err.message);
   } finally {
     await prisma.$disconnect();
   }
