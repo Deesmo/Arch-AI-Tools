@@ -32,6 +32,54 @@ async function migrate() {
       }
     }
 
+    // OAuth 2.0 tables for Claude Connector listing
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OAuthClient" (
+      "id" TEXT PRIMARY KEY,
+      "clientId" TEXT UNIQUE NOT NULL,
+      "clientSecret" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "redirectUris" TEXT[] NOT NULL DEFAULT '{}',
+      "createdAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OAuthAuthCode" (
+      "id" TEXT PRIMARY KEY,
+      "code" TEXT UNIQUE NOT NULL,
+      "clientId" TEXT NOT NULL,
+      "agentId" TEXT NOT NULL,
+      "scope" TEXT NOT NULL,
+      "redirectUri" TEXT NOT NULL,
+      "expiresAt" TIMESTAMP NOT NULL,
+      "used" BOOLEAN DEFAULT FALSE,
+      "createdAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OAuthToken" (
+      "id" TEXT PRIMARY KEY,
+      "accessToken" TEXT UNIQUE NOT NULL,
+      "refreshToken" TEXT UNIQUE NOT NULL,
+      "clientId" TEXT NOT NULL,
+      "agentId" TEXT NOT NULL,
+      "scope" TEXT NOT NULL,
+      "expiresAt" TIMESTAMP NOT NULL,
+      "createdAt" TIMESTAMP DEFAULT NOW()
+    )`);
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OAuthAuthCode_code_idx" ON "OAuthAuthCode"("code")`); } catch {}
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OAuthToken_accessToken_idx" ON "OAuthToken"("accessToken")`); } catch {}
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OAuthToken_refreshToken_idx" ON "OAuthToken"("refreshToken")`); } catch {}
+
+    // Seed Claude as an OAuth client (idempotent)
+    const claudeClientId = 'claude-anthropic-connector';
+    const claudeClientSecret = process.env.OAUTH_CLAUDE_SECRET || 'arch-claude-secret-' + Math.random().toString(36).slice(2);
+    try {
+      await prisma.$executeRawUnsafe(`
+        INSERT INTO "OAuthClient" ("id","clientId","clientSecret","name","redirectUris")
+        VALUES (gen_random_uuid()::text, $1, $2, 'Claude (Anthropic)', ARRAY['https://claude.ai/oauth/callback','https://api.claude.ai/oauth/callback'])
+        ON CONFLICT ("clientId") DO NOTHING
+      `, claudeClientId, claudeClientSecret);
+      console.log('[migrate] Claude OAuth client seeded');
+    } catch(e) { console.warn('[migrate] Claude OAuth seed skip:', e.message.slice(0,60)); }
+
+    console.log('[migrate] OAuth 2.0 tables created');
+
     // Add agent fingerprinting columns to ApiRequest
     await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerType" TEXT`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerName" TEXT`);

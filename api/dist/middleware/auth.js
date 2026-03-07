@@ -25,12 +25,23 @@ async function requireAuth(req, res, next) {
         return;
     }
     try {
-        const agent = await prisma_1.prisma.agent.findUnique({ where: { apiKey } });
+        let agent = null;
+        // OAuth Bearer token (prefix: at_oauth_) — check OAuthToken table first
+        if (apiKey.startsWith("at_oauth_")) {
+            const oauthToken = await prisma_1.prisma.oAuthToken.findUnique({ where: { accessToken: apiKey } }).catch(() => null);
+            if (oauthToken && oauthToken.expiresAt > new Date()) {
+                agent = await prisma_1.prisma.agent.findUnique({ where: { id: oauthToken.agentId } });
+            }
+        }
+        else {
+            // Standard API key
+            agent = await prisma_1.prisma.agent.findUnique({ where: { apiKey } });
+        }
         if (!agent) {
             res.status(401).json({
                 ok: false,
                 error: "unauthorized",
-                message: "Invalid API key. Register at https://archtools.dev/signup",
+                message: "Invalid API key or OAuth token. Register at https://archtools.dev",
                 request_id: crypto.randomUUID(),
             });
             return;

@@ -13,6 +13,7 @@ import adminRouter from "./routes/admin";
 import workflowsRouter from "./routes/workflows";
 import seoRouter from "./routes/seo";
 import legalRouter from "./routes/legal";
+import oauthRouter from "./routes/oauth";
 
 const app = express();
 
@@ -66,6 +67,9 @@ app.use("/v1/workflows", workflowsRouter);
 
 // Legal
 app.use("/legal", legalRouter);
+
+// OAuth 2.0 (Claude Connector + future integrations)
+app.use("/oauth", oauthRouter);
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

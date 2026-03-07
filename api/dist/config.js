@@ -15,6 +15,15 @@ exports.config = {
     anthropic: {
         apiKey: process.env.ANTHROPIC_API_KEY ?? "",
     },
+    openai: {
+        apiKey: process.env.OPENAI_API_KEY ?? "",
+    },
+    google: {
+        apiKey: process.env.GOOGLE_API_KEY ?? "",
+    },
+    xai: {
+        apiKey: process.env.XAI_API_KEY ?? "",
+    },
     resend: {
         apiKey: process.env.RESEND_API_KEY ?? "",
     },

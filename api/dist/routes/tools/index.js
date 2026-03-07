@@ -950,26 +950,82 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         if (!ok)
             return;
     }
-    if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
-        return;
-    }
     const { prompt, system, model = "claude-sonnet-4-6", max_tokens = 1000 } = req.body;
     if (!prompt) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
         return;
     }
-    const allowedModels = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
-    const selectedModel = allowedModels.includes(model) ? model : "claude-sonnet-4-6";
+    const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
+    const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
+    const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
+    const GROK_MODELS = ["grok-3", "grok-3-fast", "grok-2"];
+    const maxTok = Math.min(max_tokens, 4096);
     try {
-        const msg = await anthropic.messages.create({
-            model: selectedModel,
-            max_tokens: Math.min(max_tokens, 4096),
-            ...(system ? { system } : {}),
-            messages: [{ role: "user", content: prompt }],
-        });
-        const text = msg.content.find(b => b.type === "text")?.text ?? "";
-        res.json({ ok: true, text, model: selectedModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: (0, credits_1.reqId)() });
+        // ── Claude (default) ──
+        if (CLAUDE_MODELS.includes(model) || !GPT_MODELS.includes(model) && !GEMINI_MODELS.includes(model) && !GROK_MODELS.includes(model)) {
+            if (!anthropic) {
+                res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+                return;
+            }
+            const selectedModel = CLAUDE_MODELS.includes(model) ? model : "claude-sonnet-4-6";
+            const msg = await anthropic.messages.create({ model: selectedModel, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+            const text = msg.content.find(b => b.type === "text")?.text ?? "";
+            res.json({ ok: true, text, model: selectedModel, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        // ── OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) ──
+        if (GPT_MODELS.includes(model)) {
+            const openaiKey = process.env.OPENAI_API_KEY;
+            if (!openaiKey) {
+                res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set", request_id: (0, credits_1.reqId)() });
+                return;
+            }
+            const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+                body: JSON.stringify({ model, max_tokens: maxTok, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }] }),
+            });
+            const data = await resp.json();
+            const text = data.choices?.[0]?.message?.content ?? "";
+            res.json({ ok: true, text, model, provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        // ── Google Gemini ──
+        if (GEMINI_MODELS.includes(model)) {
+            const googleKey = process.env.GOOGLE_API_KEY;
+            if (!googleKey) {
+                res.status(503).json({ ok: false, error: "not_configured", message: "GOOGLE_API_KEY not set", request_id: (0, credits_1.reqId)() });
+                return;
+            }
+            const fullPrompt = system ? `${system}\n\n${prompt}` : prompt;
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${googleKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { maxOutputTokens: maxTok } }),
+            });
+            const data = await resp.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+            res.json({ ok: true, text, model, provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        // ── xAI Grok ──
+        if (GROK_MODELS.includes(model)) {
+            const xaiKey = process.env.XAI_API_KEY;
+            if (!xaiKey) {
+                res.status(503).json({ ok: false, error: "not_configured", message: "XAI_API_KEY not set", request_id: (0, credits_1.reqId)() });
+                return;
+            }
+            const resp = await fetch("https://api.x.ai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${xaiKey}` },
+                body: JSON.stringify({ model, max_tokens: maxTok, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }] }),
+            });
+            const data = await resp.json();
+            const text = data.choices?.[0]?.message?.content ?? "";
+            res.json({ ok: true, text, model, provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Supported: ${[...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS].join(", ")}`, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "generation_error", message: String(e), request_id: (0, credits_1.reqId)() });

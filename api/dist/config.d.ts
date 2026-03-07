@@ -12,6 +12,15 @@ export declare const config: {
     anthropic: {
         apiKey: string;
     };
+    openai: {
+        apiKey: string;
+    };
+    google: {
+        apiKey: string;
+    };
+    xai: {
+        apiKey: string;
+    };
     resend: {
         apiKey: string;
     };

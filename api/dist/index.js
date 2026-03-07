@@ -17,6 +17,7 @@ const admin_1 = __importDefault(require("./routes/admin"));
 const workflows_1 = __importDefault(require("./routes/workflows"));
 const seo_1 = __importDefault(require("./routes/seo"));
 const legal_1 = __importDefault(require("./routes/legal"));
+const oauth_1 = __importDefault(require("./routes/oauth"));
 const app = (0, express_1.default)();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
@@ -54,6 +55,8 @@ app.use("/admin", admin_1.default);
 app.use("/v1/workflows", workflows_1.default);
 // Legal
 app.use("/legal", legal_1.default);
+// OAuth 2.0 (Claude Connector + future integrations)
+app.use("/oauth", oauth_1.default);
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
     res.status(404).json({
