@@ -16,6 +16,8 @@ import workflowsRouter from "./routes/workflows";
 import seoRouter from "./routes/seo";
 import legalRouter from "./routes/legal";
 import oauthRouter from "./routes/oauth";
+import { SIGNUP_HTML } from "./assets/signupHtml";
+import { DASHBOARD_HTML } from "./assets/dashboardHtml";
 
 const app = express();
 
@@ -115,6 +117,11 @@ app.use("/v1/workflows", workflowsRouter);
 
 // Legal
 app.use("/legal", legalRouter);
+
+// ─── Frontend pages ───────────────────────────────────────────────────────────
+app.get("/signup", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
+app.get("/login", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
+app.get("/dashboard", (_req: Request, res: Response) => res.type("text/html").send(DASHBOARD_HTML));
 
 
 
