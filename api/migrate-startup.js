@@ -32,6 +32,14 @@ async function migrate() {
       }
     }
 
+    // Add agent fingerprinting columns to ApiRequest
+    await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerType" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerName" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "ApiRequest" ADD COLUMN IF NOT EXISTS "callerVersion" TEXT`);
+    // Add index for callerName (best-effort — ignore if exists)
+    try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ApiRequest_callerName_idx" ON "ApiRequest"("callerName")`); } catch {}
+    console.log('[migrate] Agent fingerprinting columns added to ApiRequest');
+
     // Seed new crypto tools (upsert — safe to run multiple times)
     const cryptoTools = [
       { name: "crypto-price", description: "Real-time price, 24h change, market cap, and volume for any cryptocurrency", category: "crypto", credits: 1 },

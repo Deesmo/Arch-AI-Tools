@@ -4,6 +4,7 @@ exports.deductCredits = deductCredits;
 exports.logError = logError;
 exports.reqId = reqId;
 const prisma_1 = require("../lib/prisma");
+const fingerprint_1 = require("../lib/fingerprint");
 async function deductCredits(req, res, toolName, cost) {
     const agent = req.agent;
     if (!agent) {
@@ -31,14 +32,18 @@ async function deductCredits(req, res, toolName, cost) {
     });
     // Update agent object in-place for use in handler
     agent.credits -= cost;
-    // Log the request
+    // Log the request with agent fingerprint
     try {
+        const fp = (0, fingerprint_1.fingerprintCaller)(req.headers["user-agent"]);
         await prisma_1.prisma.apiRequest.create({
             data: {
                 agentId: agent.id,
                 toolName,
                 creditsUsed: cost,
                 status: "SUCCESS",
+                callerType: fp.callerType,
+                callerName: fp.callerName,
+                callerVersion: fp.callerVersion ?? null,
             },
         });
         // Update daily rollup

@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
 import { Response } from "express";
+import { fingerprintCaller } from "../lib/fingerprint";
 
 export async function deductCredits(
   req: AuthedRequest,
@@ -38,14 +39,18 @@ export async function deductCredits(
   // Update agent object in-place for use in handler
   agent.credits -= cost;
 
-  // Log the request
+  // Log the request with agent fingerprint
   try {
+    const fp = fingerprintCaller(req.headers["user-agent"]);
     await prisma.apiRequest.create({
       data: {
         agentId: agent.id,
         toolName,
         creditsUsed: cost,
         status: "SUCCESS",
+        callerType: fp.callerType,
+        callerName: fp.callerName,
+        callerVersion: fp.callerVersion ?? null,
       },
     });
 
