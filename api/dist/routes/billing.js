@@ -8,8 +8,8 @@ const credits_1 = require("../utils/credits");
 const router = (0, express_1.Router)();
 const CREDIT_PACKS = [
     { credits: 10000, amount: 900, label: "Starter Pack", priceId: process.env.STRIPE_PRICE_STARTER ?? "" },
-    { credits: 10000, amount: 4900, label: "Pro Pack", priceId: process.env.STRIPE_PRICE_PRO ?? "" },
-    { credits: 100000, amount: 19900, label: "Business Pack", priceId: process.env.STRIPE_PRICE_BUSINESS ?? "" },
+    { credits: 60000, amount: 4900, label: "Pro Pack", priceId: process.env.STRIPE_PRICE_PRO ?? "" },
+    { credits: 250000, amount: 19900, label: "Business Pack", priceId: process.env.STRIPE_PRICE_BUSINESS ?? "" },
 ];
 // GET /v1/billing/plans
 router.get("/plans", (_req, res) => {
