@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth";
 import { x402Middleware } from "../../middleware/x402";
-import { deductCredits, reqId } from "../../utils/credits";
+import { deductCredits, reqId, safeErr } from "../../utils/credits";
 import { getCached, setCached } from "../../lib/lru";
 import { config } from "../../config";
 import crypto from "crypto";
@@ -115,7 +115,7 @@ router.post("/validate-data", ...toolMiddleware("validate-data"), async (req: Au
     validate(data, schema, "$");
     res.json({ ok: true, valid: errors.length === 0, errors, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "validation_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "validation_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -157,7 +157,7 @@ router.post("/qr-code", ...toolMiddleware("qr-code"), async (req: AuthedRequest,
       res.json({ ok: true, format: "png", data: dataUrl, request_id: reqId() });
     }
   } catch (e) {
-    res.status(500).json({ ok: false, error: "qr_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "qr_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -198,7 +198,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
 
     res.json({ ok: true, output, from, to, request_id: reqId() });
   } catch (e) {
-    res.status(422).json({ ok: false, error: "conversion_error", message: String(e), request_id: reqId() });
+    res.status(422).json({ ok: false, error: "conversion_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -263,7 +263,7 @@ router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (r
     $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http")) links.push(h); });
     res.json({ ok: true, url: fetchedUrl, title: $("title").text() || og["title"] || "", description: meta["description"] || og["description"] || "", og, meta, word_count: wordCount, link_count: links.length, links: links.slice(0, 20), request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "metadata_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "metadata_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -293,7 +293,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
     res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
   } catch (e) {
     const status = axios.isAxiosError(e) ? (e.response?.status ?? 502) : 500;
-    res.status(status).json({ ok: false, error: "scrape_error", message: String(e), request_id: reqId() });
+    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -321,7 +321,7 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req: Auth
     $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http")) links.push(h); });
     res.json({ ok: true, url, title, description, text, images: images.slice(0, 20), links: links.slice(0, 30), word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "extract_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "extract_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -351,7 +351,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
     });
     res.json({ ok: true, query, results: results.slice(0, num_results), count: results.length, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "search_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -380,7 +380,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
     const answer = msg.content.find(b => b.type === "text")?.text ?? "";
     res.json({ ok: true, query, answer, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "search_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -409,7 +409,7 @@ router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req: AuthedRequ
     }));
     res.json({ ok: true, url, feed_title: typeof channel.title === "string" ? channel.title : "", items: entries, count: entries.length, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "rss_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "rss_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -429,7 +429,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req: AuthedRequ
     if (data.status === "fail") { res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: reqId() }); return; }
     res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "lookup_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "lookup_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -454,7 +454,7 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req: Auth
     const updated = events.find(e => e.eventAction === "last changed")?.eventDate ?? null;
     res.json({ ok: true, domain: clean, status: data.status, registered: created, expires, last_updated: updated, nameservers, registrar: (data.entities as Array<Record<string, unknown>>)?.[0]?.handle ?? null, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "whois_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "whois_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -500,7 +500,7 @@ router.post("/phone-validate", ...toolMiddleware("phone-validate"), async (req: 
     if (!parsed) { res.json({ ok: true, valid: false, phone, message: "Could not parse phone number", request_id: reqId() }); return; }
     res.json({ ok: true, valid: parsed.isValid(), phone, e164: parsed.format("E.164"), national: parsed.formatNational(), international: parsed.formatInternational(), country_code: parsed.country, country_calling_code: `+${parsed.countryCallingCode}`, type: parsed.getType() ?? "unknown", request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "phone_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "phone_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -523,7 +523,7 @@ router.post("/currency-convert", ...toolMiddleware("currency-convert"), async (r
     const converted = Math.round(amount * rate * 100) / 100;
     res.json({ ok: true, from: from.toUpperCase(), to: to.toUpperCase(), amount, rate, converted, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "convert_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "convert_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -543,7 +543,7 @@ router.post("/timezone-convert", ...toolMiddleware("timezone-convert"), async (r
     const toFormatted = new Intl.DateTimeFormat("en-US", { timeZone: to_tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(fromDate);
     res.json({ ok: true, input: datetime, from_tz, to_tz, result: toFormatted, iso: fromDate.toISOString(), request_id: reqId() });
   } catch (e) {
-    res.status(422).json({ ok: false, error: "tz_error", message: String(e), request_id: reqId() });
+    res.status(422).json({ ok: false, error: "tz_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -587,7 +587,7 @@ router.post("/diff-text", ...toolMiddleware("diff-text"), async (req: AuthedRequ
     const removed = (changes as Array<{ removed?: boolean; count?: number }>).filter(c => c.removed).reduce((s, c) => s + (c.count ?? 0), 0);
     res.json({ ok: true, mode, changes, added, removed, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "diff_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "diff_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -643,7 +643,7 @@ router.post("/language-detect", ...toolMiddleware("language-detect"), async (req
       res.json({ ok: true, language: code, code, confidence: 0.7, request_id: reqId() });
     }
   } catch (e) {
-    res.status(500).json({ ok: false, error: "detect_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "detect_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -668,7 +668,7 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { sentiment?: string; score?: number; emotions?: Record<string, number> };
     res.json({ ok: true, sentiment: parsed.sentiment ?? "neutral", score: parsed.score ?? 0.5, emotions: parsed.emotions ?? {}, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "sentiment_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "sentiment_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -700,7 +700,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req: AuthedRequ
     const summary = msg.content.find(b => b.type === "text")?.text ?? "";
     res.json({ ok: true, summary, style, original_word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "summarize_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "summarize_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -726,7 +726,7 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
     const total = Object.values(entities).reduce((s, a) => s + a.length, 0);
     res.json({ ok: true, entities, total_found: total, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "entity_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "entity_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -751,7 +751,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req: 
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { pattern?: string; flags?: string; explanation?: string; test_examples?: string[] };
     res.json({ ok: true, pattern: parsed.pattern ?? "", flags: parsed.flags ?? "", regex: `/${parsed.pattern ?? ""}/${parsed.flags ?? ""}`, explanation: parsed.explanation ?? "", test_examples: parsed.test_examples ?? [], request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "regex_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "regex_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -776,7 +776,7 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req: AuthedRe
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { found?: unknown[]; has_pii?: boolean; redacted?: string };
     res.json({ ok: true, has_pii: parsed.has_pii ?? false, found: parsed.found ?? [], count: (parsed.found ?? []).length, ...(redact ? { redacted: parsed.redacted ?? text } : {}), request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "pii_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "pii_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -860,7 +860,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     // Should never reach here (Claude block above has || true fallthrough)
     res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'.`, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "generation_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "generation_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -887,7 +887,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     const text = msg.content.find(b => b.type === "text")?.text ?? "";
     res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "ocr_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "ocr_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -913,7 +913,7 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
       res.json({ ok: true, url, action, result: `Simulated ${action} on ${selector ?? "page"}${inputText ? ` with text: ${inputText}` : ""}`, note: "Full Playwright automation requires dedicated infrastructure", request_id: reqId() });
     }
   } catch (e) {
-    res.status(502).json({ ok: false, error: "browser_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "browser_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -942,7 +942,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     const text = msg.content.find(b => b.type === "text")?.text ?? "";
     res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "pdf_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -977,7 +977,7 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
       request_id: reqId(),
     });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "screenshot_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "screenshot_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1053,7 +1053,7 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
     const markdown = (title ? `# ${title}\n\n` : "") + toMd($("body")).replace(/\n{3,}/g, "\n\n").trim();
     res.json({ ok: true, markdown, word_count: markdown.split(/\s+/).length, char_count: markdown.length, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "markdown_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "markdown_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1073,7 +1073,7 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req: Authed
     if (!short.startsWith("http")) throw new Error("TinyURL service unavailable");
     res.json({ ok: true, original_url: url, short_url: short, service: "tinyurl", request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "shorten_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "shorten_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1115,7 +1115,7 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
       request_id: reqId(),
     });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "webhook_error", message: String(e), request_id: reqId() });
+    res.status(502).json({ ok: false, error: "webhook_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1171,7 +1171,7 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
     const results = evalPath(data, jsonPath);
     res.json({ ok: true, path: jsonPath, results, count: results.length, request_id: reqId() });
   } catch (e) {
-    res.status(400).json({ ok: false, error: "jsonpath_error", message: String(e), request_id: reqId() });
+    res.status(400).json({ ok: false, error: "jsonpath_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1200,7 +1200,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: 
     const dataUrl = `data:image/svg+xml;base64,${base64}`;
     res.json({ ok: true, prompt, style: "svg", width, height, data_url: dataUrl, svg, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "generation_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "generation_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1244,7 +1244,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const base64 = Buffer.from(svg).toString("base64");
     res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "barcode_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "barcode_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1272,7 +1272,7 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { steps?: unknown[]; final_answer?: string; success?: boolean };
     res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "workflow_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "workflow_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1291,7 +1291,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
     if (!data[id]) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found. Use CoinGecko ID (e.g. bitcoin, ethereum, solana)`, request_id: reqId() }); return; }
     const d = data[id];
     res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── crypto-ohlcv ────────────────────────────────────────────────────────────
@@ -1307,7 +1307,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
     const raw = await r.json() as number[][];
     const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
     res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── crypto-market-cap ───────────────────────────────────────────────────────
@@ -1321,7 +1321,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const data = await r.json() as { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number }[];
     const coins = data.map(c => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
     res.json({ ok: true, currency, coins, request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── crypto-fear-greed ───────────────────────────────────────────────────────
@@ -1336,7 +1336,7 @@ router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async 
     const history = data.data.map(d => ({ value: Number(d.value), classification: d.value_classification, date: new Date(Number(d.timestamp) * 1000).toISOString().split("T")[0] }));
     const latest = history[0];
     res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── crypto-sentiment ────────────────────────────────────────────────────────
@@ -1357,7 +1357,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
       price_momentum: { change_24h: data.market_data?.price_change_percentage_24h ?? null, change_7d: data.market_data?.price_change_percentage_7d ?? null },
       request_id: reqId()
     });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── crypto-news ─────────────────────────────────────────────────────────────
@@ -1379,7 +1379,7 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
     const data = await r.json() as { results?: { title: string; url: string; published_at: string; source?: { title?: string } }[] };
     const articles = (data.results ?? []).slice(0, n).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.source?.title ?? "Unknown" }));
     res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── token-lookup ─────────────────────────────────────────────────────────────
@@ -1393,7 +1393,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
     res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: reqId() }); }
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 export default router;

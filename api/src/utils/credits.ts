@@ -90,3 +90,9 @@ export async function logError(
 export function reqId(): string {
   return `req_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
 }
+
+// Safe error message — never leak internals in production
+export function safeErr(e: unknown): string {
+  if (process.env.NODE_ENV === "production") return "An error occurred. Please try again.";
+  return String(e);
+}

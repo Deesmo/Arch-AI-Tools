@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deductCredits = deductCredits;
 exports.logError = logError;
 exports.reqId = reqId;
+exports.safeErr = safeErr;
 const prisma_1 = require("../lib/prisma");
 const fingerprint_1 = require("../lib/fingerprint");
 async function deductCredits(req, res, toolName, cost) {
@@ -76,5 +77,11 @@ async function logError(agentId, toolName, cost) {
 }
 function reqId() {
     return `req_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+}
+// Safe error message — never leak internals in production
+function safeErr(e) {
+    if (process.env.NODE_ENV === "production")
+        return "An error occurred. Please try again.";
+    return String(e);
 }
 //# sourceMappingURL=credits.js.map

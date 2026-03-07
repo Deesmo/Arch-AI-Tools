@@ -56,7 +56,7 @@ router.post("/register", async (req, res) => {
     }
     catch (e) {
         console.error("Register error:", e);
-        res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // GET /v1/agent/usage
@@ -90,7 +90,7 @@ router.get("/usage", auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // GET /v1/agent/balance
@@ -116,7 +116,7 @@ router.get("/balance", auth_1.requireAuth, async (req, res) => {
         });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 exports.default = router;

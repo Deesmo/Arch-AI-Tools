@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
-import { reqId } from "../utils/credits";
+import { reqId, safeErr } from "../utils/credits";
 import crypto from "crypto";
 
 const router = Router();
@@ -57,7 +57,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     });
   } catch (e) {
     console.error("Register error:", e);
-    res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -90,7 +90,7 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
       request_id: reqId(),
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -113,7 +113,7 @@ router.get("/balance", requireAuth, async (req: AuthedRequest, res: Response): P
       request_id: reqId(),
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
 

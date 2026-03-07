@@ -155,7 +155,7 @@ router.post("/validate-data", ...toolMiddleware("validate-data"), async (req, re
         res.json({ ok: true, valid: errors.length === 0, errors, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "validation_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "validation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 2. GENERATE-HASH ────────────────────────────────────────────────────────
@@ -206,7 +206,7 @@ router.post("/qr-code", ...toolMiddleware("qr-code"), async (req, res) => {
         }
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "qr_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "qr_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 4. CONVERT-FORMAT ───────────────────────────────────────────────────────
@@ -262,7 +262,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, 
         res.json({ ok: true, output, from, to, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(422).json({ ok: false, error: "conversion_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(422).json({ ok: false, error: "conversion_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 5. TRANSFORM-TEXT ───────────────────────────────────────────────────────
@@ -362,7 +362,7 @@ router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (r
         res.json({ ok: true, url: fetchedUrl, title: $("title").text() || og["title"] || "", description: meta["description"] || og["description"] || "", og, meta, word_count: wordCount, link_count: links.length, links: links.slice(0, 20), request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "metadata_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "metadata_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 7. WEB-SCRAPE ───────────────────────────────────────────────────────────
@@ -397,7 +397,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req, res) => 
     }
     catch (e) {
         const status = axios_1.default.isAxiosError(e) ? (e.response?.status ?? 502) : 500;
-        res.status(status).json({ ok: false, error: "scrape_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(status).json({ ok: false, error: "scrape_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 8. EXTRACT-PAGE ─────────────────────────────────────────────────────────
@@ -430,7 +430,7 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req, res)
         res.json({ ok: true, url, title, description, text, images: images.slice(0, 20), links: links.slice(0, 30), word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "extract_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "extract_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 9. SEARCH-WEB ───────────────────────────────────────────────────────────
@@ -464,7 +464,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
         res.json({ ok: true, query, results: results.slice(0, num_results), count: results.length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "search_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "search_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 10. WEB-SEARCH (AI-synthesized) ─────────────────────────────────────────
@@ -499,7 +499,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
         res.json({ ok: true, query, answer, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "search_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "search_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 11. RSS-PARSE ───────────────────────────────────────────────────────────
@@ -534,7 +534,7 @@ router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req, res) => {
         res.json({ ok: true, url, feed_title: typeof channel.title === "string" ? channel.title : "", items: entries, count: entries.length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "rss_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "rss_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 12. IP-LOOKUP ───────────────────────────────────────────────────────────
@@ -560,7 +560,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req, res) => {
         res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "lookup_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "lookup_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 13. WHOIS-LOOKUP ────────────────────────────────────────────────────────
@@ -588,7 +588,7 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req, res)
         res.json({ ok: true, domain: clean, status: data.status, registered: created, expires, last_updated: updated, nameservers, registrar: data.entities?.[0]?.handle ?? null, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "whois_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "whois_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 14. EMAIL-VERIFY ────────────────────────────────────────────────────────
@@ -645,7 +645,7 @@ router.post("/phone-validate", ...toolMiddleware("phone-validate"), async (req, 
         res.json({ ok: true, valid: parsed.isValid(), phone, e164: parsed.format("E.164"), national: parsed.formatNational(), international: parsed.formatInternational(), country_code: parsed.country, country_calling_code: `+${parsed.countryCallingCode}`, type: parsed.getType() ?? "unknown", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "phone_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "phone_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 16. CURRENCY-CONVERT ────────────────────────────────────────────────────
@@ -677,7 +677,7 @@ router.post("/currency-convert", ...toolMiddleware("currency-convert"), async (r
         res.json({ ok: true, from: from.toUpperCase(), to: to.toUpperCase(), amount, rate, converted, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "convert_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "convert_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 17. TIMEZONE-CONVERT ────────────────────────────────────────────────────
@@ -703,7 +703,7 @@ router.post("/timezone-convert", ...toolMiddleware("timezone-convert"), async (r
         res.json({ ok: true, input: datetime, from_tz, to_tz, result: toFormatted, iso: fromDate.toISOString(), request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(422).json({ ok: false, error: "tz_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(422).json({ ok: false, error: "tz_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 18. GENERATE-UUID ───────────────────────────────────────────────────────
@@ -756,7 +756,7 @@ router.post("/diff-text", ...toolMiddleware("diff-text"), async (req, res) => {
         res.json({ ok: true, mode, changes, added, removed, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "diff_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "diff_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 20. READABILITY-SCORE ───────────────────────────────────────────────────
@@ -818,7 +818,7 @@ router.post("/language-detect", ...toolMiddleware("language-detect"), async (req
         }
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "detect_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "detect_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 22. SENTIMENT-ANALYSIS ──────────────────────────────────────────────────
@@ -849,7 +849,7 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
         res.json({ ok: true, sentiment: parsed.sentiment ?? "neutral", score: parsed.score ?? 0.5, emotions: parsed.emotions ?? {}, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "sentiment_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "sentiment_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 23. SUMMARIZE ───────────────────────────────────────────────────────────
@@ -887,7 +887,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req, res) => {
         res.json({ ok: true, summary, style, original_word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "summarize_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "summarize_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 24. EXTRACT-ENTITIES ────────────────────────────────────────────────────
@@ -919,7 +919,7 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
         res.json({ ok: true, entities, total_found: total, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "entity_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "entity_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 25. REGEX-GENERATE ──────────────────────────────────────────────────────
@@ -950,7 +950,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
         res.json({ ok: true, pattern: parsed.pattern ?? "", flags: parsed.flags ?? "", regex: `/${parsed.pattern ?? ""}/${parsed.flags ?? ""}`, explanation: parsed.explanation ?? "", test_examples: parsed.test_examples ?? [], request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "regex_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "regex_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 26. PII-DETECT ──────────────────────────────────────────────────────────
@@ -981,7 +981,7 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req, res) => 
         res.json({ ok: true, has_pii: parsed.has_pii ?? false, found: parsed.found ?? [], count: (parsed.found ?? []).length, ...(redact ? { redacted: parsed.redacted ?? text } : {}), request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "pii_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "pii_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 27. AI-GENERATE ─────────────────────────────────────────────────────────
@@ -1076,7 +1076,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'.`, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "generation_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "generation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 28. OCR-EXTRACT ─────────────────────────────────────────────────────────
@@ -1109,7 +1109,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
         res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "ocr_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "ocr_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 29. BROWSER-TASK ────────────────────────────────────────────────────────
@@ -1139,7 +1139,7 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req, res)
         }
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "browser_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "browser_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 30. EXTRACT-PDF ─────────────────────────────────────────────────────────
@@ -1174,7 +1174,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
         res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "pdf_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "pdf_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 31. SCREENSHOT-CAPTURE ──────────────────────────────────────────────────
@@ -1212,7 +1212,7 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
         });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "screenshot_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "screenshot_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 32. HTML-TO-MARKDOWN ────────────────────────────────────────────────────
@@ -1307,7 +1307,7 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
         res.json({ ok: true, markdown, word_count: markdown.split(/\s+/).length, char_count: markdown.length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "markdown_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "markdown_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 33. URL-SHORTEN ─────────────────────────────────────────────────────────
@@ -1331,7 +1331,7 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req, res) =
         res.json({ ok: true, original_url: url, short_url: short, service: "tinyurl", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "shorten_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "shorten_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 34. WEBHOOK-SEND ────────────────────────────────────────────────────────
@@ -1374,7 +1374,7 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
         });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "webhook_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "webhook_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 35. JSONPATH-QUERY ──────────────────────────────────────────────────────
@@ -1441,7 +1441,7 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req, 
         res.json({ ok: true, path: jsonPath, results, count: results.length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(400).json({ ok: false, error: "jsonpath_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "jsonpath_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 36. IMAGE-GENERATE (SVG via Claude) ────────────────────────────────────
@@ -1476,7 +1476,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, 
         res.json({ ok: true, prompt, style: "svg", width, height, data_url: dataUrl, svg, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "generation_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "generation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 37. BARCODE-GENERATE ────────────────────────────────────────────────────
@@ -1524,7 +1524,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
         res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "barcode_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "barcode_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 38. WORKFLOW-AGENT (multi-step pipeline) ─────────────────────────────────
@@ -1558,7 +1558,7 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req, 
         res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "workflow_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "workflow_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── CRYPTO TOOLS (read-only, no API keys required) ──────────────────────────
@@ -1587,7 +1587,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req, res)
         res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── crypto-ohlcv ────────────────────────────────────────────────────────────
@@ -1615,7 +1615,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req, res)
         res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── crypto-market-cap ───────────────────────────────────────────────────────
@@ -1635,7 +1635,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
         res.json({ ok: true, currency, coins, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── crypto-fear-greed ───────────────────────────────────────────────────────
@@ -1656,7 +1656,7 @@ router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async 
         res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── crypto-sentiment ────────────────────────────────────────────────────────
@@ -1689,7 +1689,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
         });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── crypto-news ─────────────────────────────────────────────────────────────
@@ -1718,7 +1718,7 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req, res) =
         res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── token-lookup ─────────────────────────────────────────────────────────────
@@ -1741,7 +1741,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req, res)
         res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 exports.default = router;
