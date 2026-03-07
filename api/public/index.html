@@ -5,1385 +5,515 @@
   <meta name="color-scheme" content="dark">
   <style>html,body{background:#07061A!important;}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arch Tools — 60+ AI Agent Tools. One Key.</title>
-  <meta name="description" content="60+ production-ready API tools for developers and AI agents. Multi-model AI, voice, memory, web scraping, communication, data validation and more. Dual payment rails: Stripe + x402 USDC.">
-  <meta property="og:title" content="Arch Tools — 60+ API Tools for AI Agents">
+  <title>Arch Tools — 61 AI Agent Tools. One Key.</title>
+  <meta name="description" content="61 production-ready API tools for developers and AI agents. Multi-model AI, voice, memory, web scraping, communication, data validation and more. Dual payment rails: Stripe + x402 USDC.">
+  <meta property="og:title" content="Arch Tools — 61 API Tools for AI Agents">
   <meta property="og:description" content="Pay-per-use API tools for developers and AI agents. 100 free credits to start.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://archtools.dev/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Arch Tools — 38 API Tools for AI Agents">
+  <meta name="twitter:title" content="Arch Tools — 61 API Tools for AI Agents">
   <meta name="twitter:description" content="Pay-per-use API tools for developers and AI agents. 100 free credits to start.">
-  <meta name="twitter:image" content="https://archtools.dev/og-image.png">
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23060919'/><path fill='url(%23g)' d='M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z'/><path fill='url(%23g)' d='M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z'/><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%23FF9010'/><stop offset='60%25' stop-color='%23FF2896'/><stop offset='100%25' stop-color='%238844FF'/></linearGradient></defs></svg>">
-  <!-- PWA / Add to Home Screen -->
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Arch Tools">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#07061A">
+  <link rel="canonical" href="https://archtools.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    /* ─── Reset & Base ─────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --amber:     #FF9010;
-      --pink:      #FF2896;
-      --purple:    #8844FF;
-      --blue:      #1860FF;
-      --purple2:   #7040FF;
-
-      --bg:        #07061A;
-      --bg2:       #0C0B22;
-      --bg3:       #11102C;
-
-      --border:    #1C1A3A;
-      --border2:   #2A2850;
-
-      --indigo:    #8844FF;
-      --indigo2:   #AA77FF;
-      --cyan:      #22d3ee;
-      --green:     #34d399;
-      --red:       #f87171;
-
-      --text:      #F0EEFF;
-      --muted:     #8A85B0;
-      --dimmer:    #4A4570;
-
-      --max:       1240px;
-      --mono:      'JetBrains Mono', monospace;
-      --display:   'Syne', sans-serif;
-      --body:      'DM Sans', sans-serif;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;
+      --border:#1C1A3A;--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:1240px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
     }
-
-    html { scroll-behavior: smooth; background: #07061A; overflow-x: hidden; }
-
-    body {
-      font-family: var(--body);
-      background: var(--bg);
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
       background-image:
-        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(136,68,255,0.18) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 5%, rgba(255,40,150,0.12) 0%, transparent 55%),
-        radial-gradient(ellipse 70% 60% at 50% 90%, rgba(24,96,255,0.10) 0%, transparent 65%),
-        radial-gradient(ellipse 50% 35% at 10% 60%, rgba(255,144,16,0.06) 0%, transparent 60%);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.18) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.12) 0%,transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%,rgba(24,96,255,0.10) 0%,transparent 65%),
+        radial-gradient(ellipse 50% 35% at 10% 60%,rgba(255,144,16,0.06) 0%,transparent 60%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
     }
-
-    /* ─── Grid Texture ──────────────────────────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(136,68,255,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(136,68,255,0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
     }
+    *{position:relative;}
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;}
+    @media(max-width:768px){.wrap{padding:0 20px;}}
+    [id]{scroll-margin-top:80px;}
 
-    * { position: relative; z-index: 1; }
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo-mark{width:32px;height:32px;flex-shrink:0;}
+    .logo-arch-path{filter:drop-shadow(0 0 4px rgba(255,144,16,0.6)) drop-shadow(0 0 8px rgba(255,40,150,0.4));}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
+    @media(max-width:640px){.nav-links{display:none;}}
 
-    /* ─── Container ─────────────────────────────────────────────────────────── */
-    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 32px; }
-    @media (max-width: 768px) { .wrap { padding: 0 20px; } }
+    /* HERO */
+    .hero{padding:80px 0 64px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+    @media(max-width:900px){.hero{grid-template-columns:1fr;padding:48px 0 40px;gap:32px;}}
 
-    /* ─── Nav ───────────────────────────────────────────────────────────────── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      border-bottom: 1px solid var(--border);
-      background: rgba(7,6,26,0.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);
+      border-radius:100px;padding:6px 14px;font-size:12px;font-family:var(--mono);
+      color:var(--indigo2);margin-bottom:24px;
     }
+    .hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 
-    .nav-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 60px;
+    .hero-h1{
+      font-family:var(--display);font-size:clamp(38px,5vw,62px);
+      font-weight:800;line-height:1.05;letter-spacing:-1.5px;color:var(--text);margin-bottom:24px;
     }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      font-family: var(--display);
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--text);
-      letter-spacing: -0.3px;
+    .grad{
+      background:linear-gradient(135deg,var(--amber) 0%,var(--pink) 50%,var(--purple) 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     }
-
-    /* Animated arch SVG logo mark */
-    .logo-mark {
-      width: 32px;
-      height: 32px;
-      flex-shrink: 0;
+    .hero-sub{font-size:17px;color:var(--muted);line-height:1.75;max-width:520px;margin-bottom:36px;}
+    .hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+    .btn-primary{
+      display:inline-flex;align-items:center;gap:8px;
+      background:linear-gradient(135deg,var(--amber),var(--pink));
+      color:#fff;padding:14px 28px;border-radius:10px;
+      font-family:var(--mono);font-size:14px;font-weight:500;
+      text-decoration:none;transition:opacity 0.2s,transform 0.2s;border:none;cursor:pointer;
     }
-
-    .logo-arch-path {
-      filter: drop-shadow(0 0 4px rgba(255,144,16,0.6)) drop-shadow(0 0 8px rgba(255,40,150,0.4));
+    .btn-primary:hover{opacity:0.88;transform:translateY(-2px);}
+    .btn-ghost{
+      display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--muted);
+      padding:14px 28px;border-radius:10px;border:1px solid var(--border2);
+      font-family:var(--mono);font-size:14px;text-decoration:none;
+      transition:color 0.2s,border-color 0.2s;cursor:pointer;
     }
+    .btn-ghost:hover{color:var(--text);border-color:var(--purple);}
 
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      list-style: none;
+    /* GLASS DASHBOARD */
+    .glass-dashboard{
+      background:rgba(12,11,34,0.65);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)
+      border:1px solid rgba(136,68,255,0.22);border-radius:24px;padding:28px;
+      box-shadow:0 0 60px rgba(136,68,255,0.12),0 0 120px rgba(255,40,150,0.06),inset 0 1px 0 rgba(255,255,255,0.06);
     }
+    .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+    .dash-title{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+    .dash-live{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--green);}
+    .dash-live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+    .dash-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+    .dash-stat-box{background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.12);border-radius:12px;padding:14px 12px;text-align:center;}
+    .dash-stat-num{font-family:var(--display);font-size:28px;font-weight:800;line-height:1;}
+    .dash-stat-label{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:0.5px;}
+    .g-am{background:linear-gradient(135deg,var(--amber),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .g-cy{background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .g-bl{background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 
-    .nav-links a {
-      text-decoration: none;
-      color: var(--muted);
-      font-size: 14px;
-      padding: 6px 12px;
-      border-radius: 6px;
-      transition: color 0.15s, background 0.15s;
+    /* TERMINAL */
+    .terminal{border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:rgba(5,4,16,0.85);}
+    .terminal-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.06);}
+    .t-dot{width:10px;height:10px;border-radius:50%;}
+    .t-dot.r{background:#FF5F56;}.t-dot.y{background:#FFBD2E;}.t-dot.g{background:#27C93F;}
+    .terminal-url{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px;}
+    .terminal-body{padding:16px;font-family:var(--mono);font-size:12px;line-height:1.9;}
+    .t-line{display:block;}
+    .t-comment{color:var(--dimmer);}.t-prompt{color:var(--green);}.t-cmd{color:var(--text);}
+    .t-key{color:var(--indigo2);}.t-str{color:var(--amber);}.t-out{color:var(--cyan);}
+    .t-cursor{display:inline-block;width:8px;height:14px;background:var(--green);vertical-align:middle;animation:blink 1.2s step-end infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+    /* STATS BAR */
+    .stats-bar{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(7,6,26,0.6);overflow:hidden;}
+    .stats-inner{display:flex;align-items:stretch;}
+    .stat-item{flex:1;padding:20px 16px;text-align:center;border-right:1px solid var(--border);}
+    .stat-item:last-child{border-right:none;}
+    .stat-label-top{font-family:var(--mono);font-size:10px;color:var(--dimmer);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+    .stat-val{font-family:var(--mono);font-size:20px;font-weight:700;}
+    @media(max-width:640px){.stats-inner{flex-wrap:wrap;}.stat-item{min-width:50%;border-bottom:1px solid var(--border);}}
+
+    /* MARQUEE */
+    .marquee-section{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;}
+    .mq-row{display:flex;gap:10px;animation:marquee 32s linear infinite;white-space:nowrap;will-change:transform;}
+    .mq-row.rev{animation-direction:reverse;margin-top:10px;}
+    @keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+    .mq-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;font-size:12px;font-family:var(--mono);border:1px solid var(--border2);color:var(--muted);flex-shrink:0;background:rgba(12,11,34,0.4);;cursor:pointer;transition:background 0.15s,border-color 0.15s,color 0.15s,transform 0.15s;-webkit-appearance:none;appearance:none;}
+    .mq-pill:hover{background:rgba(136,68,255,0.12);border-color:rgba(136,68,255,0.35);color:var(--text);transform:translateY(-1px);}
+    .mq-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+    /* SECTION */
+    section{padding:80px 0;}
+    .section-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    .section-title{font-family:var(--display);font-size:clamp(26px,3.5vw,42px);font-weight:800;letter-spacing:-0.8px;line-height:1.1;color:var(--text);margin-bottom:16px;}
+    .section-sub{font-size:16px;color:var(--muted);max-width:680px;line-height:1.7;margin-bottom:40px;}
+    .section-line{border:none;border-top:1px solid var(--border);margin-bottom:40px;}
+
+    /* STEPS */
+    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+    @media(max-width:768px){.steps-grid{grid-template-columns:1fr;}}
+    .step-card{background:rgba(12,11,34,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:28px;}
+    .step-num{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;}
+    .step-title{font-family:var(--display);font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+    .step-desc{font-size:14px;color:var(--muted);line-height:1.6;}
+    .step-icon{font-size:28px;margin-bottom:16px;}
+
+    /* TOOL GRID */
+    .cat-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+    .cat-pill{font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:100px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all 0.15s;background:transparent;}
+    .cat-pill:hover{color:var(--c,var(--text));border-color:var(--c,var(--purple));background:color-mix(in srgb,var(--c,#8844FF) 10%,transparent);}
+    .cat-pill.active{color:var(--c,var(--purple));border-color:var(--c,var(--purple));background:color-mix(in srgb,var(--c,#8844FF) 12%,transparent);}
+    .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;}
+    .tool-card{isolation:isolate;will-change:transform;
+      background:rgba(12,11,34,0.6);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)
+      border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;
+      transition:transform 0.22s ease,box-shadow 0.22s ease,border-color 0.22s ease,background 0.22s ease;
+      cursor:default;
     }
-
-    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
-
-    .nav-cta {
-      background: linear-gradient(135deg, var(--amber), var(--pink)) !important;
-      color: #fff !important;
-      padding: 7px 16px !important;
-      border-radius: 8px !important;
-      font-weight: 500;
+    .tool-card:hover{
+      transform:translateY(-4px) scale(1.015);
+      border-color:rgba(136,68,255,0.35);
+      box-shadow:0 12px 40px rgba(136,68,255,0.16),0 4px 16px rgba(255,40,150,0.07);
+      background:rgba(17,16,44,0.82);
     }
+    .tool-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .tool-icon-badge{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;font-family:var(--mono);font-weight:700;letter-spacing:0.3px;transition:transform 0.2s;}
+    .tool-card:hover .tool-icon-badge{transform:scale(1.08);}
+    .tool-name{font-family:var(--display);font-size:13px;font-weight:700;color:var(--text);flex:1;}
+    .tool-credits{font-family:var(--mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:100px;border:1px solid var(--border);white-space:nowrap;}
+    .tool-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:10px;}
+    .tool-endpoint{font-family:var(--mono);font-size:10.5px;color:rgba(136,68,255,0.65);background:rgba(136,68,255,0.06);padding:3px 9px;border-radius:6px;display:inline-block;}
 
-    .nav-cta:hover { opacity: 0.88 !important; transform: translateY(-1px); }
+    /* CODE BLOCKS */
+    .code-block{background:rgba(5,4,16,0.9);border:1px solid var(--border);border-radius:12px;padding:24px;font-family:var(--mono);font-size:13px;line-height:1.8;overflow-x:auto;}
+    .code-comment{color:var(--dimmer);}.code-key{color:var(--indigo2);}.code-val{color:var(--amber);}.code-str{color:var(--green);}
 
-    @media (max-width: 640px) { .nav-links { display: none; } }
+    /* X402 / MCP SECTIONS */
+    .split-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+    @media(max-width:900px){.split-grid{grid-template-columns:1fr;gap:40px;}}
+    .feature-list{list-style:none;margin-top:24px;}
+    .feature-list li{font-size:14px;color:var(--muted);padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:flex-start;gap:10px;}
+    .feature-list li::before{content:'→';color:var(--purple);font-family:var(--mono);font-size:12px;flex-shrink:0;margin-top:2px;}
 
-    /* ─── Scroll Margin for anchors ─────────────────────────────────────────── */
-    [id] { scroll-margin-top: 80px; }
+    /* PRICING */
+    .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+    @media(max-width:768px){.pricing-grid{grid-template-columns:1fr;}}
+    .pricing-card{background:rgba(12,11,34,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;transition:transform 0.2s,box-shadow 0.2s;}
+    .pricing-card:hover{transform:translateY(-4px);}
+    .pricing-card.featured{background:rgba(136,68,255,0.08);border-color:rgba(136,68,255,0.4);box-shadow:0 0 60px rgba(136,68,255,0.12);}
+    .plan-name-mono{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:12px;letter-spacing:0.5px;}
+    .plan-name-mono .hash{color:var(--purple);}
+    .plan-badge{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--amber);border:1px solid rgba(255,144,16,0.3);border-radius:100px;padding:2px 8px;margin-left:8px;}
+    .plan-price{font-family:var(--display);font-size:52px;font-weight:800;letter-spacing:-3px;line-height:1;color:var(--text);margin-bottom:4px;}
+    .plan-price .currency{font-size:24px;vertical-align:super;color:var(--muted);}
+    .plan-sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:24px;}
+    .plan-features{list-style:none;margin-bottom:28px;}
+    .plan-features li{font-size:13px;color:var(--muted);padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:8px;}
+    .plan-features li::before{content:'→';color:var(--purple);font-family:var(--mono);font-size:11px;}
+    .plan-cta{display:block;text-align:center;padding:13px;border-radius:10px;font-family:var(--mono);font-size:13px;text-decoration:none;transition:all 0.2s;cursor:pointer;border:none;}
+    .plan-cta-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);}
+    .plan-cta-ghost:hover{border-color:var(--purple);color:var(--text);}
+    .plan-cta-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;}
+    .plan-cta-primary:hover{opacity:0.88;}
 
-    /* ─── Hero ──────────────────────────────────────────────────────────────── */
-    .hero {
-      padding: 96px 0 80px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 64px;
-      align-items: center;
-    }
+    /* REGISTER CTA */
+    .cta-section{text-align:center;padding:96px 0;}
+    .cta-section .section-title{max-width:600px;margin:0 auto 16px;}
+    .cta-section .section-sub{margin:0 auto 40px;}
+    .register-form{display:flex;gap:12px;max-width:440px;margin:0 auto 16px;}
+    .register-input{flex:1;background:rgba(12,11,34,0.8);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color 0.2s;}
+    .register-input:focus{border-color:var(--purple);}
+    .register-input::placeholder{color:var(--muted);opacity:0.5;}
+    .register-note{font-family:var(--mono);font-size:11px;color:var(--dimmer);text-align:center;}
 
-    @media (max-width: 900px) {
-      .hero { grid-template-columns: 1fr; padding: 60px 0 48px; gap: 40px; }
-    }
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:40px 0 32px;}
+    .footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+    .footer-left{font-family:var(--mono);font-size:12px;color:var(--muted);}
+    .footer-prompt{font-family:var(--mono);font-size:12px;color:var(--muted);}
+    .footer-prompt .prompt-text{color:var(--purple);}
+    .footer-cursor{display:inline-block;width:8px;height:13px;background:var(--green);vertical-align:middle;margin-left:2px;animation:blink 1.2s step-end infinite;}
+    .footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+    .footer-links a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;transition:color 0.15s;}
+    .footer-links a:hover{color:var(--text);}
 
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(136,68,255,0.1);
-      border: 1px solid rgba(136,68,255,0.3);
-      border-radius: 100px;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-family: var(--mono);
-      color: var(--indigo2);
-      margin-bottom: 24px;
-      animation: fadeUp 0.6s ease both;
-    }
+    /* ── V7 SPINNING CONIC BORDER ON CARD HOVER ── */
+    @property --ba  { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+    @property --sba { syntax: '<angle>'; initial-value: 0deg; inherits: true;  }
 
-    .badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: pulse-dot 2s ease infinite;
-    }
+    .tool-card { isolation: isolate; }
 
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    .hero-headline {
-      font-family: var(--display);
-      font-size: clamp(2.6rem, 5vw, 3.8rem);
-      font-weight: 800;
-      line-height: 1.08;
-      letter-spacing: -1.5px;
-      margin-bottom: 20px;
-      animation: fadeUp 0.6s ease 0.1s both;
-    }
-
-    .grad-text {
-      background: linear-gradient(90deg, var(--amber) 0%, var(--pink) 28%, var(--purple) 56%, var(--blue) 78%, var(--amber) 100%);
-      background-size: 250% 100%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: gradShift 5s linear infinite;
-    }
-    @keyframes gradShift {
-      0%   { background-position: 0% 50%; }
-      100% { background-position: 250% 50%; }
-    }
-
-    .hero-sub {
-      font-size: 17px;
-      color: var(--muted);
-      line-height: 1.7;
-      max-width: 460px;
-      margin-bottom: 36px;
-      font-weight: 300;
-      animation: fadeUp 0.6s ease 0.2s both;
-    }
-
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      animation: fadeUp 0.6s ease 0.3s both;
-    }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: linear-gradient(135deg, var(--amber), var(--pink));
-      color: #fff;
-      padding: 13px 24px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 500;
-      font-size: 15px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      box-shadow: 0 4px 20px rgba(255,40,150,0.25);
-    }
-
-    .btn-primary:hover { opacity: 0.88; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,40,150,0.4); }
-
-    
-    .btn-primary::before { content: ''; position: absolute; top: 0; left: -100%; bottom: 0; width: 60%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent); transform: skewX(-15deg); }
-    .btn-primary:hover::before { animation: btn-shine 0.55s ease forwards; }
-    @keyframes btn-shine { 0%{left:-100%} 100%{left:160%} }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: transparent;
-      color: var(--muted);
-      padding: 13px 24px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 400;
-      font-size: 15px;
-      border: 1px solid var(--border2);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-secondary:hover { color: var(--text); border-color: var(--dimmer); background: rgba(255,255,255,0.03); }
-
-    /* ─── Terminal Window ───────────────────────────────────────────────────── */
-    .terminal {
-      background: var(--bg2);
-      border: 1px solid var(--border2);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow:
-        0 0 0 1px rgba(136,68,255,0.1),
-        0 32px 80px rgba(0,0,0,0.5),
-        0 0 80px rgba(136,68,255,0.05);
-      animation: fadeUp 0.6s ease 0.2s both, float 6s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-    }
-
-    .terminal-bar {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .t-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .t-dot.r { background: #ff5f57; }
-    .t-dot.y { background: #ffbd2e; }
-    .t-dot.g { background: #28ca42; }
-
-    .terminal-url {
-      flex: 1;
-      text-align: center;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--dimmer);
-    }
-
-    .terminal {
-      max-width: 100%;
-    }
-    .terminal-body {
-      padding: 20px 22px;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      line-height: 1.8;
-    }
-
-    .t-comment { color: var(--dimmer); }
-    .t-cmd { color: var(--muted); }
-    .t-key { color: var(--purple); }
-    .t-val { color: var(--green); }
-    .t-str { color: #fca5a5; }
-    .t-num { color: var(--amber); }
-    .t-punc { color: var(--dimmer); }
-    .t-prompt { color: var(--indigo2); }
-
-    .t-line { display: block; animation: typeIn 0.1s ease both; }
-    .t-line:nth-child(1)  { animation-delay: 0.5s; }
-    .t-line:nth-child(2)  { animation-delay: 0.7s; }
-    .t-line:nth-child(3)  { animation-delay: 0.9s; }
-    .t-line:nth-child(4)  { animation-delay: 1.1s; }
-    .t-line:nth-child(5)  { animation-delay: 1.3s; }
-    .t-line:nth-child(6)  { animation-delay: 1.5s; }
-    .t-line:nth-child(7)  { animation-delay: 1.7s; }
-    .t-line:nth-child(8)  { animation-delay: 1.9s; }
-    .t-line:nth-child(9)  { animation-delay: 2.1s; }
-    .t-line:nth-child(10) { animation-delay: 2.3s; }
-    .t-line:nth-child(11) { animation-delay: 2.5s; }
-    .t-line:nth-child(12) { animation-delay: 2.7s; }
-    .t-line:nth-child(13) { animation-delay: 2.9s; }
-    .t-line:nth-child(14) { animation-delay: 3.1s; }
-    .t-line:nth-child(15) { animation-delay: 3.3s; }
-    .t-line:nth-child(16) { animation-delay: 3.5s; }
-
-    @keyframes typeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .t-cursor {
-      display: inline-block;
-      width: 8px;
-      height: 14px;
-      background: var(--indigo2);
-      border-radius: 2px;
-      vertical-align: middle;
-      animation: blink 1s step-end infinite;
-      animation-delay: 3.7s;
-      opacity: 0;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    /* ─── Marquee ───────────────────────────────────────────────────────────── */
-    .marquee-section {
-      padding: 40px 0;
-      overflow: hidden;
-      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-      -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-    }
-
-    .mq-row {
-      display: flex;
-      gap: 10px;
-      width: max-content;
-      margin-bottom: 10px;
-    }
-
-    .mq-row-1 { animation: mqScroll 40s linear infinite; animation-play-state: paused; }
-    .mq-row-2 { animation: mqScroll 40s linear infinite reverse; animation-play-state: paused; }
-    .mq-row-3 { animation: mqScroll 40s linear infinite; animation-delay: -13s; animation-play-state: paused; }
-
-    @keyframes mqScroll {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-
-    .mq-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: var(--bg2);
-      border: 1px solid var(--border2);
-      border-radius: 100px;
-      padding: 7px 16px;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-      cursor: default;
-      transition: border-color 0.2s, color 0.2s;
-    }
-
-    .mq-pill:hover { border-color: var(--purple); color: var(--text); }
-    .mq-pill-icon { font-size: 13px; }
-
-    /* ─── Stats Bar ─────────────────────────────────────────────────────────── */
-    .stats-bar {
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      padding: 28px 0;
-      margin-bottom: 96px;
-    }
-
-    .stats-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      flex: 1;
-      min-width: 120px;
-    }
-
-    .stat-num {
-      font-family: var(--display);
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--text), var(--indigo2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: var(--dimmer);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-family: var(--mono);
-    }
-
-    .stat-divider {
-      width: 1px;
-      height: 40px;
-      background: var(--border);
-      flex-shrink: 0;
-    }
-
-    /* ─── Section Headers ───────────────────────────────────────────────────── */
-    .section-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--indigo2);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      margin-bottom: 16px;
-    }
-
-    .section-tag::before {
-      content: '';
-      display: inline-block;
-      width: 16px;
-      height: 1px;
-      background: var(--indigo2);
-    }
-
-    h2.section-title {
-      font-family: var(--display);
-      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-      font-weight: 700;
-      letter-spacing: -0.8px;
-      margin-bottom: 14px;
-      line-height: 1.15;
-    }
-
-    .section-sub {
-      font-size: 16px;
-      color: var(--muted);
-      font-weight: 300;
-      max-width: 520px;
-      line-height: 1.7;
-    }
-
-    /* ─── How It Works ──────────────────────────────────────────────────────── */
-    .section { margin-bottom: 96px; }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2px;
-      margin-top: 48px;
-      background: var(--border);
+    .tool-card::before {
+      content: ''; position: absolute; inset: 0;
+      border: 1px solid transparent;
       border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid var(--border);
+      background: conic-gradient(from var(--ba), #FF9010, #FF2896, #8844FF, #1860FF, #FF9010) border-box;
+      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0; transition: opacity 0.35s;
+      pointer-events: none; z-index: 2;
     }
 
-    @media (max-width: 700px) { .steps { grid-template-columns: 1fr; } }
+    .tool-card:hover::before { opacity: 1; animation: spin-border 2.8s linear infinite; }
 
-    .step {
-      background: var(--bg2);
-      padding: 36px 32px;
-      transition: background 0.2s;
+    @keyframes spin-border { to { --ba: 360deg; } }
+    .tool-card:hover {  }
+
+
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE — TABLET (max-width: 1024px)
+    ══════════════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .hero { gap: 40px; }
+      .split-grid { gap: 40px; }
+      .plan-price { font-size: 42px; }
     }
 
-    .step:hover { background: var(--bg3); }
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE — TABLET/PHABLET (max-width: 768px)
+    ══════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      /* Sections */
+      section { padding: 56px 0; }
 
-    .step-num {
-      font-family: var(--display);
-      font-size: 4rem;
-      font-weight: 800;
-      color: rgba(136,68,255,0.12);
-      line-height: 1;
-      margin-bottom: 16px;
-      letter-spacing: -2px;
+      /* Stats bar — wrap into 2x2+1 grid */
+      .stats-inner { flex-wrap: wrap; }
+      .stat-item {
+        flex: none;
+        width: 50%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 16px 12px;
+      }
+      .stat-item:last-child {
+        width: 100%;
+        border-bottom: none;
+      }
+      .stat-label-top { font-size: 9px; }
+      .stat-val { font-size: 18px; }
+
+      /* Glass dashboard */
+      .glass-dashboard { padding: 20px; border-radius: 18px; }
+      .dash-stats-row { gap: 8px; }
+      .dash-stat-box { padding: 10px 8px; border-radius: 10px; }
+      .dash-stat-num { font-size: 22px; }
+
+      /* Terminal */
+      .terminal-body { padding: 12px; font-size: 11px; }
+      .terminal-url { font-size: 10px; }
+
+      /* Hero */
+      .hero-h1 { font-size: clamp(32px, 8vw, 48px); letter-spacing: -1px; }
+      .hero-sub { font-size: 15px; max-width: 100%; }
+      .hero-btns { flex-direction: column; gap: 10px; }
+      .btn-primary, .btn-ghost { width: 100%; justify-content: center; padding: 14px 20px; }
+
+      /* Tool cards */
+      .tools-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .tool-card { padding: 16px; }
+      .tool-name { font-size: 12px; }
+      .tool-desc { font-size: 12px; }
+
+      /* Steps */
+      .step-card { padding: 22px; }
+
+      /* Pricing */
+      .pricing-card { padding: 24px; }
+      .plan-price { font-size: 40px; }
+
+      /* Register form — stack vertically */
+      .register-form { flex-direction: column; max-width: 100%; }
+      .register-input { width: 100%; }
+      .register-form .btn-primary { width: 100%; justify-content: center; }
+
+      /* Code blocks */
+      .code-block { font-size: 11px; padding: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+      /* Split grid — reverse order on mobile so text comes before code */
+      .split-grid.reverse-mobile { direction: rtl; }
+      .split-grid.reverse-mobile > * { direction: ltr; }
+
+      /* Section titles */
+      .section-title { font-size: clamp(24px, 6vw, 36px); }
+      .section-sub { font-size: 15px; }
+
+      /* Cat filters scroll horizontal on mobile */
+      .cat-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .cat-filters::-webkit-scrollbar { display: none; }
+      .cat-pill { flex-shrink: 0; }
     }
 
-    .step h3 {
-      font-family: var(--display);
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: var(--text);
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE — MOBILE (max-width: 480px)
+    ══════════════════════════════════════════════════ */
+    @media (max-width: 480px) {
+      section { padding: 48px 0; }
+
+      /* Nav — show a compact CTA even when links are hidden */
+      .nav-cta { padding: 6px 12px !important; font-size: 12px !important; }
+
+      /* Hero — tighter */
+      .hero-h1 { font-size: clamp(30px, 9vw, 44px); line-height: 1.08; }
+      .hero-badge { font-size: 11px; padding: 5px 12px; }
+      .hero-sub { font-size: 14px; line-height: 1.65; }
+
+      /* Stats — full width each on very small screens */
+      .stat-item { width: 50%; }
+
+      /* Glass dashboard — smaller stat nums */
+      .dash-stat-num { font-size: 20px; }
+
+      /* Tools — single column on small phones */
+      .tools-grid { grid-template-columns: 1fr; }
+
+      /* Marquee — slightly smaller pills */
+      .mq-pill { font-size: 11px; padding: 5px 12px; }
+
+      /* Steps */
+      .step-icon { font-size: 24px; }
+      .step-title { font-size: 16px; }
+
+      /* Pricing */
+      .plan-price { font-size: 36px; letter-spacing: -2px; }
+      .plan-name-mono { font-size: 12px; }
+
+      /* CTA section */
+      .cta-section { padding: 56px 0; }
+      .register-form { gap: 10px; }
+
+      /* Footer */
+      .footer-inner { flex-direction: column; align-items: flex-start; gap: 20px; }
+      .footer-links { flex-wrap: wrap; gap: 14px; }
     }
 
-    .step p { font-size: 14px; color: var(--muted); line-height: 1.7; }
-
-    .step-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      font-size: 18px;
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE — DESKTOP WIDE (min-width: 1400px)
+    ══════════════════════════════════════════════════ */
+    @media (min-width: 1400px) {
+      .tools-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+      .hero-h1 { font-size: 68px; }
     }
 
-    /* ─── Tools Grid ────────────────────────────────────────────────────────── */
-    .tools-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      margin-top: 48px;
-    }
 
-    .tool-card {
-      background: var(--bg2);
-      padding: 24px;
-      transition: background 0.2s;
-    }
-
-    .tool-card:hover { background: var(--bg3); }
-
-    .tool-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .tool-icon-wrap {
-      width: 36px;
-      height: 36px;
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-      background: rgba(136,68,255,0.12);
-    }
-
-    .tool-name {
-      font-family: var(--display);
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      flex: 1;
-      padding-top: 8px;
-    }
-
-    .tool-credits {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--dimmer);
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border2);
-      border-radius: 6px;
-      padding: 3px 8px;
-      white-space: nowrap;
-    }
-
-    .tool-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-    .tool-endpoint {
-      margin-top: 10px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--indigo2);
-      opacity: 0.7;
-    }
-
-    /* ─── Pricing ───────────────────────────────────────────────────────────── */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 48px;
-    }
-
-    @media (max-width: 700px) { .pricing-grid { grid-template-columns: 1fr; } }
-
-    .pricing-card {
-      background: var(--bg2);
-      border: 1px solid var(--border2);
-      border-radius: 16px;
-      padding: 32px 28px;
-      transition: all 0.2s;
-      position: relative;
-    }
-
-    .pricing-card:hover {
-      border-color: var(--purple);
-      transform: translateY(-4px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(136,68,255,0.08);
-    }
-
-    .pricing-card.featured {
-      border-color: var(--purple);
-      background: linear-gradient(135deg, rgba(136,68,255,0.06), var(--bg2));
-      box-shadow: 0 0 60px rgba(136,68,255,0.1);
-    }
-
-    .featured-badge {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, var(--amber), var(--pink));
-      color: #fff;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 4px 14px;
-      border-radius: 100px;
-      white-space: nowrap;
-      font-family: var(--mono);
-    }
-
-    .plan-name {
-      font-family: var(--mono);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--dimmer);
-      margin-bottom: 12px;
-    }
-
-    .plan-price {
-      font-family: var(--display);
-      font-size: 3rem;
-      font-weight: 800;
-      letter-spacing: -2px;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .plan-credits { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
-
-    .plan-per {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--dimmer);
-      margin-bottom: 28px;
-    }
-
-    .plan-features { list-style: none; margin-bottom: 28px; }
-
-    .plan-features li {
-      font-size: 14px;
-      color: var(--muted);
-      padding: 7px 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .plan-features li:last-child { border-bottom: none; }
-    .plan-features li::before { content: '✓'; color: var(--green); font-size: 12px; font-weight: 700; flex-shrink: 0; }
-
-    .btn-plan {
-      display: block;
-      width: 100%;
-      text-align: center;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-weight: 500;
-      font-size: 14px;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s;
-    }
-
-    .btn-plan-outline { background: transparent; border: 1px solid var(--border2); color: var(--muted); }
-    .btn-plan-outline:hover { border-color: var(--purple); color: var(--text); }
-    .btn-plan-solid { background: linear-gradient(135deg, var(--amber), var(--pink)); color: #fff; }
-    .btn-plan-solid:hover { opacity: 0.88; box-shadow: 0 8px 24px rgba(255,40,150,0.35); }
-
-    /* ─── x402 Section ──────────────────────────────────────────────────────── */
-    .x402-section {
-      border: 1px solid rgba(255,144,16,0.2);
-      border-radius: 20px;
-      padding: 56px 48px;
-      margin-bottom: 96px;
-      background: linear-gradient(135deg, rgba(255,144,16,0.03), var(--bg2), rgba(136,68,255,0.04));
-      position: relative;
-      overflow: hidden;
-    }
-
-    .x402-section::before {
-      content: '';
-      position: absolute;
-      top: -100px; right: -60px;
-      width: min(400px, 90vw); height: min(400px, 90vw);
-      background: radial-gradient(circle, rgba(136,68,255,0.06), transparent 70%);
-      pointer-events: none;
-    }
-
-    .x402-section { overflow: hidden; }
-    @media (max-width: 768px) { .x402-section { padding: 32px 24px; } }
-
-    .x402-section::after { content: 'x402'; position: absolute; bottom: -20px; right: 40px; font-family: var(--display); font-size: 9rem; font-weight: 800; color: rgba(255,144,16,0.04); letter-spacing: -4px; pointer-events: none; line-height: 1; z-index: 0; }
-    .x402-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 48px;
-      align-items: center;
-    }
-
-    @media (max-width: 800px) { .x402-inner { grid-template-columns: 1fr; } }
-
-    .x402-content h2 { margin-bottom: 16px; }
-
-    .x402-tags {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 24px;
-    }
-
-    .x402-tag {
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 5px 12px;
-      border-radius: 100px;
-      border: 1px solid var(--border2);
-      color: var(--dimmer);
-    }
-
-    .x402-tag.active { border-color: var(--cyan); color: var(--cyan); background: rgba(34,211,238,0.06); }
-
-    /* ─── MCP Section ───────────────────────────────────────────────────────── */
-    /* V5 cb-* syntax colors */
-    .cb-key{color:#7DD3FC} .cb-val{color:#86EFAC} .cb-str{color:#FDA4AF} .cb-punc{color:#6B7280}
-    .mcp-section { margin-bottom: 96px; }
-
-    .mcp-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 56px;
-      align-items: center;
-      margin-top: 48px;
-    }
-
-    @media (max-width: 800px) { .mcp-inner { grid-template-columns: 1fr; } }
-
-    .code-block {
-      background: var(--bg2);
-      border: 1px solid var(--border2);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-
-    .code-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 18px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .code-lang { font-family: var(--mono); font-size: 11px; color: var(--dimmer); }
-
-    .copy-btn {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--dimmer);
-      background: none;
-      border: 1px solid var(--border2);
-      border-radius: 4px;
-      padding: 3px 10px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .copy-btn:hover { color: var(--text); border-color: var(--dimmer); }
-
-    .code-body {
-      padding: 20px 22px;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      line-height: 1.85;
-      overflow-x: auto;
-      max-width: 100%;
-    }
-
-    .mcp-features { display: flex; flex-direction: column; gap: 20px; }
-
-    .mcp-feat { display: flex; gap: 16px; align-items: flex-start; }
-
-    .mcp-feat-icon {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      border: 1px solid var(--border2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .mcp-feat-text h4 { font-family: var(--display); font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .mcp-feat-text p { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-    /* ─── CTA Section ───────────────────────────────────────────────────────── */
-    .cta-section { margin-bottom: 96px; }
-
-    .cta-box {
-      background: linear-gradient(135deg, rgba(136,68,255,0.08), rgba(255,40,150,0.04));
-      border: 1px solid rgba(136,68,255,0.2);
-      border-radius: 20px;
-      padding: 64px 48px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cta-box::before {
-      content: '';
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: min(600px, 100vw); height: 300px;
-      background: radial-gradient(ellipse, rgba(136,68,255,0.07), transparent 70%);
-      pointer-events: none;
-    }
-
-    .cta-box h2 {
-      font-family: var(--display);
-      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-      font-weight: 800;
-      letter-spacing: -0.8px;
-      margin-bottom: 14px;
-    }
-
-    .cta-box p { color: var(--muted); font-size: 16px; margin-bottom: 36px; font-weight: 300; }
-
-    .cta-badges {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-    }
-
-    .cta-badge {
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 4px 12px;
-      border-radius: 100px;
-      border: 1px solid var(--border2);
-      color: var(--dimmer);
-    }
-
-    .cta-badge.active {
-      border-color: var(--purple);
-      color: var(--indigo2);
-      background: rgba(136,68,255,0.08);
-    }
-
-    .cta-form {
-      display: flex;
-      gap: 10px;
-      max-width: 440px;
-      margin: 0 auto;
-    }
-
-    @media (max-width: 500px) {
-      .cta-form { flex-direction: column; }
-      .cta-box { padding: 40px 24px; }
-    }
-
-    .cta-input {
-      flex: 1;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border2);
-      border-radius: 10px;
-      padding: 13px 18px;
-      color: var(--text);
-      font-family: var(--body);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .cta-input::placeholder { color: var(--dimmer); }
-    .cta-input:focus { border-color: var(--purple); }
-
-    #api-result {
-      margin-top: 20px;
-      padding: 16px 20px;
-      background: rgba(52,211,153,0.08);
-      border: 1px solid rgba(52,211,153,0.2);
-      border-radius: 10px;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      color: var(--green);
-      text-align: left;
-      display: none;
-      max-width: 440px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    /* ─── Footer ────────────────────────────────────────────────────────────── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 48px 0;
-    }
-
-    .footer-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .footer-left { display: flex; flex-direction: column; gap: 8px; }
-    .footer-copy { font-size: 13px; color: var(--dimmer); }
-
-    .footer-links { display: flex; gap: 20px; list-style: none; }
-    .footer-links a { font-size: 13px; color: var(--dimmer); text-decoration: none; transition: color 0.15s; }
-    .footer-links a:hover { color: var(--muted); }
-
-    .footer-status { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--green); }
-
-    /* ─── Animations ────────────────────────────────────────────────────────── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ─── Scrollbar ─────────────────────────────────────────────────────────── */
-    
-    .hero-arch-wrap { display: flex; justify-content: center; align-items: flex-end; margin-bottom: 24px; }
-    .hero-arch-svg { filter: drop-shadow(0 0 40px rgba(136,68,255,0.35)) drop-shadow(0 0 80px rgba(255,40,150,0.18)); }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--dimmer); }
-
-    /* ═══════════════════ v6 DESIGN ENHANCEMENTS ═══════════════════ */
-    @property --ba { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-
-    /* Animated headline gradient */
-    .grad-text {
-      background: linear-gradient(135deg, #FF9010, #FF2896, #8844FF, #1860FF, #FF9010, #FF2896) !important;
-      background-size: 400% !important;
-      -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
-      background-clip: text !important;
-      animation: gradShift 5s linear infinite !important;
-    }
-    @keyframes gradShift { 0%{background-position:0% 50%} 100%{background-position:400% 50%} }
-
-    /* Section tag — pink + gradient bar */
-    .section-tag { color: #FF79C0 !important; }
-    .section-tag::before { background: linear-gradient(90deg, #FF9010, #FF2896, #8844FF) !important; }
-
-    /* Stat numbers — full gradient */
-    .stat-num {
-      background: linear-gradient(135deg, #FF9010, #FF2896 50%, #8844FF) !important;
-      -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
-      background-clip: text !important;
-    }
-
-    /* Floating particles */
-    .particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-    .particle{position:absolute;border-radius:50%;animation:particleRise linear infinite;opacity:0;}
-    @keyframes particleRise{0%{transform:translateY(105vh) scale(0);opacity:0}8%{opacity:1}88%{opacity:0.7}100%{transform:translateY(-10vh) scale(1.2);opacity:0}}
-
-    /* Halo/glow animation classes */
-    @keyframes glow-pulse{0%,100%{opacity:.65}50%{opacity:1.0}}
-    @keyframes halo-pulse{0%,100%{opacity:.45}50%{opacity:.82}}
-    @keyframes floor-pulse{0%,100%{opacity:.50}50%{opacity:.90}}
-    .gp{animation:glow-pulse 2.4s ease-in-out infinite}
-    .hp{animation:halo-pulse 2.7s ease-in-out infinite}
-    .gp2{animation:glow-pulse 2.2s ease-in-out infinite .7s}
-    .fp{animation:floor-pulse 2.9s ease-in-out infinite .3s}
-
-    /* Hero SVG logo wrap */
-    .hero-logo-wrap{margin-bottom:36px;position:relative;}
-    .hero-logo-bg{position:absolute;inset:-80px;background:radial-gradient(ellipse 75% 75% at 42% 50%,rgba(255,40,150,0.14) 0%,rgba(136,68,255,0.11) 50%,transparent 80%);pointer-events:none;z-index:0;}
-    .hero-logo-inner{position:relative;z-index:1;}
-
-    /* Hero aurora beam */
-    .hero-aurora{
-      position:absolute;top:-120px;left:50%;transform:translateX(-50%);
-      width:900px;height:500px;pointer-events:none;z-index:0;
-      background:conic-gradient(from 180deg at 50% 100%,transparent 30%,rgba(255,144,16,0.06) 40%,rgba(255,40,150,0.09) 50%,rgba(136,68,255,0.09) 60%,rgba(24,96,255,0.06) 70%,transparent 80%);
-      filter:blur(40px);animation:auroraPulse 8s ease-in-out infinite;
-    }
-    @keyframes auroraPulse{0%,100%{opacity:0.6;transform:translateX(-50%) scaleX(1)}50%{opacity:1;transform:translateX(-50%) scaleX(1.08)}}
-
-    /* Arch halo ring */
-    .arch-halo-ring{
-      position:absolute;border-radius:50%;pointer-events:none;background:transparent;
-      box-shadow:0 0 120px 40px rgba(255,40,150,0.10),0 0 200px 80px rgba(136,68,255,0.06);
-      animation:haloRingPulse 4s ease-in-out infinite;
-      top:50%;left:40%;transform:translate(-50%,-50%);
-      width:320px;height:200px;
-    }
-    @keyframes haloRingPulse{0%,100%{opacity:0.7;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}}
-
-    /* Section reveal line */
-    .section-line{
-      height:1px;width:0;background:linear-gradient(90deg,#FF9010,#FF2896,#8844FF,#1860FF);
-      margin-bottom:48px;border-radius:2px;
-      transition:width 1.2s cubic-bezier(0.16,1,0.3,1);
-    }
-    .section-line.visible{width:100%;}
-
-    /* Enhanced scroll reveal */
-    .sr{opacity:0;transform:translateY(28px);transition:opacity 0.7s cubic-bezier(0.16,1,0.3,1),transform 0.7s cubic-bezier(0.16,1,0.3,1);}
-    .sr.visible{opacity:1;transform:translateY(0);}
-
-    /* Glassmorphism step cards */
-    .step{
-      background:rgba(12,11,34,0.65)!important;
-      backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;
-      border-top:1px solid rgba(255,255,255,0.06)!important;
-      border-left:1px solid rgba(255,255,255,0.04)!important;
-      transition:background 0.3s,transform 0.3s,box-shadow 0.3s!important;
-    }
-    .step:hover{background:rgba(17,16,44,0.80)!important;transform:translateY(-4px)!important;box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 40px rgba(136,68,255,0.10)!important;}
-    .step-num{
-      background:linear-gradient(135deg,#FF9010,#FF2896 40%,#8844FF)!important;
-      -webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;
-      background-clip:text!important;opacity:1!important;
-    }
-
-    /* Glassmorphism tool cards */
-    .tool-card{
-      background:rgba(12,11,34,0.60)!important;
-      backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;
-      border-top:1px solid rgba(255,255,255,0.05)!important;
-      transition:background 0.25s,transform 0.25s,box-shadow 0.25s!important;
-    }
-    .tool-card::after{
-      content:'';position:absolute;top:0;left:0;right:0;height:1px;
-      background:linear-gradient(90deg,transparent,rgba(136,68,255,0.7),rgba(255,40,150,0.5),transparent);
-      opacity:0;transition:opacity 0.3s;
-    }
-    .tool-card:hover{background:rgba(17,16,44,0.78)!important;transform:translateY(-3px)!important;box-shadow:0 12px 40px rgba(0,0,0,0.35),0 0 30px rgba(136,68,255,0.08)!important;}
-    .tool-card:hover::after{opacity:1;}
-
-    /* Tool icon SVG styling */
-    .tool-icon-wrap{color:#AA77FF;display:flex;align-items:center;justify-content:center;}
-    .tool-icon-wrap svg{opacity:0.85;}
-
-    /* Spinning border on featured pricing */
-    .pricing-card.featured{
-      --ba:0deg;border:1.5px solid transparent;
-      background:linear-gradient(var(--bg2),var(--bg2)) padding-box,
-        conic-gradient(from var(--ba),#FF9010 0%,#FF2896 30%,#8844FF 60%,#1860FF 85%,#FF9010 100%) border-box;
-      animation:spin-border 4s linear infinite;
-      box-shadow:0 0 60px rgba(136,68,255,0.15),0 0 120px rgba(255,40,150,0.06);
-    }
-    @supports not (background: conic-gradient(from 0deg, red, blue)){
-      .pricing-card.featured{border:1.5px solid #8844FF;box-shadow:0 0 60px rgba(136,68,255,0.2);}
-    }
-    @keyframes spin-border{to{--ba:360deg;}}
-
-    /* Button shimmer */
-    .btn-primary{overflow:hidden;position:relative;}
-    .btn-primary::after{
-      content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);
-      transform:skewX(-20deg);transition:left 0.5s ease;
-    }
-    .btn-primary:hover::after{left:150%;}
-    .btn-primary:hover{
-      background:linear-gradient(90deg,#FF9010,#FF2896 50%,#8844FF)!important;
-      filter:brightness(1.12)!important;transform:translateY(-2px)!important;
-      box-shadow:0 8px 32px rgba(255,40,150,0.35),0 0 60px rgba(136,68,255,0.25)!important;
-    }
-
-    /* Glow hover for pricing */
-    .glow-hover{transition:box-shadow 0.3s,transform 0.2s;}
-    .glow-hover:hover{box-shadow:0 0 40px rgba(99,102,241,0.12);transform:translateY(-4px);}
-
-    /* CTA box */
-    .cta-box{
-      background:linear-gradient(135deg,rgba(136,68,255,0.08),rgba(255,40,150,0.04));
-      border:1px solid rgba(136,68,255,0.2);border-radius:20px;padding:64px 48px;text-align:center;
-      position:relative;overflow:hidden;
-    }
-    .cta-box::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-      width:600px;height:300px;background:radial-gradient(ellipse,rgba(136,68,255,0.08),transparent 70%);pointer-events:none;}
-    @media(max-width:500px){.cta-box{padding:40px 24px;}}
-    /* ════════════════════════════════════════════════════════════════ */
-
-    @media (max-width: 768px) { #cursor-glow { display: none !important; } }
-    #cursor-glow { position: fixed; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(136,68,255,0.07), rgba(255,40,150,0.04), transparent 65%); pointer-events: none; left: -999px; top: -999px; z-index: 0; }
+    .reg-toast{font-family:var(--mono);font-size:13px;margin-top:10px;transition:opacity 0.4s;min-height:20px;text-align:center;}
+    .reg-toast-success{color:var(--green);}
+    .reg-toast-error{color:#f87171;}
   </style>
 </head>
 <body>
 
-<div id="cursor-glow"></div>
-<!-- floating particles -->
-<div class="particles" id="particles" aria-hidden="true"></div>
-<!-- shared SVG filter/gradient defs -->
-<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden;" aria-hidden="true">
-<defs>
-  <filter id="neon" x="-50%" y="-50%" width="200%" height="200%">
-    <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="b1"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b2"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="13" result="b3"/>
-    <feMerge><feMergeNode in="b3"/><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
-  <filter id="haloFx" x="-60%" y="-60%" width="220%" height="220%">
-    <feGaussianBlur in="SourceGraphic" stdDeviation="14"/>
-    <feComponentTransfer><feFuncA type="linear" slope="0.26"/></feComponentTransfer>
-  </filter>
-  <filter id="floorFx" x="-80%" y="-300%" width="260%" height="700%">
-    <feGaussianBlur in="SourceGraphic" stdDeviation="9 2.5"/>
-  </filter>
-  <linearGradient id="archGradSvg" x1="0.5" y1="0" x2="0.5" y2="1">
-    <stop offset="0%" stop-color="#FF9010"/>
-    <stop offset="40%" stop-color="#FF2896"/>
-    <stop offset="72%" stop-color="#8844FF"/>
-    <stop offset="100%" stop-color="#1860FF"/>
-  </linearGradient>
-  <linearGradient id="hlOuter" x1="0.5" y1="0" x2="0.5" y2="1">
-    <stop offset="0%" stop-color="#FFE8C0" stop-opacity="0.85"/>
-    <stop offset="35%" stop-color="#FF90D8" stop-opacity="0.45"/>
-    <stop offset="100%" stop-color="#6080FF" stop-opacity="0.08"/>
-  </linearGradient>
-  <linearGradient id="hlInner" x1="0.5" y1="0" x2="0.5" y2="1">
-    <stop offset="0%" stop-color="#FFD8A0" stop-opacity="0.70"/>
-    <stop offset="45%" stop-color="#FF70C8" stop-opacity="0.32"/>
-    <stop offset="100%" stop-color="#5070FF" stop-opacity="0.06"/>
-  </linearGradient>
-  <radialGradient id="floorGrad" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="#4488FF" stop-opacity="0.95"/>
-    <stop offset="45%" stop-color="#2244CC" stop-opacity="0.50"/>
-    <stop offset="100%" stop-color="#0011AA" stop-opacity="0"/>
-  </radialGradient>
-  <linearGradient id="wordGrad" x1="196" y1="0" x2="444" y2="0" gradientUnits="userSpaceOnUse">
-    <stop offset="0%" stop-color="#FF9010"/>
-    <stop offset="45%" stop-color="#FF2896"/>
-    <stop offset="100%" stop-color="#8844FF"/>
-  </linearGradient>
-  <linearGradient id="divGrad" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#7040FF" stop-opacity="0"/>
-    <stop offset="22%" stop-color="#FF2896" stop-opacity="0.50"/>
-    <stop offset="78%" stop-color="#7040FF" stop-opacity="0.50"/>
-    <stop offset="100%" stop-color="#1860FF" stop-opacity="0"/>
-  </linearGradient>
-  <symbol id="arch-mark" viewBox="0 10 100 90" overflow="visible">
-    <g class="hp" filter="url(#haloFx)"><path fill="url(#archGradSvg)" d="M 15,100 L 15,55 A 35,35 0 0,1 85,55 L 85,100 Z"/></g>
-    <ellipse class="hp" cx="50" cy="22" rx="28" ry="22" fill="#FF9010" opacity="0.22" filter="url(#haloFx)"/>
-    <g class="gp" filter="url(#neon)">
-      <path fill="url(#archGradSvg)" fill-rule="evenodd" d="M 15,100 L 15,55 A 35,35 0 0,1 85,55 L 85,100 L 74,100 L 74,55 A 24,24 0 0,0 26,55 L 26,100 Z"/>
-      <path fill="url(#archGradSvg)" fill-rule="evenodd" d="M 34,100 L 34,55 A 16,16 0 0,1 66,55 L 66,100 L 58,100 L 58,55 A 8,8 0 0,0 42,55 L 42,100 Z"/>
-    </g>
-    <g class="gp2">
-      <path fill="none" stroke="url(#hlOuter)" stroke-width="1.0" d="M 26,100 L 26,55 A 24,24 0 0,1 74,55 L 74,100"/>
-      <path fill="none" stroke="url(#hlOuter)" stroke-width="0.8" opacity="0.55" d="M 15,100 L 15,55 A 35,35 0 0,1 85,55 L 85,100"/>
-      <path fill="none" stroke="url(#hlInner)" stroke-width="0.9" d="M 42,100 L 42,55 A 8,8 0 0,1 58,55 L 58,100"/>
-      <path fill="none" stroke="url(#hlInner)" stroke-width="0.7" opacity="0.60" d="M 34,100 L 34,55 A 16,16 0 0,1 66,55 L 66,100"/>
-    </g>
-    <g class="fp">
-      <ellipse cx="50" cy="100" rx="34" ry="5" fill="url(#floorGrad)" filter="url(#floorFx)"/>
-      <line x1="15" y1="100" x2="85" y2="100" stroke="url(#hlOuter)" stroke-width="0.7" opacity="0.75"/>
-    </g>
-  </symbol>
-</defs>
+<!-- ARCH SVG DEFS -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF9010"/>
+      <stop offset="60%" stop-color="#FF2896"/>
+      <stop offset="100%" stop-color="#8844FF"/>
+    </linearGradient>
+    <filter id="arch-neon">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <symbol id="arch-mark" viewBox="0 10 100 90" overflow="visible">
+      <path fill="url(#arch-grad)" filter="url(#arch-neon)"
+        d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z
+           M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/>
+    </symbol>
+  </defs>
 </svg>
 
-<!-- ─── NAV ──────────────────────────────────────────────────────────────── -->
+<!-- NAV -->
 <nav>
-  <div class="wrap nav-inner">
-    <a href="/" class="logo">
-      <!-- Animated Arch SVG Logo Mark -->
-      <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="archGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#FF9010"/>
-            <stop offset="55%" stop-color="#FF2896"/>
-            <stop offset="100%" stop-color="#8844FF"/>
-          </linearGradient>
-          <filter id="archGlow">
-            <feGaussianBlur stdDeviation="2.5" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <rect width="100" height="100" rx="22" fill="#0C0B22"/>
-        <g class="logo-arch-path" filter="url(#archGlow)">
-          <path fill="url(#archGrad)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z"/>
-          <path fill="url(#archGrad)" opacity="0.75" d="M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/>
-        </g>
-      </svg>
-      Arch Tools
-    </a>
-    <ul class="nav-links">
-      <li><a href="#tools">Tools</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="#mcp">MCP</a></li>
-      <li><a href="/v1/tools">API Docs</a></li>
-      <li><a href="#signup" class="nav-cta">Start Free →</a></li>
-    </ul>
-    <button class="hamburger" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  <div class="wrap">
+    <div class="nav-inner">
+      <a class="logo" href="#" aria-label="Arch Tools home">
+        <svg class="logo-mark" viewBox="0 10 100 90" overflow="visible" aria-hidden="true">
+          <use href="#arch-mark"/>
+        </svg>
+        ARCH TOOLS
+      </a>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <ul class="nav-links">
+          <li><a href="#tools">tools</a></li>
+          <li><a href="#pricing">pricing</a></li>
+          <li><a href="#mcp">mcp</a></li>
+          <li><a href="#">api docs</a></li>
+        </ul>
+        <a href="#register" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
+      </div>
+    </div>
   </div>
 </nav>
-<div class="mobile-nav" id="mobile-nav">
-  <a href="#tools" onclick="closeMobileNav()">Tools</a>
-  <a href="#pricing" onclick="closeMobileNav()">Pricing</a>
-  <a href="#mcp" onclick="closeMobileNav()">MCP</a>
-  <a href="/v1/tools" onclick="closeMobileNav()">API Docs</a>
-  <a href="#signup" class="mob-cta" onclick="closeMobileNav()">Start Free →</a>
-</div>
 
-<!-- ─── HERO ─────────────────────────────────────────────────────────────── -->
-<section>
+<!-- HERO -->
+<section style="padding:0;">
   <div class="wrap">
     <div class="hero">
-      <div class="hero-left" style="position:relative;">
-        <div class="arch-halo-ring" aria-hidden="true"></div>
-        <div class="hero-logo-wrap">
-          <div class="hero-aurora" aria-hidden="true"></div>
-          <div class="hero-logo-bg" aria-hidden="true"></div>
-          <div class="hero-logo-inner">
-            <svg viewBox="0 0 500 190" style="width:100%;max-width:520px;display:block;" aria-label="Arch Tools">
-              <rect width="500" height="190" rx="18" fill="transparent"/>
-              <g transform="translate(5,0) scale(1.75)">
-                <g class="hp" filter="url(#haloFx)">
-                  <path fill="url(#archGradSvg)" d="M 15,100 L 15,55 A 35,35 0 0,1 85,55 L 85,100 Z"/>
-                </g>
-                <ellipse class="hp" cx="50" cy="22" rx="28" ry="22" fill="#FF9010" opacity="0.22" filter="url(#haloFx)"/>
-                <g class="gp" filter="url(#neon)">
-                  <path fill="url(#archGradSvg)" fill-rule="evenodd" d="M 15,100 L 15,55 A 35,35 0 0,1 85,55 L 85,100 L 74,100 L 74,55 A 24,24 0 0,0 26,55 L 26,100 Z"/>
-                  <path fill="url(#archGradSvg)" fill-rule="evenodd" d="M 34,100 L 34,55 A 16,16 0 0,1 66,55 L 66,100 L 58,100 L 58,55 A 8,8 0 0,0 42,55 L 42,100 Z"/>
-                </g>
-                <g class="gp2">
-                  <path fill="none" stroke="url(#hlOuter)" stroke-width="1.0" d="M 26,100 L 26,55 A 24,24 0 0,1 74,55 L 74,100"/>
-                  <path fill="none" stroke="url(#hlOuter)" stroke-width="0.8" opacity="0.55" d="M 15,100 L 15,55 A 35,35 0 0,1 85,55 L 85,100"/>
-                  <path fill="none" stroke="url(#hlInner)" stroke-width="0.9" d="M 42,100 L 42,55 A 8,8 0 0,1 58,55 L 58,100"/>
-                  <path fill="none" stroke="url(#hlInner)" stroke-width="0.7" opacity="0.60" d="M 34,100 L 34,55 A 16,16 0 0,1 66,55 L 66,100"/>
-                </g>
-                <g class="fp">
-                  <ellipse cx="50" cy="100" rx="34" ry="5" fill="url(#floorGrad)" filter="url(#floorFx)"/>
-                  <line x1="15" y1="100" x2="85" y2="100" stroke="url(#hlOuter)" stroke-width="0.7" opacity="0.75"/>
-                </g>
-              </g>
-              <line x1="182" y1="16" x2="182" y2="174" stroke="url(#divGrad)" stroke-width="0.8"/>
-              <text x="198" y="98" font-family="'Helvetica Neue','Arial Black',Arial,sans-serif" font-size="74" font-weight="900" letter-spacing="-2" fill="url(#wordGrad)">ARCH</text>
-              <text x="203" y="143" font-family="'Helvetica Neue',Arial,sans-serif" font-size="28" font-weight="300" letter-spacing="13" fill="#7040FF" opacity="0.90">TOOLS</text>
-            </svg>
-          </div>
-        </div>
+      <div class="hero-left">
         <div class="hero-badge">
-          <span class="badge-dot"></span>
-          Live · 60+ tools · one key to access them all
+          <span class="dot"></span>
+          Live · 61 tools · one key to access them all
         </div>
-        <h1 class="hero-headline">
+        <h1 class="hero-h1">
           One Key.<br>
-          <span class="grad-text">60+ Tools.</span><br>
-          Everything Your Agent Needs.
+          <span class="grad">61 Tools.</span><br>
+          Everything Your<br>Agent Needs.
         </h1>
         <p class="hero-sub">
-          Most agents need 8–12 separate APIs to function. Scraping, OCR, voice, memory, email, SMS, multi-model AI — each one its own account, key, and bill. Arch replaces all of them. One key, one credit balance, every capability. Ship faster. Manage less.
+          Most agents need 8–12 separate APIs to function. Scraping, OCR, voice, memory, email, SMS, multi-model AI — each one its own account, key, and bill. Arch replaces all of them. One key, one credit balance, one bill.
         </p>
-        <div class="hero-actions">
-          <a href="#signup" class="btn-primary">Get Your Free API Key →</a>
-          <a href="/v1/tools" class="btn-secondary">View All Tools</a>
+        <div class="hero-btns">
+          <a class="btn-primary" href="#register">$ get-api-key →</a>
+          <a class="btn-ghost" href="#tools">view all tools</a>
         </div>
       </div>
 
+      <!-- GLASS DASHBOARD (v9 hero right) -->
       <div class="hero-right">
-        <div class="hero-arch-wrap">
-          <svg class="hero-arch-svg" width="200" height="180" viewBox="0 10 100 90" overflow="visible" aria-hidden="true">
-            <use href="#arch-mark"/>
-          </svg>
-        </div>
-        <div class="terminal">
-          <div class="terminal-bar">
-            <span class="t-dot r"></span>
-            <span class="t-dot y"></span>
-            <span class="t-dot g"></span>
-            <span class="terminal-url">arch-ai-tools.onrender.com</span>
+        <div class="glass-dashboard">
+          <div class="dash-header">
+            <span class="dash-title">arch@tools:~</span>
+            <span class="dash-live"><span class="dash-live-dot"></span>All systems operational</span>
           </div>
-          <div class="terminal-body">
-            <span class="t-line"><span class="t-comment"># 1. Register — get 100 free credits</span></span>
-            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl -X POST https://arch-ai-tools.onrender.com/v1/agent/register</span></span>
-            <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'{\"email\":\"agent@example.com\"}'</span></span>
-            <span class="t-line">&nbsp;</span>
-            <span class="t-line"><span class="t-punc">{</span></span>
-            <span class="t-line">&nbsp;&nbsp;<span class="t-key">"api_key"</span><span class="t-punc">:</span> <span class="t-str">"arch_a1b2c3..."</span><span class="t-punc">,</span></span>
-            <span class="t-line">&nbsp;&nbsp;<span class="t-key">"credits"</span><span class="t-punc">:</span> <span class="t-num">100</span></span>
-            <span class="t-line"><span class="t-punc">}</span></span>
-            <span class="t-line">&nbsp;</span>
-            <span class="t-line"><span class="t-comment"># 2. Check your balance anytime (free)</span></span>
-            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl https://arch-ai-tools.onrender.com/v1/agent/balance</span></span>
-            <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"Authorization: Bearer arch_a1b2c3..."</span></span>
-            <span class="t-line">&nbsp;</span>
-            <span class="t-line"><span class="t-comment"># 3. Scrape any URL (5 credits)</span></span>
-            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl -X POST .../v1/tools/web-scrape</span></span>
-            <span class="t-line"><span class="t-prompt">$</span> <span class="t-cursor"></span></span>
+          <div class="dash-stats-row">
+            <div class="dash-stat-box">
+              <div class="dash-stat-num g-am">61</div>
+              <div class="dash-stat-label">Tools</div>
+            </div>
+            <div class="dash-stat-box">
+              <div class="dash-stat-num g-cy" style="font-size:18px;letter-spacing:-0.5px;">&lt;200ms</div>
+              <div class="dash-stat-label">Avg Response</div>
+            </div>
+            <div class="dash-stat-box">
+              <div class="dash-stat-num g-bl" style="font-size:18px;letter-spacing:-0.5px;">$0.001</div>
+              <div class="dash-stat-label">Per Credit</div>
+            </div>
+          </div>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
+              <span class="terminal-url">archtools.dev — zsh</span>
+            </div>
+            <div class="terminal-body">
+              <span class="t-line"><span class="t-comment"># 1. Register — get 100 free credits</span></span>
+              <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl -X POST https://archtools.dev/v1/agent/register</span></span>
+              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"email":"<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="224345474c5662475a434f524e470c414d4f">[email&#160;protected]</a>"&#125;'</span></span>
+              <span class="t-line">&nbsp;</span>
+              <span class="t-line"><span class="t-comment"># 2. Call any tool with your key</span></span>
+              <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl https://archtools.dev/v1/tools/web-scrape</span></span>
+              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"Authorization: Bearer $ARCH_KEY"</span></span>
+              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
+              <span class="t-line">&nbsp;</span>
+              <span class="t-line"><span class="t-out">&#123;"content":"...","credits_used":5,"remaining":95&#125;</span> <span class="t-cursor"></span></span>
+            </div>
           </div>
         </div>
       </div>
@@ -1391,710 +521,634 @@
   </div>
 </section>
 
-<!-- ─── MARQUEE ───────────────────────────────────────────────────────────── -->
-<div class="marquee-section">
-  <div class="mq-row mq-row-1" id="mq1"></div>
-  <div class="mq-row mq-row-2" id="mq2"></div>
-  <div class="mq-row mq-row-3" id="mq3"></div>
-</div>
-
-<!-- ─── STATS BAR ──────────────────────────────────────────────────────────── -->
+<!-- STATS BAR (v8 env-var style) -->
 <div class="stats-bar">
   <div class="wrap">
     <div class="stats-inner">
-      <div class="stat">
-        <span class="stat-num" data-count="60">60+</span>
-        <span class="stat-label">Production Tools</span>
+      <div class="stat-item">
+        <div class="stat-label-top">API_TOOLS</div>
+        <div class="stat-val g-am">&gt;61</div>
       </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <span class="stat-num" data-count="2">2</span>
-        <span class="stat-label">Ways to Pay</span>
+      <div class="stat-item">
+        <div class="stat-label-top">PAYMENT_RAILS</div>
+        <div class="stat-val g-bl">2</div>
       </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <span class="stat-num" data-count="100">100</span>
-        <span class="stat-label">Free Credits on Signup</span>
+      <div class="stat-item">
+        <div class="stat-label-top">FREE_CREDITS</div>
+        <div class="stat-val g-cy">100</div>
       </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <span class="stat-num" data-count="0.001" data-prefix="$">$0.001</span>
-        <span class="stat-label">Lowest Credit Price</span>
+      <div class="stat-item">
+        <div class="stat-label-top">CREDIT_PRICE</div>
+        <div class="stat-val g-am">$0.001</div>
       </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <span class="stat-num" data-count="99.9" data-suffix="%">99.9%</span>
-        <span class="stat-label">Uptime SLA</span>
+      <div class="stat-item">
+        <div class="stat-label-top">UPTIME_SLA</div>
+        <div class="stat-val g-cy">99.9%</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ─── HOW IT WORKS ──────────────────────────────────────────────────────── -->
-<section class="section">
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="mq-row"><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>AI Generate</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>OCR Extract</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Sentiment Analysis</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Web Search (AI)</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Regex Generate</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Web Scrape</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Search Web</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>RSS Parse</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>HTML to Markdown</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Webhook Send</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Convert Format</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Extract Metadata</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>PII Detect</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Readability Score</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>IP Lookup</button><button type="button" class="mq-pill" onclick="goToCategory('Comms')" aria-label="Browse Comms tools"><span class="mq-dot" style="background:#FF9010"></span>Email Verify</button><button type="button" class="mq-pill" onclick="goToCategory('Voice')" aria-label="Browse Voice tools"><span class="mq-dot" style="background:#FF2896"></span>Text to Speech</button><button type="button" class="mq-pill" onclick="goToCategory('Memory')" aria-label="Browse Memory tools"><span class="mq-dot" style="background:#22d3ee"></span>Vector Store</button><button type="button" class="mq-pill" onclick="goToCategory('Finance')" aria-label="Browse Finance tools"><span class="mq-dot" style="background:#FFD700"></span>Crypto Price</button><button type="button" class="mq-pill" onclick="goToCategory('Legal')" aria-label="Browse Legal tools"><span class="mq-dot" style="background:#f87171"></span>Legal Consult</button><button type="button" class="mq-pill" onclick="goToCategory('Infra')" aria-label="Browse Infra tools"><span class="mq-dot" style="background:#60a5fa"></span>Deploy Check</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>AI Generate</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>OCR Extract</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Sentiment Analysis</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Web Search (AI)</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Regex Generate</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Web Scrape</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Search Web</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>RSS Parse</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>HTML to Markdown</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Webhook Send</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Convert Format</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Extract Metadata</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>PII Detect</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Readability Score</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>IP Lookup</button><button type="button" class="mq-pill" onclick="goToCategory('Comms')" aria-label="Browse Comms tools"><span class="mq-dot" style="background:#FF9010"></span>Email Verify</button><button type="button" class="mq-pill" onclick="goToCategory('Voice')" aria-label="Browse Voice tools"><span class="mq-dot" style="background:#FF2896"></span>Text to Speech</button><button type="button" class="mq-pill" onclick="goToCategory('Memory')" aria-label="Browse Memory tools"><span class="mq-dot" style="background:#22d3ee"></span>Vector Store</button><button type="button" class="mq-pill" onclick="goToCategory('Finance')" aria-label="Browse Finance tools"><span class="mq-dot" style="background:#FFD700"></span>Crypto Price</button><button type="button" class="mq-pill" onclick="goToCategory('Legal')" aria-label="Browse Legal tools"><span class="mq-dot" style="background:#f87171"></span>Legal Consult</button><button type="button" class="mq-pill" onclick="goToCategory('Infra')" aria-label="Browse Infra tools"><span class="mq-dot" style="background:#60a5fa"></span>Deploy Check</button></div>
+  <div class="mq-row rev"><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Image Generate</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Summarize</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Extract Entities</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Language Detect</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Screenshot Capture</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Extract Page</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Browser Task</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Extract PDF</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>URL Shorten</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Validate Data</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>JSONPath Query</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Generate Hash</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Transform Text</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Diff Text</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Whois Lookup</button><button type="button" class="mq-pill" onclick="goToCategory('Comms')" aria-label="Browse Comms tools"><span class="mq-dot" style="background:#FF9010"></span>Phone Validate</button><button type="button" class="mq-pill" onclick="goToCategory('Voice')" aria-label="Browse Voice tools"><span class="mq-dot" style="background:#FF2896"></span>Transcribe Audio</button><button type="button" class="mq-pill" onclick="goToCategory('Memory')" aria-label="Browse Memory tools"><span class="mq-dot" style="background:#22d3ee"></span>Vector Search</button><button type="button" class="mq-pill" onclick="goToCategory('Finance')" aria-label="Browse Finance tools"><span class="mq-dot" style="background:#FFD700"></span>Currency Convert</button><button type="button" class="mq-pill" onclick="goToCategory('Legal')" aria-label="Browse Legal tools"><span class="mq-dot" style="background:#f87171"></span>Legal Consult</button><button type="button" class="mq-pill" onclick="goToCategory('Infra')" aria-label="Browse Infra tools"><span class="mq-dot" style="background:#60a5fa"></span>Error Monitor</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Image Generate</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Summarize</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Extract Entities</button><button type="button" class="mq-pill" onclick="goToCategory('AI')" aria-label="Browse AI tools"><span class="mq-dot" style="background:#8844FF"></span>Language Detect</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Screenshot Capture</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Extract Page</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Browser Task</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Extract PDF</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>URL Shorten</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Validate Data</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>JSONPath Query</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Generate Hash</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Transform Text</button><button type="button" class="mq-pill" onclick="goToCategory('Utils')" aria-label="Browse Utils tools"><span class="mq-dot" style="background:#a78bfa"></span>Diff Text</button><button type="button" class="mq-pill" onclick="goToCategory('Web')" aria-label="Browse Web tools"><span class="mq-dot" style="background:#34d399"></span>Whois Lookup</button><button type="button" class="mq-pill" onclick="goToCategory('Comms')" aria-label="Browse Comms tools"><span class="mq-dot" style="background:#FF9010"></span>Phone Validate</button><button type="button" class="mq-pill" onclick="goToCategory('Voice')" aria-label="Browse Voice tools"><span class="mq-dot" style="background:#FF2896"></span>Transcribe Audio</button><button type="button" class="mq-pill" onclick="goToCategory('Memory')" aria-label="Browse Memory tools"><span class="mq-dot" style="background:#22d3ee"></span>Vector Search</button><button type="button" class="mq-pill" onclick="goToCategory('Finance')" aria-label="Browse Finance tools"><span class="mq-dot" style="background:#FFD700"></span>Currency Convert</button><button type="button" class="mq-pill" onclick="goToCategory('Legal')" aria-label="Browse Legal tools"><span class="mq-dot" style="background:#f87171"></span>Legal Consult</button><button type="button" class="mq-pill" onclick="goToCategory('Infra')" aria-label="Browse Infra tools"><span class="mq-dot" style="background:#60a5fa"></span>Error Monitor</button></div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
   <div class="wrap">
     <div class="section-tag">How it works</div>
-    <h2 class="section-title">Up and running in under a minute</h2>
-    <p class="section-sub">No SDKs. No vendor dashboards. No onboarding flows. Register with your email, add credits, start calling tools — it's just REST.</p>
-
-    <div class="section-line sr"></div>
-    <div class="steps">
-      <div class="step sr">
-        <div class="step-num">01</div>
+    <h2 class="section-title">Three steps to your first API call</h2>
+    <p class="section-sub">Register with your email, add credits, start calling tools. No infrastructure. No setup. Just POST requests.</p>
+    <div class="section-line"></div>
+    <div class="steps-grid">
+      <div class="step-card">
         <div class="step-icon">🔑</div>
-        <h3>Register</h3>
-        <p>POST your email to <code style="font-family:var(--mono);font-size:12px;color:var(--indigo2)">/v1/agent/register</code>. Get an API key + 100 free credits in milliseconds.</p>
+        <div class="step-num">Step 01</div>
+        <div class="step-title">Register &amp; get your key</div>
+        <div class="step-desc">Sign up with your email. You instantly receive an API key and 100 free credits — no credit card required to start.</div>
       </div>
-      <div class="step sr">
-        <div class="step-num">02</div>
+      <div class="step-card">
         <div class="step-icon">💳</div>
-        <h3>Add Credits</h3>
-        <p>Buy a credit pack via Stripe starting at $9. Or skip it — AI agents can pay per-call in USDC on Base via x402. No recurring charges. Credits don't expire.</p>
+        <div class="step-num">Step 02</div>
+        <div class="step-title">Add credits your way</div>
+        <div class="step-desc">Buy a credit pack with Stripe, or top up automatically with USDC via the x402 protocol. Credits never expire.</div>
       </div>
-      <div class="step sr">
-        <div class="step-num">03</div>
+      <div class="step-card">
         <div class="step-icon">⚡</div>
-        <h3>Call Any Tool</h3>
-        <p>Same key works across all 60+ tools. JSON in, JSON out, credits deducted automatically. Your agent never needs another API account — ever.</p>
+        <div class="step-num">Step 03</div>
+        <div class="step-title">Call any tool via REST</div>
+        <div class="step-desc">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too.</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── TOOLS ─────────────────────────────────────────────────────────────── -->
-<section class="section" id="tools">
+<!-- TOOL GRID -->
+<section id="tools" style="padding-top:0;">
   <div class="wrap">
-    <div class="section-tag">60+ Production Tools</div>
+    <div class="section-tag">Tool Suite</div>
     <h2 class="section-title">The tools every agent needs to actually work</h2>
-    <p class="section-sub">Every tool your agent actually uses in production — not toy examples. Scraping that handles JavaScript. AI that routes to any model. Voice in and out. Real-time memory. SMS, email, scheduling, payments, legal. All metered to the cent.</p>
+    <p class="section-sub">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too. Scraping that handles JavaScript, AI that routes to any model, voice in and out, real-time memory, SMS, email, payments, legal.</p>
 
-    <div class="section-line sr"></div>
-    <div class="tools-grid">
+    <div class="cat-filters">
+      <button type="button" class="cat-pill active" onclick="filterTools('all',this)" data-filter="all">All 61</button>
+      <button type="button" class="cat-pill" onclick="filterTools('AI',this)" data-filter="AI" style="--c:#8844FF">AI</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Web',this)" data-filter="Web" style="--c:#34d399">Web</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Voice',this)" data-filter="Voice" style="--c:#FF2896">Voice</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Memory',this)" data-filter="Memory" style="--c:#22d3ee">Memory</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Comms',this)" data-filter="Comms" style="--c:#FF9010">Comms</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Finance',this)" data-filter="Finance" style="--c:#FFD700">Finance</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Infra',this)" data-filter="Infra" style="--c:#60a5fa">Infra</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Utils',this)" data-filter="Utils" style="--c:#a78bfa">Utils</button>
+      <button type="button" class="cat-pill" onclick="filterTools('Legal',this)" data-filter="Legal" style="--c:#f87171">Legal</button>
+    </div>
 
-      <!-- AI Tools -->
-      <div class="tool-card sr">
+    <div class="tools-grid" id="tools-grid">
+      <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🤖</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">AI</div>
           <div class="tool-name">AI Generate</div>
           <span class="tool-credits">20 cr</span>
         </div>
-        <div class="tool-desc">Text generation across Claude, GPT-4o, Gemini, and Grok — all from one call. Pass a <code style="font-family:var(--mono);font-size:11px;color:var(--indigo2)">model</code> param to route to any model. One key replaces four separate AI accounts.</div>
+        <div class="tool-desc">Text generation across Claude, GPT-4o, Gemini, and Grok — all from one call. Pass a model param to route to any model. One key replaces four separate AI accounts.</div>
         <div class="tool-endpoint">POST /v1/tools/ai-generate</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🖼️</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">IMG</div>
           <div class="tool-name">Image Generate</div>
           <span class="tool-credits">15 cr</span>
         </div>
         <div class="tool-desc">Generate images from text prompts without spinning up a separate image API. Returns URL or base64. Your agent gets visuals in one call — no pipeline to build.</div>
         <div class="tool-endpoint">POST /v1/tools/image-generate</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">👁️</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">OCR</div>
           <div class="tool-name">OCR Extract</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Receipts, invoices, screenshots, handwriting — send the image URL, get back clean text. Agents that process documents skip building a vision pipeline entirely.</div>
         <div class="tool-endpoint">POST /v1/tools/ocr-extract</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🧠</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">SUM</div>
           <div class="tool-name">Summarize</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Turn any long-form text into a paragraph, bullets, TL;DR, headline, or executive summary. Pass up to 8,000 words — get back exactly what your agent needs downstream.</div>
         <div class="tool-endpoint">POST /v1/tools/summarize</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">💬</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">SA</div>
           <div class="tool-name">Sentiment Analysis</div>
           <span class="tool-credits">8 cr</span>
         </div>
         <div class="tool-desc">Know how text feels before your agent acts on it. Returns sentiment score plus 6 emotion dimensions — joy, anger, fear, sadness, surprise, disgust — with confidence scores.</div>
         <div class="tool-endpoint">POST /v1/tools/sentiment-analysis</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🏷️</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">ENT</div>
           <div class="tool-name">Extract Entities</div>
           <span class="tool-credits">8 cr</span>
         </div>
         <div class="tool-desc">NER: extracts people, organizations, locations, dates, and money values from unstructured text.</div>
         <div class="tool-endpoint">POST /v1/tools/extract-entities</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🌐</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">SRH</div>
           <div class="tool-name">Web Search (AI)</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Real-time web search with AI-synthesized answer. Pass a query, get a clean summary backed by live results.</div>
         <div class="tool-endpoint">POST /v1/tools/web-search</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🌍</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">LNG</div>
           <div class="tool-name">Language Detect</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Detect language of any text. 100+ languages with confidence score. Uses Claude for accuracy on short strings.</div>
         <div class="tool-endpoint">POST /v1/tools/language-detect</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔲</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">REG</div>
           <div class="tool-name">Regex Generate</div>
           <span class="tool-credits">8 cr</span>
         </div>
         <div class="tool-desc">Natural language → validated regex with explanation and test examples. "Match US phone numbers" just works.</div>
         <div class="tool-endpoint">POST /v1/tools/regex-generate</div>
       </div>
-
-      <!-- Web Tools -->
-      <div class="tool-card sr">
-        <div class="tool-icon-wrap" style="margin-bottom:10px">📸</div>
-        <div class="tool-header" style="margin-bottom:0">
-          <div class="tool-name" style="padding-top:0">Screenshot Capture</div>
+      <div class="tool-card" data-cat="Web">
+        <div class="tool-header">
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">SCR</div>
+          <div class="tool-name">Screenshot Capture</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Agents that need to see a page — not just scrape it — send a URL and get back a full PNG. Full-page or viewport. Handles JS-rendered SPAs. No browser to manage.</div>
         <div class="tool-endpoint">POST /v1/tools/screenshot-capture</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🕷️</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">WEB</div>
           <div class="tool-name">Web Scrape</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Your agent needs data from the web. Skip Playwright, skip the headless browser, skip the maintenance. Send a URL, get back clean text, links, and metadata.</div>
         <div class="tool-endpoint">POST /v1/tools/web-scrape</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📄</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">EXT</div>
           <div class="tool-name">Extract Page</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Clean text, links, metadata, and images from any webpage. Strips nav, footer, ads. Reader-mode output.</div>
         <div class="tool-endpoint">POST /v1/tools/extract-page</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔍</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">SRH</div>
           <div class="tool-name">Search Web</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Web search with structured results — title, URL, snippet. Up to 10 results. No API key needed for basic use.</div>
         <div class="tool-endpoint">POST /v1/tools/search-web</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🖥️</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">BRW</div>
           <div class="tool-name">Browser Task</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Headless browser automation — extract, click, type, scrape JS-rendered pages and SPAs. Playwright-powered.</div>
         <div class="tool-endpoint">POST /v1/tools/browser-task</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📡</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">RSS</div>
           <div class="tool-name">RSS Parse</div>
           <span class="tool-credits">4 cr</span>
         </div>
         <div class="tool-desc">Parse RSS and Atom feeds into clean structured JSON. Returns title, link, description, pubDate per item.</div>
         <div class="tool-endpoint">POST /v1/tools/rss-parse</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📑</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">PDF</div>
           <div class="tool-name">Extract PDF</div>
           <span class="tool-credits">6 cr</span>
         </div>
         <div class="tool-desc">Extract text from PDFs via URL or base64. Handles scanned PDFs with Claude vision. Word count included.</div>
         <div class="tool-endpoint">POST /v1/tools/extract-pdf</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📝</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">HTM</div>
           <div class="tool-name">HTML to Markdown</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Convert any HTML or URL to clean Markdown. Preserves headings, lists, tables, links. Great for LLM context.</div>
         <div class="tool-endpoint">POST /v1/tools/html-to-markdown</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔗</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">URL</div>
           <div class="tool-name">URL Shorten</div>
           <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">Shorten any URL. Returns short URL and click tracking. Useful for agents managing links at scale.</div>
         <div class="tool-endpoint">POST /v1/tools/url-shorten</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📨</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">WHK</div>
           <div class="tool-name">Webhook Send</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">POST a JSON payload to any webhook URL. Custom headers supported. Returns status and response. Agent-to-agent messaging.</div>
         <div class="tool-endpoint">POST /v1/tools/webhook-send</div>
       </div>
-
-      <!-- Data Tools -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">✅</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">VAL</div>
           <div class="tool-name">Validate Data</div>
           <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">Validate JSON against a JSON Schema. Returns structured errors with path locations. Used by agents for input checks.</div>
         <div class="tool-endpoint">POST /v1/tools/validate-data</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔄</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">CNV</div>
           <div class="tool-name">Convert Format</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Convert between JSON, YAML, CSV, and XML. Bi-directional. Preserves types. Handles nested structures.</div>
         <div class="tool-endpoint">POST /v1/tools/convert-format</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔎</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">JSN</div>
           <div class="tool-name">JSONPath Query</div>
           <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">Run JSONPath expressions against any JSON payload. Extract nested values, filter arrays. Essential for agent pipelines.</div>
         <div class="tool-endpoint">POST /v1/tools/jsonpath-query</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔗</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">META</div>
           <div class="tool-name">Extract Metadata</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Extract Open Graph, title, description, meta tags, word count, and links from any HTML or URL.</div>
         <div class="tool-endpoint">POST /v1/tools/extract-metadata</div>
       </div>
-
-      <!-- Security / Validation -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔐</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">HSH</div>
           <div class="tool-name">Generate Hash</div>
           <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">SHA-256, SHA-512, SHA-1, MD5, SHA-384 hashes. Hex or base64 output. For checksums, signatures, deduplication.</div>
         <div class="tool-endpoint">POST /v1/tools/generate-hash</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="AI">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🕵️</div>
+          <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">PII</div>
           <div class="tool-name">PII Detect</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Before your agent logs, stores, or passes data anywhere — run it through here. Detects and redacts emails, SSNs, phones, credit cards with position-aware output. One call keeps your pipeline clean.</div>
         <div class="tool-endpoint">POST /v1/tools/pii-detect</div>
       </div>
-
-      <!-- Text Tools -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">✏️</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">TXT</div>
           <div class="tool-name">Transform Text</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">12 modes: uppercase, lowercase, titlecase, slug, camelCase, snake_case, kebab-case, base64 encode/decode, reverse, trim, word count.</div>
         <div class="tool-endpoint">POST /v1/tools/transform-text</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📊</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">RDY</div>
           <div class="tool-name">Readability Score</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Flesch-Kincaid ease + grade level. Returns avg words/sentence, avg syllables/word, grade label (Elementary to College+).</div>
         <div class="tool-endpoint">POST /v1/tools/readability-score</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">↔️</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DIF</div>
           <div class="tool-name">Diff Text</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Structured text diff in unified, words, chars, or JSON format. Added/removed counts included. Perfect for change detection.</div>
         <div class="tool-endpoint">POST /v1/tools/diff-text</div>
       </div>
-
-      <!-- Network / Validation -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📍</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">IP</div>
           <div class="tool-name">IP Lookup</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Geo, ISP, org, timezone, VPN/proxy/hosting detection for any IPv4 or IPv6 address. Used for fraud prevention.</div>
         <div class="tool-endpoint">POST /v1/tools/ip-lookup</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🌐</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">WHO</div>
           <div class="tool-name">Whois Lookup</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Domain registration date, expiry, nameservers via RDAP. Clean structured JSON — no parsing messy whois text.</div>
         <div class="tool-endpoint">POST /v1/tools/whois-lookup</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Comms">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📧</div>
+          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">VRF</div>
           <div class="tool-name">Email Verify</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Format check + MX record lookup + disposable domain detection. Returns deliverable: true/false with breakdown.</div>
         <div class="tool-endpoint">POST /v1/tools/email-verify</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Comms">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📱</div>
+          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">TEL</div>
           <div class="tool-name">Phone Validate</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">E.164 formatting, type (mobile/landline/VOIP), country code from any phone number. Powered by libphonenumber.</div>
         <div class="tool-endpoint">POST /v1/tools/phone-validate</div>
       </div>
-
-      <!-- Finance / Utility -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Finance">
         <div class="tool-header">
-          <div class="tool-icon-wrap">💱</div>
+          <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">FX</div>
           <div class="tool-name">Currency Convert</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">170+ currencies with live exchange rates. Returns converted amount + rate. Useful for pricing agents and invoicing tools.</div>
         <div class="tool-endpoint">POST /v1/tools/currency-convert</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🕐</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">TZ</div>
           <div class="tool-name">Timezone Convert</div>
           <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">Convert any datetime between IANA timezones. "America/New_York" → "Asia/Tokyo". Returns formatted local time.</div>
         <div class="tool-endpoint">POST /v1/tools/timezone-convert</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🎲</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">UUID</div>
           <div class="tool-name">Generate UUID</div>
           <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">UUIDs (v1/v4), random tokens (hex), API-key format strings. Generate up to 100 at once. Batch-friendly.</div>
         <div class="tool-endpoint">POST /v1/tools/generate-uuid</div>
       </div>
-
-      <!-- Media -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Finance">
         <div class="tool-header">
-          <div class="tool-icon-wrap">◼️</div>
+          <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">QR</div>
           <div class="tool-name">QR Code</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Generate QR codes as PNG data URL or SVG. Configurable size and error correction level. Works for URLs, text, VCards.</div>
         <div class="tool-endpoint">POST /v1/tools/qr-code</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Finance">
         <div class="tool-header">
-          <div class="tool-icon-wrap">▦</div>
+          <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">BAR</div>
           <div class="tool-name">Barcode Generate</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Generate Code128, EAN-13, UPC-A, QR barcodes as SVG or PNG. Returns base64. For inventory, shipping, retail agents.</div>
         <div class="tool-endpoint">POST /v1/tools/barcode-generate</div>
       </div>
-
-
-      <!-- ─── VOICE ─────────────────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Voice">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔊</div>
+          <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">TTS</div>
           <div class="tool-name">Text to Speech</div>
           <span class="tool-credits">8 cr</span>
         </div>
         <div class="tool-desc">Convert any text to natural-sounding audio via ElevenLabs. Returns MP3 or base64. Voice cloning, narration, agent audio output — no separate TTS account needed.</div>
         <div class="tool-endpoint">POST /v1/tools/text-to-speech</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Voice">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🎙️</div>
+          <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">STT</div>
           <div class="tool-name">Transcribe Audio</div>
           <span class="tool-credits">12 cr</span>
         </div>
         <div class="tool-desc">Audio file or URL in, clean text out. Meeting notes, voice commands, recorded interviews — pass the file and get back timestamped transcription ready for downstream processing.</div>
         <div class="tool-endpoint">POST /v1/tools/transcribe-audio</div>
       </div>
-
-      <!-- ─── COMMUNICATION ──────────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Comms">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📧</div>
+          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">MAIL</div>
           <div class="tool-name">Email Send</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Send transactional or outreach emails from your agent. Pass to, subject, and body — returns message ID. Works for notifications, confirmations, drip sequences, and alerts.</div>
         <div class="tool-endpoint">POST /v1/tools/email-send</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Comms">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📱</div>
+          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">SMS</div>
           <div class="tool-name">SMS Send</div>
           <span class="tool-credits">4 cr</span>
         </div>
         <div class="tool-desc">Send SMS text messages via Twilio to any phone number worldwide. Agents that need to alert, confirm, or notify humans — without building a separate messaging integration.</div>
         <div class="tool-endpoint">POST /v1/tools/sms-send</div>
       </div>
-
-      <!-- ─── MEMORY & KNOWLEDGE ─────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Memory">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🧲</div>
+          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">VEC</div>
           <div class="tool-name">Vector Store</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Embed and store text chunks in a managed vector database. Pass content and a namespace — retrieval-ready in seconds. The foundation of any agent with long-term memory or a knowledge base.</div>
         <div class="tool-endpoint">POST /v1/tools/vector-store</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Memory">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔎</div>
+          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">VSR</div>
           <div class="tool-name">Vector Search</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Semantic similarity search over your stored vectors. Pass a query, get back the top-k most relevant chunks with scores. Powers RAG pipelines, knowledge retrieval, and context injection.</div>
         <div class="tool-endpoint">POST /v1/tools/vector-search</div>
       </div>
-
-      <!-- ─── SCHEDULING & PRODUCTIVITY ─────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📅</div>
+          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">CAL</div>
           <div class="tool-name">Calendar Create</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Create calendar events with attendees, location, and description. Scheduling agents, booking confirmations, meeting coordinators — one call sets the event without touching the Calendar UI.</div>
         <div class="tool-endpoint">POST /v1/tools/calendar-create</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📝</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">NTN</div>
           <div class="tool-name">Notion Write</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Create or update Notion pages and databases from your agent. Research agents, content generators, and workflow automations that need to store structured output somewhere permanent.</div>
         <div class="tool-endpoint">POST /v1/tools/notion-write</div>
       </div>
-
-      <!-- ─── FINANCE & MARKET DATA ──────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Finance">
         <div class="tool-header">
-          <div class="tool-icon-wrap">₿</div>
+          <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">BTC</div>
           <div class="tool-name">Crypto Price</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Live spot prices, tickers, and order book snapshots for any trading pair. Real-time market data for trading agents, portfolio trackers, and DeFi automations — no exchange account needed.</div>
         <div class="tool-endpoint">POST /v1/tools/crypto-price</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🌐</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">DNS</div>
           <div class="tool-name">Domain Check</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Check domain availability and get name suggestions in one call. Brand research agents, startup idea generators, and naming tools — instant availability data without a registrar account.</div>
         <div class="tool-endpoint">POST /v1/tools/domain-check</div>
       </div>
-
-      <!-- ─── PROSPECTING & LEADS ────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Web">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🎯</div>
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">PRO</div>
           <div class="tool-name">Prospect Search</div>
           <span class="tool-credits">15 cr</span>
         </div>
         <div class="tool-desc">Company and lead intelligence from a structured data layer. Pass a company name or domain, get back firmographics, technographics, and contact signals. Sales agents that qualify leads automatically.</div>
         <div class="tool-endpoint">POST /v1/tools/prospect-search</div>
       </div>
-
-      <!-- ─── MEDIA GENERATION ───────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🎬</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">VID</div>
           <div class="tool-name">Video Generate</div>
           <span class="tool-credits">30 cr</span>
         </div>
         <div class="tool-desc">Generate short video clips from text prompts or image inputs via Runway ML. Social content agents, product demo generators, creative pipelines — video output without a production stack.</div>
         <div class="tool-endpoint">POST /v1/tools/video-generate</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🎨</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DSN</div>
           <div class="tool-name">Design Create</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Generate branded visual assets via Canva — social posts, presentations, thumbnails, banners. Pass a template and data, get back a shareable design URL. Content agents that produce visuals, not just text.</div>
         <div class="tool-endpoint">POST /v1/tools/design-create</div>
       </div>
-
-      <!-- ─── CODE EXECUTION ─────────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">⚡</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">RUN</div>
           <div class="tool-name">Code Execute</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Run Python or JavaScript in a sandboxed environment and get back stdout, stderr, and return value. Agents that write code and need to actually run it — safely, without spinning up compute.</div>
         <div class="tool-endpoint">POST /v1/tools/code-execute</div>
       </div>
-
-
-      <!-- ─── PAYMENTS & LEGAL ───────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Finance">
         <div class="tool-header">
-          <div class="tool-icon-wrap">💸</div>
+          <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">PAY</div>
           <div class="tool-name">Payment Send</div>
           <span class="tool-credits">5 cr</span>
         </div>
         <div class="tool-desc">Send PayPal payouts or invoice payments programmatically. Agents that need to disburse funds, pay contractors, or initiate refunds — without a human touching the PayPal dashboard.</div>
         <div class="tool-endpoint">POST /v1/tools/payment-send</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Comms">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📜</div>
+          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">DOC</div>
           <div class="tool-name">Contract Send</div>
           <span class="tool-credits">8 cr</span>
         </div>
         <div class="tool-desc">Send signature-ready contracts via DocuSign. Sales agents that close deals, HR agents that onboard employees, legal workflows that run without a human initiating every envelope.</div>
         <div class="tool-endpoint">POST /v1/tools/contract-send</div>
       </div>
-
-      <!-- ─── INFRASTRUCTURE ─────────────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🚨</div>
+          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">ERR</div>
           <div class="tool-name">Error Monitor</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Search, retrieve, and analyze production errors via Sentry. DevOps agents that triage issues, on-call automations, and CI pipelines that catch regressions before humans do.</div>
         <div class="tool-endpoint">POST /v1/tools/error-monitor</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Memory">
         <div class="tool-header">
-          <div class="tool-icon-wrap">☁️</div>
+          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">KV</div>
           <div class="tool-name">Cache Store</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Read and write to Cloudflare KV edge cache globally. Agents that need fast persistent state, session data, or shared memory across distributed runs — no database required.</div>
         <div class="tool-endpoint">POST /v1/tools/cache-store</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Memory">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🗄️</div>
+          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">FS</div>
           <div class="tool-name">File Store</div>
           <span class="tool-credits">3 cr</span>
         </div>
         <div class="tool-desc">Upload, retrieve, and share files via Box cloud storage. Agents that generate reports, process documents, or need durable file storage between runs — without S3 configuration.</div>
         <div class="tool-endpoint">POST /v1/tools/file-store</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🚀</div>
+          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">CI</div>
           <div class="tool-name">Deploy Check</div>
           <span class="tool-credits">2 cr</span>
         </div>
         <div class="tool-desc">Get deployment status, build logs, and runtime errors from Vercel. CI/CD agents, deploy monitors, and on-call bots that need to know what's live without checking the dashboard manually.</div>
         <div class="tool-endpoint">POST /v1/tools/deploy-check</div>
       </div>
-
-      <!-- ─── RESEARCH & INTELLIGENCE ────────────────────────────────── -->
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📊</div>
+          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DAT</div>
           <div class="tool-name">Data Analyze</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Run analytics queries and get back structured insights, charts, and statistical summaries. Research agents and reporting pipelines that need to compute trends, not just display raw data.</div>
         <div class="tool-endpoint">POST /v1/tools/data-analyze</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Legal">
         <div class="tool-header">
-          <div class="tool-icon-wrap">⚖️</div>
+          <div class="tool-icon-badge" style="background:rgba(248,113,113,0.10);color:#f87171;">LAW</div>
           <div class="tool-name">Legal Consult</div>
           <span class="tool-credits">20 cr</span>
         </div>
         <div class="tool-desc">Connect to a licensed attorney for document review or compliance questions via LegalZoom. Compliance agents, contract review pipelines, and legal workflows that need a human-in-the-loop sign-off.</div>
         <div class="tool-endpoint">POST /v1/tools/legal-consult</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Voice">
         <div class="tool-header">
-          <div class="tool-icon-wrap">📡</div>
+          <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">CALL</div>
           <div class="tool-name">Call Initiate</div>
           <span class="tool-credits">10 cr</span>
         </div>
         <div class="tool-desc">Initiate outbound phone calls via Twilio with custom messaging or IVR flows. Agents that need to alert humans by phone, run automated surveys, or handle voice-first user interactions.</div>
         <div class="tool-endpoint">POST /v1/tools/call-initiate</div>
       </div>
-
-      <div class="tool-card sr">
+      <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
-          <div class="tool-icon-wrap">🔔</div>
+          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">CAL</div>
           <div class="tool-name">Calendar Check</div>
           <span class="tool-credits">2 cr</span>
         </div>
@@ -2106,511 +1160,206 @@
   </div>
 </section>
 
-<!-- ─── x402 SECTION ─────────────────────────────────────────────────────── -->
-<div class="wrap">
-  <div class="x402-section">
-    <div class="x402-inner">
-      <div class="x402-content">
+<!-- X402 -->
+<section id="x402" style="background:rgba(12,11,34,0.4);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="wrap">
+    <div class="split-grid">
+      <div>
         <div class="section-tag">x402 Protocol</div>
         <h2 class="section-title">AI agents pay with USDC. Automatically.</h2>
-        <p class="section-sub">Your agent needs data. It hits the endpoint, gets a 402, signs a USDC micropayment on Base, and gets the response back — no API key rotation, no billing dashboard, no human in the loop. Money lands in your wallet in seconds.</p>
-        <div class="x402-tags">
-          <span class="x402-tag active">Base Network</span>
-          <span class="x402-tag active">USDC</span>
-          <span class="x402-tag active">$0.001–$0.02 per call</span>
-          <span class="x402-tag">Instant settlement</span>
-          <span class="x402-tag">Powered by Coinbase</span>
-        </div>
+        <p class="section-sub">Arch supports the x402 payment protocol. Your agent discovers tools, sees the price, pays in USDC, and calls the endpoint — no human in the loop, no wallet setup, no API key management.</p>
+        <ul class="feature-list">
+          <li>Agent hits endpoint → receives HTTP 402 with price + wallet</li>
+          <li>Agent pays in USDC on Base — transaction confirmed in seconds</li>
+          <li>Endpoint unlocks, tool executes, result returned</li>
+          <li>No wallet setup on your side — all handled by the protocol</li>
+          <li>Fallback: traditional Stripe credits always available</li>
+        </ul>
       </div>
-      <div>
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-lang">x402 Discovery · /.well-known/x402</span>
-          </div>
-          <div class="code-body">
-            <span style="color:var(--cyan)">GET</span> <span style="color:var(--muted)">/.well-known/x402</span><br><br>
-            <span style="color:var(--dimmer)">{</span><br>
-            &nbsp;&nbsp;<span style="color:var(--purple)">"x402Version"</span><span style="color:var(--dimmer)">:</span> <span style="color:var(--amber)">1</span><span style="color:var(--dimmer)">,</span><br>
-            &nbsp;&nbsp;<span style="color:var(--purple)">"accepts"</span><span style="color:var(--dimmer)">: [{</span><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--purple)">"scheme"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"exact"</span><span style="color:var(--dimmer)">,</span><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--purple)">"network"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"eip155:8453"</span><span style="color:var(--dimmer)">,</span><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--purple)">"asset"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"USDC"</span><span style="color:var(--dimmer)">,</span><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--purple)">"maxAmountRequired"</span><span style="color:var(--dimmer)">:</span> <span style="color:#fca5a5">"5000"</span><br>
-            &nbsp;&nbsp;<span style="color:var(--dimmer)">}]</span><br>
-            <span style="color:var(--dimmer)">}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ─── MCP SECTION ───────────────────────────────────────────────────────── -->
-<section class="section mcp-section" id="mcp">
-  <div class="wrap">
-    <div class="section-tag">MCP Compatible</div>
-    <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
-    <p class="section-sub">One config line. All 60+ tools become native tool calls inside Claude, Cursor, or any MCP-compatible client — no integrations to build or maintain.</p>
-
-    <div class="mcp-inner">
       <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">claude_desktop_config.json</span>
-          <button class="copy-btn" onclick="copyMCP()">Copy</button>
-        </div>
-        <div class="code-body" id="mcp-code">
-          <span class="cb-punc">{</span><br>
-          &nbsp;&nbsp;<span class="cb-key">"mcpServers"</span><span class="cb-punc">: {</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"arch-tools"</span><span class="cb-punc">: {</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"type"</span><span class="cb-punc">:</span> <span class="cb-str">"url"</span><span class="cb-punc">,</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"url"</span><span class="cb-punc">:</span> <span class="cb-str">"https://arch-tools-mcp.onrender.com/mcp"</span><span class="cb-punc">,</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"name"</span><span class="cb-punc">:</span> <span class="cb-str">"arch-tools"</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-punc">}</span><br>
-          &nbsp;&nbsp;<span class="cb-punc">}</span><br>
-          <span class="cb-punc">}</span>
-        </div>
-      </div>
-
-      <div class="mcp-features">
-        <div class="mcp-feat">
-          <div class="mcp-feat-icon">🤖</div>
-          <div class="mcp-feat-text">
-            <h4>Claude Desktop</h4>
-            <p>All 60+ tools appear as native tool calls inside your agent. Transcribe audio, send an SMS, search memory, scrape a URL — no context switching, no copy-pasting, no accounts to manage per tool.</p>
-          </div>
-        </div>
-        <div class="mcp-feat">
-          <div class="mcp-feat-icon">⌨️</div>
-          <div class="mcp-feat-text">
-            <h4>Cursor & Windsurf</h4>
-            <p>Coding agents fetch docs, validate formats, and convert data inline while they write code. No wrapper code. No new accounts. The tool is just there.</p>
-          </div>
-        </div>
-        <div class="mcp-feat">
-          <div class="mcp-feat-icon">🔗</div>
-          <div class="mcp-feat-text">
-            <h4>Any MCP Client</h4>
-            <p>Works with any MCP-compatible runtime. SSE at <span style="font-family:var(--mono);color:var(--indigo2);font-size:12px">arch-tools-mcp.onrender.com/mcp</span>, stdio for local agents. One server. All 60+ tools. Zero per-tool integration work.</p>
-          </div>
-        </div>
+        <span class="t-line"><span class="code-comment"># Agent discovers tool pricing</span></span>
+        <span class="t-line"><span class="t-prompt">$</span> curl https://archtools.dev/v1/tools/web-scrape \</span>
+        <span class="t-line">&nbsp;&nbsp;-H <span class="code-val">"x-payment: required"</span></span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line"><span class="code-comment"># Response: HTTP 402</span></span>
+        <span class="t-line">&#123;</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"price"</span>: <span class="code-val">"0.000005"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"currency"</span>: <span class="code-val">"USDC"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"network"</span>: <span class="code-val">"base"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"wallet"</span>: <span class="code-val">"0xArch..."</span></span>
+        <span class="t-line">&#125;</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line"><span class="code-comment"># Agent pays → tool executes</span></span>
+        <span class="t-line"><span class="t-out">&#123;"content":"...","tx":"0xabc..."&#125;</span></span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── PRICING ───────────────────────────────────────────────────────────── -->
-<section class="section" id="pricing">
+<!-- MCP -->
+<section id="mcp">
+  <div class="wrap">
+    <div class="split-grid" style="direction:ltr;">
+      <div class="code-block" style="order:2;">
+        <span class="t-line"><span class="code-comment">// claude_desktop_config.json</span></span>
+        <span class="t-line">&#123;</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"arch-tools-mcp"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"your-key-here"</span></span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&#125;</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line"><span class="code-comment">// Claude now has 61 tools natively</span></span>
+        <span class="t-line"><span class="t-out">✓ arch-tools connected (61 tools available)</span></span>
+      </div>
+      <div style="order:1;">
+        <div class="section-tag">MCP Compatible</div>
+        <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
+        <p class="section-sub">Arch ships a native MCP server. Drop 6 lines into your Claude Desktop config and every tool is immediately available as a native capability — no API calls in your prompts, no glue code.</p>
+        <ul class="feature-list">
+          <li>61 tools exposed as native MCP functions</li>
+          <li>Works with Claude Desktop, Cursor, Windsurf, and any MCP client</li>
+          <li>Tool descriptions auto-loaded — Claude knows what each tool does</li>
+          <li>Credits deducted per call, same as REST API</li>
+          <li>x402 payments work through MCP too</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" style="background:rgba(12,11,34,0.3);border-top:1px solid var(--border);">
   <div class="wrap">
     <div class="section-tag">Pricing</div>
     <h2 class="section-title">No subscriptions. No expiry. Just credits.</h2>
-    <p class="section-sub">Buy a credit pack once, use it for months. No recurring charges, no seat fees, no vendor lock-in. Or have your agents pay per-call in USDC — no account needed at all.</p>
-
+    <p class="section-sub">Buy once, use whenever. Credits never expire. Or pay per call with USDC — no wallet, no signup, no friction.</p>
     <div class="pricing-grid">
-      <div class="pricing-card glow-hover sr">
-        <div class="plan-name">Starter</div>
-        <div class="plan-price">$9</div>
-        <div class="plan-credits">1,000 credits</div>
-        <div class="plan-per">$0.009 per credit</div>
+      <div class="pricing-card">
+        <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+        <div class="plan-price"><span class="currency">$</span>9</div>
+        <div class="plan-sub">10,000 credits · $0.0009/credit</div>
         <ul class="plan-features">
-          <li>Perfect for side projects & prototypes</li>
-          <li>~200 web scrapes or ~45 AI generations</li>
-          <li>All 60+ tools, no restrictions</li>
+          <li>10,000 credits</li>
+          <li>All 61 tools</li>
+          <li>API key included</li>
           <li>Credits never expire</li>
-          <li>API key on purchase</li>
+          <li>Stripe or USDC</li>
         </ul>
-        <a href="#signup" class="btn-plan btn-plan-outline">Get Started</a>
+        <a class="plan-cta plan-cta-ghost" href="#register">$ buy-starter</a>
       </div>
-
-      <div class="pricing-card featured sr">
-        <div class="featured-badge">Best Value · 46% off</div>
-        <div class="plan-name">Pro</div>
-        <div class="plan-price">$49</div>
-        <div class="plan-credits">10,000 credits</div>
-        <div class="plan-per">$0.0049 per credit</div>
+      <div class="pricing-card featured">
+        <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">★ BEST VALUE</span></div>
+        <div class="plan-price"><span class="currency">$</span>49</div>
+        <div class="plan-sub">60,000 credits · $0.00082/credit</div>
         <ul class="plan-features">
-          <li>Where most active builders live</li>
-          <li>~2,000 scrapes or ~500 AI generations</li>
-          <li>Half the per-credit cost of Starter</li>
+          <li>60,000 credits</li>
+          <li>All 61 tools</li>
+          <li>MCP server access</li>
           <li>Credits never expire</li>
+          <li>Stripe or USDC</li>
+        </ul>
+        <a class="plan-cta plan-cta-primary" href="#register">$ buy-pro</a>
+      </div>
+      <div class="pricing-card">
+        <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
+        <div class="plan-price"><span class="currency">$</span>199</div>
+        <div class="plan-sub">300,000 credits · $0.00066/credit</div>
+        <ul class="plan-features">
+          <li>300,000 credits</li>
+          <li>All 61 tools</li>
+          <li>MCP server access</li>
           <li>Priority support</li>
+          <li>Stripe or USDC</li>
         </ul>
-        <a href="#signup" class="btn-plan btn-plan-solid">Get Pro</a>
-      </div>
-
-      <div class="pricing-card glow-hover sr">
-        <div class="plan-name">Business</div>
-        <div class="plan-price">$199</div>
-        <div class="plan-credits">100,000 credits</div>
-        <div class="plan-per">$0.002 per credit · 78% off</div>
-        <ul class="plan-features">
-          <li>Production pipelines & agents at scale</li>
-          <li>~20,000 scrapes or ~5,000 AI generations</li>
-          <li>78% lower cost than Starter</li>
-          <li>Credits never expire</li>
-          <li>Volume discounts available</li>
-        </ul>
-        <a href="#signup" class="btn-plan btn-plan-outline">Get Business</a>
+        <a class="plan-cta plan-cta-ghost" href="#register">$ buy-business</a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── CTA / SIGNUP ──────────────────────────────────────────────────────── -->
-<section class="cta-section" id="signup">
+<!-- REGISTER CTA -->
+<section id="register" class="cta-section">
   <div class="wrap">
-    <div class="cta-box sr">
-      <div class="cta-badges">
-        <span class="cta-badge active">No credit card</span>
-        <span class="cta-badge active">100 free credits</span>
-        <span class="cta-badge">All 60+ tools unlocked</span>
-        <span class="cta-badge">Credits never expire</span>
-      </div>
-      <h2>Your agent needs tools. Not more <span class="grad-text">API accounts.</span></h2>
-      <p>One email gets you a key and 100 free credits. No credit card. Call any of the 60+ tools in under 60 seconds.</p>
-      <div class="cta-form">
-        <input type="email" class="cta-input" id="email-input" placeholder="agent@example.com">
-        <button class="btn-primary" onclick="register(this)">Get Your Free Key →</button>
-      </div>
-      <div id="api-result"></div>
+    <div class="section-tag">Start building</div>
+    <h2 class="section-title">Your agent needs tools. Not more API accounts.</h2>
+    <p class="section-sub">Register in 10 seconds. 100 free credits, no card required. Your agent can be calling tools in under a minute.</p>
+    <div class="register-form">
+      <input class="register-input" type="email" placeholder="agent@example.com" id="reg-email" autocomplete="email" aria-label="Email address">
+      <button type="button" class="btn-primary" onclick="handleRegister()">$ register</button>
     </div>
+    <div class="register-note">100 free credits on signup · No credit card required · Cancel anytime</div>
+    <div id="reg-toast" class="reg-toast" style="opacity:0;" aria-live="polite"></div>
   </div>
 </section>
 
-<!-- ─── FOOTER ────────────────────────────────────────────────────────────── -->
+<!-- FOOTER -->
 <footer>
   <div class="wrap">
     <div class="footer-inner">
-      <div class="footer-left">
-        <a href="/" class="logo" style="margin-bottom: 4px;">
-          <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="archGradF" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#FF9010"/>
-                <stop offset="55%" stop-color="#FF2896"/>
-                <stop offset="100%" stop-color="#8844FF"/>
-              </linearGradient>
-            </defs>
-            <rect width="100" height="100" rx="22" fill="#0C0B22"/>
-            <path fill="url(#archGradF)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z"/>
-            <path fill="url(#archGradF)" opacity="0.75" d="M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/>
-          </svg>
-          Arch Tools
-        </a>
-        <span class="footer-copy">Built in Columbia, SC · Arch Enterprises LLC</span>
+      <div class="footer-left">Arch Tools · Built in Columbia, SC · Arch Enterprises LLC</div>
+      <div class="footer-prompt">
+        <span class="prompt-text">arch@tools:~$</span>&nbsp;<span class="footer-cursor"></span>
       </div>
-      <ul class="footer-links">
-        <li><a href="/v1/tools">API Docs</a></li>
-        <li><a href="/openapi.json">OpenAPI</a></li>
-        <li><a href="/.well-known/x402">x402</a></li>
-        <li><a href="/llms.txt">llms.txt</a></li>
-        <li><a href="/legal/terms">Terms</a></li>
-        <li><a href="/legal/privacy">Privacy</a></li>
-      </ul>
-      <div class="footer-status">
-        <span class="badge-dot"></span>
-        All systems operational
+      <div class="footer-links">
+        <a href="#">API Docs</a>
+        <a href="#">OpenAPI</a>
+        <a href="#">x402</a>
+        <a href="#">llms.txt</a>
+        <a href="#">Terms</a>
+        <a href="#">Privacy</a>
+        <a href="#" style="color:var(--green);">● Operational</a>
       </div>
     </div>
   </div>
 </footer>
 
-<script>
-  /* ─── Marquee ─────────────────────────────────────────────────────────────── */
-  const tools = [
-    { icon: '🤖', name: 'ai-generate' },
-    { icon: '🖼️', name: 'image-generate' },
-    { icon: '👁️', name: 'ocr-extract' },
-    { icon: '🧠', name: 'summarize' },
-    { icon: '💬', name: 'sentiment-analysis' },
-    { icon: '🏷️', name: 'extract-entities' },
-    { icon: '🌐', name: 'web-search' },
-    { icon: '🌍', name: 'language-detect' },
-    { icon: '🔲', name: 'regex-generate' },
-    { icon: '📸', name: 'screenshot-capture' },
-    { icon: '🕷️', name: 'web-scrape' },
-    { icon: '📄', name: 'extract-page' },
-    { icon: '🔍', name: 'search-web' },
-    { icon: '🖥️', name: 'browser-task' },
-    { icon: '📡', name: 'rss-parse' },
-    { icon: '📑', name: 'extract-pdf' },
-    { icon: '📝', name: 'html-to-markdown' },
-    { icon: '🔗', name: 'url-shorten' },
-    { icon: '📨', name: 'webhook-send' },
-    { icon: '✅', name: 'validate-data' },
-    { icon: '🔄', name: 'convert-format' },
-    { icon: '🔎', name: 'jsonpath-query' },
-    { icon: '🔗', name: 'extract-metadata' },
-    { icon: '🔐', name: 'generate-hash' },
-    { icon: '🕵️', name: 'pii-detect' },
-    { icon: '✏️', name: 'transform-text' },
-    { icon: '📊', name: 'readability-score' },
-    { icon: '↔️', name: 'diff-text' },
-    { icon: '📍', name: 'ip-lookup' },
-    { icon: '🌐', name: 'whois-lookup' },
-    { icon: '📧', name: 'email-verify' },
-    { icon: '📱', name: 'phone-validate' },
-    { icon: '💱', name: 'currency-convert' },
-    { icon: '🕐', name: 'timezone-convert' },
-    { icon: '🎲', name: 'generate-uuid' },
-    { icon: '◼️', name: 'qr-code' },
-    { icon: '▦',  name: 'barcode-generate' },
-    { icon: '⚖️', name: '/v1/agent/balance' },
-  ];
-
-  function fill(id, arr) {
-    const row = document.getElementById(id);
-    if (!row) return;
-    // Double for seamless loop
-    const doubled = [...arr, ...arr];
-    row.innerHTML = doubled.map(t =>
-      `<span class="mq-pill"><span class="mq-pill-icon">${t.icon}</span>${t.name}</span>`
-    ).join('');
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// Category filter
+function filterTools(cat, btn) {
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    const match = [...document.querySelectorAll('.cat-pill')].find(p => p.dataset.filter === cat);
+    if (match) match.classList.add('active');
   }
-
-  // Fill all rows first, then start animations simultaneously
-  fill('mq1', tools);
-  fill('mq2', [...tools].reverse());
-  fill('mq3', tools.slice(10).concat(tools.slice(0, 10)));
-
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.mq-row').forEach(row => {
-      row.style.animationPlayState = 'running';
-    });
-  });
-
-  /* ─── Registration ────────────────────────────────────────────────────────── */
-  async function register(btn) {
-    const email = document.getElementById('email-input').value.trim();
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address');
-      return;
-    }
-
-    btn.textContent = 'Registering…';
-    btn.disabled = true;
-
-    try {
-      const res = await fetch('/v1/agent/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-
-      const resultEl = document.getElementById('api-result');
-      resultEl.style.display = 'block';
-
-      if (data.ok) {
-        resultEl.style.borderColor = 'rgba(52,211,153,0.3)';
-        resultEl.style.background = 'rgba(52,211,153,0.06)';
-        resultEl.style.color = '#34d399';
-        resultEl.innerHTML = `✓ Registered!<br><br>
-          <strong style="color:#fff">API Key:</strong> ${data.api_key}<br>
-          <strong style="color:#fff">Credits:</strong> ${data.credits}<br><br>
-          <span style="color:#8A85B0;font-size:11px">Save this key — it won't be shown again.</span>`;
-      } else {
-        resultEl.style.borderColor = 'rgba(248,113,113,0.3)';
-        resultEl.style.background = 'rgba(248,113,113,0.06)';
-        resultEl.style.color = '#f87171';
-        resultEl.textContent = '✗ ' + (data.message || JSON.stringify(data));
-      }
-    } catch (e) {
-      const resultEl = document.getElementById('api-result');
-      resultEl.style.display = 'block';
-      resultEl.style.color = '#f87171';
-      resultEl.textContent = '✗ ' + e.message;
-    }
-
-    btn.textContent = 'Get API Key →';
-    btn.disabled = false;
-  }
-
-  /* ─── Copy MCP Config ─────────────────────────────────────────────────────── */
-  function copyMCP() {
-    const config = `{
-  "mcpServers": {
-    "arch-tools": {
-      "type": "url",
-      "url": "https://arch-tools-mcp.onrender.com/mcp",
-      "name": "arch-tools"
-    }
-  }
-}`;
-    navigator.clipboard.writeText(config).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
-  }
-
-  /* ─── Enter key on email input ───────────────────────────────────────────── */
-  document.getElementById('email-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') register(document.querySelector('.cta-form .btn-primary'));
-  });
-
-  /* ─── Smooth scroll for hash links ──────────────────────────────────────── */
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  });
-
-  /* ── ENHANCED SCROLL REVEAL ── */
-  (function() {
-    const ro = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); }
-      });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.sr').forEach((el, i) => {
-      const parent = el.closest('.steps, .tools-grid, .pricing-grid');
-      if (parent) {
-        const siblings = Array.from(parent.children).filter(c => c.classList.contains('sr'));
-        const idx = siblings.indexOf(el);
-        el.style.transitionDelay = (idx % 8 * 0.06) + 's';
-      }
-      ro.observe(el);
-    });
-  })();
-
-  /* ── SECTION LINE REVEALS ── */
-  (function() {
-    const lo = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-    }, { threshold: 0.3 });
-    document.querySelectorAll('.section-line').forEach(el => lo.observe(el));
-  })();
-
-  /* ── ANIMATED STAT COUNTERS ── */
-  (function() {
-    function runCounter(el) {
-      const raw = el.dataset.count, pre = el.dataset.prefix || '', suf = el.dataset.suffix || '';
-      const isFloat = raw.includes('.'), target = parseFloat(raw), dur = 1400, start = performance.now();
-      const decimals = isFloat ? raw.split('.')[1].length : 0;
-      const tick = now => {
-        const p = Math.min((now - start) / dur, 1), ease = 1 - Math.pow(1 - p, 3);
-        const val = isFloat ? (target * ease).toFixed(decimals) : Math.round(target * ease);
-        el.textContent = pre + val + suf;
-        if (p < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
-    const so = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) { runCounter(e.target); so.unobserve(e.target); } });
-    }, { threshold: 0.6 });
-    document.querySelectorAll('.stat-num[data-count]').forEach(el => so.observe(el));
-  })();
-
-  /* ── FLOATING PARTICLES ── */
-  (function() {
-    const container = document.getElementById('particles');
-    if (!container) return;
-    const colors = ['#FF8000','#FF2896','#7040FF','#1860FF','#FF9010','#AA77FF'];
-    for (let i = 0; i < 26; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      const size = Math.random() * 3 + 1.5;
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      const dur = Math.random() * 18 + 12;
-      const delay = Math.random() * 20;
-      p.style.cssText = [
-        `width:${size}px`, `height:${size}px`,
-        `left:${Math.random() * 100}%`,
-        `background:${color}`,
-        `box-shadow:0 0 ${size * 4}px ${color},0 0 ${size * 8}px ${color}`,
-        `animation-duration:${dur}s`,
-        `animation-delay:-${delay}s`
-      ].join(';');
-      container.appendChild(p);
-    }
-  })();
-
-  /* ── MAGNETIC BUTTONS ── */
-  document.querySelectorAll('.btn-primary').forEach(btn => {
-    btn.addEventListener('mousemove', e => {
-      const r = btn.getBoundingClientRect();
-      const x = e.clientX - r.left - r.width / 2;
-      const y = e.clientY - r.top - r.height / 2;
-      btn.style.transform = `translateY(-2px) translate(${x * 0.15}px,${y * 0.15}px)`;
-    });
-    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
-  });
-
-</script>
-
-
-
-<!-- ── SVG TOOL ICONS ── -->
-<script>
-(function(){
-  const I = {
-    'ai-generate':       `<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>`,
-    'image-generate':    `<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>`,
-    'ocr-extract':       `<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/>`,
-    'summarize':         `<path d="M8 6h13"/><path d="M8 12h9"/><path d="M8 18h11"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>`,
-    'sentiment-analysis':`<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/>`,
-    'extract-entities':  `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/>`,
-    'web-search':        `<circle cx="10" cy="10" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M10 7v6"/><path d="M7 10h6"/>`,
-    'language-detect':   `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>`,
-    'regex-generate':    `<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>`,
-    'web-scrape':        `<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>`,
-    'extract-page':      `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>`,
-    'search-web':        `<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>`,
-    'browser-task':      `<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 8h.01"/><path d="M9 8h.01"/><path d="M12 8h5"/>`,
-    'screenshot-capture':`<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M9 9l3 3 3-3"/>`,
-    'rss-parse':         `<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="currentColor"/>`,
-    'extract-pdf':       `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 17h4"/><path d="M10 13h2"/>`,
-    'transform-text':    `<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>`,
-    'readability-score': `<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>`,
-    'diff-text':         `<path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/><path d="M9 12h6"/>`,
-    'convert-format':    `<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
-    'extract-metadata':  `<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>`,
-    'validate-data':     `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`,
-    'generate-hash':     `<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>`,
-    'pii-detect':        `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>`,
-    'email-verify':      `<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>`,
-    'phone-validate':    `<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>`,
-    'ip-lookup':         `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`,
-    'whois-lookup':      `<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>`,
-    'currency-convert':  `<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>`,
-    'timezone-convert':  `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
-    'generate-uuid':     `<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`,
-    'qr-code':           `<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3" rx="0.5"/><path d="M17 17h3"/><path d="M17 20v-3"/>`,
-
-    'html-to-markdown':  `<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>`,
-    'url-shorten':       `<path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/>`,
-    'webhook-send':      `<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>`,
-    'jsonpath-query':    `<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>`,
-    'barcode-generate':  `<path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M15 5v14"/><path d="M19 5v14"/><path d="M9 5v14"/><path d="M13 5v14"/><path d="M17 5v14"/>`,
-    'validate-data':     `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`,
-    'convert-format':    `<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
-    'extract-metadata':  `<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>`,
-    'generate-hash':     `<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>`,
-    'pii-detect':        `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>`,
-    'ip-lookup':         `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`,
-    'whois-lookup':      `<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>`,
-    'email-verify':      `<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>`,
-    'phone-validate':    `<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>`,
-    'currency-convert':  `<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>`,
-    'timezone-convert':  `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
-    'generate-uuid':     `<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`,
-    'qr-code':           `<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><path d="M17 17h3"/><path d="M17 20v-3"/>`,
-  };
-const svgWrap = inner => `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
   document.querySelectorAll('.tool-card').forEach(card => {
-    const ep = card.querySelector('.tool-endpoint');
-    if (!ep) return;
-    const slug = ep.textContent.trim().split('/').pop();
-    if (!I[slug]) return;
-    const wrap = card.querySelector('.tool-icon-wrap');
-    if (wrap) wrap.innerHTML = svgWrap(I[slug]);
+    card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
   });
-})();
+}
+function goToCategory(cat) {
+  filterTools(cat, null);
+  document.getElementById('tools').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function handleRegister() {
+  const input = document.getElementById('reg-email');
+  const val = input.value.trim();
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const toast = document.getElementById('reg-toast');
+  if (!val) {
+    showToast(toast, 'Enter your email address.', 'error');
+    input.focus();
+    return;
+  }
+  if (!emailRe.test(val)) {
+    showToast(toast, 'That doesn\'t look like a valid email.', 'error');
+    input.focus();
+    return;
+  }
+  showToast(toast, '✓ You\'re on the list. API key incoming.', 'success');
+  input.value = '';
+}
+function showToast(el, msg, type) {
+  el.textContent = msg;
+  el.className = 'reg-toast reg-toast-' + type;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
 </script>
-
 </body>
 </html>
