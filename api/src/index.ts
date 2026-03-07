@@ -123,6 +123,41 @@ app.get("/signup", (_req: Request, res: Response) => res.type("text/html").send(
 app.get("/login", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
 app.get("/dashboard", (_req: Request, res: Response) => res.type("text/html").send(DASHBOARD_HTML));
 
+// ─── Missing pages (referenced throughout the app) ────────────────────────────
+// /pricing — referenced in Stripe cancel_url and nav links
+app.get("/pricing", (_req: Request, res: Response) => res.redirect("/#pricing"));
+
+// /docs — referenced in nav, dashboard, and agent registration
+app.get("/docs", (_req: Request, res: Response) => res.redirect("https://github.com/Deesmo/Arch-AI-Tools#readme"));
+app.get("/docs/:path", (_req: Request, res: Response) => res.redirect("https://github.com/Deesmo/Arch-AI-Tools#readme"));
+
+// /success — Stripe post-checkout success page
+app.get("/success", (_req: Request, res: Response) => {
+  res.type("text/html").send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Successful — Arch Tools</title>
+  <style>
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#07061A;color:#f0f0f6;display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:48px;text-align:center;max-width:480px}
+    h1{font-size:2rem;margin:0 0 12px;color:#00e5b0}
+    p{color:#8b8ba6;margin:0 0 24px;font-size:16px;line-height:1.6}
+    a{display:inline-block;background:#00e5b0;color:#07061A;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px}
+    .icon{font-size:3rem;margin-bottom:16px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✅</div>
+    <h1>Payment Successful</h1>
+    <p>Your credits have been added to your account. You're ready to build.</p>
+    <a href="/dashboard">Open Dashboard →</a>
+  </div>
+</body>
+</html>`);
+});
+
 
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────
