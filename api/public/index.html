@@ -5,9 +5,9 @@
   <meta name="color-scheme" content="dark">
   <style>html,body{background:#07061A!important;}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arch Tools — Everything Your Agent Needs. One Key.</title>
-  <meta name="description" content="38 production-ready API tools for developers and AI agents. Web scraping, QR codes, AI generation, data validation and more. Dual payment rails: Stripe + x402 USDC.">
-  <meta property="og:title" content="Arch Tools — 38 API Tools for AI Agents">
+  <title>Arch Tools — 60+ AI Agent Tools. One Key.</title>
+  <meta name="description" content="60+ production-ready API tools for developers and AI agents. Multi-model AI, voice, memory, web scraping, communication, data validation and more. Dual payment rails: Stripe + x402 USDC.">
+  <meta property="og:title" content="Arch Tools — 60+ API Tools for AI Agents">
   <meta property="og:description" content="Pay-per-use API tools for developers and AI agents. 100 free credits to start.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
@@ -67,12 +67,16 @@
       --body:      'DM Sans', sans-serif;
     }
 
-    html { scroll-behavior: smooth; background: #07061A; }
+    html { scroll-behavior: smooth; background: #07061A; overflow-x: hidden; }
 
     body {
       font-family: var(--body);
       background: var(--bg);
-      background-image: radial-gradient(ellipse 90% 55% at 50% -5%, rgba(136,68,255,0.22) 0%, rgba(255,40,150,0.08) 40%, transparent 70%);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(136,68,255,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%, rgba(255,40,150,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%, rgba(24,96,255,0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 35% at 10% 60%, rgba(255,144,16,0.06) 0%, transparent 60%);
       color: var(--text);
       line-height: 1.6;
       overflow-x: hidden;
@@ -335,6 +339,9 @@
       color: var(--dimmer);
     }
 
+    .terminal {
+      max-width: 100%;
+    }
     .terminal-body {
       padding: 20px 22px;
       font-family: var(--mono);
@@ -769,12 +776,13 @@
     .x402-section::before {
       content: '';
       position: absolute;
-      top: -100px; right: -100px;
-      width: 400px; height: 400px;
+      top: -100px; right: -60px;
+      width: min(400px, 90vw); height: min(400px, 90vw);
       background: radial-gradient(circle, rgba(136,68,255,0.06), transparent 70%);
       pointer-events: none;
     }
 
+    .x402-section { overflow: hidden; }
     @media (max-width: 768px) { .x402-section { padding: 32px 24px; } }
 
     .x402-section::after { content: 'x402'; position: absolute; bottom: -20px; right: 40px; font-family: var(--display); font-size: 9rem; font-weight: 800; color: rgba(255,144,16,0.04); letter-spacing: -4px; pointer-events: none; line-height: 1; z-index: 0; }
@@ -860,6 +868,7 @@
       font-size: 12.5px;
       line-height: 1.85;
       overflow-x: auto;
+      max-width: 100%;
     }
 
     .mcp-features { display: flex; flex-direction: column; gap: 20px; }
@@ -898,7 +907,7 @@
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 600px; height: 300px;
+      width: min(600px, 100vw); height: 300px;
       background: radial-gradient(ellipse, rgba(136,68,255,0.07), transparent 70%);
       pointer-events: none;
     }
@@ -1168,14 +1177,13 @@
     @media(max-width:500px){.cta-box{padding:40px 24px;}}
     /* ════════════════════════════════════════════════════════════════ */
 
+    @media (max-width: 768px) { #cursor-glow { display: none !important; } }
     #cursor-glow { position: fixed; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(136,68,255,0.07), rgba(255,40,150,0.04), transparent 65%); pointer-events: none; left: -999px; top: -999px; z-index: 0; }
   </style>
 </head>
 <body>
 
-<!-- canvas background: waves + orbs + sparks -->
 <div id="cursor-glow"></div>
-<canvas id="bg-canvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 <!-- floating particles -->
 <div class="particles" id="particles" aria-hidden="true"></div>
 <!-- shared SVG filter/gradient defs -->
@@ -1330,15 +1338,15 @@
         </div>
         <div class="hero-badge">
           <span class="badge-dot"></span>
-          Live · 38 tools · one key to access them all
+          Live · 60+ tools · one key to access them all
         </div>
         <h1 class="hero-headline">
           One Key.<br>
-          <span class="grad-text">38 Tools.</span><br>
+          <span class="grad-text">60+ Tools.</span><br>
           Everything Your Agent Needs.
         </h1>
         <p class="hero-sub">
-          AI agents need scraping, OCR, PII detection, validation, generation — and usually a separate API account for each. Arch consolidates all 38 under one key, one credit balance, one bill. Give your agent everything. Manage nothing extra.
+          Most agents need 8–12 separate APIs to function. Scraping, OCR, voice, memory, email, SMS, multi-model AI — each one its own account, key, and bill. Arch replaces all of them. One key, one credit balance, every capability. Ship faster. Manage less.
         </p>
         <div class="hero-actions">
           <a href="#signup" class="btn-primary">Get Your Free API Key →</a>
@@ -1395,8 +1403,8 @@
   <div class="wrap">
     <div class="stats-inner">
       <div class="stat">
-        <span class="stat-num" data-count="38">38</span>
-        <span class="stat-label">Ready-to-Call Tools</span>
+        <span class="stat-num" data-count="60">60+</span>
+        <span class="stat-label">Production Tools</span>
       </div>
       <div class="stat-divider"></div>
       <div class="stat">
@@ -1447,7 +1455,7 @@
         <div class="step-num">03</div>
         <div class="step-icon">⚡</div>
         <h3>Call Any Tool</h3>
-        <p>Same key works across all 38 tools. JSON in, JSON out, credits deducted automatically. Your agent never needs another API account — ever.</p>
+        <p>Same key works across all 60+ tools. JSON in, JSON out, credits deducted automatically. Your agent never needs another API account — ever.</p>
       </div>
     </div>
   </div>
@@ -1456,9 +1464,9 @@
 <!-- ─── TOOLS ─────────────────────────────────────────────────────────────── -->
 <section class="section" id="tools">
   <div class="wrap">
-    <div class="section-tag">38 Production Tools</div>
+    <div class="section-tag">60+ Production Tools</div>
     <h2 class="section-title">The tools every agent needs to actually work</h2>
-    <p class="section-sub">Scraping, OCR, AI generation, PII detection, validation, conversion — the unglamorous utilities that make agents useful. One key. One bill.</p>
+    <p class="section-sub">Every tool your agent actually uses in production — not toy examples. Scraping that handles JavaScript. AI that routes to any model. Voice in and out. Real-time memory. SMS, email, scheduling, payments, legal. All metered to the cent.</p>
 
     <div class="section-line sr"></div>
     <div class="tools-grid">
@@ -1470,7 +1478,7 @@
           <div class="tool-name">AI Generate</div>
           <span class="tool-credits">20 cr</span>
         </div>
-        <div class="tool-desc">Claude-powered text generation without managing another API key. Any prompt, any format — summaries, classifications, structured output. One credit-metered call, no token math.</div>
+        <div class="tool-desc">Text generation across Claude, GPT-4o, Gemini, and Grok — all from one call. Pass a <code style="font-family:var(--mono);font-size:11px;color:var(--indigo2)">model</code> param to route to any model. One key replaces four separate AI accounts.</div>
         <div class="tool-endpoint">POST /v1/tools/ai-generate</div>
       </div>
 
@@ -1841,6 +1849,259 @@
         <div class="tool-endpoint">POST /v1/tools/barcode-generate</div>
       </div>
 
+
+      <!-- ─── VOICE ─────────────────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🔊</div>
+          <div class="tool-name">Text to Speech</div>
+          <span class="tool-credits">8 cr</span>
+        </div>
+        <div class="tool-desc">Convert any text to natural-sounding audio via ElevenLabs. Returns MP3 or base64. Voice cloning, narration, agent audio output — no separate TTS account needed.</div>
+        <div class="tool-endpoint">POST /v1/tools/text-to-speech</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🎙️</div>
+          <div class="tool-name">Transcribe Audio</div>
+          <span class="tool-credits">12 cr</span>
+        </div>
+        <div class="tool-desc">Audio file or URL in, clean text out. Meeting notes, voice commands, recorded interviews — pass the file and get back timestamped transcription ready for downstream processing.</div>
+        <div class="tool-endpoint">POST /v1/tools/transcribe-audio</div>
+      </div>
+
+      <!-- ─── COMMUNICATION ──────────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📧</div>
+          <div class="tool-name">Email Send</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Send transactional or outreach emails from your agent. Pass to, subject, and body — returns message ID. Works for notifications, confirmations, drip sequences, and alerts.</div>
+        <div class="tool-endpoint">POST /v1/tools/email-send</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📱</div>
+          <div class="tool-name">SMS Send</div>
+          <span class="tool-credits">4 cr</span>
+        </div>
+        <div class="tool-desc">Send SMS text messages via Twilio to any phone number worldwide. Agents that need to alert, confirm, or notify humans — without building a separate messaging integration.</div>
+        <div class="tool-endpoint">POST /v1/tools/sms-send</div>
+      </div>
+
+      <!-- ─── MEMORY & KNOWLEDGE ─────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🧲</div>
+          <div class="tool-name">Vector Store</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Embed and store text chunks in a managed vector database. Pass content and a namespace — retrieval-ready in seconds. The foundation of any agent with long-term memory or a knowledge base.</div>
+        <div class="tool-endpoint">POST /v1/tools/vector-store</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🔎</div>
+          <div class="tool-name">Vector Search</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Semantic similarity search over your stored vectors. Pass a query, get back the top-k most relevant chunks with scores. Powers RAG pipelines, knowledge retrieval, and context injection.</div>
+        <div class="tool-endpoint">POST /v1/tools/vector-search</div>
+      </div>
+
+      <!-- ─── SCHEDULING & PRODUCTIVITY ─────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📅</div>
+          <div class="tool-name">Calendar Create</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Create calendar events with attendees, location, and description. Scheduling agents, booking confirmations, meeting coordinators — one call sets the event without touching the Calendar UI.</div>
+        <div class="tool-endpoint">POST /v1/tools/calendar-create</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📝</div>
+          <div class="tool-name">Notion Write</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Create or update Notion pages and databases from your agent. Research agents, content generators, and workflow automations that need to store structured output somewhere permanent.</div>
+        <div class="tool-endpoint">POST /v1/tools/notion-write</div>
+      </div>
+
+      <!-- ─── FINANCE & MARKET DATA ──────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">₿</div>
+          <div class="tool-name">Crypto Price</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Live spot prices, tickers, and order book snapshots for any trading pair. Real-time market data for trading agents, portfolio trackers, and DeFi automations — no exchange account needed.</div>
+        <div class="tool-endpoint">POST /v1/tools/crypto-price</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🌐</div>
+          <div class="tool-name">Domain Check</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Check domain availability and get name suggestions in one call. Brand research agents, startup idea generators, and naming tools — instant availability data without a registrar account.</div>
+        <div class="tool-endpoint">POST /v1/tools/domain-check</div>
+      </div>
+
+      <!-- ─── PROSPECTING & LEADS ────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🎯</div>
+          <div class="tool-name">Prospect Search</div>
+          <span class="tool-credits">15 cr</span>
+        </div>
+        <div class="tool-desc">Company and lead intelligence from a structured data layer. Pass a company name or domain, get back firmographics, technographics, and contact signals. Sales agents that qualify leads automatically.</div>
+        <div class="tool-endpoint">POST /v1/tools/prospect-search</div>
+      </div>
+
+      <!-- ─── MEDIA GENERATION ───────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🎬</div>
+          <div class="tool-name">Video Generate</div>
+          <span class="tool-credits">30 cr</span>
+        </div>
+        <div class="tool-desc">Generate short video clips from text prompts or image inputs via Runway ML. Social content agents, product demo generators, creative pipelines — video output without a production stack.</div>
+        <div class="tool-endpoint">POST /v1/tools/video-generate</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🎨</div>
+          <div class="tool-name">Design Create</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Generate branded visual assets via Canva — social posts, presentations, thumbnails, banners. Pass a template and data, get back a shareable design URL. Content agents that produce visuals, not just text.</div>
+        <div class="tool-endpoint">POST /v1/tools/design-create</div>
+      </div>
+
+      <!-- ─── CODE EXECUTION ─────────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">⚡</div>
+          <div class="tool-name">Code Execute</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Run Python or JavaScript in a sandboxed environment and get back stdout, stderr, and return value. Agents that write code and need to actually run it — safely, without spinning up compute.</div>
+        <div class="tool-endpoint">POST /v1/tools/code-execute</div>
+      </div>
+
+
+      <!-- ─── PAYMENTS & LEGAL ───────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">💸</div>
+          <div class="tool-name">Payment Send</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Send PayPal payouts or invoice payments programmatically. Agents that need to disburse funds, pay contractors, or initiate refunds — without a human touching the PayPal dashboard.</div>
+        <div class="tool-endpoint">POST /v1/tools/payment-send</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📜</div>
+          <div class="tool-name">Contract Send</div>
+          <span class="tool-credits">8 cr</span>
+        </div>
+        <div class="tool-desc">Send signature-ready contracts via DocuSign. Sales agents that close deals, HR agents that onboard employees, legal workflows that run without a human initiating every envelope.</div>
+        <div class="tool-endpoint">POST /v1/tools/contract-send</div>
+      </div>
+
+      <!-- ─── INFRASTRUCTURE ─────────────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🚨</div>
+          <div class="tool-name">Error Monitor</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Search, retrieve, and analyze production errors via Sentry. DevOps agents that triage issues, on-call automations, and CI pipelines that catch regressions before humans do.</div>
+        <div class="tool-endpoint">POST /v1/tools/error-monitor</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">☁️</div>
+          <div class="tool-name">Cache Store</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Read and write to Cloudflare KV edge cache globally. Agents that need fast persistent state, session data, or shared memory across distributed runs — no database required.</div>
+        <div class="tool-endpoint">POST /v1/tools/cache-store</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🗄️</div>
+          <div class="tool-name">File Store</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Upload, retrieve, and share files via Box cloud storage. Agents that generate reports, process documents, or need durable file storage between runs — without S3 configuration.</div>
+        <div class="tool-endpoint">POST /v1/tools/file-store</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🚀</div>
+          <div class="tool-name">Deploy Check</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Get deployment status, build logs, and runtime errors from Vercel. CI/CD agents, deploy monitors, and on-call bots that need to know what's live without checking the dashboard manually.</div>
+        <div class="tool-endpoint">POST /v1/tools/deploy-check</div>
+      </div>
+
+      <!-- ─── RESEARCH & INTELLIGENCE ────────────────────────────────── -->
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📊</div>
+          <div class="tool-name">Data Analyze</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Run analytics queries and get back structured insights, charts, and statistical summaries. Research agents and reporting pipelines that need to compute trends, not just display raw data.</div>
+        <div class="tool-endpoint">POST /v1/tools/data-analyze</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">⚖️</div>
+          <div class="tool-name">Legal Consult</div>
+          <span class="tool-credits">20 cr</span>
+        </div>
+        <div class="tool-desc">Connect to a licensed attorney for document review or compliance questions via LegalZoom. Compliance agents, contract review pipelines, and legal workflows that need a human-in-the-loop sign-off.</div>
+        <div class="tool-endpoint">POST /v1/tools/legal-consult</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">📡</div>
+          <div class="tool-name">Call Initiate</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Initiate outbound phone calls via Twilio with custom messaging or IVR flows. Agents that need to alert humans by phone, run automated surveys, or handle voice-first user interactions.</div>
+        <div class="tool-endpoint">POST /v1/tools/call-initiate</div>
+      </div>
+
+      <div class="tool-card sr">
+        <div class="tool-header">
+          <div class="tool-icon-wrap">🔔</div>
+          <div class="tool-name">Calendar Check</div>
+          <span class="tool-credits">2 cr</span>
+        </div>
+        <div class="tool-desc">Query calendar availability and upcoming events for a user or resource. Scheduling agents that need to find open slots, avoid conflicts, or confirm attendance before booking.</div>
+        <div class="tool-endpoint">POST /v1/tools/calendar-check</div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1889,7 +2150,7 @@
   <div class="wrap">
     <div class="section-tag">MCP Compatible</div>
     <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
-    <p class="section-sub">One config line. All 38 tools become native tool calls inside Claude, Cursor, or any MCP-compatible client — no integrations to build or maintain.</p>
+    <p class="section-sub">One config line. All 60+ tools become native tool calls inside Claude, Cursor, or any MCP-compatible client — no integrations to build or maintain.</p>
 
     <div class="mcp-inner">
       <div class="code-block">
@@ -1915,7 +2176,7 @@
           <div class="mcp-feat-icon">🤖</div>
           <div class="mcp-feat-text">
             <h4>Claude Desktop</h4>
-            <p>All 38 tools show up as native tool calls. Ask Claude to scrape a URL, validate data, or detect PII — it calls Arch directly. No context switching, no copy-pasting, no extra accounts.</p>
+            <p>All 60+ tools appear as native tool calls inside your agent. Transcribe audio, send an SMS, search memory, scrape a URL — no context switching, no copy-pasting, no accounts to manage per tool.</p>
           </div>
         </div>
         <div class="mcp-feat">
@@ -1929,7 +2190,7 @@
           <div class="mcp-feat-icon">🔗</div>
           <div class="mcp-feat-text">
             <h4>Any MCP Client</h4>
-            <p>Works with any MCP-compatible runtime. SSE at <span style="font-family:var(--mono);color:var(--indigo2);font-size:12px">arch-tools-mcp.onrender.com/mcp</span>, stdio for local agents. One server. All 38 tools. Zero per-tool integration work.</p>
+            <p>Works with any MCP-compatible runtime. SSE at <span style="font-family:var(--mono);color:var(--indigo2);font-size:12px">arch-tools-mcp.onrender.com/mcp</span>, stdio for local agents. One server. All 60+ tools. Zero per-tool integration work.</p>
           </div>
         </div>
       </div>
@@ -1953,7 +2214,7 @@
         <ul class="plan-features">
           <li>Perfect for side projects & prototypes</li>
           <li>~200 web scrapes or ~45 AI generations</li>
-          <li>All 38 tools, no restrictions</li>
+          <li>All 60+ tools, no restrictions</li>
           <li>Credits never expire</li>
           <li>API key on purchase</li>
         </ul>
@@ -2001,11 +2262,11 @@
       <div class="cta-badges">
         <span class="cta-badge active">No credit card</span>
         <span class="cta-badge active">100 free credits</span>
-        <span class="cta-badge">All 38 tools unlocked</span>
+        <span class="cta-badge">All 60+ tools unlocked</span>
         <span class="cta-badge">Credits never expire</span>
       </div>
       <h2>Your agent needs tools. Not more <span class="grad-text">API accounts.</span></h2>
-      <p>One email. One key. 100 free credits to call any of the 38 tools — right now.</p>
+      <p>One email gets you a key and 100 free credits. No credit card. Call any of the 60+ tools in under 60 seconds.</p>
       <div class="cta-form">
         <input type="email" class="cta-input" id="email-input" placeholder="agent@example.com">
         <button class="btn-primary" onclick="register(this)">Get Your Free Key →</button>
@@ -2281,135 +2542,7 @@
 
 </script>
 
-<!-- ── CANVAS: waves + orbs + sparks ── -->
-<script>
-(function() {
-  const canvas = document.getElementById('bg-canvas');
-  const ctx = canvas.getContext('2d');
-  let W, H, t = 0;
-  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-  window.addEventListener('resize', resize);
-  resize();
 
-  const COLORS = [[255,144,16],[255,40,150],[136,68,255],[24,96,255],[255,80,200]];
-
-  class Wave {
-    constructor(i, total) { this.reset(i, total); }
-    reset(i, total) {
-      this.color = COLORS[i % COLORS.length];
-      this.speed = 0.00015 + Math.random() * 0.00022;
-      this.amp = 70 + Math.random() * 160;
-      this.freq = 0.0018 + Math.random() * 0.003;
-      this.phase = Math.random() * Math.PI * 2;
-      this.yBase = H * (0.15 + (i / Math.max(total-1,1)) * 0.75);
-      this.width = 1.2 + Math.random() * 2.0;
-      this.alpha = 0.22 + Math.random() * 0.22;
-      this.glowW = this.width * (8 + Math.random() * 12);
-      this.glowA = this.alpha * 0.65;
-    }
-    draw(ctx, t) {
-      const [r,g,b] = this.color;
-      const phase = this.phase + t * this.speed * 1000;
-      ctx.beginPath(); ctx.lineWidth = this.glowW;
-      ctx.strokeStyle = `rgba(${r},${g},${b},${this.glowA})`;
-      this._path(ctx, phase); ctx.stroke();
-      ctx.beginPath(); ctx.lineWidth = this.width;
-      ctx.strokeStyle = `rgba(${r},${g},${b},${this.alpha})`;
-      this._path(ctx, phase); ctx.stroke();
-    }
-    _path(ctx, phase) {
-      const step = W / (Math.floor(W/3)+2);
-      ctx.moveTo(0, this.yBase + Math.sin(phase) * this.amp);
-      for (let x = 0; x <= W; x += step) {
-        const y = this.yBase
-          + Math.sin(x * this.freq + phase) * this.amp
-          + Math.sin(x * this.freq * 2.3 + phase * 1.7) * (this.amp * 0.28)
-          + Math.sin(x * this.freq * 0.5 + phase * 0.6) * (this.amp * 0.45);
-        ctx.lineTo(x, y);
-      }
-    }
-  }
-
-  class Orb {
-    constructor() { this.reset(); }
-    reset() {
-      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      this.x = Math.random() * W; this.y = Math.random() * H * 0.8;
-      this.r = 50 + Math.random() * 140;
-      this.alpha = 0.03 + Math.random() * 0.07;
-      this.speed = 0.00006 + Math.random() * 0.00012;
-      this.phase = Math.random() * Math.PI * 2;
-      this.vx = (Math.random() - 0.5) * 0.08;
-      this.vy = (Math.random() - 0.5) * 0.05;
-    }
-    draw(ctx, t) {
-      const [r,g,b] = this.color;
-      const pulse = 0.7 + 0.3 * Math.sin(t * this.speed * 1000 + this.phase);
-      const rad = this.r * pulse;
-      const grad = ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,rad);
-      grad.addColorStop(0, `rgba(${r},${g},${b},${this.alpha * pulse})`);
-      grad.addColorStop(0.4, `rgba(${r},${g},${b},${this.alpha * 0.4})`);
-      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.beginPath(); ctx.arc(this.x,this.y,rad,0,Math.PI*2);
-      ctx.fillStyle = grad; ctx.fill();
-      this.x += this.vx; this.y += this.vy;
-      if (this.x < -rad || this.x > W+rad || this.y < -rad || this.y > H+rad) this.reset();
-    }
-  }
-
-  class Spark {
-    constructor() { this.reset(); }
-    reset() {
-      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      this.x = Math.random() * W; this.y = H * 0.1 + Math.random() * H * 0.8;
-      this.vx = (Math.random()-0.5)*0.4; this.vy = -0.10-Math.random()*0.25;
-      this.life = 0; this.maxLife = 200+Math.random()*280;
-      this.r = 1.5+Math.random()*2.5;
-    }
-    draw(ctx) {
-      this.life++;
-      if (this.life > this.maxLife) { this.reset(); return; }
-      const prog = this.life / this.maxLife;
-      const alpha = prog < 0.2 ? prog/0.2 : 1-(prog-0.2)/0.8;
-      const [r,g,b] = this.color;
-      ctx.beginPath(); ctx.arc(this.x,this.y,this.r*(1-prog*0.5),0,Math.PI*2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${alpha*0.7})`;
-      ctx.shadowColor = `rgba(${r},${g},${b},0.9)`; ctx.shadowBlur = 8;
-      ctx.fill(); ctx.shadowBlur = 0;
-      this.x += this.vx; this.y += this.vy;
-      this.vx *= 0.99; this.vy *= 0.99;
-    }
-  }
-
-  let waves, orbs, sparks;
-  function init() {
-    waves  = Array.from({length:5}, (_,i) => new Wave(i, 5));
-    orbs   = Array.from({length:6}, () => new Orb());
-    sparks = Array.from({length:20}, () => new Spark());
-  }
-  init();
-  window.addEventListener('resize', () => { resize(); init(); });
-
-  let last = 0;
-  function frame(ts) {
-    if (!last) last = ts;
-    const dt = Math.min(ts - last, 50); last = ts;  // cap dt at 50ms to prevent jumps
-    t += dt * 0.001;
-    /* Paint dark background each frame — no clearRect white flash */
-    ctx.fillStyle = '#07061A';
-    ctx.fillRect(0, 0, W, H);
-    for (const o of orbs) o.draw(ctx, t);
-    ctx.save(); ctx.globalCompositeOperation = 'screen';
-    for (const w of waves) w.draw(ctx, t);
-    ctx.restore();
-    ctx.save(); ctx.globalCompositeOperation = 'screen';
-    for (const s of sparks) s.draw(ctx);
-    ctx.restore();
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
 
 <!-- ── SVG TOOL ICONS ── -->
 <script>
