@@ -1,0 +1,95 @@
+import "dotenv/config";
+import fetch from "node-fetch";
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import express from "express";
+const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
+const apiKey = process.env.ARCH_API_KEY || "";
+const transport = process.env.MCP_TRANSPORT || "stdio"; // "stdio" or "sse"
+// Render-safe: prefer PORT when running as a web service
+const ssePort = Number(process.env.PORT || process.env.MCP_SSE_PORT || 3001);
+if (!apiKey)
+    throw new Error("Missing ARCH_API_KEY");
+let toolCache = null;
+async function getTools() {
+    if (toolCache)
+        return toolCache;
+    const res = await fetch(`${baseUrl}/v1/tools`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok)
+        throw new Error(`Failed to fetch tools: ${res.status}`);
+    const data = (await res.json());
+    toolCache = data.tools;
+    return toolCache;
+}
+async function invokeTool(toolName, input) {
+    const res = await fetch(`${baseUrl}/v1/tools/${toolName}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(input ?? {}),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `Tool error: ${res.status}`);
+    }
+    const out = await res.json();
+    return JSON.stringify(out, null, 2);
+}
+async function createServer() {
+    const server = new McpServer({
+        name: "arch-tools-mcp",
+        version: "1.0.0",
+    });
+    const tools = await getTools();
+    for (const t of tools) {
+        server.tool(t.name, t.description, { input: z.any().optional() }, async ({ input }) => {
+            const out = await invokeTool(t.name, input);
+            return { content: [{ type: "text", text: out }] };
+        });
+    }
+    return server;
+}
+async function main() {
+    const server = await createServer();
+    if (transport === "sse") {
+        const app = express();
+        app.use(express.json());
+        const transports = new Map();
+        app.get("/sse", async (req, res) => {
+            const sseTransport = new SSEServerTransport("/messages", res);
+            transports.set(sseTransport.sessionId, sseTransport);
+            res.on("close", () => transports.delete(sseTransport.sessionId));
+            await server.connect(sseTransport);
+        });
+        // /mcp is an alias for /sse — for Claude Desktop, Cursor, and other MCP clients
+        app.get("/mcp", async (req, res) => {
+            const sseTransport = new SSEServerTransport("/messages", res);
+            transports.set(sseTransport.sessionId, sseTransport);
+            res.on("close", () => transports.delete(sseTransport.sessionId));
+            await server.connect(sseTransport);
+        });
+        app.post("/messages", async (req, res) => {
+            const sessionId = req.query.sessionId;
+            const sseTransport = transports.get(sessionId);
+            if (!sseTransport) {
+                res.status(400).json({ error: "Session not found" });
+                return;
+            }
+            await sseTransport.handlePostMessage(req, res);
+        });
+        // Rich health check — includes session count and transport info
+        app.get("/health", (_req, res) => res.json({ ok: true, service: "arch-tools-mcp", transport: "sse", sessions: transports.size }));
+        app.listen(ssePort, () => {
+            console.log(`MCP SSE server running on port ${ssePort}`);
+        });
+    }
+    else {
+        const stdioTransport = new StdioServerTransport();
+        await server.connect(stdioTransport);
+    }
+}
+main().catch(console.error);
+//# sourceMappingURL=index.js.map
