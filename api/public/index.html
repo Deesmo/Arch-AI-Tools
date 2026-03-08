@@ -1495,6 +1495,7 @@ async function handleRegister() {
     if (data.ok && data.api_key) {
       input.value = '';
       var apiKey = data.api_key;
+      try { localStorage.setItem('arch_api_key', apiKey); } catch(e) {}
       toast.innerHTML = '<strong style="color:#22c55e;font-size:14px;">✓ You\'re in!</strong><br><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Your API Key</span><br><span id="reg-key-display" style="color:#FF9010;font-size:11px;word-break:break-all;font-family:monospace;background:rgba(255,144,16,0.08);padding:6px 8px;border-radius:6px;display:block;margin:6px 0;">' + apiKey + '</span><button onclick="(function(){var k=document.getElementById(\'reg-key-display\');if(k){navigator.clipboard&&navigator.clipboard.writeText(k.textContent);k.style.outline=\'2px solid #22c55e\';setTimeout(function(){k.style.outline=\'none\'},1000);}})()" style="background:#22c55e;color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-top:4px;">📋 Copy API Key</button><div style="color:#6B6A8A;font-size:10px;margin-top:6px;">Save this key — it won&#39;t be shown again. ' + (data.credits || 100) + ' free credits loaded.</div>';
       toast.className = 'reg-toast reg-toast-success';
       toast.style.display = 'block';
