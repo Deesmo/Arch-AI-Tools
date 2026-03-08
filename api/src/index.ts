@@ -30,7 +30,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],  // landing page inline scripts
-      scriptSrcAttr: ["'unsafe-inline'"],  // allow inline event handlers (onclick etc)
+      "script-src-attr": ["'unsafe-inline'"],  // allow inline event handlers (onclick etc)
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
