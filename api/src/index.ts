@@ -84,6 +84,9 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
+app.get('/favicon.ico', (_req, res) => res.redirect(301, '/arch-icon.svg'));
+
 // ─── Static files (landing page) ─────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, "../public")));
 
