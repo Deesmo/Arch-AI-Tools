@@ -112,7 +112,18 @@ app.use((req, _res, next) => {
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
 app.get('/favicon.ico', (_req, res) => res.redirect(301, '/arch-icon.svg'));
 // ─── Static files (landing page) ─────────────────────────────────────────────
-app.use(express_1.default.static(path_1.default.join(__dirname, "../public")));
+// HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
+// Assets (images, icons): allow caching
+app.use(express_1.default.static(path_1.default.join(__dirname, "../public"), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        }
+        else if (filePath.match(/\.(png|jpg|svg|ico|webp)$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+    }
+}));
 // ─── og-image.png — serve SVG as image/svg+xml at /og-image.png ──────────────
 app.get("/og-image.png", (_req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");

@@ -88,7 +88,17 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.get('/favicon.ico', (_req, res) => res.redirect(301, '/arch-icon.svg'));
 
 // ─── Static files (landing page) ─────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, "../public")));
+// HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
+// Assets (images, icons): allow caching
+app.use(express.static(path.join(__dirname, "../public"), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    } else if (filePath.match(/\.(png|jpg|svg|ico|webp)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
 
 // ─── og-image.png — serve SVG as image/svg+xml at /og-image.png ──────────────
 app.get("/og-image.png", (_req: Request, res: Response): void => {
