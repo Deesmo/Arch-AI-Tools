@@ -972,8 +972,8 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
     try {
         const msg = await anthropic.messages.create({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 200,
-            messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY JSON: {"pattern": "^[a-z]+$", "flags": "i", "explanation": "...", "test_examples": ["match1", "match2"]}` }],
+            max_tokens: 500,
+            messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY valid JSON (no extra text): {"pattern": "^[a-z]+$", "flags": "i", "explanation": "brief explanation", "test_examples": ["match1", "match2"]}` }],
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
         const cleaned = raw.replace(/```json|```/g, "").trim();
@@ -1830,6 +1830,10 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req, res)
     }
     try {
         const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+        if (!r.ok) {
+            res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            return;
+        }
         const data = await r.json();
         const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
         res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: (0, credits_1.reqId)() });
