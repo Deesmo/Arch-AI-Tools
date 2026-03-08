@@ -340,8 +340,19 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
   }
   const { query, num_results = 5 } = req.body as { query?: string; num_results?: number };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
-  // DuckDuckGo Instant Answer API (no key required)
   try {
+    // Brave Search (uses SERPER_API_KEY env var which is set to Brave key)
+    if (process.env.SERPER_API_KEY) {
+      const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
+        headers: { "Accept": "application/json", "X-Subscription-Token": process.env.SERPER_API_KEY },
+      });
+      if (resp.ok) {
+        const data = await resp.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
+        const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
+        return res.json({ ok: true, query, results, count: results.length, request_id: reqId() });
+      }
+    }
+    // Fallback: DuckDuckGo Instant Answer
     const resp = await axios.get("https://api.duckduckgo.com/", {
       params: { q: query, format: "json", no_redirect: 1, no_html: 1, skip_disambig: 1 },
       timeout: 8000,
