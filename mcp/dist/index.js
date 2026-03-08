@@ -81,6 +81,29 @@ async function main() {
             await sseTransport.handlePostMessage(req, res);
         });
         // Rich health check — includes session count and transport info
+        // Smithery server-card — allows scan-free listing
+        app.get("/.well-known/mcp/server-card.json", (_req, res) => {
+            res.json({
+                name: "Arch Tools",
+                description: "50 production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.",
+                version: "1.7.0",
+                homepage: "https://archtools.dev",
+                repository: "https://github.com/Deesmo/Arch-AI-Tools",
+                auth: {
+                    type: "api_key",
+                    paramName: "ARCH_API_KEY",
+                    in: "header",
+                    headerName: "x-api-key",
+                    signupUrl: "https://archtools.dev/signup"
+                },
+                tools_count: 50,
+                transport: "sse",
+                endpoints: {
+                    sse: "/sse",
+                    messages: "/messages"
+                }
+            });
+        });
         app.get("/health", (_req, res) => res.json({ ok: true, service: "arch-tools-mcp", transport: "sse", sessions: transports.size }));
         app.listen(ssePort, () => {
             console.log(`MCP SSE server running on port ${ssePort}`);
