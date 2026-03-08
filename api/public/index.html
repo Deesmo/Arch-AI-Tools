@@ -1414,6 +1414,8 @@
 </footer>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// Safari-safe: wrap all DOM-dependent code in DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
 // Category filter
 function filterTools(cat, btn) {
   document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
@@ -1459,14 +1461,14 @@ async function buyPack(packName) {
 }
 
 // Event delegation: cat-filter buttons
-document.querySelector('.cat-filters').addEventListener('click', function(e) {
+const catFilters = document.querySelector('.cat-filters'); if (catFilters) catFilters.addEventListener('click', function(e) {
   const btn = e.target.closest('.cat-pill');
   if (!btn) return;
   filterTools(btn.dataset.filter, btn);
 });
 
 // Event delegation: marquee pills (data-cat attribute)
-document.querySelector('.marquee-section').addEventListener('click', function(e) {
+const marqueeSection = document.querySelector('.marquee-section'); if (marqueeSection) marqueeSection.addEventListener('click', function(e) {
   const btn = e.target.closest('.mq-pill[data-cat]');
   if (!btn) return;
   goToCategory(btn.dataset.cat);
@@ -1485,7 +1487,7 @@ if (registerBtn) registerBtn.addEventListener('click', handleRegister);
 
 async function handleRegister() {
   const input = document.getElementById('reg-email');
-  const btn = document.querySelector('#register .btn-primary');
+  const btn = document.querySelector('#register .btn-primary') || document.getElementById('register-btn');
   const val = input.value.trim();
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const toast = document.getElementById('reg-toast');
@@ -1527,6 +1529,7 @@ function showToast(el, msg, type) {
   el.style.display = 'block';
   setTimeout(() => { el.style.display = 'none'; }, 6000);
 }
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
