@@ -96,7 +96,9 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
-app.get('/favicon.ico', (_req, res) => res.redirect(301, '/arch-icon.svg'));
+app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
+  if (err) res.redirect(301, '/arch-icon.svg');
+}));
 
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
@@ -161,9 +163,9 @@ app.get("/dashboard", (_req: Request, res: Response) => res.type("text/html").se
 // /pricing — referenced in Stripe cancel_url and nav links
 app.get("/pricing", (_req: Request, res: Response) => res.redirect("/#pricing"));
 
-// /docs — referenced in nav, dashboard, and agent registration
-app.get("/docs", (_req: Request, res: Response) => res.redirect("https://github.com/Deesmo/Arch-AI-Tools#readme"));
-app.get("/docs/:path", (_req: Request, res: Response) => res.redirect("https://github.com/Deesmo/Arch-AI-Tools#readme"));
+// /docs — full API reference page
+app.get("/docs", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
+app.get("/docs/:slug", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 
 // /success — Stripe post-checkout success page
 app.get("/success", (_req: Request, res: Response) => {

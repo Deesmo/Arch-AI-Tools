@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Docs — Arch Tools</title>
+  <meta name="description" content="Arch Tools API documentation. 45 tools, one API key. REST, MCP, and SDK." />
+  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #00e5b0; --orange: #FFB030; --pink: #FF1888;
+    }
+    body { font-family: Syne, system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    /* NAV */
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px); background: rgba(7,6,26,0.9);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-links a.active { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+    /* LAYOUT */
+    .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+    /* SIDEBAR */
+    .sidebar {
+      width: 240px; flex-shrink: 0; padding: 32px 0 32px 24px;
+      position: sticky; top: 60px; height: calc(100vh - 60px);
+      overflow-y: auto; border-right: 1px solid var(--border);
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; } .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .sidebar-section { margin-bottom: 24px; }
+    .sidebar-heading { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding-left: 4px; }
+    .sidebar a { display: block; font-size: 12px; color: var(--muted); text-decoration: none; padding: 4px 4px 4px 8px; border-radius: 6px; border-left: 2px solid transparent; transition: all 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar a:hover { color: var(--text); background: var(--card); }
+    .sidebar a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(34,211,238,0.06); }
+    /* CONTENT */
+    .content { flex: 1; padding: 40px 48px 80px; min-width: 0; }
+    h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 12px; }
+    h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; margin: 48px 0 16px; padding-top: 8px; border-top: 1px solid var(--border); }
+    h2:first-of-type { border-top: none; margin-top: 32px; }
+    h3 { font-size: 16px; font-weight: 700; margin: 28px 0 10px; color: var(--orange); }
+    p { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 12px; }
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 8px; vertical-align: middle; }
+    .badge-post { background: rgba(85,34,255,0.3); color: #c4aaff; border: 1px solid rgba(85,34,255,0.4); }
+    .badge-free { background: rgba(0,229,176,0.15); color: #00e5b0; border: 1px solid rgba(0,229,176,0.3); }
+    /* CODE BLOCKS */
+    pre { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; overflow-x: auto; margin: 12px 0; }
+    code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: rgba(255,255,255,0.85); }
+    .inline-code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+    .c-key { color: #79c0ff; } .c-str { color: #a5d6ff; } .c-num { color: #79c0ff; } .c-muted { color: rgba(255,255,255,0.4); }
+    /* TOOL CARDS */
+    .tool-doc { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; }
+    .tool-doc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .tool-doc-name { font-family: "JetBrains Mono", monospace; font-size: 14px; font-weight: 600; color: var(--text); }
+    .tool-doc-desc { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .params-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 4px; }
+    .params-table th { text-align: left; padding: 4px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .params-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+    .params-table td:first-child { font-family: "JetBrains Mono", monospace; color: #79c0ff; white-space: nowrap; }
+    .params-table td:nth-child(2) { color: var(--orange); font-family: "JetBrains Mono", monospace; }
+    .params-table td:nth-child(3) { color: var(--muted); }
+    .req { color: var(--pink); font-size: 10px; font-weight: 700; }
+    .opt { color: rgba(255,255,255,0.3); font-size: 10px; }
+    /* ALERT */
+    .alert { padding: 12px 16px; border-radius: 10px; border: 1px solid; margin-bottom: 16px; font-size: 13px; }
+    .alert-info { background: rgba(34,211,238,0.07); border-color: rgba(34,211,238,0.25); color: rgba(255,255,255,0.7); }
+    .alert-warn { background: rgba(255,176,48,0.07); border-color: rgba(255,176,48,0.25); color: rgba(255,255,255,0.7); }
+    /* COPY BTN */
+    .code-wrap { position: relative; }
+    .copy-btn { position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.12s; }
+    .copy-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+    @media (max-width: 768px) { .sidebar { display: none; } .content { padding: 24px 20px; } }
+  </style>
+</head>
+<body>
+  <nav class="at-nav">
+    <a class="at-nav-logo" href="/">
+      <div class="at-logo-mark">
+        <svg width="18" height="18" viewBox="0 0 180 180" fill="none"><defs><linearGradient id="ng" x1="90" y1="20" x2="90" y2="160" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFB030"/><stop offset="42%" stop-color="#FF1888"/><stop offset="100%" stop-color="#5522FF"/></linearGradient></defs><path d="M90 22 L154 150 H128 L90 78 L52 150 H26 Z" fill="url(#ng)"/><rect x="62" y="118" width="56" height="20" rx="4" fill="url(#ng)" opacity="0.6"/></svg>
+      </div>
+      <span class="at-logo-name">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/docs" class="active">Docs</a>
+      <a href="/signup" class="at-nav-cta">Get API Key →</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Getting Started</div>
+        <a href="#authentication">Authentication</a>
+        <a href="#quickstart">Quickstart</a>
+        <a href="#credits">Credits &amp; Limits</a>
+        <a href="#errors">Error Codes</a>
+        <a href="#mcp">MCP / Claude Desktop</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Data &amp; Validation</div>
+        <a href="#validate-data">validate-data</a>
+        <a href="#generate-hash">generate-hash</a>
+        <a href="#pii-detect">pii-detect</a>
+        <a href="#diff-text">diff-text</a>
+        <a href="#readability-score">readability-score</a>
+        <a href="#language-detect">language-detect</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Web &amp; Scraping</div>
+        <a href="#web-scrape">web-scrape</a>
+        <a href="#extract-page">extract-page</a>
+        <a href="#search-web">search-web</a>
+        <a href="#rss-parse">rss-parse</a>
+        <a href="#ip-lookup">ip-lookup</a>
+        <a href="#whois-lookup">whois-lookup</a>
+        <a href="#screenshot-capture">screenshot-capture</a>
+        <a href="#html-to-markdown">html-to-markdown</a>
+        <a href="#url-shorten">url-shorten</a>
+        <a href="#webhook-send">webhook-send</a>
+        <a href="#extract-metadata">extract-metadata</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Text &amp; AI</div>
+        <a href="#transform-text">transform-text</a>
+        <a href="#ai-generate">ai-generate</a>
+        <a href="#summarize">summarize</a>
+        <a href="#sentiment-analysis">sentiment-analysis</a>
+        <a href="#extract-entities">extract-entities</a>
+        <a href="#regex-generate">regex-generate</a>
+        <a href="#jsonpath-query">jsonpath-query</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Conversion &amp; Format</div>
+        <a href="#convert-format">convert-format</a>
+        <a href="#convert-units">convert-units</a>
+        <a href="#currency-convert">currency-convert</a>
+        <a href="#timezone-convert">timezone-convert</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Files &amp; Media</div>
+        <a href="#ocr-extract">ocr-extract</a>
+        <a href="#extract-pdf">extract-pdf</a>
+        <a href="#image-generate">image-generate</a>
+        <a href="#qr-code">qr-code</a>
+        <a href="#barcode-generate">barcode-generate</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Identity &amp; Comms</div>
+        <a href="#generate-uuid">generate-uuid</a>
+        <a href="#email-verify">email-verify</a>
+        <a href="#phone-validate">phone-validate</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crypto</div>
+        <a href="#crypto-price">crypto-price</a>
+        <a href="#crypto-market-cap">crypto-market-cap</a>
+        <a href="#crypto-ohlcv">crypto-ohlcv</a>
+        <a href="#crypto-fear-greed">crypto-fear-greed</a>
+        <a href="#crypto-news">crypto-news</a>
+        <a href="#token-lookup">token-lookup</a>
+      </div>
+    </nav>
+
+    <div class="content">
+      <h1>API Reference</h1>
+      <p>45 production tools. One API key. Every request is authenticated, credit-deducted, and logged.</p>
+
+      <div class="alert alert-info">
+        <strong>Base URL:</strong> <span class="inline-code">https://arch-ai-tools.onrender.com</span> &nbsp;·&nbsp;
+        <strong>Also available at:</strong> <span class="inline-code">https://archtools.dev</span>
+      </div>
+
+      <!-- AUTHENTICATION -->
+      <h2 id="authentication">Authentication</h2>
+      <p>Pass your API key in the <span class="inline-code">x-api-key</span> header (or as <span class="inline-code">Authorization: Bearer &lt;key&gt;</span>). You can get a key at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a>.</p>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="c-muted"># Pass as header</span>
+curl -X POST https://archtools.dev/v1/tools/generate-hash \
+  -H <span class="c-str">"x-api-key: arch_your_key_here"</span> \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -d <span class="c-str">'{"text":"hello","algorithm":"sha256"}'</span></code></pre>
+      </div>
+
+      <!-- QUICKSTART -->
+      <h2 id="quickstart">Quickstart</h2>
+      <p>Register, get your key, make your first call in under 60 seconds:</p>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="c-muted"># 1. Register (get key instantly, no email verify)</span>
+curl -X POST https://archtools.dev/v1/agent/register \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -d <span class="c-str">'{"email":"you@example.com","plan":"free"}'</span>
+
+<span class="c-muted"># 2. Call a tool</span>
+curl -X POST https://archtools.dev/v1/tools/ai-generate \
+  -H <span class="c-str">"x-api-key: arch_&lt;your_key&gt;"</span> \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -d <span class="c-str">'{"prompt":"Summarize what Arch Tools does in one sentence"}'</span></code></pre>
+      </div>
+
+      <!-- CREDITS -->
+      <h2 id="credits">Credits &amp; Rate Limits</h2>
+      <p>Every account gets <strong>100 free credits per month</strong> (auto-refreshed on the 1st). Most tools cost 1 credit per call. AI tools cost 2–5 credits.</p>
+      <table class="params-table" style="margin-bottom:16px">
+        <tr><th>Tier</th><th>Rate Limit</th><th>Daily Limit</th></tr>
+        <tr><td>Free</td><td>30 req/min</td><td>500 req/day</td></tr>
+        <tr><td>Starter ($9)</td><td>60 req/min</td><td>5,000 req/day</td></tr>
+        <tr><td>Pro ($49)</td><td>120 req/min</td><td>20,000 req/day</td></tr>
+        <tr><td>Business ($199)</td><td>300 req/min</td><td>100,000 req/day</td></tr>
+      </table>
+      <p>Check your usage: <span class="inline-code">GET /v1/agent/usage</span> with your key.</p>
+
+      <!-- ERRORS -->
+      <h2 id="errors">Error Codes</h2>
+      <table class="params-table">
+        <tr><th>Code</th><th>Meaning</th></tr>
+        <tr><td>401</td><td>Invalid or missing API key</td></tr>
+        <tr><td>400</td><td>Missing required parameter — check the <span class="inline-code">message</span> field</td></tr>
+        <tr><td>402</td><td>Insufficient credits — purchase more at archtools.dev/#pricing</td></tr>
+        <tr><td>429</td><td>Rate limit exceeded — back off and retry</td></tr>
+        <tr><td>500</td><td>Internal error — retry with exponential backoff</td></tr>
+        <tr><td>502</td><td>Upstream service unavailable (e.g. CoinGecko, Stripe)</td></tr>
+      </table>
+
+      <!-- MCP -->
+      <h2 id="mcp">MCP / Claude Desktop</h2>
+      <p>All 45 tools are auto-exposed as MCP tools. Add to your <span class="inline-code">claude_desktop_config.json</span>:</p>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>{
+  <span class="c-key">"mcpServers"</span>: {
+    <span class="c-key">"arch-tools"</span>: {
+      <span class="c-key">"command"</span>: <span class="c-str">"npx"</span>,
+      <span class="c-key">"args"</span>: [<span class="c-str">"-y"</span>, <span class="c-str">"mcp-remote"</span>, <span class="c-str">"https://arch-tools-mcp.onrender.com/sse"</span>],
+      <span class="c-key">"env"</span>: { <span class="c-key">"ARCH_API_KEY"</span>: <span class="c-str">"arch_your_key_here"</span> }
+    }
+  }
+}</code></pre>
+      </div>
+
+      <!-- ── DATA & VALIDATION ── -->
+      <h2>Data &amp; Validation</h2>
+
+      <div class="tool-doc" id="validate-data">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/validate-data</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Validate a JSON object against a schema. Returns field-level errors.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>data</td><td>object</td><td><span class="req">required</span> — the JSON object to validate</td></tr>
+          <tr><td>schema</td><td>object</td><td><span class="req">required</span> — key: type map, e.g. <span class="inline-code">{"name":"string","age":"number"}</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="generate-hash">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/generate-hash</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Hash a string using MD5, SHA1, SHA256, or SHA512.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>algorithm</td><td>string</td><td><span class="opt">optional</span> — md5 | sha1 | sha256 | sha512. Default: sha256</td></tr>
+          <tr><td>encoding</td><td>string</td><td><span class="opt">optional</span> — hex | base64. Default: hex</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="pii-detect">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/pii-detect</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Detect personally identifiable information (emails, phones, SSNs, credit cards) in text.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="diff-text">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/diff-text</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Compare two strings and return the differences.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text1</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>text2</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>mode</td><td>string</td><td><span class="opt">optional</span> — words | chars | lines. Default: words</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="readability-score">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/readability-score</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Return Flesch-Kincaid and other readability scores for text.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="language-detect">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/language-detect</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Detect the language of a text string.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <!-- ── WEB & SCRAPING ── -->
+      <h2>Web &amp; Scraping</h2>
+
+      <div class="tool-doc" id="web-scrape">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/web-scrape</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Scrape a URL and return raw HTML or a specific CSS selector's content.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>selector</td><td>string</td><td><span class="opt">optional</span> — CSS selector to extract, e.g. <span class="inline-code">h1</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="extract-page">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-page</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Extract clean readable text from a URL (strips ads, nav, boilerplate).</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="search-web">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/search-web</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Search the web and return titles, URLs, and snippets.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>query</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>num_results</td><td>number</td><td><span class="opt">optional</span> — Default: 5</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="rss-parse">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/rss-parse</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Parse an RSS feed and return structured article data.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span> — RSS feed URL</td></tr>
+          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — max items. Default: 20</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="ip-lookup">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/ip-lookup</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Geolocate an IP address. Returns country, city, ISP, ASN.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>ip</td><td>string</td><td><span class="req">required</span> — IPv4 or IPv6</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="whois-lookup">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/whois-lookup</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">WHOIS lookup for a domain. Returns registrar, expiry, nameservers.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>domain</td><td>string</td><td><span class="req">required</span> — e.g. archtools.dev</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="screenshot-capture">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/screenshot-capture</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
+        <div class="tool-doc-desc">Capture a screenshot of any URL and return a base64 image.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="html-to-markdown">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/html-to-markdown</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Convert HTML to clean Markdown. Pass raw HTML or a URL.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>html</td><td>string</td><td><span class="opt">optional</span> — raw HTML string</td></tr>
+          <tr><td>url</td><td>string</td><td><span class="opt">optional</span> — fetch and convert from URL</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="url-shorten">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/url-shorten</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Shorten a URL.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="webhook-send">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/webhook-send</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Send a POST payload to any webhook URL.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>webhook_url</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>payload</td><td>object</td><td><span class="req">required</span> — JSON body to POST</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="extract-metadata">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-metadata</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Extract Open Graph, Twitter Card, and meta tags from a URL or HTML.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="opt">optional</span></td></tr>
+          <tr><td>text</td><td>string</td><td><span class="opt">optional</span> — raw HTML</td></tr>
+        </table>
+      </div>
+
+      <!-- ── TEXT & AI ── -->
+      <h2>Text &amp; AI</h2>
+
+      <div class="tool-doc" id="transform-text">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/transform-text</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Transform text: uppercase, lowercase, title case, reverse, slug, camelCase, snake_case, and more.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>mode</td><td>string</td><td><span class="req">required</span> — uppercase | lowercase | title | reverse | slug | camelCase | snake_case | trim</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="ai-generate">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/ai-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
+        <div class="tool-doc-desc">Generate text using Claude, GPT-4, Grok, or Gemini. Specify model or let it default to Claude.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>prompt</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>system</td><td>string</td><td><span class="opt">optional</span> — system prompt</td></tr>
+          <tr><td>model</td><td>string</td><td><span class="opt">optional</span> — Default: claude-sonnet-4-6</td></tr>
+          <tr><td>max_tokens</td><td>number</td><td><span class="opt">optional</span> — Default: 1000</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="summarize">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/summarize</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
+        <div class="tool-doc-desc">Summarize a block of text or a URL using AI.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="opt">optional</span></td></tr>
+          <tr><td>url</td><td>string</td><td><span class="opt">optional</span> — fetch and summarize from URL</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="sentiment-analysis">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/sentiment-analysis</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Analyze the sentiment of text. Returns positive/neutral/negative with confidence score.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="extract-entities">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-entities</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Extract named entities (people, orgs, locations, dates) from text.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="regex-generate">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/regex-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Generate a regex pattern from a plain-English description using AI.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>description</td><td>string</td><td><span class="req">required</span> — e.g. "match US phone numbers"</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="jsonpath-query">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/jsonpath-query</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Run a JSONPath query against a JSON object.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>data</td><td>object</td><td><span class="req">required</span> — the JSON to query</td></tr>
+          <tr><td>path</td><td>string</td><td><span class="req">required</span> — JSONPath expression, e.g. <span class="inline-code">$.store.book[*].title</span></td></tr>
+        </table>
+      </div>
+
+      <!-- ── CONVERSION ── -->
+      <h2>Conversion &amp; Format</h2>
+
+      <div class="tool-doc" id="convert-format">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/convert-format</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Convert between JSON, YAML, TOML, CSV, and XML.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>input</td><td>string</td><td><span class="req">required</span> — the content to convert</td></tr>
+          <tr><td>from</td><td>string</td><td><span class="req">required</span> — json | yaml | toml | csv | xml</td></tr>
+          <tr><td>to</td><td>string</td><td><span class="req">required</span> — json | yaml | toml | csv | xml</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="convert-units">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/convert-units</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Convert between units of measurement (length, weight, temperature, volume, etc).</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>value</td><td>number</td><td><span class="req">required</span></td></tr>
+          <tr><td>from</td><td>string</td><td><span class="req">required</span> — e.g. km, lbs, celsius</td></tr>
+          <tr><td>to</td><td>string</td><td><span class="req">required</span> — e.g. miles, kg, fahrenheit</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="currency-convert">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/currency-convert</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Convert between world currencies using live FX rates.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>amount</td><td>number</td><td><span class="req">required</span></td></tr>
+          <tr><td>from</td><td>string</td><td><span class="req">required</span> — e.g. USD</td></tr>
+          <tr><td>to</td><td>string</td><td><span class="req">required</span> — e.g. EUR</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="timezone-convert">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/timezone-convert</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Convert a datetime between timezones.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>datetime</td><td>string</td><td><span class="req">required</span> — ISO 8601</td></tr>
+          <tr><td>from_tz</td><td>string</td><td><span class="req">required</span> — e.g. UTC, America/New_York</td></tr>
+          <tr><td>to_tz</td><td>string</td><td><span class="req">required</span> — e.g. Asia/Tokyo</td></tr>
+        </table>
+      </div>
+
+      <!-- ── FILES & MEDIA ── -->
+      <h2>Files &amp; Media</h2>
+
+      <div class="tool-doc" id="ocr-extract">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/ocr-extract</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
+        <div class="tool-doc-desc">Extract text from an image using OCR. Pass an image URL.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span> — public image URL</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="extract-pdf">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-pdf</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
+        <div class="tool-doc-desc">Extract text content from a PDF by URL.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span> — public PDF URL</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="image-generate">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/image-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">5 credits</span></div>
+        <div class="tool-doc-desc">Generate an image from a text prompt using AI.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>prompt</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>size</td><td>string</td><td><span class="opt">optional</span> — 256x256 | 512x512 | 1024x1024. Default: 512x512</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="qr-code">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/qr-code</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Generate a QR code image for any text or URL. Returns base64 PNG.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>size</td><td>number</td><td><span class="opt">optional</span> — px. Default: 256</td></tr>
+          <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — png | svg. Default: png</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="barcode-generate">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/barcode-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Generate a barcode (Code128, QR, EAN, UPC) as base64 PNG.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>data</td><td>string</td><td><span class="req">required</span> — value to encode</td></tr>
+          <tr><td>type</td><td>string</td><td><span class="opt">optional</span> — code128 | qr | ean13 | upc. Default: code128</td></tr>
+        </table>
+      </div>
+
+      <!-- ── IDENTITY ── -->
+      <h2>Identity &amp; Communications</h2>
+
+      <div class="tool-doc" id="generate-uuid">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/generate-uuid</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Generate one or more UUIDs.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>version</td><td>string</td><td><span class="opt">optional</span> — v4 | v1. Default: v4</td></tr>
+          <tr><td>count</td><td>number</td><td><span class="opt">optional</span> — 1–100. Default: 1</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="email-verify">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/email-verify</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Validate email format and check MX records.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>email</td><td>string</td><td><span class="req">required</span></td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="phone-validate">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/phone-validate</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Validate and parse a phone number. Returns country, format, type.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>phone</td><td>string</td><td><span class="req">required</span></td></tr>
+          <tr><td>country</td><td>string</td><td><span class="opt">optional</span> — ISO 3166 code. Default: US</td></tr>
+        </table>
+      </div>
+
+      <!-- ── CRYPTO ── -->
+      <h2>Crypto</h2>
+
+      <div class="tool-doc" id="crypto-price">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-price</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Get live price, 24h change, market cap, and volume for any token. Use CoinGecko IDs (bitcoin, ethereum, solana).</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID, e.g. <span class="inline-code">bitcoin</span></td></tr>
+          <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Default: usd</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="crypto-market-cap">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-market-cap</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Top N tokens by market cap with price and 24h change.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — Default: 10, max 250</td></tr>
+          <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Default: usd</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="crypto-ohlcv">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-ohlcv</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">OHLCV candlestick data for a token over N days.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID</td></tr>
+          <tr><td>days</td><td>number</td><td><span class="opt">optional</span> — Default: 7</td></tr>
+          <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Default: usd</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="crypto-fear-greed">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-fear-greed</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Crypto Fear &amp; Greed Index — current value and historical data.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — days of history. Default: 7</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="crypto-news">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-news</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Latest crypto news headlines for a specific token or the market overall.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>symbol</td><td>string</td><td><span class="opt">optional</span> — CoinGecko ID. Omit for general news.</td></tr>
+          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — Default: 10</td></tr>
+        </table>
+      </div>
+
+      <div class="tool-doc" id="token-lookup">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/token-lookup</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
+        <div class="tool-doc-desc">Search CoinGecko for a token by name or ticker. Returns the CoinGecko ID to use with other crypto tools.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>query</td><td>string</td><td><span class="req">required</span> — e.g. "bitcoin" or "BTC"</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function copyCode(btn) {
+      var pre = btn.parentElement.querySelector("pre");
+      var text = pre ? pre.innerText : "";
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = "\u2713 Copied";
+        setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+      });
+    }
+
+    // Sidebar active link on scroll
+    var sections = document.querySelectorAll("[id]");
+    var links = document.querySelectorAll(".sidebar a");
+    function onScroll() {
+      var scrollY = window.scrollY + 100;
+      var active = null;
+      sections.forEach(function(s) {
+        if (s.offsetTop <= scrollY) active = s.id;
+      });
+      links.forEach(function(a) {
+        a.classList.toggle("active", a.getAttribute("href") === "#" + active);
+      });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  </script>
+</body>
+</html>
