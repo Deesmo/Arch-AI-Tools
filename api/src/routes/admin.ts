@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "../middleware/auth";
-import { reqId } from "../utils/credits";
+import { reqId, safeErr } from "../utils/credits";
 
 const router = Router();
 
@@ -78,7 +78,7 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
     });
   } catch (e) {
     console.error("Admin stats error:", e);
-    res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: reqId() });
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
 

@@ -196,6 +196,23 @@ export function x402Middleware(toolName: string) {
 
     // Mark request as x402-paid so tool handler can skip credit check
     (req as Request & { x402Paid?: boolean }).x402Paid = true;
+
+    // Log x402 tool call to ApiRequest for admin stats visibility
+    try {
+      await prisma.apiRequest.create({
+        data: {
+          agentId: "x402_anonymous",
+          toolName,
+          creditsUsed: 0,
+          status: "SUCCESS",
+          callerType: "x402",
+          callerName: "x402-payment",
+        },
+      });
+    } catch {
+      // Non-fatal
+    }
+
     next();
   };
 }

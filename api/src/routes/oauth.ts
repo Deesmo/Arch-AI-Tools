@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import crypto from "crypto";
+import crypto, { timingSafeEqual } from "crypto";
 
 const router = Router();
 
@@ -137,7 +137,9 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
   const { grant_type, code, client_id, client_secret, redirect_uri, refresh_token } = req.body as Record<string, string>;
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
-  if (!client || client.clientSecret !== client_secret) {
+  const secretsMatch = !!client && client.clientSecret.length === (client_secret ?? "").length &&
+    timingSafeEqual(Buffer.from(client.clientSecret), Buffer.from(client_secret ?? ""));
+  if (!client || !secretsMatch) {
     res.status(401).json({ error: "invalid_client" }); return;
   }
 
@@ -170,7 +172,7 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
     if (!refresh_token) { res.status(400).json({ error: "invalid_request" }); return; }
 
     const oldToken = await prisma.oAuthToken.findUnique({ where: { refreshToken: refresh_token } }).catch(() => null);
-    if (!oldToken || oldToken.clientId !== client_id) { res.status(400).json({ error: "invalid_grant" }); return; }
+    if (!oldToken || oldToken.clientId !== client_id || oldToken.expiresAt < new Date()) { res.status(400).json({ error: "invalid_grant" }); return; }
 
     // Rotate tokens
     const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;

@@ -188,10 +188,24 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
+// Startup guard — fail fast if ADMIN_KEY is insecure
+if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.ADMIN_KEY === "changeme")) {
+  console.error("FATAL: ADMIN_KEY must be set to a secure value in production. Exiting.");
+  process.exit(1);
+}
+
 app.listen(config.port, () => {
   console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
   console.log(`   ENV: ${config.nodeEnv}`);
   console.log(`   Site: ${config.publicSiteUrl}`);
 });
+
+// Daily cleanup of expired OAuth records
+setInterval(async () => {
+  try {
+    const { cleanupExpiredOAuthRecords } = await import("./lib/systemJobs");
+    await cleanupExpiredOAuthRecords();
+  } catch { /* non-fatal */ }
+}, 24 * 60 * 60 * 1000);
 
 export default app;
