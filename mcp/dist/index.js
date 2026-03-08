@@ -4,7 +4,6 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
@@ -107,19 +106,58 @@ async function main() {
         });
         // Streamable HTTP transport — used by Smithery and modern MCP clients (POST-based)
         // Inject Accept header if missing — some clients (Smithery) omit it
-        app.all("/mcp", async (req, res) => {
-            // Force Accept header before SDK checks it — some clients (Smithery) send wrong/missing value
-            req.headers["accept"] = "application/json, text/event-stream";
+        // Streamable HTTP endpoint — custom implementation bypassing SDK transport Accept header check
+        // Handles initialize, tools/list, tools/call for Smithery + modern MCP clients
+        app.post("/mcp", async (req, res) => {
+            const body = req.body;
+            res.setHeader("Content-Type", "text/event-stream");
+            res.setHeader("Cache-Control", "no-cache");
+            res.setHeader("Connection", "keep-alive");
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            const send = (data) => res.write(`event: message\ndata: ${JSON.stringify(data)}\n\n`);
+            if (!body || body.jsonrpc !== "2.0") {
+                send({ jsonrpc: "2.0", id: body?.id ?? null, error: { code: -32600, message: "Invalid Request" } });
+                res.end();
+                return;
+            }
             try {
-                const streamTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-                const freshServer = await createServer();
-                await freshServer.connect(streamTransport);
-                await streamTransport.handleRequest(req, res, req.body);
+                switch (body.method) {
+                    case "initialize":
+                        send({ jsonrpc: "2.0", id: body.id, result: {
+                                protocolVersion: "2024-11-05",
+                                capabilities: { tools: { listChanged: false } },
+                                serverInfo: { name: "arch-tools-mcp", version: "1.7.0" }
+                            } });
+                        break;
+                    case "notifications/initialized":
+                        // No response needed — just ack
+                        break;
+                    case "tools/list": {
+                        const tools = await getTools();
+                        send({ jsonrpc: "2.0", id: body.id, result: {
+                                tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
+                            } });
+                        break;
+                    }
+                    case "tools/call": {
+                        const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {});
+                        send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
+                        break;
+                    }
+                    default:
+                        send({ jsonrpc: "2.0", id: body.id, error: { code: -32601, message: "Method not found" } });
+                }
             }
             catch (err) {
-                if (!res.headersSent)
-                    res.status(500).json({ error: "Internal server error" });
+                send({ jsonrpc: "2.0", id: body?.id ?? null, error: { code: -32000, message: err?.message || "Internal error" } });
             }
+            res.end();
+        });
+        app.options("/mcp", (_req, res) => {
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key, Authorization");
+            res.status(204).end();
         });
         app.get("/health", (_req, res) => res.json({ ok: true, service: "arch-tools-mcp", transport: "sse+streamable", sessions: transports.size }));
         app.listen(ssePort, () => {

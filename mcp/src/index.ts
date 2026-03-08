@@ -130,17 +130,65 @@ async function main() {
 
     // Streamable HTTP transport — used by Smithery and modern MCP clients (POST-based)
     // Inject Accept header if missing — some clients (Smithery) omit it
-    app.all("/mcp", async (req, res) => {
-      // Force Accept header before SDK checks it — some clients (Smithery) send wrong/missing value
-      req.headers["accept"] = "application/json, text/event-stream";
-      try {
-        const streamTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-        const freshServer = await createServer();
-        await freshServer.connect(streamTransport);
-        await streamTransport.handleRequest(req, res, req.body);
-      } catch (err) {
-        if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
+    // Streamable HTTP endpoint — custom implementation bypassing SDK transport Accept header check
+    // Handles initialize, tools/list, tools/call for Smithery + modern MCP clients
+    app.post("/mcp", async (req, res) => {
+      const body = req.body as any;
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+
+      const send = (data: object) => res.write(`event: message\ndata: ${JSON.stringify(data)}\n\n`);
+
+      if (!body || body.jsonrpc !== "2.0") {
+        send({ jsonrpc: "2.0", id: body?.id ?? null, error: { code: -32600, message: "Invalid Request" } });
+        res.end(); return;
       }
+
+      try {
+        switch (body.method) {
+          case "initialize":
+            send({ jsonrpc: "2.0", id: body.id, result: {
+              protocolVersion: "2024-11-05",
+              capabilities: { tools: { listChanged: false } },
+              serverInfo: { name: "arch-tools-mcp", version: "1.7.0" }
+            }});
+            break;
+
+          case "notifications/initialized":
+            // No response needed — just ack
+            break;
+
+          case "tools/list": {
+            const tools = await getTools();
+            send({ jsonrpc: "2.0", id: body.id, result: {
+              tools: tools.map((t: any) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
+            }});
+            break;
+          }
+
+          case "tools/call": {
+            const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {});
+            send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
+            break;
+          }
+
+          default:
+            send({ jsonrpc: "2.0", id: body.id, error: { code: -32601, message: "Method not found" } });
+        }
+      } catch (err: any) {
+        send({ jsonrpc: "2.0", id: body?.id ?? null, error: { code: -32000, message: err?.message || "Internal error" } });
+      }
+
+      res.end();
+    });
+
+    app.options("/mcp", (_req, res) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key, Authorization");
+      res.status(204).end();
     });
 
     app.get("/health", (_req, res) =>
