@@ -66,5 +66,34 @@ router.get("/stats", auth_1.requireAdmin, async (_req, res) => {
         res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: (0, credits_1.reqId)() });
     }
 });
+// POST /v1/admin/seed-tools — one-shot seed for missing tools
+router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
+    const tools = [
+        { name: "barcode-generate", description: "Generate Code128 barcodes as SVG", category: "media", credits: 2 },
+        { name: "html-to-markdown", description: "Convert HTML or any URL to clean Markdown", category: "text", credits: 3 },
+        { name: "image-generate", description: "Generate SVG images from text prompts via Claude", category: "ai", credits: 15 },
+        { name: "jsonpath-query", description: "Run JSONPath expressions against any JSON payload", category: "data", credits: 1 },
+        { name: "screenshot-capture", description: "Capture page metadata and screenshot URL for any public URL", category: "web", credits: 10 },
+        { name: "url-shorten", description: "Shorten any URL via TinyURL", category: "utility", credits: 1 },
+        { name: "webhook-send", description: "POST a JSON payload to any webhook URL", category: "utility", credits: 2 },
+        { name: "workflow-agent", description: "Multi-step autonomous AI agent pipeline", category: "ai", credits: 25 },
+    ];
+    const results = [];
+    for (const t of tools) {
+        try {
+            await prisma_1.prisma.tool.upsert({
+                where: { name: t.name },
+                update: { description: t.description, category: t.category, credits: t.credits, enabled: true },
+                create: { ...t, enabled: true },
+            });
+            results.push({ name: t.name, status: "ok" });
+        }
+        catch (e) {
+            results.push({ name: t.name, status: `error: ${String(e).slice(0, 100)}` });
+        }
+    }
+    const total = await prisma_1.prisma.tool.count();
+    res.json({ ok: true, results, total, request_id: (0, credits_1.reqId)() });
+});
 exports.default = router;
 //# sourceMappingURL=admin.js.map

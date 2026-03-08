@@ -81,4 +81,35 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
   }
 });
 
+// POST /v1/admin/seed-tools — one-shot seed for missing tools
+router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+  const tools = [
+    { name: "barcode-generate",   description: "Generate Code128 barcodes as SVG",                            category: "media",   credits: 2  },
+    { name: "html-to-markdown",   description: "Convert HTML or any URL to clean Markdown",                   category: "text",    credits: 3  },
+    { name: "image-generate",     description: "Generate SVG images from text prompts via Claude",             category: "ai",      credits: 15 },
+    { name: "jsonpath-query",     description: "Run JSONPath expressions against any JSON payload",            category: "data",    credits: 1  },
+    { name: "screenshot-capture", description: "Capture page metadata and screenshot URL for any public URL", category: "web",     credits: 10 },
+    { name: "url-shorten",        description: "Shorten any URL via TinyURL",                                 category: "utility", credits: 1  },
+    { name: "webhook-send",       description: "POST a JSON payload to any webhook URL",                      category: "utility", credits: 2  },
+    { name: "workflow-agent",     description: "Multi-step autonomous AI agent pipeline",                     category: "ai",      credits: 25 },
+  ];
+
+  const results: Array<{ name: string; status: string }> = [];
+  for (const t of tools) {
+    try {
+      await prisma.tool.upsert({
+        where: { name: t.name },
+        update: { description: t.description, category: t.category, credits: t.credits, enabled: true },
+        create: { ...t, enabled: true },
+      });
+      results.push({ name: t.name, status: "ok" });
+    } catch (e) {
+      results.push({ name: t.name, status: `error: ${String(e).slice(0, 100)}` });
+    }
+  }
+
+  const total = await prisma.tool.count();
+  res.json({ ok: true, results, total, request_id: reqId() });
+});
+
 export default router;
