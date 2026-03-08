@@ -105,14 +105,16 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
   const results: Array<{ name: string; status: string }> = [];
   for (const t of tools) {
     try {
-      await prisma.tool.upsert({
-        where: { name: t.name },
-        update: { description: t.description, category: t.category, credits: t.credits, enabled: true },
-        create: { ...t, enabled: true },
-      });
+      // Use raw SQL so we bypass any Prisma schema/column mismatch issues
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "Tool" (id, name, description, category, credits, enabled)
+         VALUES (substr(md5(random()::text), 1, 25), $1, $2, $3, $4, true)
+         ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, category = EXCLUDED.category, credits = EXCLUDED.credits, enabled = true`,
+        t.name, t.description, t.category, t.credits
+      );
       results.push({ name: t.name, status: "ok" });
     } catch (e) {
-      results.push({ name: t.name, status: `error: ${String(e).slice(0, 100)}` });
+      results.push({ name: t.name, status: `error: ${String(e).slice(0, 120)}` });
     }
   }
 
