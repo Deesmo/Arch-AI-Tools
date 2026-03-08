@@ -203,8 +203,10 @@ async function migrate() {
 
     // Ensure Tool table has 'enabled' column (was missing from original schema)
     try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Tool" ADD COLUMN IF NOT EXISTS "enabled" BOOLEAN NOT NULL DEFAULT true`);
-      console.log('[migrate] Tool.enabled column ensured');
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Tool" ADD COLUMN IF NOT EXISTS "enabled" BOOLEAN DEFAULT true`);
+      await prisma.$executeRawUnsafe(`UPDATE "Tool" SET enabled = true WHERE enabled IS NULL`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Tool" ALTER COLUMN "enabled" SET NOT NULL`);
+      console.log('[migrate] Tool.enabled column ensured + nulls fixed');
     } catch (err) {
       console.warn('[migrate] Tool.enabled skip:', err.message.slice(0, 80));
     }
