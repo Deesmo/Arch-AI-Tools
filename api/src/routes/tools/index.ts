@@ -1330,8 +1330,12 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
   try {
     const id = symbol.toLowerCase().trim();
     const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
+    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as Record<string, Record<string, number>>;
-    if (!data[id]) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found. Use CoinGecko ID (e.g. bitcoin, ethereum, solana)`, request_id: reqId() }); return; }
+    if (!data || !data[id]) {
+      res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found or CoinGecko rate limit hit. Try again in a moment or use a Pro API key.`, request_id: reqId() });
+      return;
+    }
     const d = data[id];
     res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
