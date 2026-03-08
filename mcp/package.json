@@ -1,9 +1,21 @@
 {
-  "name": "arch-tools-mcp",
-  "version": "1.0.0",
-  "private": true,
+  "name": "@deesmo/arch-tools-mcp",
+  "version": "1.7.0",
+  "mcpName": "io.github.deesmo/arch-tools",
+  "description": "MCP server for Arch Tools — 45 production-ready API tools for AI agents. Web scraping, AI generation, crypto data, data validation, OCR, and more. Supports USDC payments via x402.",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "arch-tools-mcp": "dist/index.js"
+  },
+  "keywords": ["mcp", "ai-agents", "api", "tools", "x402", "usdc", "web-scraping", "ai-generation", "crypto"],
+  "author": "MCMetaverse LLC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Deesmo/Arch-AI-Tools.git"
+  },
+  "homepage": "https://archtools.dev",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
