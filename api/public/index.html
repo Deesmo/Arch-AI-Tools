@@ -15,12 +15,12 @@
   <title>Arch Tools — The First API Platform AI Agents Can Pay Autonomously</title>
   <meta name="description" content="The first API platform where AI agents pay autonomously with USDC via x402. 45 production tools, one key, no human credit card required. Built for the agent economy.">
   <meta property="og:title" content="Arch Tools — 45 API Tools for AI Agents">
-  <meta property="og:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 50 tools, one key.">
+  <meta property="og:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 47 tools, one key.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Arch Tools — 45 API Tools for AI Agents">
-  <meta name="twitter:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 50 tools, one key.">
+  <meta name="twitter:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 47 tools, one key.">
   <link rel="canonical" href="https://archtools.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -607,7 +607,7 @@
     <p class="section-sub">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too. Scraping that handles JavaScript, AI that routes to any model, voice in and out, real-time memory, SMS, email, payments, legal.</p>
 
     <div class="cat-filters">
-      <button type="button" class="cat-pill active" data-filter="all">All 50</button>
+      <button type="button" class="cat-pill active" data-filter="all">All 47</button>
       <button type="button" class="cat-pill" data-filter="AI" style="--c:#8844FF">AI</button>
       <button type="button" class="cat-pill" data-filter="Web" style="--c:#34d399">Web</button>
       <button type="button" class="cat-pill" data-filter="Voice" style="--c:#FF2896">Voice</button>
@@ -980,15 +980,6 @@
         <div class="tool-desc">Send transactional emails via Resend. Plain text or HTML. From, to, subject, body — done.</div>
         <div class="tool-endpoint">POST /v1/tools/email-send</div>
       </div>
-      <div class="tool-card" data-cat="Comms">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">SMS</div>
-          <div class="tool-name">SMS Send</div>
-          <span class="tool-credits">4 cr</span>
-        </div>
-        <div class="tool-desc">Send SMS text messages via Twilio to any phone number worldwide. Agents that need to alert, confirm, or notify humans — without building a separate messaging integration.</div>
-        <div class="tool-endpoint">POST /v1/tools/sms-send</div>
-      </div>
       <div class="tool-card" data-cat="Memory">
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">VEC</div>
@@ -1006,15 +997,6 @@
         </div>
         <div class="tool-desc">Semantic similarity search over your stored vectors. Pass a query, get back the top-k most relevant chunks with scores. Powers RAG pipelines, knowledge retrieval, and context injection.</div>
         <div class="tool-endpoint">POST /v1/tools/vector-search</div>
-      </div>
-      <div class="tool-card" data-cat="Infra">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">CAL</div>
-          <div class="tool-name">Calendar Create</div>
-          <span class="tool-credits">3 cr</span>
-        </div>
-        <div class="tool-desc">Create calendar events with attendees, location, and description. Scheduling agents, booking confirmations, meeting coordinators — one call sets the event without touching the Calendar UI.</div>
-        <div class="tool-endpoint">POST /v1/tools/calendar-create</div>
       </div>
       <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
@@ -1043,24 +1025,6 @@
         <div class="tool-desc">Check if a domain is registered or available via RDAP. Returns registration date, nameservers, expiry.</div>
         <div class="tool-endpoint">POST /v1/tools/domain-check</div>
       </div>
-      <div class="tool-card" data-cat="Web">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">PRO</div>
-          <div class="tool-name">Prospect Search</div>
-          <span class="tool-credits">15 cr</span>
-        </div>
-        <div class="tool-desc">Company and lead intelligence from a structured data layer. Pass a company name or domain, get back firmographics, technographics, and contact signals. Sales agents that qualify leads automatically.</div>
-        <div class="tool-endpoint">POST /v1/tools/prospect-search</div>
-      </div>
-      <div class="tool-card" data-cat="Utils">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">VID</div>
-          <div class="tool-name">Video Generate</div>
-          <span class="tool-credits">30 cr</span>
-        </div>
-        <div class="tool-desc">Generate short video clips from text prompts or image inputs via Runway ML. Social content agents, product demo generators, creative pipelines — video output without a production stack.</div>
-        <div class="tool-endpoint">POST /v1/tools/video-generate</div>
-      </div>
       <div class="tool-card" data-cat="Utils">
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DSN</div>
@@ -1070,33 +1034,6 @@
         <div class="tool-desc">Generate images from text prompts via DALL-E 3. Three sizes. Vivid or natural style. Returns image URL.</div>
         <div class="tool-endpoint">POST /v1/tools/design-create</div>
       </div>
-      <div class="tool-card" data-cat="Utils">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">RUN</div>
-          <div class="tool-name">Code Execute</div>
-          <span class="tool-credits">5 cr</span>
-        </div>
-        <div class="tool-desc">Run Python or JavaScript in a sandboxed environment and get back stdout, stderr, and return value. Agents that write code and need to actually run it — safely, without spinning up compute.</div>
-        <div class="tool-endpoint">POST /v1/tools/code-execute</div>
-      </div>
-      <div class="tool-card" data-cat="Finance">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">PAY</div>
-          <div class="tool-name">Payment Send</div>
-          <span class="tool-credits">5 cr</span>
-        </div>
-        <div class="tool-desc">Send PayPal payouts or invoice payments programmatically. Agents that need to disburse funds, pay contractors, or initiate refunds — without a human touching the PayPal dashboard.</div>
-        <div class="tool-endpoint">POST /v1/tools/payment-send</div>
-      </div>
-      <div class="tool-card" data-cat="Comms">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(255,144,16,0.10);color:#FF9010;">DOC</div>
-          <div class="tool-name">Contract Send</div>
-          <span class="tool-credits">8 cr</span>
-        </div>
-        <div class="tool-desc">Send signature-ready contracts via DocuSign. Sales agents that close deals, HR agents that onboard employees, legal workflows that run without a human initiating every envelope.</div>
-        <div class="tool-endpoint">POST /v1/tools/contract-send</div>
-      </div>
       <div class="tool-card" data-cat="Infra">
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">ERR</div>
@@ -1105,69 +1042,6 @@
         </div>
         <div class="tool-desc">Search, retrieve, and analyze production errors via Sentry. DevOps agents that triage issues, on-call automations, and CI pipelines that catch regressions before humans do.</div>
         <div class="tool-endpoint">POST /v1/tools/error-monitor</div>
-      </div>
-      <div class="tool-card" data-cat="Memory">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">KV</div>
-          <div class="tool-name">Cache Store</div>
-          <span class="tool-credits">2 cr</span>
-        </div>
-        <div class="tool-desc">Read and write to Cloudflare KV edge cache globally. Agents that need fast persistent state, session data, or shared memory across distributed runs — no database required.</div>
-        <div class="tool-endpoint">POST /v1/tools/cache-store</div>
-      </div>
-      <div class="tool-card" data-cat="Memory">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">FS</div>
-          <div class="tool-name">File Store</div>
-          <span class="tool-credits">3 cr</span>
-        </div>
-        <div class="tool-desc">Upload, retrieve, and share files via Box cloud storage. Agents that generate reports, process documents, or need durable file storage between runs — without S3 configuration.</div>
-        <div class="tool-endpoint">POST /v1/tools/file-store</div>
-      </div>
-      <div class="tool-card" data-cat="Infra">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">CI</div>
-          <div class="tool-name">Deploy Check</div>
-          <span class="tool-credits">2 cr</span>
-        </div>
-        <div class="tool-desc">Get deployment status, build logs, and runtime errors from Vercel. CI/CD agents, deploy monitors, and on-call bots that need to know what's live without checking the dashboard manually.</div>
-        <div class="tool-endpoint">POST /v1/tools/deploy-check</div>
-      </div>
-      <div class="tool-card" data-cat="Utils">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DAT</div>
-          <div class="tool-name">Data Analyze</div>
-          <span class="tool-credits">10 cr</span>
-        </div>
-        <div class="tool-desc">Run analytics queries and get back structured insights, charts, and statistical summaries. Research agents and reporting pipelines that need to compute trends, not just display raw data.</div>
-        <div class="tool-endpoint">POST /v1/tools/data-analyze</div>
-      </div>
-      <div class="tool-card" data-cat="Legal">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(248,113,113,0.10);color:#f87171;">LAW</div>
-          <div class="tool-name">Legal Consult</div>
-          <span class="tool-credits">20 cr</span>
-        </div>
-        <div class="tool-desc">Connect to a licensed attorney for document review or compliance questions via LegalZoom. Compliance agents, contract review pipelines, and legal workflows that need a human-in-the-loop sign-off.</div>
-        <div class="tool-endpoint">POST /v1/tools/legal-consult</div>
-      </div>
-      <div class="tool-card" data-cat="Voice">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">CALL</div>
-          <div class="tool-name">Call Initiate</div>
-          <span class="tool-credits">10 cr</span>
-        </div>
-        <div class="tool-desc">Initiate outbound phone calls via Twilio with custom messaging or IVR flows. Agents that need to alert humans by phone, run automated surveys, or handle voice-first user interactions.</div>
-        <div class="tool-endpoint">POST /v1/tools/call-initiate</div>
-      </div>
-      <div class="tool-card" data-cat="Infra">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">CAL</div>
-          <div class="tool-name">Calendar Check</div>
-          <span class="tool-credits">2 cr</span>
-        </div>
-        <div class="tool-desc">Query calendar availability and upcoming events for a user or resource. Scheduling agents that need to find open slots, avoid conflicts, or confirm attendance before booking.</div>
-        <div class="tool-endpoint">POST /v1/tools/calendar-check</div>
       </div>
 
     </div>
@@ -1227,15 +1101,15 @@
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&#125;</span>
         <span class="t-line">&nbsp;</span>
-        <span class="t-line"><span class="code-comment">// Claude now has 50 tools natively</span></span>
-        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (50 tools available)</span></span>
+        <span class="t-line"><span class="code-comment">// Claude now has 47 tools natively</span></span>
+        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (47 tools available)</span></span>
       </div>
       <div style="order:1;">
         <div class="section-tag">MCP Compatible</div>
         <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
         <p class="section-sub">Arch ships a native MCP server. Drop 6 lines into your Claude Desktop config and every tool is immediately available as a native capability — no API calls in your prompts, no glue code.</p>
         <ul class="feature-list">
-          <li>50 tools exposed as native MCP functions</li>
+          <li>47 tools exposed as native MCP functions</li>
           <li>Mac, Windows, Linux — same config</li>
           <li>Claude Desktop, Cursor, Windsurf — any MCP client</li>
           <li>Tool descriptions auto-loaded — Claude knows what each tool does</li>
@@ -1273,7 +1147,7 @@
           <div class="plan-sub">10,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>10,000 credits</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>API key included</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
@@ -1286,7 +1160,7 @@
           <div class="plan-sub">60,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>60,000 credits</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>MCP server access</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
@@ -1299,7 +1173,7 @@
           <div class="plan-sub">250,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>250,000 credits</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>MCP server access</li>
             <li>Priority support</li>
             <li>Stripe or USDC</li>
@@ -1322,7 +1196,7 @@
           <div class="plan-sub">600 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>600 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>API key included</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
@@ -1335,7 +1209,7 @@
           <div class="plan-sub">3,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>3,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>MCP server access</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
@@ -1348,7 +1222,7 @@
           <div class="plan-sub">12,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>12,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>MCP server access</li>
             <li>Priority support</li>
             <li>Stripe billing</li>
@@ -1371,7 +1245,7 @@
           <div class="plan-sub">$81 billed annually &middot; 600 credits/month</div>
           <ul class="plan-features">
             <li>600 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>API key included</li>
             <li>Save $27 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1384,7 +1258,7 @@
           <div class="plan-sub">$261 billed annually &middot; 3,000 credits/month</div>
           <ul class="plan-features">
             <li>3,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>MCP server access</li>
             <li>Save $87 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1397,7 +1271,7 @@
           <div class="plan-sub">$801 billed annually &middot; 12,000 credits/month</div>
           <ul class="plan-features">
             <li>12,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 47 tools</li>
             <li>MCP server access</li>
             <li>Save $267 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1415,7 +1289,7 @@
   <div class="wrap">
     <div class="section-tag">Why Arch</div>
     <h2 class="section-title">The math doesn't lie.</h2>
-    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get 50 tools, dual payment rails, and MCP support for $9. No other platform comes close.</p>
+    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get 47 tools, dual payment rails, and MCP support for $9. No other platform comes close.</p>
     <div class="section-line"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
     <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin-top:32px;">
@@ -1433,7 +1307,7 @@
         <tr style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.35);border-radius:8px;">
           <td style="padding:14px 16px;font-weight:700;color:var(--text);white-space:nowrap;">⚡ Arch Tools</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">$9</td>
-          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">50 tools</td>
+          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">47 tools</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Native</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
