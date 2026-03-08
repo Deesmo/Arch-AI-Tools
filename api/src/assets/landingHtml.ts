@@ -855,7 +855,7 @@ export const LANDING_HTML = `<!doctype html>
         <button class="copy-btn" id="copy-btn">copy</button>
         <div id="tab-curl" class="code-tab active">
 <pre><span class="c-gray"># 1. Register — get your API key instantly</span>
-<span class="c-gray"># 1. Create an account — verify email to unlock free credits</span>
+<span class="c-gray"># 1. Register — get your API key instantly (no email verification required)</span>
 <span class="c-gray"># Open:</span> <span class="c-str">https://archtools.dev/signup</span>
 
 <span class="c-gray"># 2. Call any tool with your key</span>
@@ -899,7 +899,7 @@ result = client.tools.invoke(
 <div class="section" style="padding-top:0">
   <div class="stats-row">
     <div class="stat">
-      <div class="stat-num">11</div>
+      <div class="stat-num">45</div>
       <div class="stat-label">Production Tools</div>
     </div>
     <div class="stat">
@@ -921,8 +921,8 @@ result = client.tools.invoke(
 <div class="divider"></div>
 <section class="section" id="tools">
   <div class="section-label">Tools</div>
-  <h2 class="section-title">11 Tools. One API Key.</h2>
-  <p class="section-sub">Every tool is schema-validated, rate-limited by plan, and credit-accounted. Discover them all via <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent)">GET /v1/tools</code>.</p>
+  <h2 class="section-title">45 Tools. One API Key.</h2>
+  <p class="section-sub">Every tool is schema-validated, rate-limited by plan, and credit-accounted. Powered by Claude, GPT-4, Grok, and Gemini — under one unified API. Discover them all via <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent)">GET /v1/tools</code>.</p>
 
   <div class="tools-grid">
     <div class="tool-card">
@@ -1064,13 +1064,13 @@ result = client.tools.invoke(
 <section class="section" id="get-started">
   <div class="section-label">Get Started</div>
   <h2 class="section-title">Up and running in 60 seconds</h2>
-  <p class="section-sub">Verify your email, get an API key, and make your first call in under a minute. No credit card required.</p>
+  <p class="section-sub">Enter your email, get an API key instantly, and make your first call in under a minute. No email verification. No credit card required.</p>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div>
         <div class="step-title">Register</div>
-        <div class="step-desc">Enter your email at <a href="/signup" style="color:var(--text);text-decoration:underline">/signup</a> to verify ownership and receive your API key + monthly free credits.</div>
+        <div class="step-desc">Enter your email at <a href="/signup" style="color:var(--text);text-decoration:underline">/signup</a> — your API key is generated instantly. 100 free credits added to your account, refreshed monthly.</div>
       </div>
     </div>
     <div class="step">

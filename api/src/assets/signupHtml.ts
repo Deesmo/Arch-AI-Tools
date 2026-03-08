@@ -4,7 +4,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arch Tools — Get your API key</title>
-  <meta name="description" content="Create your Arch Tools account. Verify your email to receive your API key and free monthly credits." />
+  <meta name="description" content="Create your Arch Tools account. Get your API key instantly — no email verification required. 100 free credits included." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
