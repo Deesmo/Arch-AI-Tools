@@ -581,7 +581,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req, res) => {
         return;
     }
     try {
-        const resp = await axios_1.default.get(`https://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
+        const resp = await axios_1.default.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
         const data = resp.data;
         if (data.status === "fail") {
             res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: (0, credits_1.reqId)() });
@@ -976,7 +976,10 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
             messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY JSON: {"pattern": "^[a-z]+$", "flags": "i", "explanation": "...", "test_examples": ["match1", "match2"]}` }],
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+        const cleaned = raw.replace(/```json|```/g, "").trim();
+        // Extract JSON object from response even if Claude adds surrounding text
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
         res.json({ ok: true, pattern: parsed.pattern ?? "", flags: parsed.flags ?? "", regex: `/${parsed.pattern ?? ""}/${parsed.flags ?? ""}`, explanation: parsed.explanation ?? "", test_examples: parsed.test_examples ?? [], request_id: (0, credits_1.reqId)() });
     }
     catch (e) {

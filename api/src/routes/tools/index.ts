@@ -430,7 +430,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req: AuthedRequ
   const { ip } = req.body as { ip?: string };
   if (!ip) { res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: reqId() }); return; }
   try {
-    const resp = await axios.get(`https://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
+    const resp = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
     const data = resp.data as Record<string, unknown>;
     if (data.status === "fail") { res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: reqId() }); return; }
     res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: reqId() });
@@ -754,7 +754,10 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req: 
       messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY JSON: {"pattern": "^[a-z]+$", "flags": "i", "explanation": "...", "test_examples": ["match1", "match2"]}` }],
     });
     const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { pattern?: string; flags?: string; explanation?: string; test_examples?: string[] };
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    // Extract JSON object from response even if Claude adds surrounding text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned) as { pattern?: string; flags?: string; explanation?: string; test_examples?: string[] };
     res.json({ ok: true, pattern: parsed.pattern ?? "", flags: parsed.flags ?? "", regex: `/${parsed.pattern ?? ""}/${parsed.flags ?? ""}`, explanation: parsed.explanation ?? "", test_examples: parsed.test_examples ?? [], request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "regex_error", message: safeErr(e), request_id: reqId() });
