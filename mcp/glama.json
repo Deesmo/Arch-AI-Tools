@@ -1,0 +1,22 @@
+{
+  "$schema": "https://glama.ai/mcp/servers/schema.json",
+  "name": "Arch Tools",
+  "description": "50 production-ready API tools for AI agents and developers: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, crypto data, email, image generation (DALL-E 3), audio transcription, text-to-speech, domain lookup, and more. Supports autonomous USDC payments via x402 — no signup needed for AI agents.",
+  "version": "1.7.0",
+  "homepage": "https://archtools.dev",
+  "repository": "https://github.com/Deesmo/Arch-AI-Tools",
+  "license": "MIT",
+  "author": "MCMetaverse LLC",
+  "categories": ["developer-tools", "ai-agents", "data", "utilities"],
+  "keywords": ["mcp", "api", "tools", "x402", "usdc", "ai-agents", "web-scraping", "image-generation", "transcription", "crypto"],
+  "server": {
+    "type": "remote",
+    "transport": "sse",
+    "url": "https://arch-tools-mcp.onrender.com/sse"
+  },
+  "authentication": {
+    "type": "apiKey",
+    "headerName": "X-API-Key",
+    "signupUrl": "https://archtools.dev/signup"
+  }
+}
