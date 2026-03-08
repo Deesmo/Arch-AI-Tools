@@ -135,6 +135,37 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
     const statusEl = document.getElementById('status');
     const btn = document.getElementById('btn');
 
+    // If redirected from homepage registration with key in URL, show success immediately
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const preKey = params.get('key');
+      const preCredits = parseInt(params.get('credits') || '100', 10);
+      if (preKey && preKey.startsWith('arch_')) {
+        showStatus(
+          '<div style="margin-bottom:10px;font-size:16px;font-weight:700;color:#00e5b0">✅ Account created!</div>' +
+          '<div style="margin-bottom:6px;font-size:12px;color:#8b8ba6">Your API key — save it now, it won\'t be shown again:</div>' +
+          '<div id="api-key-box" class="mono" style="background:#0a0a14;border:1px solid rgba(0,229,176,0.4);padding:10px 12px;border-radius:8px;cursor:text;word-break:break-all;font-size:13px;margin-bottom:10px;user-select:all">' + preKey + '</div>' +
+          '<button id="copy-btn" style="width:100%;height:40px;border-radius:10px;border:0;background:linear-gradient(135deg,#4f46e5,#22d3ee);color:#071018;font-weight:700;cursor:pointer;margin-bottom:10px">Copy API Key</button>' +
+          '<div style="font-size:12px;color:#8b8ba6">You have <strong style="color:#f0f0f6">' + preCredits + ' free credits</strong>. This key won\'t be shown again — save it somewhere safe.</div>' +
+          '<div style="margin-top:10px"><a href="/dashboard?key=' + encodeURIComponent(preKey) + '" style="color:#00e5b0;font-weight:600">→ Open Dashboard</a></div>'
+        );
+        const copyBtn = document.getElementById('copy-btn');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(preKey).then(function() {
+              copyBtn.textContent = '✅ Copied!';
+              setTimeout(function() { copyBtn.textContent = 'Copy API Key'; }, 2000);
+            });
+          });
+        }
+        btn.style.display = 'none';
+        document.getElementById('email').style.display = 'none';
+        // Clean URL so key isn't visible in address bar
+        history.replaceState({}, '', '/signup');
+        return;
+      }
+    })();
+
     document.getElementById('btn').addEventListener('click', sendLink);
 
     function showStatus(html) {

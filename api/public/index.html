@@ -66,7 +66,7 @@
     .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
     .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
     .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
-    @media(max-width:640px){.nav-links{display:none;}}
+    @media(max-width:640px){.nav-links{display:none;}} /* nav-links hidden on mobile — CTA still visible */
 
     /* HERO */
     .hero{padding:80px 0 64px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
@@ -448,8 +448,9 @@
           <li><a href="#mcp">mcp</a></li>
           <li><a href="/blog-x402.html">blog</a></li>
           <li><a href="/openapi.json" target="_blank">api docs</a></li>
+          <li><a href="/dashboard" style="color:var(--muted);">dashboard</a></li>
         </ul>
-        <a href="#register" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
+        <a href="/signup" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
       </div>
     </div>
   </div>
@@ -473,7 +474,7 @@
           Your AI agent can register, pay, and call 45 production tools without a human in the loop. USDC on Base via x402 — accepted natively. Every competitor is Stripe-only. You're not.
         </p>
         <div class="hero-btns">
-          <a class="btn-primary" href="#register">$ get-api-key →</a>
+          <a class="btn-primary" href="/signup">$ get-api-key →</a>
           <a class="btn-ghost" href="#x402">how x402 works</a>
         </div>
       </div>
@@ -1496,15 +1497,9 @@ async function handleRegister() {
       input.value = '';
       var apiKey = data.api_key;
       try { localStorage.setItem('arch_api_key', apiKey); } catch(e) {}
-      toast.innerHTML = '<strong style="color:#22c55e;font-size:14px;">✓ You\'re in!</strong><br><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Your API Key</span><br><span id="reg-key-display" style="color:#FF9010;font-size:11px;word-break:break-all;font-family:monospace;background:rgba(255,144,16,0.08);padding:6px 8px;border-radius:6px;display:block;margin:6px 0;">' + apiKey + '</span><button onclick="(function(){var k=document.getElementById(\'reg-key-display\');if(k){navigator.clipboard&&navigator.clipboard.writeText(k.textContent);k.style.outline=\'2px solid #22c55e\';setTimeout(function(){k.style.outline=\'none\'},1000);}})()" style="background:#22c55e;color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-top:4px;">📋 Copy API Key</button><div style="color:#6B6A8A;font-size:10px;margin-top:6px;">Save this key — it won&#39;t be shown again. ' + (data.credits || 100) + ' free credits loaded.</div>';
-      toast.className = 'reg-toast reg-toast-success';
-      toast.style.display = 'block';
-      toast.style.padding = '12px';
-      toast.style.borderRadius = '8px';
-      toast.style.background = 'rgba(255,255,255,0.04)';
-      toast.style.border = '1px solid rgba(255,144,16,0.3)';
-      // Key stays visible — NO auto-hide on success
-      btn.textContent = '$ registered ✓';
+      btn.textContent = '$ redirecting...';
+      // Redirect to signup success page so user sees key prominently with copy button
+      window.location.href = '/signup?key=' + encodeURIComponent(apiKey) + '&credits=' + (data.credits || 100);
     } else if (data.error === 'email_exists' || (data.message && data.message.includes('Unique constraint'))) {
       showToast(toast, '✓ Account exists — check your email for your API key.', 'success');
       btn.textContent = '$ register';
