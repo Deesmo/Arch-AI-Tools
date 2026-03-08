@@ -1511,3 +1511,177 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
 });
 
 export default router;
+
+// ─── text-to-speech ───────────────────────────────────────────────────────────
+router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 5); if (!ok) return; }
+  const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body as { text?: string; voice_id?: string; model_id?: string; stability?: number; similarity_boost?: number };
+  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  if (text.length > 5000) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() }); return; }
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() }); return; }
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
+      method: "POST",
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+      body: JSON.stringify({ text, model_id, voice_settings: { stability, similarity_boost } })
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error("[text-to-speech] ElevenLabs error:", r.status, err);
+      res.status(502).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const buf = await r.arrayBuffer();
+    const b64 = Buffer.from(buf).toString("base64");
+    res.json({ ok: true, audio_base64: b64, mime_type: "audio/mpeg", voice_id, model_id, char_count: text.length, request_id: reqId() });
+  } catch (e) { console.error("[text-to-speech]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── transcribe-audio ─────────────────────────────────────────────────────────
+router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 8); if (!ok) return; }
+  const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
+  if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: reqId() }); return; }
+  try {
+    // Fetch audio file
+    const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(30000) });
+    if (!audioResp.ok) { res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() }); return; }
+    const audioBuffer = await audioResp.arrayBuffer();
+    const contentType = audioResp.headers.get("content-type") ?? "audio/mpeg";
+    const ext = contentType.includes("wav") ? "wav" : contentType.includes("ogg") ? "ogg" : contentType.includes("webm") ? "webm" : contentType.includes("mp4") ? "mp4" : "mp3";
+
+    const formData = new FormData();
+    formData.append("file", new Blob([audioBuffer], { type: contentType }), `audio.${ext}`);
+    formData.append("model", "whisper-1");
+    if (language) formData.append("language", language);
+    if (whisperPrompt) formData.append("prompt", whisperPrompt);
+    formData.append("response_format", "verbose_json");
+
+    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${openaiKey}` },
+      body: formData
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error("[transcribe-audio] OpenAI error:", r.status, err);
+      res.status(502).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as { text: string; language?: string; duration?: number; segments?: unknown[] };
+    res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: reqId() });
+  } catch (e) { console.error("[transcribe-audio]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── email-send ───────────────────────────────────────────────────────────────
+router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "email-send", 3); if (!ok) return; }
+  const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
+  if (!to || !subject || (!body && !html)) { res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return; }
+  if (!to.includes("@")) { res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return; }
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return; }
+  try {
+    const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
+    const htmlBody = html ?? `<p>${(body ?? "").replace(/\n/g, "<br>")}</p>`;
+    const textBody = body ?? html?.replace(/<[^>]+>/g, "") ?? "";
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: fromAddr, to: [to], subject, html: htmlBody, text: textBody })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({})) as { message?: string };
+      console.error("[email-send] Resend error:", r.status, err);
+      res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as { id?: string };
+    res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });
+  } catch (e) { console.error("[email-send]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── design-create ────────────────────────────────────────────────────────────
+router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", 15); if (!ok) return; }
+  const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; style?: string; n?: number };
+  if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
+  const safeSize = validSizes.includes(size) ? size : "1024x1024";
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: reqId() }); return; }
+  try {
+    const r = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "dall-e-3", prompt, size: safeSize, quality, style, n: Math.min(n, 1), response_format: "url" })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
+      console.error("[design-create] OpenAI error:", r.status, err);
+      res.status(502).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
+    const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
+    res.json({ ok: true, images, count: images.length, size: safeSize, quality, style, request_id: reqId() });
+  } catch (e) { console.error("[design-create]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── domain-check ─────────────────────────────────────────────────────────────
+router.post("/domain-check", ...toolMiddleware("domain-check"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "domain-check", 2); if (!ok) return; }
+  const { domain } = req.body as { domain?: string };
+  if (!domain) { res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() }); return; }
+  const clean = domain.toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+  try {
+    // RDAP lookup — if 404 the domain is available; if 200 it's registered
+    const tld = clean.split(".").pop() ?? "";
+    const rdapBase: Record<string, string> = {
+      com: "https://rdap.verisign.com/com/v1/domain/",
+      net: "https://rdap.verisign.com/net/v1/domain/",
+      org: "https://rdap.publicinterestregistry.org/rdap/domain/",
+      io: "https://rdap.nic.io/domain/",
+      dev: "https://rdap.nic.google/v1/domain/",
+      app: "https://rdap.nic.google/v1/domain/",
+      ai: "https://rdap.nic.ai/v1/domain/",
+    };
+    const base = rdapBase[tld] ?? `https://rdap.org/domain/`;
+    const r = await fetch(`${base}${clean}`, { signal: AbortSignal.timeout(8000), headers: { "Accept": "application/json" } });
+    if (r.status === 404) {
+      res.json({ ok: true, domain: clean, available: true, registered: false, request_id: reqId() }); return;
+    }
+    if (!r.ok) {
+      // Try fallback RDAP
+      const r2 = await fetch(`https://rdap.org/domain/${clean}`, { signal: AbortSignal.timeout(8000) });
+      if (r2.status === 404) {
+        res.json({ ok: true, domain: clean, available: true, registered: false, request_id: reqId() }); return;
+      }
+      if (!r2.ok) {
+        res.json({ ok: true, domain: clean, available: null, registered: null, note: "RDAP lookup failed — domain may or may not be available", request_id: reqId() }); return;
+      }
+    }
+    const data = await (r.ok ? r : (await fetch(`https://rdap.org/domain/${clean}`))).json() as {
+      ldhName?: string; status?: string[]; events?: { eventAction: string; eventDate: string }[];
+      entities?: { roles?: string[]; vcardArray?: unknown[] }[];
+      nameservers?: { ldhName: string }[];
+    };
+    const registered = r.ok || true;
+    const registrationDate = data.events?.find(e => e.eventAction === "registration")?.eventDate ?? null;
+    const expirationDate = data.events?.find(e => e.eventAction === "expiration")?.eventDate ?? null;
+    const updatedDate = data.events?.find(e => e.eventAction === "last changed")?.eventDate ?? null;
+    const nameservers = (data.nameservers ?? []).map(ns => ns.ldhName?.toLowerCase());
+    const status = data.status ?? [];
+    const registrantEntity = data.entities?.find(e => e.roles?.includes("registrant"));
+    res.json({
+      ok: true, domain: clean, available: false, registered: true,
+      status, registration_date: registrationDate, expiration_date: expirationDate, updated_date: updatedDate,
+      nameservers, has_registrant: !!registrantEntity,
+      request_id: reqId()
+    });
+  } catch (e) { console.error("[domain-check]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});

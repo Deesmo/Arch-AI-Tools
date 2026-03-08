@@ -14,7 +14,7 @@ router.get("/health", async (_req, res) => {
             prisma_1.prisma.tool.count(),
             prisma_1.prisma.agent.count(),
         ]);
-        res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "connected", tools: toolCount || 45, agents: agentCount });
+        res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "connected", tools: toolCount || 50, agents: agentCount });
     }
     catch {
         res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "error" });
@@ -30,7 +30,7 @@ router.get("/.well-known/x402", (_req, res) => {
     }));
     res.json({
         name: "Arch Tools",
-        description: "The first API platform built for autonomous agent payments. 45 production tools, USDC on Base via x402 or Stripe.",
+        description: "The first API platform built for autonomous agent payments. 50 production tools, USDC on Base via x402 or Stripe.",
         url: BASE_URL,
         api_base: API_BASE,
         version: "1",
@@ -97,11 +97,16 @@ const TOOL_DESCRIPTIONS = {
     "ai-generate": "AI text generation via Claude",
     "ocr-extract": "Extract text from images (URL or base64)",
     "browser-task": "Headless browser automation (click/type/extract) via Playwright",
+    "text-to-speech": "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)",
+    "transcribe-audio": "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)",
+    "email-send": "Send transactional emails via Resend — plain text or HTML",
+    "design-create": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
+    "domain-check": "Check if a domain is available or registered via RDAP (no key needed)",
     "extract-pdf": "Extract text from a PDF (URL or base64)",
 };
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 45 production-ready tools. One key. USDC on Base via x402 or Stripe.
+> 50 production-ready tools. One key. USDC on Base via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -126,7 +131,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:        60,000 credits — $49   ($0.00082/credit)
   Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (45 total)
+## All Tools (50 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -214,7 +219,7 @@ Privacy: ${BASE_URL}/privacy.html
 `;
 const OPENAPI_STUB = {
     openapi: "3.0.3",
-    info: { title: "Arch Tools API", version: "1.7.0", description: "45 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
+    info: { title: "Arch Tools API", version: "1.7.0", description: "50 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
     servers: [{ url: API_BASE }],
     tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
     components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
@@ -222,7 +227,7 @@ const OPENAPI_STUB = {
 const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
     name,
     description,
-    credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1 }).find(([k]) => k === name)?.[1] ?? 5,
+    credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 5, "transcribe-audio": 8, "email-send": 3, "design-create": 15, "domain-check": 2 }).find(([k]) => k === name)?.[1] ?? 5,
     category: ["ai-generate", "ocr-extract", "sentiment-analysis", "summarize", "extract-entities", "regex-generate", "pii-detect", "web-search", "language-detect"].includes(name) ? "ai" : ["web-scrape", "search-web", "extract-page", "browser-task", "rss-parse"].includes(name) ? "web" : "utility",
     active: true,
     endpoint: `/v1/tools/${name}`,

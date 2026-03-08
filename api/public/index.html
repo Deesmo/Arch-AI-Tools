@@ -15,12 +15,12 @@
   <title>Arch Tools — The First API Platform AI Agents Can Pay Autonomously</title>
   <meta name="description" content="The first API platform where AI agents pay autonomously with USDC via x402. 45 production tools, one key, no human credit card required. Built for the agent economy.">
   <meta property="og:title" content="Arch Tools — 45 API Tools for AI Agents">
-  <meta property="og:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 45 tools, one key.">
+  <meta property="og:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 50 tools, one key.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Arch Tools — 45 API Tools for AI Agents">
-  <meta name="twitter:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 45 tools, one key.">
+  <meta name="twitter:description" content="The first API platform where AI agents pay autonomously with USDC via x402. No human card needed. 50 tools, one key.">
   <link rel="canonical" href="https://archtools.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -607,7 +607,7 @@
     <p class="section-sub">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too. Scraping that handles JavaScript, AI that routes to any model, voice in and out, real-time memory, SMS, email, payments, legal.</p>
 
     <div class="cat-filters">
-      <button type="button" class="cat-pill active" data-filter="all">All 45</button>
+      <button type="button" class="cat-pill active" data-filter="all">All 50</button>
       <button type="button" class="cat-pill" data-filter="AI" style="--c:#8844FF">AI</button>
       <button type="button" class="cat-pill" data-filter="Web" style="--c:#34d399">Web</button>
       <button type="button" class="cat-pill" data-filter="Voice" style="--c:#FF2896">Voice</button>
@@ -957,18 +957,18 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">TTS</div>
           <div class="tool-name">Text to Speech</div>
-          <span class="tool-credits">8 cr</span>
+          <span class="tool-credits">5 cr</span>
         </div>
-        <div class="tool-desc">Convert any text to natural-sounding audio via ElevenLabs. Returns MP3 or base64. Voice cloning, narration, agent audio output — no separate TTS account needed.</div>
+        <div class="tool-desc">Convert text to natural-sounding audio via ElevenLabs. Returns base64 MP3. 50+ voices available.</div>
         <div class="tool-endpoint">POST /v1/tools/text-to-speech</div>
       </div>
       <div class="tool-card" data-cat="Voice">
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">STT</div>
           <div class="tool-name">Transcribe Audio</div>
-          <span class="tool-credits">12 cr</span>
+          <span class="tool-credits">8 cr</span>
         </div>
-        <div class="tool-desc">Audio file or URL in, clean text out. Meeting notes, voice commands, recorded interviews — pass the file and get back timestamped transcription ready for downstream processing.</div>
+        <div class="tool-desc">Transcribe audio files to text via OpenAI Whisper. Pass a URL — 100+ languages, timestamps optional.</div>
         <div class="tool-endpoint">POST /v1/tools/transcribe-audio</div>
       </div>
       <div class="tool-card" data-cat="Comms">
@@ -977,7 +977,7 @@
           <div class="tool-name">Email Send</div>
           <span class="tool-credits">3 cr</span>
         </div>
-        <div class="tool-desc">Send transactional or outreach emails from your agent. Pass to, subject, and body — returns message ID. Works for notifications, confirmations, drip sequences, and alerts.</div>
+        <div class="tool-desc">Send transactional emails via Resend. Plain text or HTML. From, to, subject, body — done.</div>
         <div class="tool-endpoint">POST /v1/tools/email-send</div>
       </div>
       <div class="tool-card" data-cat="Comms">
@@ -1040,7 +1040,7 @@
           <div class="tool-name">Domain Check</div>
           <span class="tool-credits">2 cr</span>
         </div>
-        <div class="tool-desc">Check domain availability and get name suggestions in one call. Brand research agents, startup idea generators, and naming tools — instant availability data without a registrar account.</div>
+        <div class="tool-desc">Check if a domain is registered or available via RDAP. Returns registration date, nameservers, expiry.</div>
         <div class="tool-endpoint">POST /v1/tools/domain-check</div>
       </div>
       <div class="tool-card" data-cat="Web">
@@ -1065,9 +1065,9 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DSN</div>
           <div class="tool-name">Design Create</div>
-          <span class="tool-credits">10 cr</span>
+          <span class="tool-credits">15 cr</span>
         </div>
-        <div class="tool-desc">Generate branded visual assets via Canva — social posts, presentations, thumbnails, banners. Pass a template and data, get back a shareable design URL. Content agents that produce visuals, not just text.</div>
+        <div class="tool-desc">Generate images from text prompts via DALL-E 3. Three sizes. Vivid or natural style. Returns image URL.</div>
         <div class="tool-endpoint">POST /v1/tools/design-create</div>
       </div>
       <div class="tool-card" data-cat="Utils">
@@ -1227,15 +1227,15 @@
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&#125;</span>
         <span class="t-line">&nbsp;</span>
-        <span class="t-line"><span class="code-comment">// Claude now has 45 tools natively</span></span>
-        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (45 tools available)</span></span>
+        <span class="t-line"><span class="code-comment">// Claude now has 50 tools natively</span></span>
+        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (50 tools available)</span></span>
       </div>
       <div style="order:1;">
         <div class="section-tag">MCP Compatible</div>
         <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
         <p class="section-sub">Arch ships a native MCP server. Drop 6 lines into your Claude Desktop config and every tool is immediately available as a native capability — no API calls in your prompts, no glue code.</p>
         <ul class="feature-list">
-          <li>45 tools exposed as native MCP functions</li>
+          <li>50 tools exposed as native MCP functions</li>
           <li>Mac, Windows, Linux — same config</li>
           <li>Claude Desktop, Cursor, Windsurf — any MCP client</li>
           <li>Tool descriptions auto-loaded — Claude knows what each tool does</li>
@@ -1273,7 +1273,7 @@
           <div class="plan-sub">10,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>10,000 credits</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>API key included</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
@@ -1286,7 +1286,7 @@
           <div class="plan-sub">60,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>60,000 credits</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>MCP server access</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
@@ -1299,7 +1299,7 @@
           <div class="plan-sub">250,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>250,000 credits</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>MCP server access</li>
             <li>Priority support</li>
             <li>Stripe or USDC</li>
@@ -1322,7 +1322,7 @@
           <div class="plan-sub">600 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>600 credits every month</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>API key included</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
@@ -1335,7 +1335,7 @@
           <div class="plan-sub">3,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>3,000 credits every month</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>MCP server access</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
@@ -1348,7 +1348,7 @@
           <div class="plan-sub">12,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>12,000 credits every month</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>MCP server access</li>
             <li>Priority support</li>
             <li>Stripe billing</li>
@@ -1371,7 +1371,7 @@
           <div class="plan-sub">$81 billed annually &middot; 600 credits/month</div>
           <ul class="plan-features">
             <li>600 credits every month</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>API key included</li>
             <li>Save $27 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1384,7 +1384,7 @@
           <div class="plan-sub">$261 billed annually &middot; 3,000 credits/month</div>
           <ul class="plan-features">
             <li>3,000 credits every month</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>MCP server access</li>
             <li>Save $87 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1397,7 +1397,7 @@
           <div class="plan-sub">$801 billed annually &middot; 12,000 credits/month</div>
           <ul class="plan-features">
             <li>12,000 credits every month</li>
-            <li>All 45 tools</li>
+            <li>All 50 tools</li>
             <li>MCP server access</li>
             <li>Save $267 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1415,7 +1415,7 @@
   <div class="wrap">
     <div class="section-tag">Why Arch</div>
     <h2 class="section-title">The math doesn't lie.</h2>
-    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get 45 tools, dual payment rails, and MCP support for $9. No other platform comes close.</p>
+    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get 50 tools, dual payment rails, and MCP support for $9. No other platform comes close.</p>
     <div class="section-line"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
     <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin-top:32px;">
@@ -1433,7 +1433,7 @@
         <tr style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.35);border-radius:8px;">
           <td style="padding:14px 16px;font-weight:700;color:var(--text);white-space:nowrap;">⚡ Arch Tools</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">$9</td>
-          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">45 tools</td>
+          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">50 tools</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Native</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
