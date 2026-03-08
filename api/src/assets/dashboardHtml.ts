@@ -70,24 +70,6 @@ export const DASHBOARD_HTML = `<!doctype html>
     <script>
       const $ = (id) => document.getElementById(id);
 
-      // Auto-load key from localStorage (saved after signup)
-      (function() {
-        const saved = localStorage.getItem('arch_api_key');
-        if (saved) {
-          $('key').value = saved;
-          $('load').click();
-        }
-        // Also handle ?key= param from signup redirect
-        const params = new URLSearchParams(window.location.search);
-        const qKey = params.get('key');
-        if (qKey && qKey.startsWith('arch_')) {
-          $('key').value = qKey;
-          localStorage.setItem('arch_api_key', qKey);
-          history.replaceState({}, '', '/dashboard');
-          $('load').click();
-        }
-      })();
-
       const btn = $('load');
       btn.addEventListener('click', async () => {
         $('status').textContent = 'Loading…';
@@ -113,6 +95,24 @@ export const DASHBOARD_HTML = `<!doctype html>
           $('recent').textContent = String(e);
         }
       });
+
+      // Auto-load AFTER event listener is attached
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const qKey = params.get('key');
+        if (qKey && qKey.startsWith('arch_')) {
+          $('key').value = qKey;
+          localStorage.setItem('arch_api_key', qKey);
+          history.replaceState({}, '', '/dashboard');
+          btn.click();
+          return;
+        }
+        const saved = localStorage.getItem('arch_api_key');
+        if (saved) {
+          $('key').value = saved;
+          btn.click();
+        }
+      })();
     </script>
   </div>
 </body>
