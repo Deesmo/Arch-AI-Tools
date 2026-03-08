@@ -186,7 +186,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
       if (copyBtn) {
         copyBtn.addEventListener('click', function() {
           navigator.clipboard.writeText(apiKey).then(function() {
-            copyBtn.textContent = '&#10003; Copied!';
+            copyBtn.textContent = '✓ Copied!';
             setTimeout(function() { copyBtn.textContent = 'Copy API Key'; }, 2000);
           });
         });

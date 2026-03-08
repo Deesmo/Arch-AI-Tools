@@ -184,7 +184,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             : (data.message || 'Error loading usage.');
           return;
         }
-        document.getElementById('status').textContent = '&#10003; Loaded';
+        document.getElementById('status').textContent = '\u2713 Loaded';
         document.getElementById('credits').textContent = data.credits_remaining ?? '—';
         document.getElementById('calls').textContent = data.calls_today ?? '—';
         document.getElementById('recent').textContent = data.recent_activity && data.recent_activity.length
