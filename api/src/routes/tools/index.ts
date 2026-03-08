@@ -750,7 +750,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req: 
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
+      max_tokens: 200,
       messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY JSON: {"pattern": "^[a-z]+$", "flags": "i", "explanation": "...", "test_examples": ["match1", "match2"]}` }],
     });
     const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
@@ -942,16 +942,25 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     let base64Data = pdf_base64;
     if (pdf_url && !pdf_base64) {
       try { await validateUrl(pdf_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const resp = await axios.get(pdf_url, { responseType: "arraybuffer", timeout: 15000 });
-      base64Data = Buffer.from(resp.data as ArrayBuffer).toString("base64");
+      const resp = await axios.get(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
+      const buffer = Buffer.from(resp.data as ArrayBuffer);
+      if (buffer.length > 5 * 1024 * 1024) {
+        res.status(400).json({ ok: false, error: "file_too_large", message: "PDF must be under 5MB", request_id: reqId() });
+        return;
+      }
+      base64Data = buffer.toString("base64");
     }
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
-    });
-    const text = msg.content.find(b => b.type === "text")?.text ?? "";
-    res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
+    try {
+      const msg = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
+      });
+      const text = msg.content.find(b => b.type === "text")?.text ?? "";
+      res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
+    } catch (anthropicErr) {
+      res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(anthropicErr), request_id: reqId() });
+    }
   } catch (e) {
     res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(e), request_id: reqId() });
   }
@@ -1199,8 +1208,8 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: 
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   try {
     const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1500,
       messages: [{
         role: "user",
         content: `Generate a complete, self-contained SVG image (${width}x${height}) based on this prompt: "${prompt}"\n\nRequirements:\n- Valid SVG with viewBox="0 0 ${width} ${height}"\n- Use only SVG elements (rect, circle, path, text, etc.)\n- Make it visually appealing and creative\n- Return ONLY the SVG code, nothing else, no markdown fences`,
@@ -1330,7 +1339,18 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
   const { limit = 10, currency = "usd" } = req.body as { limit?: number; currency?: string };
   try {
     const n = Math.min(Math.max(1, limit), 100);
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`);
+    const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
+    const cgHeaders = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
+    let r = await fetch(cgUrl, { headers: cgHeaders });
+    if (!r.ok) {
+      // Retry once after 1 second
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      r = await fetch(cgUrl, { headers: cgHeaders });
+      if (!r.ok) {
+        res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
+        return;
+      }
+    }
     const data = await r.json() as { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number }[];
     const coins = data.map(c => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
     res.json({ ok: true, currency, coins, request_id: reqId() });
