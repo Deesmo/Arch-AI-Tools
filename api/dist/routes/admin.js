@@ -103,15 +103,19 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
     const results = [];
     for (const t of tools) {
         try {
-            // Try prisma.tool.create, skip if already exists
             const existing = await prisma_1.prisma.tool.findUnique({ where: { name: t.name } });
             if (existing) {
                 results.push({ name: t.name, status: "already_exists" });
             }
             else {
-                await prisma_1.prisma.tool.create({
-                    data: { name: t.name, description: t.description, category: t.category, credits: t.credits },
-                });
+                // DB has extra NOT NULL columns not in Prisma schema — use raw SQL
+                const id = Math.random().toString(36).slice(2, 27);
+                const endpoint = `/v1/tools/${t.name}`;
+                const now = new Date().toISOString();
+                await prisma_1.prisma.$executeRaw(client_1.Prisma.sql `
+          INSERT INTO "Tool" (id, name, description, endpoint, method, credits, category, active, enabled, "createdAt", "updatedAt", version)
+          VALUES (${id}, ${t.name}, ${t.description}, ${endpoint}, 'POST', ${t.credits}, ${t.category}, true, true, ${now}::timestamp, ${now}::timestamp, '1.0.0')
+        `);
                 results.push({ name: t.name, status: "created" });
             }
         }
