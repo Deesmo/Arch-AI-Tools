@@ -82,6 +82,19 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
   }
 });
 
+// GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
+router.get("/lookup", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.query as { email?: string };
+  if (!email) { res.status(400).json({ ok: false, error: "email_required", request_id: reqId() }); return; }
+  try {
+    const agent = await prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
+    if (!agent) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
+    res.json({ ok: true, agent, request_id: reqId() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
 // POST /v1/admin/seed-tools — one-shot seed for missing tools
 router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   const tools = [

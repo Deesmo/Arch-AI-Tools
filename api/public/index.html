@@ -1494,9 +1494,15 @@ async function handleRegister() {
     const data = await res.json();
     if (data.ok && data.api_key) {
       input.value = '';
-      toast.innerHTML = '✓ You\'re in! Your API key:<br><span style="color:#FF9010;font-size:12px;word-break:break-all;">' + data.api_key + '</span><br><span style="color:#6B6A8A;font-size:11px;">Save this — it won\'t be shown again. ' + (data.credits || 100) + ' free credits loaded.</span>';
+      var apiKey = data.api_key;
+      toast.innerHTML = '<strong style="color:#22c55e;font-size:14px;">✓ You\'re in!</strong><br><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Your API Key</span><br><span id="reg-key-display" style="color:#FF9010;font-size:11px;word-break:break-all;font-family:monospace;background:rgba(255,144,16,0.08);padding:6px 8px;border-radius:6px;display:block;margin:6px 0;">' + apiKey + '</span><button onclick="(function(){var k=document.getElementById(\'reg-key-display\');if(k){navigator.clipboard&&navigator.clipboard.writeText(k.textContent);k.style.outline=\'2px solid #22c55e\';setTimeout(function(){k.style.outline=\'none\'},1000);}})()" style="background:#22c55e;color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-top:4px;">📋 Copy API Key</button><div style="color:#6B6A8A;font-size:10px;margin-top:6px;">Save this key — it won&#39;t be shown again. ' + (data.credits || 100) + ' free credits loaded.</div>';
       toast.className = 'reg-toast reg-toast-success';
       toast.style.display = 'block';
+      toast.style.padding = '12px';
+      toast.style.borderRadius = '8px';
+      toast.style.background = 'rgba(255,255,255,0.04)';
+      toast.style.border = '1px solid rgba(255,144,16,0.3)';
+      // Key stays visible — NO auto-hide on success
       btn.textContent = '$ registered ✓';
     } else if (data.error === 'email_exists' || (data.message && data.message.includes('Unique constraint'))) {
       showToast(toast, '✓ Account exists — check your email for your API key.', 'success');

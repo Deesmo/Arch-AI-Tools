@@ -67,6 +67,25 @@ router.get("/stats", auth_1.requireAdmin, async (_req, res) => {
         res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
+// GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
+router.get("/lookup", auth_1.requireAdmin, async (req, res) => {
+    const { email } = req.query;
+    if (!email) {
+        res.status(400).json({ ok: false, error: "email_required", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    try {
+        const agent = await prisma_1.prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
+        if (!agent) {
+            res.status(404).json({ ok: false, error: "not_found", request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        res.json({ ok: true, agent, request_id: (0, credits_1.reqId)() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+    }
+});
 // POST /v1/admin/seed-tools — one-shot seed for missing tools
 router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
     const tools = [
