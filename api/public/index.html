@@ -1251,53 +1251,163 @@
 <section id="pricing" style="background:rgba(12,11,34,0.3);border-top:1px solid var(--border);">
   <div class="wrap">
     <div class="section-tag">Pricing</div>
-    <h2 class="section-title">No subscriptions. No expiry. Just credits.</h2>
-    <p class="section-sub">Buy once, use whenever. Credits never expire. Or pay per call with USDC — no wallet, no signup, no friction.</p>
-    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,144,16,0.08);border:1px solid rgba(255,144,16,0.3);border-radius:8px;padding:10px 18px;margin-bottom:32px;font-family:var(--mono);font-size:12px;color:#FF9010;">
-      <span>🔒</span>
-      <span><strong>Founding member price</strong> — $9 Starter locked in forever. Price increases after early access.</span>
+    <h2 class="section-title" id="pricing-heading">No subscriptions. No expiry. Just credits.</h2>
+    <p class="section-sub" id="pricing-sub">Buy once, use whenever. Credits never expire. Or subscribe monthly and auto-refill. You choose.</p>
+
+    <!-- Billing toggle -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:4px;width:fit-content;margin-left:auto;margin-right:auto;">
+      <button id="toggle-onetime" onclick="setPricingMode('onetime')" style="padding:8px 22px;border-radius:9px;border:0;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">One-Time</button>
+      <button id="toggle-monthly" onclick="setPricingMode('monthly')" style="padding:8px 22px;border-radius:9px;border:0;background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">Monthly</button>
+      <button id="toggle-annual" onclick="setPricingMode('annual')" style="padding:8px 22px;border-radius:9px;border:0;background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">Annual <span style="font-size:10px;color:#00e5b0;font-weight:700;">SAVE 25%</span></button>
     </div>
-    <div class="pricing-grid">
-      <div class="pricing-card">
-        <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
-        <div class="plan-price"><span class="currency">$</span>9</div>
-        <div class="plan-sub">10,000 credits · $0.0009/credit</div>
-        <ul class="plan-features">
-          <li>10,000 credits</li>
-          <li>All 45 tools</li>
-          <li>API key included</li>
-          <li>Credits never expire</li>
-          <li>Stripe or USDC</li>
-        </ul>
-        <button class="plan-cta plan-cta-ghost" data-pack="starter">$ buy-starter</button>
+
+    <!-- One-time packs -->
+    <div id="pricing-onetime">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,144,16,0.08);border:1px solid rgba(255,144,16,0.3);border-radius:8px;padding:10px 18px;margin-bottom:28px;font-family:var(--mono);font-size:12px;color:#FF9010;">
+        <span>&#128274;</span>
+        <span><strong>Credits never expire.</strong> Pay once, use forever. Every competitor expires credits monthly. We don't.</span>
       </div>
-      <div class="pricing-card featured">
-        <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">★ BEST VALUE</span></div>
-        <div class="plan-price"><span class="currency">$</span>49</div>
-        <div class="plan-sub">60,000 credits · $0.00082/credit</div>
-        <ul class="plan-features">
-          <li>60,000 credits</li>
-          <li>All 45 tools</li>
-          <li>MCP server access</li>
-          <li>Credits never expire</li>
-          <li>Stripe or USDC</li>
-        </ul>
-        <button class="plan-cta plan-cta-primary" data-pack="pro">$ buy-pro</button>
-      </div>
-      <div class="pricing-card">
-        <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
-        <div class="plan-price"><span class="currency">$</span>199</div>
-        <div class="plan-sub">250,000 credits · $0.00080/credit</div>
-        <ul class="plan-features">
-          <li>250,000 credits</li>
-          <li>All 45 tools</li>
-          <li>MCP server access</li>
-          <li>Priority support</li>
-          <li>Stripe or USDC</li>
-        </ul>
-        <button class="plan-cta plan-cta-ghost" data-pack="business">$ buy-business</button>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+          <div class="plan-price"><span class="currency">$</span>9</div>
+          <div class="plan-sub">10,000 credits &middot; never expire</div>
+          <ul class="plan-features">
+            <li>10,000 credits</li>
+            <li>All 45 tools</li>
+            <li>API key included</li>
+            <li>Credits never expire</li>
+            <li>Stripe or USDC</li>
+          </ul>
+          <button class="plan-cta plan-cta-ghost" data-pack="starter">$ buy-starter</button>
+        </div>
+        <div class="pricing-card featured">
+          <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; BEST VALUE</span></div>
+          <div class="plan-price"><span class="currency">$</span>49</div>
+          <div class="plan-sub">60,000 credits &middot; never expire</div>
+          <ul class="plan-features">
+            <li>60,000 credits</li>
+            <li>All 45 tools</li>
+            <li>MCP server access</li>
+            <li>Credits never expire</li>
+            <li>Stripe or USDC</li>
+          </ul>
+          <button class="plan-cta plan-cta-primary" data-pack="pro">$ buy-pro</button>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
+          <div class="plan-price"><span class="currency">$</span>199</div>
+          <div class="plan-sub">250,000 credits &middot; never expire</div>
+          <ul class="plan-features">
+            <li>250,000 credits</li>
+            <li>All 45 tools</li>
+            <li>MCP server access</li>
+            <li>Priority support</li>
+            <li>Stripe or USDC</li>
+          </ul>
+          <button class="plan-cta plan-cta-ghost" data-pack="business">$ buy-business</button>
+        </div>
       </div>
     </div>
+
+    <!-- Monthly subscription -->
+    <div id="pricing-monthly" style="display:none">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.25);border-radius:8px;padding:10px 18px;margin-bottom:28px;font-family:var(--mono);font-size:12px;color:#22d3ee;">
+        <span>&#8635;</span>
+        <span><strong>Auto-refills every month.</strong> Set it and forget it. Cancel anytime.</span>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+          <div class="plan-price"><span class="currency">$</span>9<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">600 credits/month &middot; auto-renews</div>
+          <ul class="plan-features">
+            <li>600 credits every month</li>
+            <li>All 45 tools</li>
+            <li>API key included</li>
+            <li>Cancel anytime</li>
+            <li>Stripe billing</li>
+          </ul>
+          <button class="plan-cta plan-cta-ghost" data-sub="starter-monthly">$ subscribe-starter</button>
+        </div>
+        <div class="pricing-card featured">
+          <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; POPULAR</span></div>
+          <div class="plan-price"><span class="currency">$</span>29<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">3,000 credits/month &middot; auto-renews</div>
+          <ul class="plan-features">
+            <li>3,000 credits every month</li>
+            <li>All 45 tools</li>
+            <li>MCP server access</li>
+            <li>Cancel anytime</li>
+            <li>Stripe billing</li>
+          </ul>
+          <button class="plan-cta plan-cta-primary" data-sub="pro-monthly">$ subscribe-pro</button>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
+          <div class="plan-price"><span class="currency">$</span>89<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">12,000 credits/month &middot; auto-renews</div>
+          <ul class="plan-features">
+            <li>12,000 credits every month</li>
+            <li>All 45 tools</li>
+            <li>MCP server access</li>
+            <li>Priority support</li>
+            <li>Stripe billing</li>
+          </ul>
+          <button class="plan-cta plan-cta-ghost" data-sub="business-monthly">$ subscribe-business</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annual subscription -->
+    <div id="pricing-annual" style="display:none">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,229,176,0.08);border:1px solid rgba(0,229,176,0.25);border-radius:8px;padding:10px 18px;margin-bottom:28px;font-family:var(--mono);font-size:12px;color:#00e5b0;">
+        <span>&#10003;</span>
+        <span><strong>25% off vs monthly.</strong> Billed once per year. Cancel anytime.</span>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+          <div class="plan-price"><span class="currency">$</span>6.75<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">$81 billed annually &middot; 600 credits/month</div>
+          <ul class="plan-features">
+            <li>600 credits every month</li>
+            <li>All 45 tools</li>
+            <li>API key included</li>
+            <li>Save $27 vs monthly</li>
+            <li>Cancel anytime</li>
+          </ul>
+          <button class="plan-cta plan-cta-ghost" data-sub="starter-annual">$ subscribe-starter-annual</button>
+        </div>
+        <div class="pricing-card featured">
+          <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; BEST VALUE</span></div>
+          <div class="plan-price"><span class="currency">$</span>21.75<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">$261 billed annually &middot; 3,000 credits/month</div>
+          <ul class="plan-features">
+            <li>3,000 credits every month</li>
+            <li>All 45 tools</li>
+            <li>MCP server access</li>
+            <li>Save $87 vs monthly</li>
+            <li>Cancel anytime</li>
+          </ul>
+          <button class="plan-cta plan-cta-primary" data-sub="pro-annual">$ subscribe-pro-annual</button>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
+          <div class="plan-price"><span class="currency">$</span>66.75<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">$801 billed annually &middot; 12,000 credits/month</div>
+          <ul class="plan-features">
+            <li>12,000 credits every month</li>
+            <li>All 45 tools</li>
+            <li>MCP server access</li>
+            <li>Save $267 vs monthly</li>
+            <li>Cancel anytime</li>
+          </ul>
+          <button class="plan-cta plan-cta-ghost" data-sub="business-annual">$ subscribe-business-annual</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -1432,31 +1542,61 @@ function goToCategory(cat) {
   document.getElementById('tools').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Stripe checkout for pricing buttons
+// Pricing toggle
+function setPricingMode(mode) {
+  var modes = ['onetime', 'monthly', 'annual'];
+  modes.forEach(function(m) {
+    var panel = document.getElementById('pricing-' + m);
+    var btn = document.getElementById('toggle-' + m);
+    if (!panel || !btn) return;
+    var active = m === mode;
+    panel.style.display = active ? 'block' : 'none';
+    btn.style.background = active ? 'linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF)' : 'transparent';
+    btn.style.color = active ? '#fff' : 'rgba(255,255,255,0.5)';
+  });
+  var h = document.getElementById('pricing-heading');
+  var s = document.getElementById('pricing-sub');
+  if (mode === 'onetime' && h) { h.textContent = 'No subscriptions. No expiry. Just credits.'; if (s) s.textContent = 'Buy once, use forever. Credits never expire. Every competitor deletes your credits monthly. We don\u2019t.'; }
+  if (mode === 'monthly' && h) { h.textContent = 'Monthly credits. Auto-refill. Cancel anytime.'; if (s) s.textContent = 'Subscribe and never run out. Your credits refresh every month automatically.'; }
+  if (mode === 'annual' && h) { h.textContent = 'Annual billing. 25% off. Best deal.'; if (s) s.textContent = 'Pay once a year and save 25% vs monthly. Same auto-refill, better rate.'; }
+}
+
+// Get API key helper
+async function getApiKey() {
+  var apiKey = localStorage.getItem('arch_api_key') || '';
+  if (!apiKey) apiKey = window.prompt('Enter your Arch Tools API key (or go to archtools.dev/signup to get one):') || '';
+  if (!apiKey.trim()) { window.location.href = '/signup'; return null; }
+  return apiKey.trim();
+}
+
+// Stripe checkout for one-time packs
 async function buyPack(packName) {
-  let apiKey = localStorage.getItem('arch_api_key') || '';
-  if (!apiKey) {
-    apiKey = window.prompt('Enter your Arch Tools API key (or go to archtools.dev/signup to get one):');
-  }
-  if (!apiKey || !apiKey.trim()) {
-    window.location.href = '/signup';
-    return;
-  }
+  var apiKey = await getApiKey(); if (!apiKey) return;
   try {
-    const res = await fetch('/v1/billing/checkout', {
+    var res = await fetch('/v1/billing/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey.trim() },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
       body: JSON.stringify({ pack: packName })
     });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert('Error: ' + (data.message || 'Could not create checkout session. Check your API key.'));
-    }
-  } catch(e) {
-    alert('Something went wrong. Please try again.');
-  }
+    var data = await res.json();
+    if (data.url) { window.location.href = data.url; }
+    else { alert('Error: ' + (data.message || 'Could not create checkout session. Check your API key.')); }
+  } catch(e) { alert('Something went wrong. Please try again.'); }
+}
+
+// Stripe checkout for subscriptions
+async function buySubscription(planId) {
+  var apiKey = await getApiKey(); if (!apiKey) return;
+  try {
+    var res = await fetch('/v1/billing/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ plan: planId })
+    });
+    var data = await res.json();
+    if (data.url) { window.location.href = data.url; }
+    else { alert('Error: ' + (data.message || 'Could not create subscription session. Check your API key.')); }
+  } catch(e) { alert('Something went wrong. Please try again.'); }
 }
 
 // Event delegation: cat-filter buttons
@@ -1473,11 +1613,12 @@ const marqueeSection = document.querySelector('.marquee-section'); if (marqueeSe
   goToCategory(btn.dataset.cat);
 });
 
-// Event delegation: pricing buy buttons
+// Event delegation: one-time pack buttons
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-pack]');
-  if (!btn) return;
-  buyPack(btn.dataset.pack);
+  var btn = e.target.closest('[data-pack]');
+  if (btn) { buyPack(btn.dataset.pack); return; }
+  var sbtn = e.target.closest('[data-sub]');
+  if (sbtn) { buySubscription(sbtn.dataset.sub); }
 });
 
 // Register button
