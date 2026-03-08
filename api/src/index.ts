@@ -67,6 +67,17 @@ const authLimiter = rateLimit({
   message: { ok: false, error: "rate_limited", message: "Too many auth attempts. Try again in 15 minutes." },
 });
 
+// Registration-specific limit — prevent credit farming via bulk account creation
+// 5 new accounts per IP per hour is generous for real users, blocks bots
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many registration attempts. Try again in 1 hour." },
+});
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(morgan("combined"));
@@ -116,7 +127,9 @@ app.use("/", discoveryRouter);
 app.use("/tools", seoRouter);
 app.use("/v1/tools", seoRouter);  // Free endpoint proxies
 
-// Agent registration & usage (rate limited to prevent brute force)
+// Agent registration — tight limit to prevent credit farming
+app.use("/v1/agent/register", registerLimiter);
+// Agent usage & other agent routes — auth brute force protection
 app.use("/v1/agent", authLimiter, agentRouter);
 
 // OAuth (rate limited to prevent brute force)

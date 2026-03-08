@@ -96,6 +96,16 @@ const authLimiter = (0, express_rate_limit_1.default)({
     keyGenerator: (req) => req.ip ?? "unknown",
     message: { ok: false, error: "rate_limited", message: "Too many auth attempts. Try again in 15 minutes." },
 });
+// Registration-specific limit — prevent credit farming via bulk account creation
+// 5 new accounts per IP per hour is generous for real users, blocks bots
+const registerLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.ip ?? "unknown",
+    message: { ok: false, error: "rate_limited", message: "Too many registration attempts. Try again in 1 hour." },
+});
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use((0, cors_1.default)({ origin: config_1.config.corsOrigin, credentials: true }));
 app.use((0, morgan_1.default)("combined"));
@@ -136,7 +146,9 @@ app.use("/", discovery_1.default);
 // SEO free tool pages + no-auth API endpoints
 app.use("/tools", seo_1.default);
 app.use("/v1/tools", seo_1.default); // Free endpoint proxies
-// Agent registration & usage (rate limited to prevent brute force)
+// Agent registration — tight limit to prevent credit farming
+app.use("/v1/agent/register", registerLimiter);
+// Agent usage & other agent routes — auth brute force protection
 app.use("/v1/agent", authLimiter, agent_1.default);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauth_1.default);
