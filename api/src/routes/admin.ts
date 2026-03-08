@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { Prisma } from "@prisma/client";
 import { requireAdmin } from "../middleware/auth";
 import { reqId } from "../utils/credits";
 
@@ -105,13 +106,17 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
   const results: Array<{ name: string; status: string }> = [];
   for (const t of tools) {
     try {
-      // Use raw SQL so we bypass any Prisma schema/column mismatch issues
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "Tool" (id, name, description, category, credits, enabled)
-         VALUES (substr(md5(random()::text), 1, 25), $1, $2, $3, $4, true)
-         ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, category = EXCLUDED.category, credits = EXCLUDED.credits, enabled = true`,
-        t.name, t.description, t.category, t.credits
-      );
+      // Use tagged template raw SQL (Prisma.sql handles parameterization correctly)
+      const id = Math.random().toString(36).slice(2, 27);
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO "Tool" (id, name, description, category, credits, enabled)
+        VALUES (${id}, ${t.name}, ${t.description}, ${t.category}, ${t.credits}, true)
+        ON CONFLICT (name) DO UPDATE
+          SET description = EXCLUDED.description,
+              category    = EXCLUDED.category,
+              credits     = EXCLUDED.credits,
+              enabled     = true
+      `);
       results.push({ name: t.name, status: "ok" });
     } catch (e) {
       results.push({ name: t.name, status: `error: ${String(e).slice(0, 120)}` });

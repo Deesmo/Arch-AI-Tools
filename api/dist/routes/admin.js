@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
+const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const credits_1 = require("../utils/credits");
 const router = (0, express_1.Router)();
@@ -89,10 +90,17 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
     const results = [];
     for (const t of tools) {
         try {
-            // Use raw SQL so we bypass any Prisma schema/column mismatch issues
-            await prisma_1.prisma.$executeRawUnsafe(`INSERT INTO "Tool" (id, name, description, category, credits, enabled)
-         VALUES (substr(md5(random()::text), 1, 25), $1, $2, $3, $4, true)
-         ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, category = EXCLUDED.category, credits = EXCLUDED.credits, enabled = true`, t.name, t.description, t.category, t.credits);
+            // Use tagged template raw SQL (Prisma.sql handles parameterization correctly)
+            const id = Math.random().toString(36).slice(2, 27);
+            await prisma_1.prisma.$executeRaw(client_1.Prisma.sql `
+        INSERT INTO "Tool" (id, name, description, category, credits, enabled)
+        VALUES (${id}, ${t.name}, ${t.description}, ${t.category}, ${t.credits}, true)
+        ON CONFLICT (name) DO UPDATE
+          SET description = EXCLUDED.description,
+              category    = EXCLUDED.category,
+              credits     = EXCLUDED.credits,
+              enabled     = true
+      `);
             results.push({ name: t.name, status: "ok" });
         }
         catch (e) {
