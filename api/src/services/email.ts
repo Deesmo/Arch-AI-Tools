@@ -180,7 +180,15 @@ export async function sendPurchaseConfirmation(to: string, credits: number, labe
   await sendEmail(to, subject, html);
 }
 
-// ─── 5. Monthly Refresh ───
+// ─── 5. Admin Alert (new payment / new signup) ───
+export async function sendAdminAlert(subject: string, body: string): Promise<void> {
+  const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
+  if (!adminEmail) return; // silently skip if not configured
+  const html = layout(subject, `<p style="font-family:monospace;font-size:14px;line-height:1.6;">${body.replace(/\n/g, "<br>")}</p>`);
+  await sendEmail(adminEmail, subject, html);
+}
+
+// ─── 6. Monthly Refresh ───
 export async function sendMonthlyRefreshEmail(to: string, credits: number, newBalance: number): Promise<void> {
   const month = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
   const subject = `🔄 Your ${credits} free Arch Tools credits are refreshed for ${month}`;

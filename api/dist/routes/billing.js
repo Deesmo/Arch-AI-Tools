@@ -228,7 +228,10 @@ router.post("/stripe", async (req, res) => {
                     const agentRecord = await prisma_1.prisma.agent.findUnique({ where: { id: agentId }, select: { email: true, credits: true } });
                     if (agentRecord?.email) {
                         const pack = CREDIT_PACKS.find(p => p.credits === credits);
+                        const amountUsd = ((session.amount_total ?? 0) / 100).toFixed(2);
                         (0, email_1.sendPurchaseConfirmation)(agentRecord.email, credits, pack?.label ?? "Credit Pack", agentRecord.credits).catch(() => { });
+                        // Admin notification
+                        (0, email_1.sendAdminAlert)(`💰 New Arch Tools sale — $${amountUsd}`, `New one-time purchase!\n\nCustomer: ${agentRecord.email}\nPack: ${pack?.label ?? "Credit Pack"}\nCredits: ${credits.toLocaleString()}\nAmount: $${amountUsd}\nStripe session: ${stripeId}`).catch(() => { });
                     }
                 }
                 catch { /* non-fatal */ }
@@ -247,6 +250,12 @@ router.post("/stripe", async (req, res) => {
                     prisma_1.prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId } }),
                 ]);
                 console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
+                try {
+                    const agentRecord2 = await prisma_1.prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } });
+                    const amountUsd2 = ((session.amount_total ?? 0) / 100).toFixed(2);
+                    (0, email_1.sendAdminAlert)(`🔁 New Arch Tools subscription — $${amountUsd2}/mo`, `New subscription started!\n\nCustomer: ${agentRecord2?.email ?? "unknown"}\nPlan: ${planLabel}\nCredits/month: ${creditsPerMonth.toLocaleString()}\nAmount: $${amountUsd2}\nStripe session: ${stripeId}`).catch(() => { });
+                }
+                catch { /* non-fatal */ }
             }
         }
         catch (e) {
@@ -286,6 +295,9 @@ router.post("/stripe", async (req, res) => {
                 prisma_1.prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth } } }),
             ]);
             console.log(`[billing] Renewal: +${creditsPerMonth} credits to agent ${agentId}`);
+            const agentRenewal = await prisma_1.prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } }).catch(() => null);
+            const renewalAmount = ((invoice.amount_paid ?? 0) / 100).toFixed(2);
+            (0, email_1.sendAdminAlert)(`🔄 Arch Tools subscription renewal — $${renewalAmount}`, `Subscription renewed!\n\nCustomer: ${agentRenewal?.email ?? "unknown"}\nCredits added: ${creditsPerMonth.toLocaleString()}\nAmount: $${renewalAmount}\nSubscription: ${subscriptionId}`).catch(() => { });
         }
         catch (e) {
             console.error("Subscription renewal error:", e);

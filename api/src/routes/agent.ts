@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { reqId, safeErr } from "../utils/credits";
-import { sendWelcomeEmail } from "../services/email";
+import { sendWelcomeEmail, sendAdminAlert } from "../services/email";
 import crypto from "crypto";
 
 const router = Router();
@@ -70,6 +70,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Send welcome email (non-blocking — don't delay the response)
     if (email) {
       sendWelcomeEmail(email, agent.id, apiKey, freeCredits).catch(() => {});
+      // Admin new signup alert
+      sendAdminAlert(
+        `👤 New Arch Tools signup — ${email}`,
+        `New user registered!\n\nEmail: ${email}\nName: ${name ?? "(not provided)"}\nStarting credits: ${freeCredits}\nAgent ID: ${agent.id}`
+      ).catch(() => {});
     }
   } catch (e) {
     console.error("Register error:", e);

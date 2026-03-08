@@ -5,6 +5,7 @@ exports.sendVerificationEmail = sendVerificationEmail;
 exports.sendWelcomeEmail = sendWelcomeEmail;
 exports.sendLowCreditAlert = sendLowCreditAlert;
 exports.sendPurchaseConfirmation = sendPurchaseConfirmation;
+exports.sendAdminAlert = sendAdminAlert;
 exports.sendMonthlyRefreshEmail = sendMonthlyRefreshEmail;
 const logger_1 = require("../lib/logger");
 /**
@@ -177,7 +178,15 @@ async function sendPurchaseConfirmation(to, credits, label, newBalance) {
   `);
     await sendEmail(to, subject, html);
 }
-// ─── 5. Monthly Refresh ───
+// ─── 5. Admin Alert (new payment / new signup) ───
+async function sendAdminAlert(subject, body) {
+    const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
+    if (!adminEmail)
+        return; // silently skip if not configured
+    const html = layout(subject, `<p style="font-family:monospace;font-size:14px;line-height:1.6;">${body.replace(/\n/g, "<br>")}</p>`);
+    await sendEmail(adminEmail, subject, html);
+}
+// ─── 6. Monthly Refresh ───
 async function sendMonthlyRefreshEmail(to, credits, newBalance) {
     const month = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
     const subject = `🔄 Your ${credits} free Arch Tools credits are refreshed for ${month}`;

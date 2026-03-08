@@ -69,6 +69,8 @@ router.post("/register", async (req, res) => {
         // Send welcome email (non-blocking — don't delay the response)
         if (email) {
             (0, email_1.sendWelcomeEmail)(email, agent.id, apiKey, freeCredits).catch(() => { });
+            // Admin new signup alert
+            (0, email_1.sendAdminAlert)(`👤 New Arch Tools signup — ${email}`, `New user registered!\n\nEmail: ${email}\nName: ${name ?? "(not provided)"}\nStarting credits: ${freeCredits}\nAgent ID: ${agent.id}`).catch(() => { });
         }
     }
     catch (e) {
