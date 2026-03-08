@@ -252,9 +252,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           al.innerHTML = '<p class="activity-empty">No API calls yet. <a href="/docs" style="color:var(--accent)">Try a tool \u2192</a></p>';
         } else {
           al.innerHTML = act.slice(0, 10).map(function(a) {
-            var d = a.created_at ? new Date(a.created_at).toLocaleString() : "";
-            var cr = a.credits_used ? '<span class="activity-credits">-' + a.credits_used + ' cr</span>' : '';
-            return '<div class="activity-row"><span class="activity-tool">' + (a.tool || 'api call') + '</span><span>' + cr + ' <span class="activity-time">' + d + '</span></span></div>';
+            var ts = a.createdAt || a.created_at || "";
+            var d = ts ? new Date(ts).toLocaleTimeString() : "";
+            var credits = a.creditsUsed || a.credits_used || 0;
+            var cr = credits ? '<span class="activity-credits">-' + credits + ' cr</span>' : '';
+            var toolName = a.toolName || a.tool || 'api call';
+            return '<div class="activity-row"><span class="activity-tool">' + toolName + '</span><span>' + cr + ' <span class="activity-time">' + d + '</span></span></div>';
           }).join("");
         }
 
