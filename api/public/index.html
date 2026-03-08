@@ -252,26 +252,16 @@
     .footer-links a:hover{color:var(--text);}
 
     /* ── V7 SPINNING CONIC BORDER ON CARD HOVER ── */
-    @property --ba  { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-    @property --sba { syntax: '<angle>'; initial-value: 0deg; inherits: true;  }
+    /* @property --ba removed: iOS Safari crash */
+    /* @property --sba removed: iOS Safari crash */
 
     .tool-card { isolation: isolate; }
 
-    .tool-card::before {
-      content: ''; position: absolute; inset: 0;
-      border: 1px solid transparent;
-      border-radius: 16px;
-      background: conic-gradient(from var(--ba), #FF9010, #FF2896, #8844FF, #1860FF, #FF9010) border-box;
-      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      opacity: 0; transition: opacity 0.35s;
-      pointer-events: none; z-index: 2;
-    }
+    /* tool-card::before conic removed */
 
-    .tool-card:hover::before { opacity: 1; animation: spin-border 2.8s linear infinite; }
+    /* tool-card hover spin removed */
 
-    @keyframes spin-border { to { --ba: 360deg; } }
+    /* spin-border keyframes removed */ }
     .tool-card:hover {  }
 
 
