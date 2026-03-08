@@ -4,6 +4,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
@@ -104,7 +105,20 @@ async function main() {
                 }
             });
         });
-        app.get("/health", (_req, res) => res.json({ ok: true, service: "arch-tools-mcp", transport: "sse", sessions: transports.size }));
+        // Streamable HTTP transport — used by Smithery and modern MCP clients (POST-based)
+        app.all("/mcp", async (req, res) => {
+            try {
+                const streamTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+                const freshServer = await createServer();
+                await freshServer.connect(streamTransport);
+                await streamTransport.handleRequest(req, res, req.body);
+            }
+            catch (err) {
+                if (!res.headersSent)
+                    res.status(500).json({ error: "Internal server error" });
+            }
+        });
+        app.get("/health", (_req, res) => res.json({ ok: true, service: "arch-tools-mcp", transport: "sse+streamable", sessions: transports.size }));
         app.listen(ssePort, () => {
             console.log(`MCP SSE server running on port ${ssePort}`);
         });

@@ -128,8 +128,20 @@ async function main() {
       });
     });
 
+    // Streamable HTTP transport — used by Smithery and modern MCP clients (POST-based)
+    app.all("/mcp", async (req, res) => {
+      try {
+        const streamTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+        const freshServer = await createServer();
+        await freshServer.connect(streamTransport);
+        await streamTransport.handleRequest(req, res, req.body);
+      } catch (err) {
+        if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
     app.get("/health", (_req, res) =>
-      res.json({ ok: true, service: "arch-tools-mcp", transport: "sse", sessions: transports.size })
+      res.json({ ok: true, service: "arch-tools-mcp", transport: "sse+streamable", sessions: transports.size })
     );
 
     app.listen(ssePort, () => {
