@@ -46,8 +46,9 @@ const uuid_1 = require("uuid");
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const axios_1 = __importDefault(require("axios"));
 const router = (0, express_1.Router)();
-const anthropic = process.env.ANTHROPIC_API_KEY
-    ? new sdk_1.default({ apiKey: process.env.ANTHROPIC_API_KEY })
+const _anthropicKey = process.env.ANTHROPIC_API_KEY;
+const anthropic = (_anthropicKey && !_anthropicKey.startsWith("ENTER"))
+    ? new sdk_1.default({ apiKey: _anthropicKey })
     : null;
 // ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
 const requestCounts = new Map();
@@ -476,7 +477,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { query } = req.body;
@@ -830,7 +831,7 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { text } = req.body;
@@ -861,7 +862,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req, res) => {
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { text, style = "paragraph" } = req.body;
@@ -899,7 +900,7 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { text } = req.body;
@@ -931,7 +932,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { description, examples } = req.body;
@@ -962,7 +963,7 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req, res) => 
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { text, redact = false } = req.body;
@@ -1028,8 +1029,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         // ── Google Gemini ──
         if (GEMINI_MODELS.includes(model)) {
             const googleKey = process.env.GOOGLE_API_KEY;
-            if (!googleKey) {
-                res.status(503).json({ ok: false, error: "not_configured", message: "GOOGLE_API_KEY not set", request_id: (0, credits_1.reqId)() });
+            if (!googleKey || googleKey.startsWith("ENTER")) {
+                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires a Google API key that has not been configured.", request_id: (0, credits_1.reqId)() });
                 return;
             }
             const fullPrompt = system ? `${system}\n\n${prompt}` : prompt;
@@ -1046,8 +1047,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         // ── xAI Grok ──
         if (GROK_MODELS.includes(model)) {
             const xaiKey = process.env.XAI_API_KEY;
-            if (!xaiKey) {
-                res.status(503).json({ ok: false, error: "not_configured", message: "XAI_API_KEY not set", request_id: (0, credits_1.reqId)() });
+            if (!xaiKey || xaiKey.startsWith("ENTER")) {
+                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an xAI API key that has not been configured.", request_id: (0, credits_1.reqId)() });
                 return;
             }
             const resp = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -1063,7 +1064,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         // ── Claude (default — known Claude models OR unknown model name falls here) ──
         if (CLAUDE_MODELS.includes(model) || true) { // true = default fallthrough to Claude
             if (!anthropic) {
-                res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
                 return;
             }
             const selectedModel = CLAUDE_MODELS.includes(model) ? model : "claude-sonnet-4-6";
@@ -1088,7 +1089,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { image_url, image_base64, media_type = "image/jpeg" } = req.body;
@@ -1151,7 +1152,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { pdf_url, pdf_base64 } = req.body;
@@ -1453,7 +1454,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, 
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { prompt, style = "svg", width = 400, height = 300 } = req.body;
@@ -1536,7 +1537,7 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req, 
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "ANTHROPIC_API_KEY not set", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
         return;
     }
     const { goal, context, steps } = req.body;
