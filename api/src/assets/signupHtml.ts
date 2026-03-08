@@ -5,126 +5,140 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arch Tools — Get your API key</title>
   <meta name="description" content="Create your Arch Tools account. Get your API key instantly — no email verification required. 100 free credits included." />
+  <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
+  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0b0f19;
-      --card: rgba(255,255,255,0.06);
-      --border: rgba(255,255,255,0.12);
+      --bg: #07061A;
+      --card: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.10);
       --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.70);
+      --muted: rgba(255,255,255,0.55);
       --accent: #22d3ee;
-      --accent2: #4f46e5;
-      --shadow: 0 18px 60px rgba(0,0,0,0.55);
+      --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
     }
-    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: radial-gradient(1200px 600px at 30% 15%, rgba(79,70,229,0.22), transparent 60%),
-                  radial-gradient(900px 500px at 80% 30%, rgba(34,211,238,0.18), transparent 60%),
+      font-family: Syne, system-ui, sans-serif;
+      background: radial-gradient(900px 500px at 20% 10%, rgba(85,34,255,0.18), transparent 65%),
+                  radial-gradient(700px 400px at 80% 80%, rgba(255,24,136,0.12), transparent 65%),
                   var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 28px 16px;
     }
-    .wrap { width: 100%; max-width: 520px; }
-    .brand {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 18px;
+    /* ── NAV ── */
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      background: rgba(7,6,26,0.85);
+      position: sticky; top: 0; z-index: 100;
     }
-    .mark {
-      width: 38px; height: 38px; border-radius: 10px;
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid rgba(255,255,255,0.12);
       display: grid; place-items: center;
-      background: linear-gradient(135deg, rgba(79,70,229,0.95), rgba(34,211,238,0.95));
-      font-weight: 800;
     }
-    .name { font-weight: 700; letter-spacing: -0.02em; }
+    .at-logo-name { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-cta {
+      background: var(--grad); color: #fff !important; font-weight: 700;
+      padding: 7px 14px; border-radius: 8px; font-size: 12px !important;
+    }
+    /* ── PAGE ── */
+    .page {
+      display: flex; align-items: center; justify-content: center;
+      min-height: calc(100vh - 60px);
+      padding: 40px 16px;
+    }
+    .wrap { width: 100%; max-width: 500px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 22px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 28px;
+      backdrop-filter: blur(12px);
     }
-    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.03em; }
-    p { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
-    .row { display: flex; gap: 10px; }
-    input {
-      flex: 1;
-      height: 44px;
-      border-radius: 12px;
+    .card-title { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .card-sub { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 22px; }
+    .input-row { display: flex; gap: 10px; }
+    input[type="email"] {
+      flex: 1; height: 46px; border-radius: 12px;
       border: 1px solid var(--border);
-      background: rgba(0,0,0,0.25);
-      color: var(--text);
-      padding: 0 14px;
-      outline: none;
-      font-size: 14px;
+      background: rgba(0,0,0,0.3); color: var(--text);
+      padding: 0 14px; font-size: 14px; font-family: inherit; outline: none;
     }
-    input:focus { border-color: rgba(34,211,238,0.55); box-shadow: 0 0 0 4px rgba(34,211,238,0.10); }
-    button {
-      height: 44px;
-      border-radius: 12px;
-      border: 0;
-      padding: 0 14px;
-      font-weight: 700;
-      cursor: pointer;
-      color: #071018;
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      transition: transform 0.08s ease;
-      white-space: nowrap;
+    input[type="email"]:focus { border-color: rgba(34,211,238,0.5); box-shadow: 0 0 0 3px rgba(34,211,238,0.08); }
+    .btn-primary {
+      height: 46px; padding: 0 20px; border-radius: 12px; border: 0;
+      background: var(--grad); color: #fff; font-weight: 700; font-size: 14px;
+      font-family: inherit; cursor: pointer; white-space: nowrap;
+      transition: opacity 0.15s;
     }
-    button:active { transform: translateY(1px); }
-    .fine {
-      margin-top: 14px;
-      font-size: 12px;
-      color: rgba(255,255,255,0.62);
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status { margin-top: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); display: none; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    .legal { margin-top: 14px; font-size: 12px; color: var(--muted); }
+    .legal a { color: rgba(255,255,255,0.65); text-decoration: none; }
+    .legal a:hover { text-decoration: underline; }
+    .copy-btn-full {
+      width: 100%; height: 42px; border-radius: 10px; border: 0;
+      background: var(--grad); color: #fff; font-weight: 700; font-size: 14px;
+      font-family: inherit; cursor: pointer; margin-bottom: 10px;
     }
-    .fine a { color: rgba(255,255,255,0.82); text-decoration: none; }
-    .fine a:hover { text-decoration: underline; }
-    .status {
-      margin-top: 14px;
-      padding: 12px 12px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: rgba(0,0,0,0.18);
-      color: var(--muted);
-      display: none;
-    }
-    .status strong { color: var(--text); }
-    .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="brand">
-      <div class="mark">A</div>
-      <div class="name">Arch Tools</div>
-    </div>
-
-    <div class="card">
-      <h1>Get your API key</h1>
-      <p>Enter your email to create an account. Your API key is generated instantly — <strong>copy and save it</strong>, it won't be shown again. New accounts receive <strong>100 free credits</strong> to get started.</p>
-
-      <div class="row">
-        <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
-        <button id="btn">Get API Key</button>
+  <nav class="at-nav">
+    <a class="at-nav-logo" href="/">
+      <div class="at-logo-mark">
+        <svg width="18" height="18" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="ng" x1="90" y1="20" x2="90" y2="160" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#FFB030"/>
+              <stop offset="42%" stop-color="#FF1888"/>
+              <stop offset="100%" stop-color="#5522FF"/>
+            </linearGradient>
+          </defs>
+          <path d="M90 22 L154 150 H128 L90 78 L52 150 H26 Z" fill="url(#ng)"/>
+          <rect x="62" y="118" width="56" height="20" rx="4" fill="url(#ng)" opacity="0.6"/>
+        </svg>
       </div>
-
-      <div id="status" class="status"></div>
-
-      <div class="fine">
-        By continuing you agree to our <a href="/legal/terms">Terms</a> and <a href="/legal/privacy">Privacy Policy</a>.
-      </div>
+      <span class="at-logo-name">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/docs">Docs</a>
+      <a href="/signup" class="at-nav-cta">Get API Key →</a>
     </div>
+  </nav>
 
-    <div class="fine" style="margin-top:14px; text-align:center;">
-      <a href="/">← Back to home</a> · <a href="/docs">Docs</a>
+  <div class="page">
+    <div class="wrap">
+      <div class="card">
+        <div class="card-title">Get your API key</div>
+        <p class="card-sub">Enter your email — your key is generated instantly. No email verification. No credit card. 100 free credits included, refreshed monthly.</p>
+
+        <div class="input-row">
+          <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
+          <button id="btn" class="btn-primary">Get API Key</button>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="legal">
+          By continuing you agree to our <a href="/legal/terms">Terms</a> and <a href="/legal/privacy">Privacy Policy</a>.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -132,33 +146,18 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     const statusEl = document.getElementById('status');
     const btn = document.getElementById('btn');
 
-    // If redirected from homepage registration with key in URL, show success immediately
     (function() {
       const params = new URLSearchParams(window.location.search);
       const preKey = params.get('key');
       const preCredits = parseInt(params.get('credits') || '100', 10);
       if (preKey && preKey.startsWith('arch_')) {
-        showStatus(
-          '<div style="margin-bottom:10px;font-size:16px;font-weight:700;color:#00e5b0">✅ Account created!</div>' +
-          '<div style="margin-bottom:6px;font-size:12px;color:#8b8ba6">Your API key — save it now, it won&#39;t be shown again:</div>' +
-          '<div id="api-key-box" class="mono" style="background:#0a0a14;border:1px solid rgba(0,229,176,0.4);padding:10px 12px;border-radius:8px;cursor:text;word-break:break-all;font-size:13px;margin-bottom:10px;user-select:all">' + preKey + '</div>' +
-          '<button id="copy-btn" style="width:100%;height:40px;border-radius:10px;border:0;background:linear-gradient(135deg,#4f46e5,#22d3ee);color:#071018;font-weight:700;cursor:pointer;margin-bottom:10px">Copy API Key</button>' +
-          '<div style="font-size:12px;color:#8b8ba6">You have <strong style="color:#f0f0f6">' + preCredits + ' free credits</strong>. This key won&#39;t be shown again — save it somewhere safe.</div>' +
-          '<div style="margin-top:10px"><a href="/dashboard?key=' + encodeURIComponent(preKey) + '" style="color:#00e5b0;font-weight:600">→ Open Dashboard</a></div>'
-        );
-        const copyBtn = document.getElementById('copy-btn');
-        if (copyBtn) {
-          copyBtn.addEventListener('click', function() {
-            navigator.clipboard.writeText(preKey).then(function() {
-              copyBtn.textContent = '✅ Copied!';
-              setTimeout(function() { copyBtn.textContent = 'Copy API Key'; }, 2000);
-            });
-          });
-        }
+        showSuccess(preKey, preCredits);
         btn.style.display = 'none';
         document.getElementById('email').style.display = 'none';
-        // Clean URL so key isn't visible in address bar
         history.replaceState({}, '', '/signup');
+        if (preKey) {
+          localStorage.setItem('arch_api_key', preKey);
+        }
         return;
       }
     })();
@@ -170,52 +169,52 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
       statusEl.style.display = 'block';
     }
 
+    function showSuccess(apiKey, credits) {
+      if (apiKey) localStorage.setItem('arch_api_key', apiKey);
+      showStatus(
+        '<div style="margin-bottom:12px;font-size:17px;font-weight:800;color:#00e5b0">&#9989; Account created!</div>' +
+        '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
+        '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
+        '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' free credits</strong>. Refreshed monthly. No subscription required.</div>' +
+        '<a href="/dashboard" style="display:block;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#22d3ee;font-weight:700;text-decoration:none;font-size:14px">&#8594; Open Dashboard</a>'
+      );
+      const copyBtn = document.getElementById('copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          navigator.clipboard.writeText(apiKey).then(function() {
+            copyBtn.textContent = '&#10003; Copied!';
+            setTimeout(function() { copyBtn.textContent = 'Copy API Key'; }, 2000);
+          });
+        });
+      }
+    }
+
     async function sendLink() {
       const email = (document.getElementById('email').value || '').trim();
-      if (!email) {
-        showStatus('<strong>Enter an email</strong> to continue.');
-        return;
-      }
+      if (!email) { showStatus('<span style="color:#f87171">Enter your email to continue.</span>'); return; }
       btn.disabled = true;
-      btn.textContent = 'Creating account…';
-
+      btn.textContent = 'Creating account...';
       try {
         const res = await fetch('/v1/agent/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, plan: 'free' })
         });
-        const data = await res.json().catch(() => ({}));
+        let data;
+        try { data = await res.json(); } catch(_) { data = {}; }
         if (res.ok && data.api_key) {
-          const apiKey = data.api_key;
-          const credits = data.credits || 100;
-          showStatus(
-            '<div style="margin-bottom:10px;font-size:16px;font-weight:700;color:#00e5b0">✅ Account created!</div>' +
-            '<div style="margin-bottom:6px;font-size:12px;color:#8b8ba6">Your API key — save it now, it won&#39;t be shown again:</div>' +
-            '<div id="api-key-box" class="mono" style="background:#0a0a14;border:1px solid rgba(0,229,176,0.4);padding:10px 12px;border-radius:8px;cursor:text;word-break:break-all;font-size:13px;margin-bottom:10px;user-select:all">' + apiKey + '</div>' +
-            '<button id="copy-btn" style="width:100%;height:40px;border-radius:10px;border:0;background:linear-gradient(135deg,#4f46e5,#22d3ee);color:#071018;font-weight:700;cursor:pointer;margin-bottom:10px">Copy API Key</button>' +
-            '<div style="font-size:12px;color:#8b8ba6">You have <strong style="color:#f0f0f6">' + credits + ' free credits</strong>. This key won&#39;t be shown again — save it somewhere safe.</div>' +
-            '<div style="margin-top:10px"><a href="/dashboard" style="color:#00e5b0;font-weight:600">→ Open Dashboard</a></div>'
-          );
-          const copyBtn = document.getElementById('copy-btn');
-          if (copyBtn) {
-            copyBtn.addEventListener('click', function() {
-              navigator.clipboard.writeText(apiKey).then(function() {
-                copyBtn.textContent = '✅ Copied!';
-                setTimeout(function() { copyBtn.textContent = 'Copy API Key'; }, 2000);
-              });
-            });
-          }
+          showSuccess(data.api_key, data.credits || 100);
           btn.style.display = 'none';
           document.getElementById('email').style.display = 'none';
         } else {
           const msg = data.error === 'email_exists'
-            ? 'An account with this email already exists. <a href="/dashboard" style="color:#00e5b0">→ Go to Dashboard</a>'
+            ? 'An account with this email already exists. <a href="/dashboard" style="color:#22d3ee">&#8594; Open Dashboard</a>'
             : (data.message || 'Something went wrong. Please try again.');
-          showStatus('<div style="color:#f87171;font-weight:600">⚠️ ' + msg + '</div>');
+          showStatus('<span style="color:#f87171">&#9888;&#65039; ' + msg + '</span>');
         }
-      } catch (e) {
-        showStatus('<strong>Something went wrong.</strong> Please try again.');
+      } catch(_) {
+        showStatus('<span style="color:#f87171">Connection error. Please try again.</span>');
       } finally {
         btn.disabled = false;
         btn.textContent = 'Get API Key';
