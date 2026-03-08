@@ -6,7 +6,7 @@ export const LANDING_HTML = `<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arch Tools — Production-Ready API Tools for AI Agents & Developers</title>
-  <meta name="description" content="8 production-grade API tools. Dual payment rails: Stripe for developers, USDC for AI agents. MCP-native. Start free." />
+  <meta name="description" content="45 AI-powered API tools for developers and AI agents. Scrape, generate, convert, detect, and more. One API key. 100 free credits/month. No credit card required." />
   <meta property="og:title" content="Arch Tools — API Tools for AI Agents" />
   <meta property="og:description" content="Production-ready utility tools for developers and AI agents. Validate, hash, scrape, convert, and generate — all with a single API key." />
   <meta property="og:image" content="https://archtools.dev/og-image.png" />
@@ -832,12 +832,13 @@ export const LANDING_HTML = `<!doctype html>
   <div class="hero-inner">
     <div class="hero-badge">
       <div class="hero-badge-dot"></div>
-      Now live · 8 production tools · Dual payment rails
+      Now live · 45 production tools · 100 free credits/month · No credit card required
     </div>
-    <h1>API Tools Built for<br><span class="grad">AI Agents & Devs</span></h1>
+    <h1>45 Tools Your AI Agent<br><span class="grad">Can Call Right Now</span></h1>
     <p class="hero-sub">
-      8 production-ready utilities — validate, hash, scrape, convert, transform, and generate —
-      accessible via REST, MCP, or SDK. Pay with Stripe or USDC.
+      One API key. 45 ready-to-use tools — scrape websites, generate text with Claude or GPT-4,
+      detect PII, convert files, look up crypto prices, extract PDFs, and more.
+      Agents pay autonomously in USDC. Developers pay with Stripe. No subscriptions.
     </p>
     <div class="hero-actions">
       <a href="/signup" class="btn-primary">Get Started Free →</a>
@@ -854,8 +855,7 @@ export const LANDING_HTML = `<!doctype html>
       <div class="code-block">
         <button class="copy-btn" id="copy-btn">copy</button>
         <div id="tab-curl" class="code-tab active">
-<pre><span class="c-gray"># 1. Register — get your API key instantly</span>
-<span class="c-gray"># 1. Register — get your API key instantly (no email verification required)</span>
+<pre><span class="c-gray"># 1. Register — instant API key, no email verification required</span>
 <span class="c-gray"># Open:</span> <span class="c-str">https://archtools.dev/signup</span>
 
 <span class="c-gray"># 2. Call any tool with your key</span>
@@ -891,6 +891,36 @@ result = client.tools.invoke(
 <span class="c-blue">print</span>(result[<span class="c-str">"result"</span>][<span class="c-str">"hash"</span>])</pre>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT IS ARCH TOOLS -->
+<div class="divider"></div>
+<section class="section">
+  <div class="section-label">What is Arch Tools?</div>
+  <h2 class="section-title">Think of it as a Swiss Army knife for AI agents</h2>
+  <p class="section-sub" style="max-width:680px">
+    When you build an AI agent — in Claude, ChatGPT, Cursor, or your own code — it often needs to <em>do things</em>:
+    scrape a website, read a PDF, detect bad data, generate text, hash a value, look up a crypto price.
+    Instead of building each of those yourself, you give your agent one Arch Tools API key and it can call any of 45 tools instantly.
+    One key. 45 tools. Works with REST, MCP, or SDK.
+  </p>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px">
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 20px;flex:1;min-width:200px">
+      <div style="font-size:22px;margin-bottom:6px">🤖</div>
+      <div style="font-weight:700;margin-bottom:4px">For AI Agents</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6)">Give your Claude, GPT, or custom agent an Arch Tools key. It calls tools autonomously — and pays in USDC via x402, no human approval needed.</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 20px;flex:1;min-width:200px">
+      <div style="font-size:22px;margin-bottom:6px">👨‍💻</div>
+      <div style="font-weight:700;margin-bottom:4px">For Developers</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6)">Stop reinventing utilities. Need to scrape, hash, convert, or detect PII? One API call. Charged per use. No monthly fees, no cold starts.</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 20px;flex:1;min-width:200px">
+      <div style="font-size:22px;margin-bottom:6px">🔌</div>
+      <div style="font-weight:700;margin-bottom:4px">For MCP Clients</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6)">Claude Desktop, Cursor, Windsurf — connect once via MCP and all 45 tools appear in your toolbox automatically. No extra setup.</div>
     </div>
   </div>
 </section>
@@ -1131,7 +1161,7 @@ result = client.tools.invoke(
     <div class="mcp-text">
       <h2 class="mcp-title">Model Context Protocol Native</h2>
       <p class="mcp-desc">
-        All 8 tools are auto-exposed via MCP. Connect Claude Desktop, any MCP-compatible agent platform, or deploy the SSE server yourself on Render.
+        All 45 tools are auto-exposed via MCP. Connect Claude Desktop, any MCP-compatible agent platform, or deploy the SSE server yourself on Render.
         Tools are dynamically discovered — no config needed.
       </p>
       <div class="mcp-links">
@@ -1167,8 +1197,9 @@ result = client.tools.invoke(
 <div class="divider"></div>
 <section class="section" id="pricing">
   <div class="section-label">Pricing</div>
-  <h2 class="section-title">Simple, credit-based pricing</h2>
-  <p class="section-sub">Credits don't expire. Buy once, use anytime. Every account gets 100 free credits monthly.</p>
+  <h2 class="section-title">100 Free Credits Every Month. No Credit Card.</h2>
+  <p class="section-sub">Every account gets 100 free credits on signup, refreshed every month — no card required, no trial expiry.
+  Need more? Buy a one-time credit pack. Credits never expire. No subscription ever.</p>
   <div class="pricing-grid">
     <div class="plan-card">
       <div class="plan-name">Starter</div>
@@ -1179,7 +1210,7 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~1,000 hash calls or 50 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 8 tools</li>
+        <li>All 45 tools</li>
         <li>60 req/min rate limit</li>
         <li>REST + MCP access</li>
         <li>100 free credits/month</li>
@@ -1197,7 +1228,7 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~10,000 hashes or 500 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 8 tools</li>
+        <li>All 45 tools</li>
         <li>240 req/min rate limit</li>
         <li>REST + MCP + SDK access</li>
         <li>API key restrictions</li>
@@ -1215,7 +1246,7 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~100k hashes or 5,000 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 8 tools</li>
+        <li>All 45 tools</li>
         <li>1,200 req/min rate limit</li>
         <li>REST + MCP + SDK access</li>
         <li>IP + origin restrictions</li>
