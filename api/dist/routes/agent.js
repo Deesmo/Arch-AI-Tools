@@ -23,8 +23,17 @@ router.post("/register", async (req, res) => {
         return;
     }
     try {
-        // Check if already registered
-        const existing = await prisma_1.prisma.agent.findUnique({ where: { email } });
+        // Check if already registered (use raw to handle corrupted records with null apiKey)
+        let existing = null;
+        try {
+            existing = await prisma_1.prisma.agent.findUnique({ where: { email } });
+        }
+        catch {
+            // Corrupted record (e.g. null apiKey) — check via raw SQL
+            const rows = await prisma_1.prisma.$queryRaw `SELECT id FROM "Agent" WHERE email=${email} LIMIT 1`;
+            if (rows.length > 0)
+                existing = rows[0];
+        }
         if (existing) {
             res.status(409).json({
                 ok: false,
