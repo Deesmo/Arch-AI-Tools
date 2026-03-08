@@ -141,8 +141,9 @@ function x402Middleware(toolName) {
         // No payment header — check if they have a valid API key with credits
         if (!paymentHeader) {
             const authHeader = req.headers.authorization;
-            if (authHeader?.startsWith("Bearer ")) {
-                // Let auth middleware handle it
+            const apiKey = req.headers["x-api-key"];
+            if (authHeader?.startsWith("Bearer ") || apiKey) {
+                // Let auth middleware handle it (API key or Bearer token)
                 next();
                 return;
             }
