@@ -51,6 +51,7 @@ export async function requireAuth(
       }
     } else {
       // Standard API key
+      // TODO: Migrate to hashed keys. See SECURITY.md for migration plan.
       agent = await prisma.agent.findUnique({ where: { apiKey } });
     }
 

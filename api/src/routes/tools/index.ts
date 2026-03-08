@@ -4,6 +4,7 @@ import { x402Middleware } from "../../middleware/x402";
 import { deductCredits, reqId, safeErr } from "../../utils/credits";
 import { getCached, setCached } from "../../lib/lru";
 import { config } from "../../config";
+import { validateUrl } from "../../lib/ssrf";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
@@ -250,6 +251,7 @@ router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (r
     let html = text ?? "";
     let fetchedUrl = url ?? "";
     if (url && !text) {
+      try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
       const resp = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "ArchTools/1.5 Metadata Extractor" } });
       html = resp.data as string;
     }
@@ -278,6 +280,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
   }
   const { url, selector } = req.body as { url?: string; selector?: string };
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
     const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5 Web Scraper (https://archtools.dev)" } });
     const cheerio = await import("cheerio");
@@ -308,6 +311,7 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req: Auth
   }
   const { url } = req.body as { url?: string };
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
     const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5" } });
     const cheerio = await import("cheerio");
@@ -395,6 +399,7 @@ router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req: AuthedRequ
   }
   const { url, limit = 20 } = req.body as { url?: string; limit?: number };
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
     const resp = await axios.get(url, { timeout: 10000, headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
     const xml2js = await import("xml2js");
@@ -425,7 +430,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req: AuthedRequ
   const { ip } = req.body as { ip?: string };
   if (!ip) { res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: reqId() }); return; }
   try {
-    const resp = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
+    const resp = await axios.get(`https://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
     const data = resp.data as Record<string, unknown>;
     if (data.status === "fail") { res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: reqId() }); return; }
     res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: reqId() });
@@ -848,18 +853,21 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       return;
     }
 
-    // ── Claude (default — known Claude models OR unknown model name falls here) ──
-    if (CLAUDE_MODELS.includes(model) || true) {  // true = default fallthrough to Claude
-      if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-      const selectedModel = CLAUDE_MODELS.includes(model) ? model : "claude-sonnet-4-6";
-      const msg = await anthropic.messages.create({ model: selectedModel, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
-      const text = msg.content.find(b => b.type === "text")?.text ?? "";
-      res.json({ ok: true, text, model: selectedModel, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
+    // Validate model
+    const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
+    if (!allModels.includes(model)) {
+      res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: reqId() });
       return;
     }
 
-    // Should never reach here (Claude block above has || true fallthrough)
-    res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'.`, request_id: reqId() });
+    // ── Claude ──
+    if (CLAUDE_MODELS.includes(model)) {
+      if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+      const msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+      const text = msg.content.find(b => b.type === "text")?.text ?? "";
+      res.json({ ok: true, text, model, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
+      return;
+    }
   } catch (e) {
     res.status(500).json({ ok: false, error: "generation_error", message: safeErr(e), request_id: reqId() });
   }
@@ -902,6 +910,7 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
   }
   const { url, action = "extract", selector, text: inputText } = req.body as { url?: string; action?: string; selector?: string; text?: string };
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
   try {
     const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
@@ -932,6 +941,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
   try {
     let base64Data = pdf_base64;
     if (pdf_url && !pdf_base64) {
+      try { await validateUrl(pdf_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
       const resp = await axios.get(pdf_url, { responseType: "arraybuffer", timeout: 15000 });
       base64Data = Buffer.from(resp.data as ArrayBuffer).toString("base64");
     }
@@ -955,8 +965,9 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
     const ok = await deductCredits(req, res, "screenshot-capture", 10);
     if (!ok) return;
   }
-  const { url, full_page = true } = req.body as { url?: string; full_page?: boolean };
+  const { url } = req.body as { url?: string };
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
     const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Screenshot" } });
     const cheerio = await import("cheerio");
@@ -966,15 +977,12 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
     const ogImage = $('meta[property="og:image"]').attr("content") || "";
     const h1 = $("h1").first().text() || "";
     const bodyText = $("body").text().replace(/\s+/g, " ").trim().slice(0, 1000);
-    // Use free screenshot service
-    const screenshotUrl = `https://api.screenshotone.com/take?url=${encodeURIComponent(url)}&full_page=${full_page}&format=png&viewport_width=1280&viewport_height=800`;
     res.json({
       ok: true,
       url,
-      screenshot_url: screenshotUrl,
       page_meta: { title, description, og_image: ogImage, h1 },
       page_text_preview: bodyText,
-      note: "screenshot_url is a best-effort link; for production use consider a dedicated screenshot service with API key",
+      note: "Full screenshot capture requires a dedicated screenshot service. This endpoint returns page metadata and OG image.",
       request_id: reqId(),
     });
   } catch (e) {
@@ -995,6 +1003,7 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
   try {
     let rawHtml = html ?? "";
     if (url && !html) {
+      try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
       const resp = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0 ArchTools" } });
       rawHtml = resp.data as string;
     }
@@ -1094,6 +1103,7 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
   };
   if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url is required", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
+  try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   const allowedMethods = ["POST", "PUT", "PATCH"];
   const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
   try {
@@ -1215,6 +1225,8 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
   }
   const { data: barcodeData, type = "code128", width = 250, height = 100 } = req.body as { data?: string; type?: string; width?: number; height?: number };
   if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: reqId() }); return; }
+  const validTypes = ["code128", "qr"];
+  if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
   try {
     // Generate Code128 SVG (simplified — bars based on char codes)
     const chars = barcodeData.slice(0, 80);
@@ -1243,7 +1255,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
   <text x="${svgWidth / 2}" y="${height - 2}" text-anchor="middle" font-family="monospace" font-size="10" fill="#000">${chars}</text>
 </svg>`;
     const base64 = Buffer.from(svg).toString("base64");
-    res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, request_id: reqId() });
+    res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, note: "SVG barcode generated. For production use verify scanning with a barcode reader. Full Code128 encoding via bwip-js recommended for high-fidelity output.", request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "barcode_error", message: safeErr(e), request_id: reqId() });
   }
