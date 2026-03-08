@@ -144,18 +144,34 @@ async function migrate() {
     try { await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "X402Payment_createdAt_idx" ON "X402Payment"("createdAt")`); } catch {}
     console.log('[migrate] X402Payment table ensured');
 
-    // Seed all missing tools (upsert — safe to run multiple times)
+    // Seed all missing tools via raw SQL (safe, idempotent)
+    const missingTools = [
+      { name: "barcode-generate",   description: "Generate Code128 barcodes as SVG",                            category: "media",   credits: 2  },
+      { name: "html-to-markdown",   description: "Convert HTML or any URL to clean Markdown",                   category: "text",    credits: 3  },
+      { name: "image-generate",     description: "Generate SVG images from text prompts via Claude",             category: "ai",      credits: 15 },
+      { name: "jsonpath-query",     description: "Run JSONPath expressions against any JSON payload",            category: "data",    credits: 1  },
+      { name: "screenshot-capture", description: "Capture page metadata and screenshot URL for any public URL", category: "web",     credits: 10 },
+      { name: "url-shorten",        description: "Shorten any URL via TinyURL",                                 category: "utility", credits: 1  },
+      { name: "webhook-send",       description: "POST a JSON payload to any webhook URL",                      category: "utility", credits: 2  },
+      { name: "workflow-agent",     description: "Multi-step autonomous AI agent pipeline",                     category: "ai",      credits: 25 },
+    ];
+    for (const t of missingTools) {
+      try {
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "Tool" (id, name, description, category, credits, enabled)
+           VALUES (gen_random_uuid()::text, $1, $2, $3, $4, true)
+           ON CONFLICT (name) DO UPDATE SET description=$2, category=$3, credits=$4, enabled=true`,
+          t.name, t.description, t.category, t.credits
+        );
+        console.log('[migrate] Tool upserted (SQL):', t.name);
+      } catch (err) {
+        console.warn('[migrate] Tool SQL skip:', t.name, err.message.slice(0, 80));
+      }
+    }
+    console.log('[migrate] Missing tools seeded');
+
+    // Seed new crypto tools (upsert — safe to run multiple times)
     const cryptoTools = [
-      // Tools with route handlers that were never seeded to DB
-      { name: "barcode-generate", description: "Generate Code128 barcodes as SVG", category: "media", credits: 2 },
-      { name: "html-to-markdown", description: "Convert HTML or any URL to clean Markdown", category: "text", credits: 3 },
-      { name: "image-generate", description: "Generate SVG images from text prompts via Claude", category: "ai", credits: 15 },
-      { name: "jsonpath-query", description: "Run JSONPath expressions against any JSON payload", category: "data", credits: 1 },
-      { name: "screenshot-capture", description: "Capture page metadata and screenshot URL for any public URL", category: "web", credits: 10 },
-      { name: "url-shorten", description: "Shorten any URL via TinyURL", category: "utility", credits: 1 },
-      { name: "webhook-send", description: "POST a JSON payload to any webhook URL", category: "utility", credits: 2 },
-      { name: "workflow-agent", description: "Multi-step autonomous AI agent pipeline", category: "ai", credits: 25 },
-      // Crypto tools
       { name: "crypto-price", description: "Real-time price, 24h change, market cap, and volume for any cryptocurrency", category: "crypto", credits: 1 },
       { name: "crypto-ohlcv", description: "OHLCV candlestick data for any crypto over 1-90 days", category: "crypto", credits: 2 },
       { name: "crypto-market-cap", description: "Top N cryptocurrencies by market cap with price, volume, and 24h change", category: "crypto", credits: 1 },
