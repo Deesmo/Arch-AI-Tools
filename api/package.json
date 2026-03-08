@@ -1,7 +1,7 @@
 {
   "name": "arch-ai-tools",
   "version": "1.6.0",
-  "description": "Arch Tools — 30 production-ready API tools for developers and AI agents",
+  "description": "Arch Tools \u2014 30 production-ready API tools for developers and AI agents",
   "private": true,
   "scripts": {
     "build": "tsc",
@@ -9,7 +9,8 @@
     "dev": "ts-node-dev --respawn --transpile-only api/src/index.ts",
     "seed": "ts-node --transpile-only api/src/seed.ts",
     "generate": "prisma generate",
-    "db:push": "prisma db push --accept-data-loss"
+    "db:push": "prisma db push --accept-data-loss",
+    "refresh-credits": "node dist/cron/refreshCredits.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
