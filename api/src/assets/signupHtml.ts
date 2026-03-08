@@ -109,7 +109,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
 
     <div class="card">
       <h1>Get your API key</h1>
-      <p>Enter your email to create an account. We'll send a secure magic link to verify your email. Verified accounts receive <strong>100 free credits per month</strong>.</p>
+      <p>Enter your email to create an account. Your API key is generated instantly — <strong>copy and save it</strong>, it won't be shown again. New accounts receive <strong>100 free credits</strong> to get started.</p>
 
       <div class="row">
         <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
@@ -157,16 +157,20 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.api_key) {
           showStatus(
-            '<strong>✅ Account created!</strong><br/>' +
-            'Your API key: <span class="mono" style="background:#111;padding:4px 8px;border-radius:4px;user-select:all">' + data.api_key + '</span><br/>' +
-            '<span style="color:#8b8ba6;font-size:13px">You have <strong>' + (data.credits || 100) + ' free credits</strong>. Save this key — it won\'t be shown again.</span><br/>' +
-            '<a href="/dashboard" style="color:#00e5b0">→ Open Dashboard</a>'
+            '<div style="margin-bottom:10px;font-size:16px;font-weight:700;color:#00e5b0">✅ Account created! Copy your API key now.</div>' +
+            '<div style="margin-bottom:6px;font-size:12px;color:#8b8ba6">Your API key — click to select all, then copy:</div>' +
+            '<div class="mono" onclick="this.select&&this.select();selectAll(this)" style="background:#0a0a14;border:1px solid rgba(0,229,176,0.4);padding:10px 12px;border-radius:8px;cursor:pointer;word-break:break-all;font-size:13px;margin-bottom:10px">' + data.api_key + '</div>' +
+            '<button onclick="navigator.clipboard.writeText(\'' + data.api_key + '\').then(()=>{this.textContent=\'✅ Copied!\';setTimeout(()=>this.textContent=\'Copy API Key\',2000)})" style="width:100%;height:40px;border-radius:10px;border:0;background:linear-gradient(135deg,#4f46e5,#22d3ee);color:#071018;font-weight:700;cursor:pointer;margin-bottom:10px">Copy API Key</button>' +
+            '<div style="font-size:12px;color:#8b8ba6">You have <strong style="color:#f0f0f6">' + (data.credits || 100) + ' free credits</strong>. This key won\'t be shown again — save it somewhere safe.</div>' +
+            '<div style="margin-top:10px"><a href="/dashboard" style="color:#00e5b0;font-weight:600">→ Open Dashboard</a></div>'
           );
+          btn.style.display = 'none';
+          document.getElementById('email').style.display = 'none';
         } else {
           const msg = data.error === 'email_exists'
-            ? 'An account with that email already exists. <a href="/dashboard" style="color:#00e5b0">Go to dashboard</a>'
+            ? 'An account with this email already exists. <a href="/dashboard" style="color:#00e5b0">→ Go to Dashboard</a>'
             : (data.message || 'Something went wrong. Please try again.');
-          showStatus('<strong>⚠️ ' + msg + '</strong>');
+          showStatus('<div style="color:#f87171;font-weight:600">⚠️ ' + msg + '</div>');
         }
       } catch (e) {
         showStatus('<strong>Something went wrong.</strong> Please try again.');
