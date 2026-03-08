@@ -343,14 +343,18 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
   try {
     // Brave Search (uses SERPER_API_KEY env var which is set to Brave key)
     if (process.env.SERPER_API_KEY) {
-      const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
-        headers: { "Accept": "application/json", "X-Subscription-Token": process.env.SERPER_API_KEY },
-      });
-      if (resp.ok) {
-        const data = await resp.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
-        const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
-        return res.json({ ok: true, query, results, count: results.length, request_id: reqId() });
-      }
+      try {
+        const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
+          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.SERPER_API_KEY },
+        });
+        if (resp.ok) {
+          const data = await resp.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
+          const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
+          if (results.length > 0) {
+            return res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: reqId() });
+          }
+        }
+      } catch (_) { /* fall through to DDG */ }
     }
     // Fallback: DuckDuckGo Instant Answer
     const resp = await axios.get("https://api.duckduckgo.com/", {
@@ -899,17 +903,24 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
   const { image_url, image_base64, media_type = "image/jpeg" } = req.body as { image_url?: string; image_base64?: string; media_type?: string };
   if (!image_url && !image_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
   try {
-    const imageContent = image_url
-      ? { type: "image" as const, source: { type: "url" as const, url: image_url } }
-      : { type: "image" as const, source: { type: "base64" as const, media_type: media_type as "image/jpeg", data: image_base64! } };
+    let imgBase64 = image_base64;
+    let imgMediaType: string = media_type;
+    if (image_url && !image_base64) {
+      try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
+      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 15000 });
+      imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
+      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0];
+    }
+    const imageContent = { type: "image" as const, source: { type: "base64" as const, media_type: imgMediaType as "image/jpeg", data: imgBase64! } };
     const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages: [{ role: "user", content: [imageContent, { type: "text", text: "Extract all text from this image. Return the text exactly as it appears, preserving formatting and structure." }] }],
     });
     const text = msg.content.find(b => b.type === "text")?.text ?? "";
     res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
+    console.error("[ocr-extract] error:", e);
     res.status(500).json({ ok: false, error: "ocr_error", message: safeErr(e), request_id: reqId() });
   }
 });
@@ -966,13 +977,14 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     }
     try {
       const msg = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
+        model: "claude-3-5-sonnet-20241022",
         max_tokens: 4096,
         messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
       });
       const text = msg.content.find(b => b.type === "text")?.text ?? "";
       res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
     } catch (anthropicErr) {
+      console.error("[extract-pdf] Anthropic error:", anthropicErr);
       res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(anthropicErr), request_id: reqId() });
     }
   } catch (e) {
