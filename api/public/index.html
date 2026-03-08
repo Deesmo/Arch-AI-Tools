@@ -1215,33 +1215,37 @@
   <div class="wrap">
     <div class="split-grid" style="direction:ltr;">
       <div class="code-block" style="order:2;">
-        <span class="t-line"><span class="code-comment">// claude_desktop_config.json</span></span>
+        <span class="t-line"><span class="code-comment">// Mac: ~/Library/Application Support/Claude/claude_desktop_config.json</span></span>
+        <span class="t-line"><span class="code-comment">// Win: %APPDATA%\Claude\claude_desktop_config.json</span></span>
         <span class="t-line">&#123;</span>
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"arch-tools-mcp"</span>],</span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123;</span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"your-key-here"</span></span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://arch-tools-mcp.onrender.com/sse"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123; <span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"arch_your_key"</span> &#125;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&#125;</span>
         <span class="t-line">&nbsp;</span>
         <span class="t-line"><span class="code-comment">// Claude now has 45 tools natively</span></span>
-        <span class="t-line"><span class="t-out">✓ arch-tools connected (45 tools available)</span></span>
+        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (45 tools available)</span></span>
       </div>
       <div style="order:1;">
         <div class="section-tag">MCP Compatible</div>
         <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
-        <p class="section-sub">Arch ships a native MCP server. Drop 6 lines into your Claude Desktop config and every tool is immediately available as a native capability — no API calls in your prompts, no glue code.</p>
+        <p class="section-sub">Arch ships a native MCP server. Drop 6 lines into your config and every tool is immediately available — Mac, Windows, and Linux. No API calls in your prompts, no glue code.</p>
         <ul class="feature-list">
           <li>45 tools exposed as native MCP functions</li>
-          <li>Works with Claude Desktop, Cursor, Windsurf, and any MCP client</li>
+          <li>Works on Mac, Windows, and Linux</li>
+          <li>Claude Desktop, Cursor, Windsurf — any MCP client</li>
           <li>Tool descriptions auto-loaded — Claude knows what each tool does</li>
           <li>Credits deducted per call, same as REST API</li>
-          <li>x402 payments work through MCP too</li>
         </ul>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;padding:4px 10px;">&#63743; macOS</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;padding:4px 10px;">&#9112; Windows</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;padding:4px 10px;">&#128039; Linux</div>
+        </div>
       </div>
     </div>
   </div>
