@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { stripe } from "../lib/stripe";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { reqId } from "../utils/credits";
+import { sendPurchaseConfirmation } from "../services/email";
 
 const router = Router();
 
@@ -109,6 +110,15 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       ]);
 
       console.log(`Credits granted: ${credits} to agent ${agentId}`);
+
+      // Send purchase confirmation email (non-blocking)
+      try {
+        const agentRecord = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true, credits: true } });
+        if (agentRecord?.email) {
+          const pack = CREDIT_PACKS.find(p => p.credits === credits);
+          sendPurchaseConfirmation(agentRecord.email, credits, pack?.label ?? "Credit Pack", agentRecord.credits).catch(() => {});
+        }
+      } catch { /* non-fatal */ }
     } catch (e) {
       console.error("Webhook processing error:", e);
     }

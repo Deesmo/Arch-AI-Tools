@@ -6,6 +6,7 @@ exports.reqId = reqId;
 exports.safeErr = safeErr;
 const prisma_1 = require("../lib/prisma");
 const fingerprint_1 = require("../lib/fingerprint");
+const email_1 = require("../services/email");
 async function deductCredits(req, res, toolName, cost) {
     const agent = req.agent;
     if (!agent) {
@@ -33,6 +34,13 @@ async function deductCredits(req, res, toolName, cost) {
     });
     // Update agent object in-place for use in handler
     agent.credits -= cost;
+    // Low credit alert (non-blocking)
+    if (agent.credits <= email_1.LOW_CREDIT_THRESHOLD && agent.credits > 0) {
+        prisma_1.prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
+            .then(a => { if (a?.email)
+            (0, email_1.sendLowCreditAlert)(a.email, agent.credits, agent.id).catch(() => { }); })
+            .catch(() => { });
+    }
     // Log the request with agent fingerprint
     try {
         const fp = (0, fingerprint_1.fingerprintCaller)(req.headers["user-agent"]);

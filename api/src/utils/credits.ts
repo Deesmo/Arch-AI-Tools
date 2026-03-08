@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { fingerprintCaller } from "../lib/fingerprint";
+import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email";
 
 export async function deductCredits(
   req: AuthedRequest,
@@ -38,6 +39,13 @@ export async function deductCredits(
 
   // Update agent object in-place for use in handler
   agent.credits -= cost;
+
+  // Low credit alert (non-blocking)
+  if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
+    prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
+      .then(a => { if (a?.email) sendLowCreditAlert(a.email, agent.credits, agent.id).catch(() => {}); })
+      .catch(() => {});
+  }
 
   // Log the request with agent fingerprint
   try {

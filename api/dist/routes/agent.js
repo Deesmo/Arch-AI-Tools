@@ -7,6 +7,7 @@ const express_1 = require("express");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
 const credits_1 = require("../utils/credits");
+const email_1 = require("../services/email");
 const crypto_1 = __importDefault(require("crypto"));
 const router = (0, express_1.Router)();
 // POST /v1/agent/register
@@ -53,6 +54,10 @@ router.post("/register", async (req, res) => {
             docs: "https://archtools.dev",
             request_id: (0, credits_1.reqId)(),
         });
+        // Send welcome email (non-blocking — don't delay the response)
+        if (email) {
+            (0, email_1.sendWelcomeEmail)(email, agent.id, apiKey, freeCredits).catch(() => { });
+        }
     }
     catch (e) {
         console.error("Register error:", e);
