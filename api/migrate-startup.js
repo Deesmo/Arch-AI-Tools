@@ -201,6 +201,21 @@ async function migrate() {
       console.log('[migrate] Expired OAuth codes/tokens cleaned up');
     } catch(e) { console.warn('[migrate] OAuth cleanup skip:', e.message?.slice(0,60)); }
 
+    // Ensure Tool table has 'enabled' column (was missing from original schema)
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Tool" ADD COLUMN IF NOT EXISTS "enabled" BOOLEAN NOT NULL DEFAULT true`);
+      console.log('[migrate] Tool.enabled column ensured');
+    } catch (err) {
+      console.warn('[migrate] Tool.enabled skip:', err.message.slice(0, 80));
+    }
+    // Ensure Tool table has 'schemaJson' column
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Tool" ADD COLUMN IF NOT EXISTS "schemaJson" JSONB`);
+      console.log('[migrate] Tool.schemaJson column ensured');
+    } catch (err) {
+      console.warn('[migrate] Tool.schemaJson skip:', err.message.slice(0, 80));
+    }
+
     console.log('[migrate] All migrations complete.');
   } catch (err) {
     console.error('[migrate] Fatal migration error:', err.message);
