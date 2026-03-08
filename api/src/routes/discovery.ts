@@ -15,9 +15,9 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
       prisma.tool.count(),
       prisma.agent.count(),
     ]);
-    res.json({ ok: true, service: "arch-tools-api", version: "1.5.0", db: "connected", tools: toolCount || 30, agents: agentCount });
+    res.json({ ok: true, service: "arch-tools-api", version: "1.6.0", db: "connected", tools: toolCount || 30, agents: agentCount });
   } catch {
-    res.json({ ok: true, service: "arch-tools-api", version: "1.5.0", db: "error" });
+    res.json({ ok: true, service: "arch-tools-api", version: "1.6.0", db: "error" });
   }
 });
 
@@ -222,7 +222,7 @@ Privacy: ${BASE_URL}/privacy.html
 
 const OPENAPI_STUB = {
   openapi: "3.0.3",
-  info: { title: "Arch Tools API", version: "1.5.0", description: "44 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
+  info: { title: "Arch Tools API", version: "1.6.0", description: "44 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
   servers: [{ url: API_BASE }],
   tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
   components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
