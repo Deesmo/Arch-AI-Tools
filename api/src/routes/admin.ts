@@ -92,6 +92,14 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
     { name: "url-shorten",        description: "Shorten any URL via TinyURL",                                 category: "utility", credits: 1  },
     { name: "webhook-send",       description: "POST a JSON payload to any webhook URL",                      category: "utility", credits: 2  },
     { name: "workflow-agent",     description: "Multi-step autonomous AI agent pipeline",                     category: "ai",      credits: 25 },
+    // Crypto tools
+    { name: "crypto-price",       description: "Real-time price, 24h change, market cap for any cryptocurrency", category: "crypto",  credits: 1  },
+    { name: "crypto-ohlcv",       description: "OHLCV candlestick data for any crypto over 1-90 days",           category: "crypto",  credits: 2  },
+    { name: "crypto-market-cap",  description: "Top N cryptocurrencies by market cap with price and volume",      category: "crypto",  credits: 1  },
+    { name: "crypto-fear-greed",  description: "Crypto Fear & Greed Index with historical data",                  category: "crypto",  credits: 1  },
+    { name: "crypto-news",        description: "Latest crypto news headlines with source and sentiment",          category: "crypto",  credits: 2  },
+    { name: "crypto-sentiment",   description: "Market sentiment analysis for any cryptocurrency",                category: "crypto",  credits: 3  },
+    { name: "token-lookup",       description: "Look up any token by name, symbol, or contract address",         category: "crypto",  credits: 1  },
   ];
 
   const results: Array<{ name: string; status: string }> = [];
