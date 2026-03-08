@@ -241,17 +241,15 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
 
       <!-- MCP -->
       <h2 id="mcp">MCP / Claude Desktop</h2>
-      <p>All 45 tools are auto-exposed as MCP tools. Works on <strong>Mac, Windows, and Linux</strong>.</p>
+      <p>All 45 tools are auto-exposed as MCP tools. Mac, Windows, and Linux. Add to <span class="inline-code">claude_desktop_config.json</span>:</p>
 
-      <p style="margin:12px 0 6px;font-weight:600;font-size:13px;">Step 1 — Find your config file</p>
-      <table class="params-table" style="margin-bottom:16px;">
-        <tr><th>OS</th><th>Config file path</th></tr>
+      <table class="params-table" style="margin:10px 0 14px;">
+        <tr><th>OS</th><th>Config path</th></tr>
         <tr><td>macOS</td><td><span class="inline-code">~/Library/Application Support/Claude/claude_desktop_config.json</span></td></tr>
-        <tr><td>Windows</td><td><span class="inline-code">%APPDATA%\Claude\claude_desktop_config.json</span> <span style="color:var(--muted);font-size:11px;">(paste in Explorer address bar)</span></td></tr>
+        <tr><td>Windows</td><td><span class="inline-code">%APPDATA%\Claude\claude_desktop_config.json</span></td></tr>
         <tr><td>Linux</td><td><span class="inline-code">~/.config/Claude/claude_desktop_config.json</span></td></tr>
       </table>
 
-      <p style="margin:0 0 6px;font-weight:600;font-size:13px;">Step 2 — Add Arch Tools to the config</p>
       <div class="code-wrap">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         <pre><code>{
@@ -264,21 +262,7 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
   }
 }</code></pre>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px;">&#9432; Requires Node.js installed on your machine. <a href="https://nodejs.org" target="_blank" rel="noopener" style="color:var(--accent)">Download Node.js →</a></p>
-
-      <p style="margin:16px 0 6px;font-weight:600;font-size:13px;">Cursor / Windsurf</p>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">Same JSON config — add to your IDE's MCP settings panel. The SSE endpoint is the same for all clients.</p>
-
-      <p style="margin:16px 0 6px;font-weight:600;font-size:13px;">API calls on Windows</p>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">All API examples use <span class="inline-code">curl</span>, which is built into Windows 10+ (Command Prompt and PowerShell). If <span class="inline-code">curl</span> resolves to PowerShell's <span class="inline-code">Invoke-WebRequest</span>, use <span class="inline-code">curl.exe</span> instead:</p>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code><span class="c-comment"># Windows PowerShell — use curl.exe to avoid Invoke-WebRequest alias</span>
-curl.exe -X POST https://archtools.dev/v1/tools/generate-hash `
-  -H "x-api-key: arch_your_key_here" `
-  -H "Content-Type: application/json" `
-  -d '{"text":"hello","algorithm":"sha256"}'</code></pre>
-      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Same SSE endpoint works with Cursor, Windsurf, and any MCP-compatible client.</p>
 
       <!-- ── DATA & VALIDATION ── -->
       <h2>Data &amp; Validation</h2>
