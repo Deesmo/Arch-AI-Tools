@@ -131,9 +131,8 @@ async function main() {
     // Streamable HTTP transport — used by Smithery and modern MCP clients (POST-based)
     // Inject Accept header if missing — some clients (Smithery) omit it
     app.use("/mcp", (req, _res, next) => {
-      if (!req.headers["accept"]) {
-        req.headers["accept"] = "application/json, text/event-stream";
-      }
+      // Force correct Accept header — SDK requires both; some clients send wrong value
+      req.headers["accept"] = "application/json, text/event-stream";
       next();
     });
     app.all("/mcp", async (req, res) => {
