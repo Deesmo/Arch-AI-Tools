@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -31,6 +64,7 @@ app.use((0, helmet_1.default)({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'"], // landing page inline scripts
+            "script-src-attr": ["'unsafe-inline'"], // allow inline event handlers (onclick etc)
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:"],
@@ -75,6 +109,8 @@ app.use((req, _res, next) => {
     req.headers["x-request-id"] = req.headers["x-request-id"] ?? crypto.randomUUID();
     next();
 });
+// ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
+app.get('/favicon.ico', (_req, res) => res.redirect(301, '/arch-icon.svg'));
 // ─── Static files (landing page) ─────────────────────────────────────────────
 app.use(express_1.default.static(path_1.default.join(__dirname, "../public")));
 // ─── og-image.png — serve SVG as image/svg+xml at /og-image.png ──────────────
@@ -160,10 +196,23 @@ app.use((err, _req, res, _next) => {
     });
 });
 // ─── Start ────────────────────────────────────────────────────────────────────
+// Startup guard — fail fast if ADMIN_KEY is insecure
+if (config_1.config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.ADMIN_KEY === "changeme")) {
+    console.error("FATAL: ADMIN_KEY must be set to a secure value in production. Exiting.");
+    process.exit(1);
+}
 app.listen(config_1.config.port, () => {
     console.log(`⚡ Arch Tools API v1.5.0 running on port ${config_1.config.port}`);
     console.log(`   ENV: ${config_1.config.nodeEnv}`);
     console.log(`   Site: ${config_1.config.publicSiteUrl}`);
 });
+// Daily cleanup of expired OAuth records
+setInterval(async () => {
+    try {
+        const { cleanupExpiredOAuthRecords } = await Promise.resolve().then(() => __importStar(require("./lib/systemJobs")));
+        await cleanupExpiredOAuthRecords();
+    }
+    catch { /* non-fatal */ }
+}, 24 * 60 * 60 * 1000);
 exports.default = app;
 //# sourceMappingURL=index.js.map

@@ -116,7 +116,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
 
       <div class="row">
         <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
-        <button id="btn" onclick="sendLink()">Get API Key</button>
+        <button id="btn">Get API Key</button>
       </div>
 
       <div id="status" class="status"></div>
@@ -134,6 +134,8 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
   <script>
     const statusEl = document.getElementById('status');
     const btn = document.getElementById('btn');
+
+    document.getElementById('btn').addEventListener('click', sendLink);
 
     function showStatus(html) {
       statusEl.innerHTML = html;

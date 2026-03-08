@@ -35,6 +35,9 @@ router.post("/register", async (req, res) => {
             return;
         }
         const apiKey = `arch_${crypto_1.default.randomBytes(24).toString("hex")}`;
+        // TODO: Migrate to hashed keys. See SECURITY.md for migration plan.
+        // API keys are currently stored in plaintext. A schema migration is required
+        // to add apiKeyHash before this can be safely changed.
         const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "100", 10);
         const agent = await prisma_1.prisma.agent.create({
             data: {

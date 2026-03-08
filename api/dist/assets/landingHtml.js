@@ -814,7 +814,7 @@ exports.LANDING_HTML = `<!doctype html>
     <div class="logo-mark">A</div>
     <span class="logo-name">Arch Tools</span>
   </a>
-  <button class="nav-toggle" aria-label="Open menu" onclick="toggleNav()">
+  <button class="nav-toggle" aria-label="Open menu" id="nav-toggle-btn">
     <span></span><span></span><span></span>
   </button>
   <ul class="nav-links">
@@ -850,12 +850,12 @@ exports.LANDING_HTML = `<!doctype html>
 
     <div class="quickcode">
       <div class="quickcode-tabs">
-        <button class="qtab active" onclick="showTab('curl')">cURL</button>
-        <button class="qtab" onclick="showTab('node')">Node.js</button>
-        <button class="qtab" onclick="showTab('python')">Python</button>
+        <button class="qtab active" data-tab="curl">cURL</button>
+        <button class="qtab" data-tab="node">Node.js</button>
+        <button class="qtab" data-tab="python">Python</button>
       </div>
       <div class="code-block">
-        <button class="copy-btn" onclick="copyCode()">copy</button>
+        <button class="copy-btn" id="copy-btn">copy</button>
         <div id="tab-curl" class="code-tab active">
 <pre><span class="c-gray"># 1. Register — get your API key instantly</span>
 <span class="c-gray"># 1. Create an account — verify email to unlock free credits</span>
@@ -1187,7 +1187,7 @@ result = client.tools.invoke(
         <li>REST + MCP access</li>
         <li>100 free credits/month</li>
       </ul>
-      <a href="/v1/checkout" class="plan-btn plan-btn-ghost">Buy Starter Credits</a>
+      <button class="plan-btn plan-btn-ghost" data-pack="starter">Buy Starter Credits</button>
     </div>
 
     <div class="plan-card featured">
@@ -1206,7 +1206,7 @@ result = client.tools.invoke(
         <li>API key restrictions</li>
         <li>100 free credits/month</li>
       </ul>
-      <a href="/v1/checkout" class="plan-btn plan-btn-primary">Buy Pro Credits →</a>
+      <button class="plan-btn plan-btn-primary" data-pack="pro">Buy Pro Credits →</button>
     </div>
 
     <div class="plan-card">
@@ -1225,7 +1225,7 @@ result = client.tools.invoke(
         <li>Daily credit caps per key</li>
         <li>100 free credits/month</li>
       </ul>
-      <a href="/v1/checkout" class="plan-btn plan-btn-ghost">Buy Business Credits</a>
+      <button class="plan-btn plan-btn-ghost" data-pack="business">Buy Business Credits</button>
     </div>
   </div>
 </section>
@@ -1256,6 +1256,10 @@ result = client.tools.invoke(
     el.classList.toggle('open');
   }
 
+  // Wire up nav toggle
+  const navToggleBtn = document.getElementById('nav-toggle-btn');
+  if (navToggleBtn) navToggleBtn.addEventListener('click', toggleNav);
+
   // Close mobile menu when clicking a link
   document.addEventListener('click', (e) => {
     const links = document.querySelector('.nav-links');
@@ -1266,22 +1270,62 @@ result = client.tools.invoke(
     }
   });
 
-  function showTab(name) {
+  function showTab(name, clickedEl) {
     document.querySelectorAll('.code-tab').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.qtab').forEach(el => el.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
-    event.target.classList.add('active');
+    if (clickedEl) clickedEl.classList.add('active');
   }
+
+  // Wire up code tabs via event delegation
+  document.querySelectorAll('.qtab').forEach(function(btn) {
+    btn.addEventListener('click', function() { showTab(this.dataset.tab, this); });
+  });
 
   function copyCode() {
     const active = document.querySelector('.code-tab.active pre');
     if (!active) return;
     navigator.clipboard.writeText(active.innerText).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'copied!';
-      setTimeout(() => btn.textContent = 'copy', 2000);
+      const btn = document.getElementById('copy-btn');
+      if (btn) { btn.textContent = 'copied!'; setTimeout(() => btn.textContent = 'copy', 2000); }
     });
   }
+
+  // Wire up copy button
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) copyBtn.addEventListener('click', copyCode);
+
+  // Stripe checkout for pricing buttons
+  async function buyPack(packName) {
+    let apiKey = localStorage.getItem('arch_api_key') || '';
+    if (!apiKey) {
+      apiKey = window.prompt('Enter your Arch Tools API key (or go to archtools.dev/signup to get one):');
+    }
+    if (!apiKey || !apiKey.trim()) {
+      window.location.href = '/signup';
+      return;
+    }
+    try {
+      const res = await fetch('/v1/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey.trim() },
+        body: JSON.stringify({ pack: packName })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Error: ' + (data.message || 'Could not create checkout session. Check your API key.'));
+      }
+    } catch(e) {
+      alert('Something went wrong. Please try again.');
+    }
+  }
+
+  // Wire up pricing buttons via data-pack attributes
+  document.querySelectorAll('[data-pack]').forEach(function(btn) {
+    btn.addEventListener('click', function() { buyPack(this.dataset.pack); });
+  });
 
   // Animate sections on scroll
   const observer = new IntersectionObserver((entries) => {

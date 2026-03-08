@@ -41,6 +41,7 @@ const auth_1 = require("../../middleware/auth");
 const x402_1 = require("../../middleware/x402");
 const credits_1 = require("../../utils/credits");
 const config_1 = require("../../config");
+const ssrf_1 = require("../../lib/ssrf");
 const crypto_1 = __importDefault(require("crypto"));
 const uuid_1 = require("uuid");
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
@@ -345,6 +346,13 @@ router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (r
         let html = text ?? "";
         let fetchedUrl = url ?? "";
         if (url && !text) {
+            try {
+                await (0, ssrf_1.validateUrl)(url);
+            }
+            catch (err) {
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                return;
+            }
             const resp = await axios_1.default.get(url, { timeout: 10000, headers: { "User-Agent": "ArchTools/1.5 Metadata Extractor" } });
             html = resp.data;
         }
@@ -380,6 +388,13 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req, res) => 
         return;
     }
     try {
+        await (0, ssrf_1.validateUrl)(url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    try {
         const resp = await axios_1.default.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5 Web Scraper (https://archtools.dev)" } });
         const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
         const $ = cheerio.load(resp.data);
@@ -412,6 +427,13 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req, res)
     const { url } = req.body;
     if (!url) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    try {
+        await (0, ssrf_1.validateUrl)(url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
         return;
     }
     try {
@@ -517,6 +539,13 @@ router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req, res) => {
         return;
     }
     try {
+        await (0, ssrf_1.validateUrl)(url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    try {
         const resp = await axios_1.default.get(url, { timeout: 10000, headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
         const xml2js = await Promise.resolve().then(() => __importStar(require("xml2js")));
         const parsed = await xml2js.parseStringPromise(resp.data, { explicitArray: false, mergeAttrs: true });
@@ -552,7 +581,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req, res) => {
         return;
     }
     try {
-        const resp = await axios_1.default.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
+        const resp = await axios_1.default.get(`https://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
         const data = resp.data;
         if (data.status === "fail") {
             res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: (0, credits_1.reqId)() });
@@ -943,7 +972,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
     try {
         const msg = await anthropic.messages.create({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 400,
+            max_tokens: 200,
             messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY JSON: {"pattern": "^[a-z]+$", "flags": "i", "explanation": "...", "test_examples": ["match1", "match2"]}` }],
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
@@ -1061,20 +1090,23 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
             res.json({ ok: true, text, model, provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: (0, credits_1.reqId)() });
             return;
         }
-        // ── Claude (default — known Claude models OR unknown model name falls here) ──
-        if (CLAUDE_MODELS.includes(model) || true) { // true = default fallthrough to Claude
+        // Validate model
+        const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
+        if (!allModels.includes(model)) {
+            res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        // ── Claude ──
+        if (CLAUDE_MODELS.includes(model)) {
             if (!anthropic) {
                 res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
                 return;
             }
-            const selectedModel = CLAUDE_MODELS.includes(model) ? model : "claude-sonnet-4-6";
-            const msg = await anthropic.messages.create({ model: selectedModel, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+            const msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
             const text = msg.content.find(b => b.type === "text")?.text ?? "";
-            res.json({ ok: true, text, model: selectedModel, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, text, model, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: (0, credits_1.reqId)() });
             return;
         }
-        // Should never reach here (Claude block above has || true fallthrough)
-        res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'.`, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "generation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
@@ -1126,6 +1158,13 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req, res)
         res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
         return;
     }
+    try {
+        await (0, ssrf_1.validateUrl)(url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        return;
+    }
     // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
     try {
         const resp = await axios_1.default.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
@@ -1163,16 +1202,33 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
     try {
         let base64Data = pdf_base64;
         if (pdf_url && !pdf_base64) {
-            const resp = await axios_1.default.get(pdf_url, { responseType: "arraybuffer", timeout: 15000 });
-            base64Data = Buffer.from(resp.data).toString("base64");
+            try {
+                await (0, ssrf_1.validateUrl)(pdf_url);
+            }
+            catch (err) {
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                return;
+            }
+            const resp = await axios_1.default.get(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
+            const buffer = Buffer.from(resp.data);
+            if (buffer.length > 5 * 1024 * 1024) {
+                res.status(400).json({ ok: false, error: "file_too_large", message: "PDF must be under 5MB", request_id: (0, credits_1.reqId)() });
+                return;
+            }
+            base64Data = buffer.toString("base64");
         }
-        const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
-            max_tokens: 4096,
-            messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
-        });
-        const text = msg.content.find(b => b.type === "text")?.text ?? "";
-        res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
+        try {
+            const msg = await anthropic.messages.create({
+                model: "claude-sonnet-4-6",
+                max_tokens: 4096,
+                messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
+            });
+            const text = msg.content.find(b => b.type === "text")?.text ?? "";
+            res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
+        }
+        catch (anthropicErr) {
+            res.status(500).json({ ok: false, error: "pdf_error", message: (0, credits_1.safeErr)(anthropicErr), request_id: (0, credits_1.reqId)() });
+        }
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "pdf_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
@@ -1186,9 +1242,16 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
         if (!ok)
             return;
     }
-    const { url, full_page = true } = req.body;
+    const { url } = req.body;
     if (!url) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    try {
+        await (0, ssrf_1.validateUrl)(url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
         return;
     }
     try {
@@ -1200,15 +1263,12 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
         const ogImage = $('meta[property="og:image"]').attr("content") || "";
         const h1 = $("h1").first().text() || "";
         const bodyText = $("body").text().replace(/\s+/g, " ").trim().slice(0, 1000);
-        // Use free screenshot service
-        const screenshotUrl = `https://api.screenshotone.com/take?url=${encodeURIComponent(url)}&full_page=${full_page}&format=png&viewport_width=1280&viewport_height=800`;
         res.json({
             ok: true,
             url,
-            screenshot_url: screenshotUrl,
             page_meta: { title, description, og_image: ogImage, h1 },
             page_text_preview: bodyText,
-            note: "screenshot_url is a best-effort link; for production use consider a dedicated screenshot service with API key",
+            note: "Full screenshot capture requires a dedicated screenshot service. This endpoint returns page metadata and OG image.",
             request_id: (0, credits_1.reqId)(),
         });
     }
@@ -1232,6 +1292,13 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
     try {
         let rawHtml = html ?? "";
         if (url && !html) {
+            try {
+                await (0, ssrf_1.validateUrl)(url);
+            }
+            catch (err) {
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                return;
+            }
             const resp = await axios_1.default.get(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0 ArchTools" } });
             rawHtml = resp.data;
         }
@@ -1352,6 +1419,13 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
         res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: (0, credits_1.reqId)() });
         return;
     }
+    try {
+        await (0, ssrf_1.validateUrl)(webhook_url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        return;
+    }
     const allowedMethods = ["POST", "PUT", "PATCH"];
     const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
     try {
@@ -1464,8 +1538,8 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, 
     }
     try {
         const msg = await anthropic.messages.create({
-            model: "claude-sonnet-4-6",
-            max_tokens: 2000,
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1500,
             messages: [{
                     role: "user",
                     content: `Generate a complete, self-contained SVG image (${width}x${height}) based on this prompt: "${prompt}"\n\nRequirements:\n- Valid SVG with viewBox="0 0 ${width} ${height}"\n- Use only SVG elements (rect, circle, path, text, etc.)\n- Make it visually appealing and creative\n- Return ONLY the SVG code, nothing else, no markdown fences`,
@@ -1491,6 +1565,11 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const { data: barcodeData, type = "code128", width = 250, height = 100 } = req.body;
     if (!barcodeData) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    const validTypes = ["code128", "qr"];
+    if (!validTypes.includes(type)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: (0, credits_1.reqId)() });
         return;
     }
     try {
@@ -1522,7 +1601,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
   <text x="${svgWidth / 2}" y="${height - 2}" text-anchor="middle" font-family="monospace" font-size="10" fill="#000">${chars}</text>
 </svg>`;
         const base64 = Buffer.from(svg).toString("base64");
-        res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, note: "SVG barcode generated. For production use verify scanning with a barcode reader. Full Code128 encoding via bwip-js recommended for high-fidelity output.", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "barcode_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
@@ -1630,7 +1709,18 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const { limit = 10, currency = "usd" } = req.body;
     try {
         const n = Math.min(Math.max(1, limit), 100);
-        const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`);
+        const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
+        const cgHeaders = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
+        let r = await fetch(cgUrl, { headers: cgHeaders });
+        if (!r.ok) {
+            // Retry once after 1 second
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            r = await fetch(cgUrl, { headers: cgHeaders });
+            if (!r.ok) {
+                res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+                return;
+            }
+        }
         const data = await r.json();
         const coins = data.map(c => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
         res.json({ ok: true, currency, coins, request_id: (0, credits_1.reqId)() });

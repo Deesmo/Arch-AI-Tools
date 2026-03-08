@@ -64,7 +64,7 @@ router.get("/stats", auth_1.requireAdmin, async (_req, res) => {
     }
     catch (e) {
         console.error("Admin stats error:", e);
-        res.status(500).json({ ok: false, error: "internal_error", message: String(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
 // POST /v1/admin/seed-tools — one-shot seed for missing tools
