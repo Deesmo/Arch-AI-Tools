@@ -80,19 +80,37 @@ export const DASHBOARD_HTML = `<!doctype html>
         if (token.toLowerCase().startsWith('bearer ')) token = token.slice(7).trim();
         try {
           const resp = await fetch('/v1/agent/usage', { headers: { Authorization: 'Bearer ' + token } });
-          const data = await resp.json();
+          let data;
+          try {
+            data = await resp.json();
+          } catch (_) {
+            $('status').textContent = 'Error';
+            $('recent').textContent = resp.status === 502 || resp.status === 503
+              ? 'Service temporarily unavailable — please try again in a moment.'
+              : 'Server returned an unexpected response (HTTP ' + resp.status + '). Try again.';
+            btn.disabled = false;
+            btn.textContent = 'Load Usage';
+            return;
+          }
           if (!resp.ok || data.ok === false) {
             $('status').textContent = 'Error';
-            $('recent').textContent = JSON.stringify(data, null, 2);
+            const errMsg = data.error === 'unauthorized'
+              ? 'Invalid API key. Register at archtools.dev/signup to get a valid key.'
+              : (data.message || JSON.stringify(data));
+            $('recent').textContent = errMsg;
+            btn.disabled = false;
+            btn.textContent = 'Load Usage';
             return;
           }
           $('status').textContent = 'OK';
           $('credits').textContent = data.credits_remaining ?? '—';
           $('calls').textContent = data.calls_today ?? '—';
-          $('recent').textContent = JSON.stringify(data.recent_activity ?? [], null, 2);
+          $('recent').textContent = data.recent_activity && data.recent_activity.length
+            ? JSON.stringify(data.recent_activity, null, 2)
+            : 'No activity yet.';
         } catch (e) {
-          $('status').textContent = 'Failed';
-          $('recent').textContent = String(e);
+          $('status').textContent = 'Error';
+          $('recent').textContent = 'Could not connect. Check your internet connection and try again.';
         }
       });
 
