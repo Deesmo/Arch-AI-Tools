@@ -27,6 +27,9 @@ exports.config = {
     resend: {
         apiKey: process.env.RESEND_API_KEY ?? "",
     },
+    coingecko: {
+        apiKey: process.env.COINGECKO_API_KEY ?? "",
+    },
     x402: {
         // Only use wallet address if it looks like a real Ethereum/Base address (0x + 40 hex chars)
         walletAddress: /^0x[a-fA-F0-9]{40}$/.test(process.env.WALLET_ADDRESS ?? "") ? (process.env.WALLET_ADDRESS ?? "") : "",

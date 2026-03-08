@@ -24,6 +24,9 @@ export declare const config: {
     resend: {
         apiKey: string;
     };
+    coingecko: {
+        apiKey: string;
+    };
     x402: {
         walletAddress: string;
         network: string;

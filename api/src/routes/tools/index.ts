@@ -1312,7 +1312,14 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
   }
 });
 
-// ─── CRYPTO TOOLS (read-only, no API keys required) ──────────────────────────
+// ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
+// Helper: returns CoinGecko headers, including API key when configured
+const cgHeaders = (): Record<string, string> => {
+  const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
+  const key = config.coingecko?.apiKey;
+  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-pro-api-key"] = key;
+  return h;
+};
 
 // ─── crypto-price ────────────────────────────────────────────────────────────
 router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
@@ -1322,7 +1329,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`);
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
     const data = await r.json() as Record<string, Record<string, number>>;
     if (!data[id]) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found. Use CoinGecko ID (e.g. bitcoin, ethereum, solana)`, request_id: reqId() }); return; }
     const d = data[id];
@@ -1338,7 +1345,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`);
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const raw = await r.json() as number[][];
     const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
@@ -1354,12 +1361,12 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
   try {
     const n = Math.min(Math.max(1, limit), 100);
     const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
-    const cgHeaders = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
-    let r = await fetch(cgUrl, { headers: cgHeaders });
+    const _cgHeaders = cgHeaders();
+    let r = await fetch(cgUrl, { headers: _cgHeaders });
     if (!r.ok) {
       // Retry once after 1 second
       await new Promise(resolve => setTimeout(resolve, 1000));
-      r = await fetch(cgUrl, { headers: cgHeaders });
+      r = await fetch(cgUrl, { headers: _cgHeaders });
       if (!r.ok) {
         res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
         return;
@@ -1394,7 +1401,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false`);
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false`, { headers: cgHeaders() });
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const data = await r.json() as { sentiment_votes_up_percentage?: number; sentiment_votes_down_percentage?: number; community_data?: { twitter_followers?: number; reddit_subscribers?: number; reddit_active_accounts?: number }; market_data?: { price_change_percentage_24h?: number; price_change_percentage_7d?: number } };
     res.json({
@@ -1418,7 +1425,7 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
     const r = await fetch(url, { headers: { "User-Agent": "ArchTools/1.0" } });
     if (!r.ok) {
       // Fallback: CoinGecko news endpoint
-      const r2 = await fetch(`https://api.coingecko.com/api/v3/news?per_page=${n}`);
+      const r2 = await fetch(`https://api.coingecko.com/api/v3/news?per_page=${n}`, { headers: cgHeaders() });
       const d2 = await r2.json() as { data?: { title: string; url: string; published_at: string; author?: { name?: string } }[] };
       const articles = (d2.data ?? []).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.author?.name ?? "CoinGecko" }));
       res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() }); return;
@@ -1436,7 +1443,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
   const { query } = req.body as { query?: string };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
   try {
-    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
