@@ -19,17 +19,19 @@ export async function requireAuth(
   next: NextFunction
 ): Promise<void> {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  const xApiKey = req.headers["x-api-key"] as string | undefined;
+  
+  if (!authHeader?.startsWith("Bearer ") && !xApiKey) {
     res.status(401).json({
       ok: false,
       error: "unauthorized",
-      message: "Missing Authorization: Bearer <api_key> header",
+      message: "Missing Authorization: Bearer <api_key> header or x-api-key header",
       request_id: req.headers["x-request-id"] ?? crypto.randomUUID(),
     });
     return;
   }
 
-  const apiKey = authHeader.slice(7).trim();
+  const apiKey = (xApiKey ?? authHeader!.slice(7)).trim();
   if (!apiKey) {
     res.status(401).json({
       ok: false,
