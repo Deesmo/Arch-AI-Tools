@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Dark background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f0f1a;stop-opacity:1" />
+    </linearGradient>
+    <!-- Purple-blue accent gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6c63ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00b4d8;stop-opacity:1" />
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+
+  <!-- Grid lines (subtle) -->
+  <g stroke="#ffffff" stroke-opacity="0.03" stroke-width="1">
+    <line x1="0" y1="90" x2="1200" y2="90" />
+    <line x1="0" y1="180" x2="1200" y2="180" />
+    <line x1="0" y1="270" x2="1200" y2="270" />
+    <line x1="0" y1="360" x2="1200" y2="360" />
+    <line x1="0" y1="450" x2="1200" y2="450" />
+    <line x1="0" y1="540" x2="1200" y2="540" />
+    <line x1="120" y1="0" x2="120" y2="630" />
+    <line x1="240" y1="0" x2="240" y2="630" />
+    <line x1="360" y1="0" x2="360" y2="630" />
+    <line x1="480" y1="0" x2="480" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="720" y1="0" x2="720" y2="630" />
+    <line x1="840" y1="0" x2="840" y2="630" />
+    <line x1="960" y1="0" x2="960" y2="630" />
+    <line x1="1080" y1="0" x2="1080" y2="630" />
+  </g>
+
+  <!-- Left glow orb -->
+  <circle cx="120" cy="315" r="200" fill="#6c63ff" opacity="0.08" />
+  <!-- Right glow orb -->
+  <circle cx="1080" cy="315" r="200" fill="#00b4d8" opacity="0.08" />
+  <!-- Center subtle orb -->
+  <circle cx="600" cy="315" r="280" fill="#7c3aed" opacity="0.04" />
+
+  <!-- Top accent bar -->
+  <rect x="0" y="0" width="1200" height="4" fill="url(#accentGrad)" />
+  <!-- Bottom accent bar -->
+  <rect x="0" y="626" width="1200" height="4" fill="url(#accentGrad)" />
+
+  <!-- Left accent bracket -->
+  <rect x="60" y="60" width="4" height="510" fill="url(#accentGrad)" opacity="0.4" rx="2" />
+  <!-- Right accent bracket -->
+  <rect x="1136" y="60" width="4" height="510" fill="url(#accentGrad)" opacity="0.4" rx="2" />
+
+  <!-- Icon / Logo mark — stylized "A" in circle -->
+  <circle cx="600" cy="180" r="54" fill="none" stroke="url(#accentGrad)" stroke-width="2.5" opacity="0.9" filter="url(#glow)" />
+  <text x="600" y="200" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="52" font-weight="800" text-anchor="middle" fill="url(#accentGrad)" filter="url(#glow)">A</text>
+
+  <!-- Main title -->
+  <text x="600" y="310" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="-2" text-anchor="middle" fill="#ffffff" filter="url(#glow)">Arch AI Tools</text>
+
+  <!-- Accent underline -->
+  <rect x="360" y="328" width="480" height="3" fill="url(#accentGrad)" rx="2" opacity="0.8" />
+
+  <!-- Subtitle -->
+  <text x="600" y="395" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="34" font-weight="300" letter-spacing="1" text-anchor="middle" fill="#a0aec0">45 AI Tools. One API.</text>
+
+  <!-- Feature badges -->
+  <!-- Badge 1 -->
+  <rect x="200" y="456" width="180" height="42" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#6c63ff" stroke-width="1" stroke-opacity="0.5" />
+  <text x="290" y="483" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="500" text-anchor="middle" fill="#a78bfa">⚡ REST API</text>
+
+  <!-- Badge 2 -->
+  <rect x="420" y="456" width="180" height="42" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#00b4d8" stroke-width="1" stroke-opacity="0.5" />
+  <text x="510" y="483" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="500" text-anchor="middle" fill="#67e8f9">🤖 MCP Ready</text>
+
+  <!-- Badge 3 -->
+  <rect x="640" y="456" width="180" height="42" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#6c63ff" stroke-width="1" stroke-opacity="0.5" />
+  <text x="730" y="483" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="500" text-anchor="middle" fill="#a78bfa">💳 Stripe + x402</text>
+
+  <!-- Badge 4 -->
+  <rect x="860" y="456" width="180" height="42" rx="8" fill="#ffffff" fill-opacity="0.06" stroke="#00b4d8" stroke-width="1" stroke-opacity="0.5" />
+  <text x="950" y="483" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="500" text-anchor="middle" fill="#67e8f9">🌐 archtools.dev</text>
+
+  <!-- Bottom domain watermark -->
+  <text x="600" y="578" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="18" font-weight="400" letter-spacing="3" text-anchor="middle" fill="#4a5568" text-transform="uppercase">ARCHTOOLS.DEV</text>
+</svg>

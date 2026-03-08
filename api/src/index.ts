@@ -86,6 +86,13 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // ─── Static files (landing page) ─────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, "../public")));
 
+// ─── og-image.png — serve SVG as image/svg+xml at /og-image.png ──────────────
+app.get("/og-image.png", (_req: Request, res: Response): void => {
+  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.sendFile(path.join(__dirname, "../public/og-image.svg"));
+});
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 // Discovery & health (no auth)
