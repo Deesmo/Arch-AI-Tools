@@ -1435,21 +1435,64 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-news", 2); if (!ok) return; }
   const { symbol, limit = 10 } = req.body as { symbol?: string; limit?: number };
-  try {
-    const n = Math.min(Math.max(1, limit), 20);
-    const url = symbol ? `https://cryptopanic.com/api/free/v1/posts/?auth_token=free&currencies=${symbol.toUpperCase()}&limit=${n}&public=true` : `https://cryptopanic.com/api/free/v1/posts/?auth_token=free&limit=${n}&public=true`;
-    const r = await fetch(url, { headers: { "User-Agent": "ArchTools/1.0" } });
-    if (!r.ok) {
-      // Fallback: CoinGecko news endpoint
-      const r2 = await fetch(`https://api.coingecko.com/api/v3/news?per_page=${n}`, { headers: cgHeaders() });
-      const d2 = await r2.json() as { data?: { title: string; url: string; published_at: string; author?: { name?: string } }[] };
-      const articles = (d2.data ?? []).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.author?.name ?? "CoinGecko" }));
-      res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() }); return;
+  const n = Math.min(Math.max(1, limit), 20);
+
+  // Helper: parse RSS feed
+  const parseRss = async (feedUrl: string, sourceName: string) => {
+    const r = await fetch(feedUrl, { headers: { "User-Agent": "ArchTools/1.6" }, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return [];
+    const xml = await r.text();
+    const items: { title: string; url: string; published_at: string; source: string }[] = [];
+    const itemMatches = xml.match(/<item[\s\S]*?<\/item>/g) ?? [];
+    for (const item of itemMatches.slice(0, n)) {
+      const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/)?.[1] ?? item.match(/<title>(.*?)<\/title>/)?.[1] ?? "";
+      const link = item.match(/<link>(.*?)<\/link>|<guid[^>]*>(https?:\/\/[^<]+)<\/guid>/)?.[1] ?? item.match(/<guid[^>]*>(https?:\/\/[^<]+)<\/guid>/)?.[1] ?? "";
+      const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] ?? "";
+      if (title && link) items.push({ title: title.replace(/<[^>]+>/g, "").trim(), url: link.trim(), published_at: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(), source: sourceName });
     }
-    const data = await r.json() as { results?: { title: string; url: string; published_at: string; source?: { title?: string } }[] };
-    const articles = (data.results ?? []).slice(0, n).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.source?.title ?? "Unknown" }));
+    return items;
+  };
+
+  try {
+    let articles: { title: string; url: string; published_at: string; source: string }[] = [];
+
+    // Try CryptoPanic paid key first (if configured)
+    const cpKey = process.env.CRYPTOPANIC_API_KEY;
+    if (cpKey) {
+      const cpUrl = symbol
+        ? `https://cryptopanic.com/api/v1/posts/?auth_token=${cpKey}&currencies=${symbol.toUpperCase()}&limit=${n}&public=true`
+        : `https://cryptopanic.com/api/v1/posts/?auth_token=${cpKey}&limit=${n}&public=true`;
+      const r = await fetch(cpUrl, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) {
+        const data = await r.json() as { results?: { title: string; url: string; published_at: string; source?: { title?: string } }[] };
+        articles = (data.results ?? []).map(a => ({ title: a.title, url: a.url, published_at: a.published_at, source: a.source?.title ?? "CryptoPanic" }));
+      }
+    }
+
+    // RSS fallback: CoinDesk + CoinTelegraph + Bitcoin Magazine (always available, no key needed)
+    if (articles.length === 0) {
+      const feeds = [
+        { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", name: "CoinDesk" },
+        { url: "https://cointelegraph.com/rss", name: "CoinTelegraph" },
+        { url: "https://bitcoinmagazine.com/.rss/full/", name: "Bitcoin Magazine" },
+      ];
+      const results = await Promise.allSettled(feeds.map(f => parseRss(f.url, f.name)));
+      for (const r of results) {
+        if (r.status === "fulfilled") articles.push(...r.value);
+      }
+      // Filter by symbol if provided
+      if (symbol && articles.length > 0) {
+        const q = symbol.toLowerCase();
+        const filtered = articles.filter(a => a.title.toLowerCase().includes(q));
+        if (filtered.length > 0) articles = filtered;
+      }
+      articles = articles.slice(0, n);
+    }
+
     res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+  }
 });
 
 // ─── token-lookup ─────────────────────────────────────────────────────────────
