@@ -39,10 +39,10 @@ export const DASHBOARD_HTML = `<!doctype html>
     </header>
 
     <div class="card" style="margin-bottom:14px">
-      <div class="muted" style="margin-bottom:10px">Paste an API key to view usage. (Keys are never stored client-side.)</div>
+      <div class="muted" style="margin-bottom:10px">Paste your API key to view usage.</div>
       <div class="row">
         <div>
-          <input id="key" placeholder="Authorization: Bearer arch_..." />
+          <input id="key" placeholder="arch_..." />
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <button id="load">Load Usage</button>
@@ -69,11 +69,33 @@ export const DASHBOARD_HTML = `<!doctype html>
 
     <script>
       const $ = (id) => document.getElementById(id);
+
+      // Auto-load key from localStorage (saved after signup)
+      (function() {
+        const saved = localStorage.getItem('arch_api_key');
+        if (saved) {
+          $('key').value = saved;
+          $('load').click();
+        }
+        // Also handle ?key= param from signup redirect
+        const params = new URLSearchParams(window.location.search);
+        const qKey = params.get('key');
+        if (qKey && qKey.startsWith('arch_')) {
+          $('key').value = qKey;
+          localStorage.setItem('arch_api_key', qKey);
+          history.replaceState({}, '', '/dashboard');
+          $('load').click();
+        }
+      })();
+
       const btn = $('load');
       btn.addEventListener('click', async () => {
         $('status').textContent = 'Loading…';
         const raw = $('key').value.trim();
-        const token = raw.startsWith('Bearer ') ? raw.slice(7) : raw;
+        // Strip any header prefix users might have accidentally pasted
+        let token = raw;
+        if (token.toLowerCase().startsWith('authorization:')) token = token.replace(/^authorization:\s*/i, '');
+        if (token.toLowerCase().startsWith('bearer ')) token = token.slice(7).trim();
         try {
           const resp = await fetch('/v1/agent/usage', { headers: { Authorization: 'Bearer ' + token } });
           const data = await resp.json();
