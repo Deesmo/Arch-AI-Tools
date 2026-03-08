@@ -51,7 +51,7 @@ router.get("/.well-known/x402", (_req, res) => {
 // GET /v1/tools — full tool list with schemas
 router.get("/v1/tools", async (_req, res) => {
     try {
-        const tools = await prisma_1.prisma.tool.findMany({ where: { enabled: true }, orderBy: { name: "asc" } });
+        const tools = await prisma_1.prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
         res.json({ ok: true, tools });
     }
     catch {
@@ -224,7 +224,12 @@ const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description
     description,
     credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1 }).find(([k]) => k === name)?.[1] ?? 5,
     category: ["ai-generate", "ocr-extract", "sentiment-analysis", "summarize", "extract-entities", "regex-generate", "pii-detect", "web-search", "language-detect"].includes(name) ? "ai" : ["web-scrape", "search-web", "extract-page", "browser-task", "rss-parse"].includes(name) ? "web" : "utility",
-    enabled: true,
+    active: true,
+    endpoint: `/v1/tools/${name}`,
+    method: "POST",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    tags: [],
 }));
 exports.default = router;
 //# sourceMappingURL=discovery.js.map

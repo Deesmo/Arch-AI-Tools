@@ -53,10 +53,11 @@ const TOOLS = [
 async function main() {
     console.log("Seeding tools…");
     for (const tool of TOOLS) {
+        const endpoint = `/v1/tools/${tool.name}`;
         await prisma.tool.upsert({
             where: { name: tool.name },
             update: { description: tool.description, category: tool.category, credits: tool.credits },
-            create: tool,
+            create: { ...tool, endpoint, method: "POST", active: true },
         });
     }
     console.log(`Seeded ${TOOLS.length} tools.`);

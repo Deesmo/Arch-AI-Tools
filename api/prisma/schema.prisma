@@ -26,14 +26,32 @@ model Agent {
   purchases    Purchase[]
 }
 
+enum ToolPlan {
+  free
+  starter
+  pro
+  business
+}
+
 model Tool {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String
-  category    String
-  credits     Int
-  schemaJson  Json?
-  enabled     Boolean @default(true)
+  id           String    @id @default(cuid())
+  name         String    @unique
+  description  String
+  endpoint     String
+  method       String    @default("POST")
+  credits      Int       @default(1)
+  schemaJson   Json?
+  category     String    @default("utility")
+  ownerAgentId String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  author       String?
+  deprecated   Boolean?
+  homepage     String?
+  minPlan      ToolPlan?
+  tags         String[]  @default([])
+  version      String?
 }
 
 model ApiRequest {
