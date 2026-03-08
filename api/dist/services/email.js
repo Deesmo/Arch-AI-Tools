@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LOW_CREDIT_THRESHOLD = void 0;
 exports.sendVerificationEmail = sendVerificationEmail;
@@ -9,8 +6,7 @@ exports.sendWelcomeEmail = sendWelcomeEmail;
 exports.sendLowCreditAlert = sendLowCreditAlert;
 exports.sendPurchaseConfirmation = sendPurchaseConfirmation;
 exports.sendMonthlyRefreshEmail = sendMonthlyRefreshEmail;
-const node_fetch_1 = __importDefault(require("node-fetch"));
-const logger_js_1 = require("../lib/logger.js");
+const logger_1 = require("../lib/logger");
 /**
  * Arch Tools — Email Service
  *
@@ -29,53 +25,53 @@ exports.LOW_CREDIT_THRESHOLD = Number(process.env.LOW_CREDIT_THRESHOLD || 20);
 // ─── Core send helper ───
 async function sendEmail(to, subject, html, text) {
     if (!to || !to.includes("@")) {
-        logger_js_1.logger.debug({ to }, "Email skipped — invalid address");
+        logger_1.logger.debug({ to }, "Email skipped — invalid address");
         return false;
     }
     // Resend
     if (process.env.RESEND_API_KEY) {
         try {
-            const r = await (0, node_fetch_1.default)("https://api.resend.com/emails", {
+            const r = await fetch("https://api.resend.com/emails", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
                 body: JSON.stringify({ from: FROM, to, subject, html, ...(text ? { text } : {}) }),
             });
             if (!r.ok) {
                 const detail = await r.text().catch(() => "");
-                logger_js_1.logger.error({ to, status: r.status, detail }, "Resend email failed");
+                logger_1.logger.error({ to, status: r.status, detail }, "Resend email failed");
                 return false;
             }
-            logger_js_1.logger.info({ to, subject }, "Email sent (Resend)");
+            logger_1.logger.info({ to, subject }, "Email sent (Resend)");
             return true;
         }
         catch (e) {
-            logger_js_1.logger.error({ to, error: e.message }, "Resend email error");
+            logger_1.logger.error({ to, error: e.message }, "Resend email error");
             return false;
         }
     }
     // Postmark
     if (process.env.POSTMARK_SERVER_TOKEN) {
         try {
-            const r = await (0, node_fetch_1.default)("https://api.postmarkapp.com/email", {
+            const r = await fetch("https://api.postmarkapp.com/email", {
                 method: "POST",
                 headers: { "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN, "Content-Type": "application/json" },
                 body: JSON.stringify({ From: FROM, To: to, Subject: subject, HtmlBody: html, ...(text ? { TextBody: text } : {}), MessageStream: "outbound" }),
             });
             if (!r.ok) {
                 const detail = await r.text().catch(() => "");
-                logger_js_1.logger.error({ to, status: r.status, detail }, "Postmark email failed");
+                logger_1.logger.error({ to, status: r.status, detail }, "Postmark email failed");
                 return false;
             }
-            logger_js_1.logger.info({ to, subject }, "Email sent (Postmark)");
+            logger_1.logger.info({ to, subject }, "Email sent (Postmark)");
             return true;
         }
         catch (e) {
-            logger_js_1.logger.error({ to, error: e.message }, "Postmark email error");
+            logger_1.logger.error({ to, error: e.message }, "Postmark email error");
             return false;
         }
     }
     // Dev fallback
-    logger_js_1.logger.warn({ to, subject }, "Email provider not configured — email skipped (set RESEND_API_KEY)");
+    logger_1.logger.warn({ to, subject }, "Email provider not configured — email skipped (set RESEND_API_KEY)");
     return false;
 }
 // ─── Shared HTML layout ───
@@ -128,7 +124,7 @@ async function sendVerificationEmail(args) {
     <p style="font-size:12px;color:#444;word-break:break-all">Or copy this link: ${verifyUrl}</p>
   `);
     await sendEmail(to, subject, html, text);
-    logger_js_1.logger.info({ to }, "Verification email sent");
+    logger_1.logger.info({ to }, "Verification email sent");
 }
 // ─── 2. Welcome Email ───
 async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted) {

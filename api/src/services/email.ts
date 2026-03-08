@@ -1,5 +1,4 @@
-import fetch from "node-fetch";
-import { logger } from "../lib/logger.js";
+import { logger } from "../lib/logger";
 
 /**
  * Arch Tools — Email Service
