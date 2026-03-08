@@ -87,28 +87,40 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
         { name: "crypto-sentiment", description: "Market sentiment analysis for any cryptocurrency", category: "crypto", credits: 3 },
         { name: "token-lookup", description: "Look up any token by name, symbol, or contract address", category: "crypto", credits: 1 },
     ];
+    // First, diagnose the actual Tool table structure
+    let columns = [];
+    try {
+        columns = await prisma_1.prisma.$queryRaw(client_1.Prisma.sql `
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'Tool'
+      ORDER BY ordinal_position
+    `);
+    }
+    catch (e) {
+        columns = [{ error: String(e).slice(0, 200) }];
+    }
     const results = [];
     for (const t of tools) {
         try {
-            // Use tagged template raw SQL (Prisma.sql handles parameterization correctly)
-            const id = Math.random().toString(36).slice(2, 27);
-            await prisma_1.prisma.$executeRaw(client_1.Prisma.sql `
-        INSERT INTO "Tool" (id, name, description, category, credits, enabled)
-        VALUES (${id}, ${t.name}, ${t.description}, ${t.category}, ${t.credits}, true)
-        ON CONFLICT (name) DO UPDATE
-          SET description = EXCLUDED.description,
-              category    = EXCLUDED.category,
-              credits     = EXCLUDED.credits,
-              enabled     = true
-      `);
-            results.push({ name: t.name, status: "ok" });
+            // Try prisma.tool.create, skip if already exists
+            const existing = await prisma_1.prisma.tool.findUnique({ where: { name: t.name } });
+            if (existing) {
+                results.push({ name: t.name, status: "already_exists" });
+            }
+            else {
+                await prisma_1.prisma.tool.create({
+                    data: { name: t.name, description: t.description, category: t.category, credits: t.credits },
+                });
+                results.push({ name: t.name, status: "created" });
+            }
         }
         catch (e) {
-            results.push({ name: t.name, status: `error: ${String(e).slice(0, 120)}` });
+            results.push({ name: t.name, status: `error: ${String(e).slice(0, 300)}` });
         }
     }
     const total = await prisma_1.prisma.tool.count();
-    res.json({ ok: true, results, total, request_id: (0, credits_1.reqId)() });
+    res.json({ ok: true, columns, results, total, request_id: (0, credits_1.reqId)() });
 });
 exports.default = router;
 //# sourceMappingURL=admin.js.map
