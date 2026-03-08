@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API Docs — Arch Tools</title>
-  <meta name="description" content="Arch Tools API documentation. 45 tools, one API key. REST, MCP, and SDK." />
+  <meta name="description" content="Arch Tools API documentation. 50 tools, one API key. REST, MCP, and SDK." />
   <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -174,6 +174,11 @@
         <a href="#crypto-fear-greed">crypto-fear-greed</a>
         <a href="#crypto-news">crypto-news</a>
         <a href="#token-lookup">token-lookup</a>
+        <a href="#text-to-speech">text-to-speech</a>
+        <a href="#transcribe-audio">transcribe-audio</a>
+        <a href="#email-send">email-send</a>
+        <a href="#design-create">design-create</a>
+        <a href="#domain-check">domain-check</a>
       </div>
     </nav>
 
@@ -241,7 +246,7 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
 
       <!-- MCP -->
       <h2 id="mcp">MCP / Claude Desktop</h2>
-      <p>All 45 tools are auto-exposed as MCP tools. Mac, Windows, and Linux. Add to <span class="inline-code">claude_desktop_config.json</span>:</p>
+      <p>All 50 tools are auto-exposed as MCP tools. Mac, Windows, and Linux. Add to <span class="inline-code">claude_desktop_config.json</span>:</p>
 
       <table class="params-table" style="margin:10px 0 14px;">
         <tr><th>OS</th><th>Config path</th></tr>
@@ -655,6 +660,80 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
         <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
           <tr><td>query</td><td>string</td><td><span class="req">required</span> — e.g. "bitcoin" or "BTC"</td></tr>
         </table>
+      </div>
+
+      <!-- text-to-speech -->
+      <div class="tool-doc" id="text-to-speech">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/text-to-speech</span><span class="badge badge-post">POST</span><span class="badge badge-free">5 credits</span></div>
+        <div class="tool-doc-desc">Convert text to natural-sounding speech via ElevenLabs. Returns base64-encoded MP3 audio. 50+ voices available.</div>
+        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td>text</td><td>string</td><td>✓</td><td>Text to convert. Max 5,000 characters.</td></tr>
+          <tr><td>voice_id</td><td>string</td><td></td><td>ElevenLabs voice ID. Default: <span class="inline-code">EXAVITQu4vr4xnSDxMaL</span> (Sarah)</td></tr>
+          <tr><td>model_id</td><td>string</td><td></td><td>ElevenLabs model. Default: <span class="inline-code">eleven_turbo_v2_5</span></td></tr>
+          <tr><td>stability</td><td>number</td><td></td><td>Voice stability 0–1. Default: 0.5</td></tr>
+          <tr><td>similarity_boost</td><td>number</td><td></td><td>Clarity/similarity 0–1. Default: 0.75</td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/text-to-speech \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Hello from Arch Tools","voice_id":"EXAVITQu4vr4xnSDxMaL"}'</code></pre></div>
+      </div>
+
+      <!-- transcribe-audio -->
+      <div class="tool-doc" id="transcribe-audio">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/transcribe-audio</span><span class="badge badge-post">POST</span><span class="badge badge-free">8 credits</span></div>
+        <div class="tool-doc-desc">Transcribe audio files to text via OpenAI Whisper. Pass a public audio URL. Supports 100+ languages.</div>
+        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td>audio_url</td><td>string</td><td>✓</td><td>Public URL of the audio file (MP3, WAV, M4A, OGG, WEBM)</td></tr>
+          <tr><td>language</td><td>string</td><td></td><td>ISO-639-1 language code hint (e.g. <span class="inline-code">en</span>, <span class="inline-code">es</span>). Auto-detected if omitted.</td></tr>
+          <tr><td>prompt</td><td>string</td><td></td><td>Optional context prompt to improve accuracy (e.g. technical terms, speaker names)</td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/transcribe-audio \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"audio_url":"https://example.com/audio.mp3","language":"en"}'</code></pre></div>
+      </div>
+
+      <!-- email-send -->
+      <div class="tool-doc" id="email-send">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/email-send</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
+        <div class="tool-doc-desc">Send transactional emails via Resend. Plain text or HTML. Sent from no-reply@archtools.dev by default.</div>
+        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td>to</td><td>string</td><td>✓</td><td>Recipient email address</td></tr>
+          <tr><td>subject</td><td>string</td><td>✓</td><td>Email subject line</td></tr>
+          <tr><td>body</td><td>string</td><td>✓*</td><td>Plain text body. Required if <span class="inline-code">html</span> not provided.</td></tr>
+          <tr><td>html</td><td>string</td><td>✓*</td><td>HTML body. Required if <span class="inline-code">body</span> not provided.</td></tr>
+          <tr><td>from</td><td>string</td><td></td><td>Sender address. Default: <span class="inline-code">Arch Tools &lt;no-reply@archtools.dev&gt;</span></td></tr>
+        </table>
+        <p style="font-size:12px;color:var(--muted);margin:8px 0 0;">⚠️ You are responsible for CAN-SPAM / GDPR compliance. Do not send unsolicited email.</p>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/email-send \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"to":"user@example.com","subject":"Hello","body":"Message body here"}'</code></pre></div>
+      </div>
+
+      <!-- design-create -->
+      <div class="tool-doc" id="design-create">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/design-create</span><span class="badge badge-post">POST</span><span class="badge badge-free">15 credits</span></div>
+        <div class="tool-doc-desc">Generate images from text prompts via DALL-E 3. Returns an image URL. Three sizes, vivid or natural style.</div>
+        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td>prompt</td><td>string</td><td>✓</td><td>Image description / prompt</td></tr>
+          <tr><td>size</td><td>string</td><td></td><td><span class="inline-code">1024x1024</span> (default), <span class="inline-code">1792x1024</span>, or <span class="inline-code">1024x1792</span></td></tr>
+          <tr><td>quality</td><td>string</td><td></td><td><span class="inline-code">standard</span> (default) or <span class="inline-code">hd</span></td></tr>
+          <tr><td>style</td><td>string</td><td></td><td><span class="inline-code">vivid</span> (default) or <span class="inline-code">natural</span></td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/design-create \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"prompt":"A futuristic city skyline at sunset, ultra-detailed","size":"1792x1024"}'</code></pre></div>
+      </div>
+
+      <!-- domain-check -->
+      <div class="tool-doc" id="domain-check">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/domain-check</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">Check if a domain is registered or available via RDAP. Returns registration date, expiry, nameservers, and status. No API key needed.</div>
+        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td>domain</td><td>string</td><td>✓</td><td>Domain to check (e.g. <span class="inline-code">archtools.dev</span>, <span class="inline-code">example.com</span>). URL format also accepted.</td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/domain-check \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"domain":"archtools.dev"}'</code></pre></div>
       </div>
 
     </div>
