@@ -362,6 +362,9 @@
       .cat-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
       .cat-filters::-webkit-scrollbar { display: none; }
       .cat-pill { flex-shrink: 0; }
+
+      /* Quick Start — stack to 1 col on mobile */
+      #quickstart .qs-grid { grid-template-columns: 1fr !important; }
     }
 
     /* ══════════════════════════════════════════════════
@@ -1807,6 +1810,49 @@ function showLangTab(lang) {
   </div>
 </section>
 
+<!-- QUICK START -->
+<section id="quickstart" style="padding:72px 0 60px;border-top:1px solid var(--border);">
+  <div class="wrap">
+    <div class="section-tag">Quick Start</div>
+    <h2 class="section-title">Up and running in 3 steps.</h2>
+    <p class="section-sub" style="margin-bottom:40px;">Get your API key, make your first call, and integrate with your agent — all in under 5 minutes.</p>
+
+    <div class="qs-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:8px;">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--amber);">STEP 1 — GET YOUR KEY</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--purple);">STEP 2 — FIRST CALL</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--cyan);">STEP 3 — USE IN AGENT</div>
+    </div>
+    <div class="qs-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:36px;">
+      <div class="code-block" style="margin:0;">
+        <span class="t-line"><span class="code-comment"># Register — get 100 free credits</span></span>
+        <span class="t-line"><span class="t-prompt">$</span> curl -X POST https://archtools.dev/v1/agent/register \</span>
+        <span class="t-line">&nbsp;&nbsp;-H <span class="code-str">"Content-Type: application/json"</span> \</span>
+        <span class="t-line">&nbsp;&nbsp;-d <span class="code-str">'{"email":"you@example.com"}'</span></span>
+        <span class="t-line" style="margin-top:8px;"><span class="code-comment"># → returns your api_key</span></span>
+      </div>
+      <div class="code-block" style="margin:0;">
+        <span class="t-line"><span class="code-comment"># Call any tool with x-api-key</span></span>
+        <span class="t-line"><span class="t-prompt">$</span> curl -X POST https://archtools.dev/v1/tools/generate-hash \</span>
+        <span class="t-line">&nbsp;&nbsp;-H <span class="code-str">"x-api-key: arch_your_key"</span> \</span>
+        <span class="t-line">&nbsp;&nbsp;-H <span class="code-str">"Content-Type: application/json"</span> \</span>
+        <span class="t-line">&nbsp;&nbsp;-d <span class="code-str">'{"text":"hello","algorithm":"sha256"}'</span></span>
+      </div>
+      <div class="code-block" style="margin:0;">
+        <span class="t-line"><span class="code-comment">// JS agent fetch example</span></span>
+        <span class="t-line"><span class="code-key">const</span> res = <span class="code-key">await</span> fetch(</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-str">"https://archtools.dev/v1/tools/web-scrape"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;{ method: <span class="code-str">"POST"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;headers: { <span class="code-str">"x-api-key"</span>: <span class="code-val">API_KEY</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-str">"Content-Type"</span>: <span class="code-str">"application/json"</span> },</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;body: JSON.stringify({ url: <span class="code-str">"https://example.com"</span> }) }</span>
+        <span class="t-line">);</span>
+        <span class="t-line"><span class="code-key">const</span> data = <span class="code-key">await</span> res.json();</span>
+      </div>
+    </div>
+    <p style="font-family:var(--mono);font-size:12px;color:var(--dimmer);margin-top:8px;">Every response includes <code style="color:var(--muted);">credits_remaining</code> so your agent always knows its balance. Failed calls (4xx) never cost credits.</p>
+  </div>
+</section>
+
 <!-- FAQ -->
 <section id="faq" style="padding:72px 0 60px;border-top:1px solid var(--border);">
   <div class="wrap">
@@ -1855,12 +1901,36 @@ function showLangTab(lang) {
         <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">15 networks: <strong style="color:var(--text);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad</strong> (EVM/USDC), plus <strong style="color:var(--text);">Solana, Noble/Cosmos, Algorand, Stellar, Sui, Polkadot, Aptos</strong>. USDT is accepted on 6 EVM chains. Native tokens supported: ETH, BNB, NEAR, SOL, TAO. If your agent holds any of these, it can pay. No bridging, no wrapping — send natively.</p>
       </details>
 
-      <details style="padding:20px 0;">
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
         <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
           Is there a free tier? What do I actually get?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
         <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with your email — no credit card needed — and you instantly receive <strong style="color:var(--green);">100 free credits</strong>, refreshed every month. That's enough for ~20 web scrapes, ~50 hash/validate/UUID calls, or 5 AI generations. No time limit, no expiry, no upsell wall. Use it to test every tool before spending a dollar. When you're ready to scale, one-time credit packs start at $9.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          What exactly is a credit?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">A credit is the unit of usage on Arch Tools. Each successful API call deducts credits from your balance — most utility tools (hash, UUID, validate) cost <strong style="color:var(--green);">1 credit</strong>. Mid-tier tools (web scrape, currency convert) cost 2–5 credits. AI generation and advanced tools cost 10–25 credits. Failed requests (4xx errors) are always free. Your current balance is returned in every API response as <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">credits_remaining</code>.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          What is x402 and how does it work?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">x402 is an open HTTP payment protocol — an extension of the classic <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402 Payment Required</code> status code. When an AI agent calls a tool without a pre-purchased balance, the server responds with a 402 containing a USDC price and wallet address. The agent signs a payment on-chain (Base, Solana, or Ethereum), includes the signed receipt in a retry request, and the endpoint unlocks immediately — all without a human or credit card. Arch Tools is the first production API platform to implement x402 natively. Learn more at <a href="https://x402.org" target="_blank" style="color:var(--purple);">x402.org</a>.</p>
+      </details>
+
+      <details style="padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          How do I get an API key?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address — no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response. Your key is also emailed to you so you can always recover it. Store it safely — it's the only authentication you need for all 50 tools.</p>
       </details>
 
     </div>
