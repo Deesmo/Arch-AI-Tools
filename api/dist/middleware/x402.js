@@ -27,6 +27,8 @@ const USDC_CONTRACTS = {
     base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     "base-sepolia": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
 };
+// Solana USDC mint address (native USDC on Solana mainnet)
+const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 // Per-tool pricing in USDC (string to avoid float issues)
 exports.X402_PRICES = {
     "validate-data": "0.001",
@@ -81,25 +83,41 @@ function buildPaymentRequired(toolName, price) {
     const usdcContract = USDC_CONTRACTS[network] ?? USDC_CONTRACTS["base"];
     // Convert price to USDC atomic units (6 decimals)
     const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
+    const resource = `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`;
+    const accepts = [
+        // Option 1: USDC on Coinbase Base (EVM)
+        {
+            scheme: "exact",
+            network: chainId,
+            maxAmountRequired: amountAtomic,
+            resource,
+            description: `Arch Tools — ${toolName} (USDC on Base)`,
+            mimeType: "application/json",
+            payTo: config_1.config.x402.walletAddress,
+            maxTimeoutSeconds: 60,
+            asset: usdcContract,
+            extra: { name: "USD Coin", version: "2" },
+        },
+    ];
+    // Option 2: USDC on Solana (if wallet configured)
+    const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
+    if (solanaWallet) {
+        accepts.push({
+            scheme: "exact",
+            network: "solana:mainnet",
+            maxAmountRequired: amountAtomic,
+            resource,
+            description: `Arch Tools — ${toolName} (USDC on Solana)`,
+            mimeType: "application/json",
+            payTo: solanaWallet,
+            maxTimeoutSeconds: 60,
+            asset: SOLANA_USDC_MINT,
+            extra: { name: "USD Coin", version: "spl" },
+        });
+    }
     return {
         x402Version: 1,
-        accepts: [
-            {
-                scheme: "exact",
-                network: chainId,
-                maxAmountRequired: amountAtomic,
-                resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`,
-                description: `Arch Tools — ${toolName}`,
-                mimeType: "application/json",
-                payTo: config_1.config.x402.walletAddress,
-                maxTimeoutSeconds: 60,
-                asset: usdcContract,
-                extra: {
-                    name: "USD Coin",
-                    version: "2",
-                },
-            },
-        ],
+        accepts,
         error: "X-PAYMENT-REQUIRED",
     };
 }

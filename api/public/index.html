@@ -520,7 +520,7 @@
               <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"X-PAYMENT: $USDC_PAYMENT_HEADER"</span></span>
               <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
               <span class="t-line">&nbsp;</span>
-              <span class="t-line"><span class="t-comment"># x402 — USDC on Coinbase Base, settles instantly</span></span>
+              <span class="t-line"><span class="t-comment"># x402 — USDC on Base or Solana, settles instantly</span></span>
               <span class="t-line"><span class="t-out" style="color:#34d399;">&#123;"content":"...","paid_via":"x402","amount":"0.001 USDC"&#125;</span></span>
               <span class="t-line">&nbsp;</span>
               <span class="t-line"><span class="t-comment"># Or use API key + Stripe if you prefer</span></span>
@@ -1122,12 +1122,12 @@
   <div class="wrap">
     <div class="split-grid">
       <div>
-        <div class="section-tag">x402 Protocol · Powered by Coinbase Base</div>
+        <div class="section-tag">x402 Protocol · Base · Solana</div>
         <h2 class="section-title">AI agents pay with USDC. Automatically.</h2>
         <p class="section-sub">Arch supports the x402 payment protocol — built on <strong style="color:var(--fg);">Coinbase's Base network</strong>. Your agent discovers tools, sees the price in USDC, pays autonomously, and calls the endpoint. No human in the loop, no wallet setup, no credit card management.</p>
         <ul class="feature-list">
           <li>→ Agent hits endpoint → receives HTTP 402 with price + wallet address</li>
-          <li>→ Agent pays in <strong style="color:var(--fg);">USDC on Base</strong> (Coinbase L2) — settles in seconds, costs fractions of a cent</li>
+          <li>→ Agent pays in <strong style="color:var(--fg);">USDC on Base</strong> (Coinbase L2) or <strong style="color:var(--fg);">USDC on Solana</strong> — settles in seconds, costs fractions of a cent</li>
           <li>→ Endpoint unlocks, tool executes, result returned</li>
           <li>→ No wallet setup on your side — the protocol handles everything</li>
           <li>→ Fallback: Stripe credits always available if you prefer traditional billing</li>
@@ -1135,6 +1135,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center;">
           <span style="font-size:11px;color:rgba(255,255,255,0.35);font-family:var(--mono);">BUILT ON</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,82,255,0.12);color:#4d8eff;border:1px solid rgba(0,82,255,0.3);">Coinbase Base</span>
+          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(153,69,255,0.12);color:#9945FF;border:1px solid rgba(153,69,255,0.3);">Solana</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,229,176,0.10);color:#00e5b0;border:1px solid rgba(0,229,176,0.25);">USDC</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,144,16,0.10);color:#FFB030;border:1px solid rgba(255,144,16,0.25);">x402 Protocol</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border:1px solid var(--border);">Stripe</span>
