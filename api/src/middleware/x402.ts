@@ -260,7 +260,24 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 11: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+  // Option 11: USDC on Sui (Move-based L1, native USDC via Circle CCTP)
+  const suiWallet = process.env.SUI_WALLET_ADDRESS;
+  if (suiWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "sui:mainnet",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Sui)`,
+      mimeType: "application/json",
+      payTo: suiWallet,
+      maxTimeoutSeconds: 60,
+      asset: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      extra: { name: "USD Coin", version: "sui-move" },
+    });
+  }
+
+  // Option 12: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
   const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
   if (aptosWallet) {
     accepts.push({
