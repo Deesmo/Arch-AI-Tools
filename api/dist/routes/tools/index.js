@@ -2200,4 +2200,69 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req, res)
         res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
     }
 });
+// ─── Route aliases (DB name → actual route) ──────────────────────────────────
+// DB has "generate-image" but route is /design-create
+router.post("/generate-image", ...toolMiddleware("design-create"), async (req, res) => {
+    req.url = "/design-create";
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await (0, credits_1.deductCredits)(req, res, "design-create", 15);
+        if (!ok)
+            return;
+    }
+    const { prompt, size = "1024x1024", quality = "standard" } = req.body;
+    if (!prompt) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
+    if (!OPENAI_KEY) {
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    try {
+        const r = await axios_1.default.post("https://api.openai.com/v1/images/generations", { model: "dall-e-3", prompt, n: 1, size, quality }, { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 });
+        const img = r.data.data[0];
+        res.json({ ok: true, image_url: img.url, revised_prompt: img.revised_prompt, size, quality, credits_used: 15, request_id: (0, credits_1.reqId)() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "generation_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+    }
+});
+// DB has "check-domain" but route is /domain-check
+router.post("/check-domain", ...toolMiddleware("domain-check"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await (0, credits_1.deductCredits)(req, res, "domain-check", 2);
+        if (!ok)
+            return;
+    }
+    const { domain } = req.body;
+    if (!domain) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: (0, credits_1.reqId)() });
+        return;
+    }
+    const clean = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
+    try {
+        const r = await axios_1.default.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { Accept: "application/json" } });
+        const d = r.data;
+        const events = d.events ?? [];
+        const registrar = (d.entities ?? []).find(e => (e.roles ?? []).includes("registrar"));
+        res.json({
+            ok: true, domain: clean, available: false,
+            registrar: (() => { const vcard = registrar?.vcardArray?.[1]; const fn = vcard?.find((v) => Array.isArray(v) && v[0] === "fn"); return fn ? fn[3] ?? null : null; })(),
+            expiry_date: events.find(e => e.eventAction === "expiration")?.eventDate ?? null,
+            status: d.status ?? [], credits_used: 2, request_id: (0, credits_1.reqId)()
+        });
+    }
+    catch (e) {
+        const status = e?.response?.status;
+        if (status === 404) {
+            res.json({ ok: true, domain: clean, available: true, registrar: null, expiry_date: null, status: ["available"], credits_used: 2, request_id: (0, credits_1.reqId)() });
+        }
+        else {
+            res.status(502).json({ ok: false, error: "lookup_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        }
+    }
+});
 //# sourceMappingURL=index.js.map
