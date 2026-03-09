@@ -18,11 +18,14 @@ import axios from "axios";
 import { prisma } from "../lib/prisma";
 import { config } from "../config";
 
-// USDC contract addresses by network
+// USDC contract addresses by network (native USDC, not bridged)
 const USDC_CONTRACTS: Record<string, string> = {
-  base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  base:      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   "base-sepolia": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-  ethereum: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  ethereum:  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  arbitrum:  "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  polygon:   "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+  optimism:  "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
 };
 
 // Solana USDC mint address (native USDC on Solana mainnet)
@@ -116,6 +119,54 @@ function buildPaymentRequired(toolName: string, price: string): object {
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
       asset: USDC_CONTRACTS["ethereum"],
+      extra: { name: "USD Coin", version: "2" },
+    });
+  }
+
+  // Option 3: USDC on Arbitrum (same EVM wallet, fast + cheap L2)
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:42161",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Arbitrum)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDC_CONTRACTS["arbitrum"],
+      extra: { name: "USD Coin", version: "2" },
+    });
+  }
+
+  // Option 4: USDC on Polygon (same EVM wallet)
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:137",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Polygon)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDC_CONTRACTS["polygon"],
+      extra: { name: "USD Coin", version: "2" },
+    });
+  }
+
+  // Option 5: USDC on Optimism (same EVM wallet)
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:10",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Optimism)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDC_CONTRACTS["optimism"],
       extra: { name: "USD Coin", version: "2" },
     });
   }
