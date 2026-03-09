@@ -26,6 +26,7 @@ const USDC_CONTRACTS: Record<string, string> = {
   arbitrum:  "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
   polygon:   "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
   optimism:  "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+  avalanche: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
 };
 
 // Solana USDC mint address (native USDC on Solana mainnet)
@@ -171,7 +172,23 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 3: USDC on Solana
+  // Option 6: USDC on Avalanche C-Chain (same EVM wallet)
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:43114",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Avalanche)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDC_CONTRACTS["avalanche"],
+      extra: { name: "USD Coin", version: "2" },
+    });
+  }
+
+  // Option 7: USDC on Solana
   const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
   if (solanaWallet) {
     accepts.push({
