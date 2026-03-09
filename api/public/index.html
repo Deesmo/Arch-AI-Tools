@@ -641,6 +641,61 @@
   </div>
 </section>
 
+<!-- QUICK START -->
+<section id="quick-start" style="padding:72px 0 60px;border-top:1px solid var(--border);">
+  <div class="wrap">
+    <div class="section-tag">Quick Start</div>
+    <h2 class="section-title">First API call in 60 seconds</h2>
+    <p class="section-sub" style="margin-bottom:40px;">Register free, get your key, make your first call. No credit card, no setup, no SDK required.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
+      <div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:12px;padding:20px 22px;">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 1 — Get your key</div>
+            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> — your API key arrives in the confirmation email instantly. 100 free credits included.</p>
+            <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--amber);text-decoration:none;border:1px solid rgba(255,144,16,0.3);border-radius:6px;padding:6px 12px;background:rgba(255,144,16,0.07);transition:all 0.15s;">Get free API key →</a>
+          </div>
+          <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:12px;padding:20px 22px;">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 2 — Pick a tool</div>
+            <p style="font-size:14px;color:var(--muted);margin:0;line-height:1.6;">Browse all 50 tools below. Each has one endpoint, one JSON body, one response. No auth flows, no OAuth, no rate-limit tokens to manage.</p>
+          </div>
+          <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:12px;padding:20px 22px;">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 3 — Call it</div>
+            <p style="font-size:14px;color:var(--muted);margin:0;line-height:1.6;">Pass <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:12px;">x-api-key: YOUR_KEY</code> in the header. That's the only auth step, forever.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="background:#070617;border:1px solid var(--border2);border-radius:12px;overflow:hidden;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;gap:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div><div style="width:10px;height:10px;border-radius:50%;background:#ffbd2e;"></div><div style="width:10px;height:10px;border-radius:50%;background:#28ca41;"></div></div>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--dimmer);">cURL · Web Search</span>
+          </div>
+          <pre style="margin:0;padding:20px;font-family:var(--mono);font-size:12.5px;color:#A8FF78;line-height:1.8;overflow-x:auto;">curl -X POST https://archtools.dev/v1/tools/search-web \
+  -H "x-api-key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "AI agent payments 2025"}'</pre>
+          <div style="border-top:1px solid var(--border);padding:14px 20px;background:rgba(255,255,255,0.02);">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--dimmer);margin-bottom:8px;">Response</div>
+            <pre style="margin:0;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;overflow-x:auto;">{
+  "ok": true,
+  "results": [
+    {
+      "title": "x402: HTTP-native payments for AI",
+      "url": "https://x402.org",
+      "snippet": "The protocol powering autonomous agent payments..."
+    }
+  ],
+  "credits_used": 3,
+  "request_id": "req_abc123"
+}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- TOOL GRID -->
 <section id="tools" style="padding-top:0;">
   <div class="wrap">
@@ -1511,6 +1566,59 @@ function showLangTab(lang) {
   </div>
 </section>
 
+<!-- RATE LIMITS -->
+<section id="rate-limits" style="padding:60px 0 48px;border-top:1px solid var(--border);">
+  <div class="wrap">
+    <div class="section-tag">Rate Limits</div>
+    <h2 class="section-title">Built for real workloads</h2>
+    <p class="section-sub" style="margin-bottom:36px;">Limits are per API key. x402 micropayment calls bypass rate limits entirely — the chain is the ratelimiter.</p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:560px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border2);">
+            <th style="text-align:left;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Plan</th>
+            <th style="text-align:center;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Requests / min</th>
+            <th style="text-align:center;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Requests / hour</th>
+            <th style="text-align:center;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Concurrent</th>
+            <th style="text-align:center;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Timeout</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:14px 16px;font-weight:600;color:var(--text);">Free</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">20</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">200</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">5</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">30s</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:rgba(255,144,16,0.03);">
+            <td style="padding:14px 16px;font-weight:600;color:var(--amber);">Starter · $9</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">60</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">1,000</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">15</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">30s</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:rgba(136,68,255,0.03);">
+            <td style="padding:14px 16px;font-weight:600;color:var(--purple);">Pro · $49</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">200</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">5,000</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">50</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">60s</td>
+          </tr>
+          <tr style="background:rgba(255,40,150,0.03);">
+            <td style="padding:14px 16px;font-weight:600;color:var(--pink);">Business · $199</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">600</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">20,000</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">100</td>
+            <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">120s</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">429 responses include a <code style="color:var(--muted);">Retry-After</code> header. x402 per-call payments have no rate limit. Need higher limits? <a href="mailto:brad@drinkforbidden.com" style="color:var(--purple);">Contact us.</a></p>
+  </div>
+</section>
+
 <!-- WHAT DOES $9 BUY -->
 <section style="padding:60px 0 40px;border-top:1px solid var(--border);">
   <div class="wrap">
@@ -1544,6 +1652,66 @@ function showLangTab(lang) {
       </div>
     </div>
     <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Mix and match across all 50 tools. Credits never expire — use them at your own pace.</p>
+  </div>
+</section>
+
+<!-- CREDITS EXPLAINED -->
+<section id="credits" style="padding:60px 0 48px;border-top:1px solid var(--border);">
+  <div class="wrap">
+    <div class="section-tag">Credits Explained</div>
+    <h2 class="section-title">Every tool. Every cost. No surprises.</h2>
+    <p class="section-sub" style="margin-bottom:36px;">Credits are consumed per successful API call. Failed calls (4xx errors) never cost credits. Here's what each tool category costs.</p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:500px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border2);">
+            <th style="text-align:left;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Tool Category</th>
+            <th style="text-align:left;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Examples</th>
+            <th style="text-align:center;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Credits / call</th>
+            <th style="text-align:center;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;">Calls per $9</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:13px 16px;font-weight:600;color:var(--text);">Utility</td>
+            <td style="padding:13px 16px;color:var(--muted);font-size:13px;">UUID, hash, QR code, regex, readability</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--green);font-weight:600;">1</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">10,000</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);">
+            <td style="padding:13px 16px;font-weight:600;color:var(--text);">Validation</td>
+            <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Email verify, phone validate, PII detect</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--green);font-weight:600;">2</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">5,000</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:13px 16px;font-weight:600;color:var(--text);">Conversion & Data</td>
+            <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Currency, format convert, JSONPath, language detect</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--cyan);font-weight:600;">3–5</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">2,000–3,333</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);">
+            <td style="padding:13px 16px;font-weight:600;color:var(--text);">Crypto & Finance</td>
+            <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Crypto price, OHLCV, fear/greed, sentiment</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--cyan);font-weight:600;">5–10</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">1,000–2,000</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:13px 16px;font-weight:600;color:var(--text);">Web & Search</td>
+            <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Web scrape, search, RSS parse, screenshot</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--amber);font-weight:600;">5–10</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">1,000–2,000</td>
+          </tr>
+          <tr style="background:rgba(255,255,255,0.01);">
+            <td style="padding:13px 16px;font-weight:600;color:var(--text);">AI Generation</td>
+            <td style="padding:13px 16px;color:var(--muted);font-size:13px;">AI text, image generate, OCR, browser task</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--pink);font-weight:600;">10–25</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">400–1,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Every API response includes <code style="color:var(--muted);">credits_used</code> and <code style="color:var(--muted);">credits_remaining</code> so your agent always knows its balance. Failed calls (4xx) are always free.</p>
   </div>
 </section>
 
