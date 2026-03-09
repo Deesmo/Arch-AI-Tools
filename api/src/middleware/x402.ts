@@ -225,7 +225,24 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 9: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+  // Option 9: USDC on Algorand (ASA ID 31566704, native Circle USDC)
+  const algorandWallet = process.env.ALGORAND_WALLET_ADDRESS;
+  if (algorandWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "algorand:mainnet",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Algorand)`,
+      mimeType: "application/json",
+      payTo: algorandWallet,
+      maxTimeoutSeconds: 60,
+      asset: "31566704",
+      extra: { name: "USD Coin", version: "asa" },
+    });
+  }
+
+  // Option 10: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
   const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
   if (aptosWallet) {
     accepts.push({
