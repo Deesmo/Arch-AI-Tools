@@ -351,7 +351,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
           const data = await resp.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
           const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
           if (results.length > 0) {
-            return res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: reqId() });
+            res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: reqId() }); return;
           }
         }
       } catch (_) { /* fall through to DDG */ }

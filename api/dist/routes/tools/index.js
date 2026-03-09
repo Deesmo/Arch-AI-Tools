@@ -480,7 +480,8 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                     const data = await resp.json();
                     const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
                     if (results.length > 0) {
-                        return res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: (0, credits_1.reqId)() });
+                        res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: (0, credits_1.reqId)() });
+                        return;
                     }
                 }
             }
