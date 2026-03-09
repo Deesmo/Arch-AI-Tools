@@ -337,6 +337,35 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "USD Coin", version: "aptos-fa" },
         });
     }
+    // Native ETH — agents holding ETH can pay directly (fixed pricing per tier)
+    const ethWallet = process.env.ETH_WALLET_ADDRESS;
+    if (ethWallet) {
+        // ETH pricing tiers (in wei, ~$2500/ETH): basic=0.0000004, mid=0.000004, heavy=0.000008
+        const ethPriceFloat = parseFloat(price);
+        let ethWei;
+        if (ethPriceFloat <= 0.002)
+            ethWei = "400000000000"; // ~$0.001
+        else if (ethPriceFloat <= 0.005)
+            ethWei = "800000000000"; // ~$0.002
+        else if (ethPriceFloat <= 0.010)
+            ethWei = "2000000000000"; // ~$0.005
+        else if (ethPriceFloat <= 0.020)
+            ethWei = "4000000000000"; // ~$0.010
+        else
+            ethWei = "8000000000000"; // ~$0.020
+        accepts.push({
+            scheme: "exact",
+            network: "eip155:1",
+            maxAmountRequired: ethWei,
+            resource,
+            description: `Arch Tools — ${toolName} (native ETH on Ethereum)`,
+            mimeType: "application/json",
+            payTo: ethWallet,
+            maxTimeoutSeconds: 300,
+            asset: "0x0000000000000000000000000000000000000000",
+            extra: { name: "Ether", version: "native" },
+        });
+    }
     // USDT options — Tether (higher market cap than USDC, widely held by trading agents)
     const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
     if (usdtWallet) {
