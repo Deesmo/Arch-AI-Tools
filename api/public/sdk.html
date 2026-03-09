@@ -125,7 +125,7 @@
     .lang-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
     .lang-name{font-weight:600;font-size:14px;}
     .lang-install{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;}
-    .lang-code{background:#0D0C24;border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--cyan);line-height:1.7;overflow-x:auto;}
+    .lang-code{background:#0D0C24;border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--cyan);line-height:1.7;overflow-x:auto;white-space:pre;margin:0;}
 
     /* FOOTER */
     footer{border-top:1px solid var(--border);padding:32px 0;margin-top:0;}
@@ -273,7 +273,7 @@
       <div class="mcp-step">
         <div class="step-num">STEP 3 — CLAUDE DESKTOP</div>
         <div class="step-title">claude_desktop_config.json</div>
-        <div class="code-line" style="white-space:pre;font-size:11px;">{
+        <pre class="code-line" style="font-size:11px;white-space:pre;overflow-x:auto;">{
   "mcpServers": {
     "arch-tools": {
       "command": "arch-tools-mcp",
@@ -282,7 +282,7 @@
       }
     }
   }
-}</div>
+}</pre>
       </div>
       <div class="mcp-step">
         <div class="step-num">STEP 4 — STREAMABLE HTTP</div>
@@ -321,7 +321,7 @@
           <div class="lang-name">JavaScript / Node.js</div>
         </div>
         <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># No SDK needed — plain fetch works</div>
-        <div class="lang-code">const res = await fetch(
+        <pre class="lang-code">const res = await fetch(
   'https://archtools.dev/v1/tools/search-web',
   {
     method: 'POST',
@@ -332,7 +332,7 @@
     body: JSON.stringify({ query: 'AI agents' })
   }
 );
-const data = await res.json();</div>
+const data = await res.json();</pre>
       </div>
 
       <div class="lang-card">
@@ -341,14 +341,14 @@ const data = await res.json();</div>
           <div class="lang-name">Python</div>
         </div>
         <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># pip install requests</div>
-        <div class="lang-code">import requests
+        <pre class="lang-code">import requests
 
 r = requests.post(
   'https://archtools.dev/v1/tools/search-web',
   headers={'x-api-key': 'YOUR_KEY'},
   json={'query': 'AI agents'}
 )
-data = r.json()</div>
+data = r.json()</pre>
       </div>
 
       <div class="lang-card">
@@ -357,13 +357,13 @@ data = r.json()</div>
           <div class="lang-name">Go</div>
         </div>
         <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># Standard library only</div>
-        <div class="lang-code">req, _ := http.NewRequest(
+        <pre class="lang-code">req, _ := http.NewRequest(
   "POST",
   "https://archtools.dev/v1/tools/search-web",
   strings.NewReader(`{"query":"AI"}`),
 )
 req.Header.Set("x-api-key", "YOUR_KEY")
-resp, _ := http.DefaultClient.Do(req)</div>
+resp, _ := http.DefaultClient.Do(req)</pre>
       </div>
 
       <div class="lang-card">
@@ -372,11 +372,11 @@ resp, _ := http.DefaultClient.Do(req)</div>
           <div class="lang-name">cURL</div>
         </div>
         <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># Works from any terminal</div>
-        <div class="lang-code">curl -X POST \
+        <pre class="lang-code">curl -X POST \
   https://archtools.dev/v1/tools/search-web \
   -H "x-api-key: YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"query": "AI agents"}'</div>
+  -d '{"query": "AI agents"}'</pre>
       </div>
 
     </div>
