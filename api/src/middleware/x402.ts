@@ -420,6 +420,31 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
+  // UNI (Uniswap governance token) on Ethereum — ~$10/UNI, 18 decimals
+  const uniWallet = process.env.UNI_WALLET_ADDRESS;
+  if (uniWallet) {
+    const uniPriceFloat = parseFloat(price);
+    let uniAtomic: string;
+    if (uniPriceFloat <= 0.002)       uniAtomic = "100000000000000";   // 0.0001 UNI ~$0.001
+    else if (uniPriceFloat <= 0.005)  uniAtomic = "300000000000000";
+    else if (uniPriceFloat <= 0.010)  uniAtomic = "700000000000000";
+    else if (uniPriceFloat <= 0.020)  uniAtomic = "1400000000000000";
+    else                               uniAtomic = "2500000000000000";
+
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:1",
+      maxAmountRequired: uniAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (UNI on Ethereum)`,
+      mimeType: "application/json",
+      payTo: uniWallet,
+      maxTimeoutSeconds: 60,
+      asset: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      extra: { name: "Uniswap", version: "erc20" },
+    });
+  }
+
   // USDT options — Tether (higher market cap than USDC, widely held by trading agents)
   const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
   if (usdtWallet) {
