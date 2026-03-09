@@ -1,0 +1,2 @@
+ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "reset_token" TEXT;
+ALTER TABLE "Agent" ADD COLUMN IF NOT EXISTS "reset_token_expiry" TIMESTAMP;

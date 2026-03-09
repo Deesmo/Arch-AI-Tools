@@ -116,6 +116,14 @@ exports.LOGIN_HTML = `<!DOCTYPE html>
         <label>Password</label>
         <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
       </div>
+      <div style="text-align:right;margin-top:-8px;margin-bottom:12px;font-size:12px;">
+        <a href="#" onclick="showForgot();return false;" style="color:rgba(255,255,255,0.4);text-decoration:none;">Forgot password?</a>
+      </div>
+      <div id="forgot-form" style="display:none;margin-bottom:12px;">
+        <input type="email" id="forgot-email" placeholder="your@email.com" style="width:100%;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#fff;padding:0 14px;font-family:inherit;font-size:13px;outline:none;margin-bottom:8px;" />
+        <button onclick="doForgot()" style="width:100%;height:40px;border-radius:10px;border:0;background:rgba(255,144,16,0.15);border:1px solid rgba(255,144,16,0.3);color:#FF9010;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Send Reset Link</button>
+        <div id="forgot-status" style="font-size:12px;min-height:16px;margin-top:6px;"></div>
+      </div>
       <div class="status" id="status-password"></div>
       <button class="btn-submit" id="btn-login" onclick="doLogin()">Sign in →</button>
     </div>
@@ -196,6 +204,26 @@ exports.LOGIN_HTML = `<!DOCTYPE html>
       else doKeyLogin();
     }
   });
+
+  function showForgot() {
+    var f = document.getElementById('forgot-form');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') document.getElementById('forgot-email').focus();
+  }
+
+  async function doForgot() {
+    var email = (document.getElementById('forgot-email').value || '').trim();
+    var st = document.getElementById('forgot-status');
+    if (!email) { st.style.color='#f87171'; st.textContent='Enter your email.'; return; }
+    st.style.color='rgba(255,255,255,0.5)'; st.textContent='Sending…';
+    var r = await fetch('/auth/forgot-password', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email })
+    });
+    var d = await r.json();
+    st.style.color='#34d399';
+    st.textContent = d.message || 'Reset link sent if account exists.';
+  }
 
   // If already logged in, redirect
   fetch('/auth/me', { credentials: 'include' }).then(r => r.json()).then(d => {

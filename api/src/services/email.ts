@@ -285,3 +285,15 @@ export async function sendMonthlyRefreshEmail(to: string, credits: number, newBa
   `);
   await sendEmail(to, subject, html);
 }
+
+// ─── 7. Password Reset ───
+export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+  const subject = "Reset your Arch Tools password";
+  const html = layout(subject, `
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;color:#F0EEFF;">Reset your password</h2>
+    <p style="font-size:14px;color:#8A85B0;margin-bottom:24px;">Click the button below to set a new password. This link expires in 1 hour.</p>
+    <div class="btn-wrap"><a class="btn" href="${resetUrl}">Reset Password →</a></div>
+    <p style="font-size:12px;color:#5A557A;margin-top:20px;">If you didn't request this, ignore this email. Your password won't change.</p>
+  `);
+  await sendEmail(to, subject, html);
+}

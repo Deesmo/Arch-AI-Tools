@@ -7,6 +7,7 @@ exports.sendLowCreditAlert = sendLowCreditAlert;
 exports.sendPurchaseConfirmation = sendPurchaseConfirmation;
 exports.sendAdminAlert = sendAdminAlert;
 exports.sendMonthlyRefreshEmail = sendMonthlyRefreshEmail;
+exports.sendPasswordResetEmail = sendPasswordResetEmail;
 const logger_1 = require("../lib/logger");
 /**
  * Arch Tools — Email Service
@@ -277,6 +278,17 @@ async function sendMonthlyRefreshEmail(to, credits, newBalance) {
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Start building →</a></div>
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Need more credits? <a href="${SITE}/#pricing">Upgrade your plan</a> for up to 100,000 credits per month.</p>
+  `);
+    await sendEmail(to, subject, html);
+}
+// ─── 7. Password Reset ───
+async function sendPasswordResetEmail(to, resetUrl) {
+    const subject = "Reset your Arch Tools password";
+    const html = layout(subject, `
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;color:#F0EEFF;">Reset your password</h2>
+    <p style="font-size:14px;color:#8A85B0;margin-bottom:24px;">Click the button below to set a new password. This link expires in 1 hour.</p>
+    <div class="btn-wrap"><a class="btn" href="${resetUrl}">Reset Password →</a></div>
+    <p style="font-size:12px;color:#5A557A;margin-top:20px;">If you didn't request this, ignore this email. Your password won't change.</p>
   `);
     await sendEmail(to, subject, html);
 }
