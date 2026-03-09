@@ -120,6 +120,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
     <div class="at-nav-links">
       <a href="/">Home</a>
       <a href="/dashboard">Dashboard</a>
+      <a href="/login">Sign In</a>
       <a href="/docs">Docs</a>
       <a href="/signup" class="at-nav-cta">Get API Key →</a>
     </div>
