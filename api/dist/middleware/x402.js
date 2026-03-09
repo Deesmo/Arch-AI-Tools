@@ -296,7 +296,23 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "USD Coin", version: "2" },
         });
     }
-    // Option 14: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+    // Option 14: USDC on Polkadot Asset Hub (asset ID 1337, Circle native USDC, XCM to all parachains)
+    const polkadotWallet = process.env.POLKADOT_WALLET_ADDRESS;
+    if (polkadotWallet) {
+        accepts.push({
+            scheme: "exact",
+            network: "polkadot:asset-hub",
+            maxAmountRequired: amountAtomic,
+            resource,
+            description: `Arch Tools — ${toolName} (USDC on Polkadot)`,
+            mimeType: "application/json",
+            payTo: polkadotWallet,
+            maxTimeoutSeconds: 120,
+            asset: "1337",
+            extra: { name: "USD Coin", version: "asset-hub" },
+        });
+    }
+    // Option 15: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
     const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
     if (aptosWallet) {
         accepts.push({
