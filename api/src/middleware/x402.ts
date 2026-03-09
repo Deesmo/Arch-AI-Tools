@@ -242,7 +242,25 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 10: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+  // Option 10: USDC on Stellar (native USDC, 17-sec settlement — MEMO REQUIRED for Coinbase)
+  const stellarWallet = process.env.STELLAR_WALLET_ADDRESS;
+  const stellarMemo = process.env.STELLAR_WALLET_MEMO;
+  if (stellarWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "stellar:pubnet",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Stellar)`,
+      mimeType: "application/json",
+      payTo: stellarWallet,
+      maxTimeoutSeconds: 60,
+      asset: "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      extra: { name: "USD Coin", version: "stellar", memo: stellarMemo ?? "" },
+    });
+  }
+
+  // Option 11: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
   const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
   if (aptosWallet) {
     accepts.push({
