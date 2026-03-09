@@ -176,7 +176,9 @@ exports.LOGIN_HTML = `<!DOCTYPE html>
       var d = await r.json();
       if (d.ok) {
         setStatus('status-password', '✓ Signed in — redirecting…', false);
-        setTimeout(() => window.location.href = '/dashboard', 500);
+        var params = new URLSearchParams(window.location.search);
+        var next = params.get('next') || '/dashboard';
+        setTimeout(() => window.location.href = next, 500);
       } else if (d.error === 'no_password_set') {
         setStatus('status-password', 'No password set for this account. Use the API Key tab to access your dashboard, then set a password from there.', true);
       } else {

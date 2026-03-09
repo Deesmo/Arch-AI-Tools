@@ -332,7 +332,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById("load-btn").click();
       } else {
         var sub = document.querySelector(".page-sub");
-        if (sub) sub.innerHTML = 'Enter your API key below, or <a href="/login" style="color:var(--accent);">sign in with email & password →</a>';
+        // No session, no saved key — redirect to login
+        window.location.href = '/login?next=/dashboard';
       }
     })();
 
