@@ -408,6 +408,34 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "BNB", version: "native" },
         });
     }
+    // TAO (Bittensor) — AI-native blockchain, 9 decimals (Rao), ~$400/TAO
+    const taoWallet = process.env.TAO_WALLET_ADDRESS;
+    if (taoWallet) {
+        const taoPriceFloat = parseFloat(price);
+        let taoRao;
+        if (taoPriceFloat <= 0.002)
+            taoRao = "2500"; // 0.0000025 TAO ~$0.001
+        else if (taoPriceFloat <= 0.005)
+            taoRao = "6250";
+        else if (taoPriceFloat <= 0.010)
+            taoRao = "12500";
+        else if (taoPriceFloat <= 0.020)
+            taoRao = "25000";
+        else
+            taoRao = "62500";
+        accepts.push({
+            scheme: "exact",
+            network: "bittensor:finney",
+            maxAmountRequired: taoRao,
+            resource,
+            description: `Arch Tools — ${toolName} (TAO on Bittensor)`,
+            mimeType: "application/json",
+            payTo: taoWallet,
+            maxTimeoutSeconds: 120,
+            asset: "TAO",
+            extra: { name: "Bittensor", version: "native", decimals: "9" },
+        });
+    }
     // UNI (Uniswap governance token) on Ethereum — ~$10/UNI, 18 decimals
     const uniWallet = process.env.UNI_WALLET_ADDRESS;
     if (uniWallet) {
