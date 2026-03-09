@@ -110,7 +110,8 @@
         <a href="#quickstart">Quickstart</a>
         <a href="#credits">Credits &amp; Limits</a>
         <a href="#errors">Error Codes</a>
-        <a href="#mcp">MCP / Claude Desktop</a>
+        <a href="#mcp">MCP — All Clients</a>
+        <a href="#quickstart-lang">Quick Start by Language</a>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-heading">Data &amp; Validation</div>
@@ -245,16 +246,16 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
       </table>
 
       <!-- MCP -->
-      <h2 id="mcp">MCP / Claude Desktop</h2>
-      <p>All 50 tools are auto-exposed as MCP tools. Mac, Windows, and Linux. Add to <span class="inline-code">claude_desktop_config.json</span>:</p>
+      <h2 id="mcp">MCP Setup — All Clients</h2>
+      <p>All 50 tools are auto-exposed as MCP functions. One config block works across every MCP-compatible client.</p>
 
+      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Claude Desktop</h3>
       <table class="params-table" style="margin:10px 0 14px;">
-        <tr><th>OS</th><th>Config path</th></tr>
+        <tr><th>OS</th><th>Config file path</th></tr>
         <tr><td>macOS</td><td><span class="inline-code">~/Library/Application Support/Claude/claude_desktop_config.json</span></td></tr>
         <tr><td>Windows</td><td><span class="inline-code">%APPDATA%\Claude\claude_desktop_config.json</span></td></tr>
         <tr><td>Linux</td><td><span class="inline-code">~/.config/Claude/claude_desktop_config.json</span></td></tr>
       </table>
-
       <div class="code-wrap">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         <pre><code>{
@@ -267,7 +268,114 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
   }
 }</code></pre>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Same SSE endpoint works with Cursor, Windsurf, and any MCP-compatible client.</p>
+
+      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Cursor</h3>
+      <table class="params-table" style="margin:10px 0 14px;">
+        <tr><th>OS</th><th>Config file path</th></tr>
+        <tr><td>macOS / Linux</td><td><span class="inline-code">~/.cursor/mcp.json</span></td></tr>
+        <tr><td>Windows</td><td><span class="inline-code">%USERPROFILE%\.cursor\mcp.json</span></td></tr>
+      </table>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>{
+  <span class="c-key">"mcpServers"</span>: {
+    <span class="c-key">"arch-tools"</span>: {
+      <span class="c-key">"command"</span>: <span class="c-str">"npx"</span>,
+      <span class="c-key">"args"</span>: [<span class="c-str">"-y"</span>, <span class="c-str">"mcp-remote"</span>, <span class="c-str">"https://arch-tools-mcp.onrender.com/sse"</span>],
+      <span class="c-key">"env"</span>: { <span class="c-key">"ARCH_API_KEY"</span>: <span class="c-str">"arch_your_key_here"</span> }
+    }
+  }
+}</code></pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Windsurf (Codeium)</h3>
+      <table class="params-table" style="margin:10px 0 14px;">
+        <tr><th>OS</th><th>Config file path</th></tr>
+        <tr><td>macOS / Linux</td><td><span class="inline-code">~/.codeium/windsurf/mcp_config.json</span></td></tr>
+        <tr><td>Windows</td><td><span class="inline-code">%USERPROFILE%\.codeium\windsurf\mcp_config.json</span></td></tr>
+      </table>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>{
+  <span class="c-key">"mcpServers"</span>: {
+    <span class="c-key">"arch-tools"</span>: {
+      <span class="c-key">"command"</span>: <span class="c-str">"npx"</span>,
+      <span class="c-key">"args"</span>: [<span class="c-str">"-y"</span>, <span class="c-str">"mcp-remote"</span>, <span class="c-str">"https://arch-tools-mcp.onrender.com/sse"</span>],
+      <span class="c-key">"env"</span>: { <span class="c-key">"ARCH_API_KEY"</span>: <span class="c-str">"arch_your_key_here"</span> }
+    }
+  }
+}</code></pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">ChatGPT Custom GPT Actions</h3>
+      <p>Connect Arch Tools to a Custom GPT in the ChatGPT GPT Store (requires OpenAI account):</p>
+      <ol style="color:var(--muted);line-height:2;padding-left:20px;font-size:14px;">
+        <li>Go to <span class="inline-code">chat.openai.com/gpts/editor</span> → Create</li>
+        <li>Click <strong>Actions</strong> → <strong>Import from URL</strong></li>
+        <li>Paste: <span class="inline-code">https://arch-ai-tools.onrender.com/openapi.json</span></li>
+        <li>Set auth: <strong>API Key</strong> → header name <span class="inline-code">x-api-key</span></li>
+        <li>Save and publish — your GPT now has 18 core Arch Tools natively</li>
+      </ol>
+
+      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Grok &amp; Gemini (API function calling)</h3>
+      <p style="color:var(--muted);font-size:14px;line-height:1.7;">Both xAI (Grok) and Google (Gemini) support function calling via their APIs. Pass the Arch Tools OpenAPI spec or define tool functions manually. No consumer app connector stores exist yet for either platform — use the REST API directly in your agent code. The <span class="inline-code">openapi.json</span> at <span class="inline-code">https://arch-ai-tools.onrender.com/openapi.json</span> has all parameter definitions.</p>
+
+      <h2 id="quickstart-lang">Quick Start by Language</h2>
+
+      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">curl (Mac / Linux)</h3>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/web-scrape \
+  -H "x-api-key: arch_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'</code></pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">curl.exe (Windows Command Prompt)</h3>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>curl.exe -X POST https://arch-ai-tools.onrender.com/v1/tools/web-scrape ^
+  -H "x-api-key: arch_your_key_here" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"url\":\"https://example.com\"}"</code></pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">PowerShell</h3>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>Invoke-RestMethod -Uri "https://arch-ai-tools.onrender.com/v1/tools/web-scrape" `
+  -Method POST `
+  -Headers @{ "x-api-key" = "arch_your_key_here"; "Content-Type" = "application/json" } `
+  -Body '{"url":"https://example.com"}'</code></pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">Node.js (fetch)</h3>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>const res = await fetch('https://arch-ai-tools.onrender.com/v1/tools/web-scrape', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'arch_your_key_here',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ url: 'https://example.com' })
+});
+const data = await res.json();
+console.log(data);</code></pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">Python</h3>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>import requests
+
+res = requests.post(
+    "https://arch-ai-tools.onrender.com/v1/tools/web-scrape",
+    headers={"x-api-key": "arch_your_key_here"},
+    json={"url": "https://example.com"}
+)
+print(res.json())</code></pre>
+      </div>
 
       <!-- ── DATA & VALIDATION ── -->
       <h2>Data &amp; Validation</h2>
