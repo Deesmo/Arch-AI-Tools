@@ -175,7 +175,14 @@ app.use("/auth", auth_1.default);
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req, res) => res.type("text/html").send(signupHtml_1.SIGNUP_HTML));
 app.get("/login", (_req, res) => res.type("text/html").send(loginHtml_1.LOGIN_HTML));
-app.get("/dashboard", (_req, res) => res.type("text/html").send(dashboardHtml_1.DASHBOARD_HTML));
+app.get("/dashboard", (req, res) => {
+    const { verifySession } = require("./routes/auth");
+    const token = req.cookies?.arch_session;
+    if (!token || !verifySession(token)) {
+        return res.redirect(302, "/login?next=/dashboard");
+    }
+    return res.type("text/html").send(dashboardHtml_1.DASHBOARD_HTML);
+});
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — referenced in Stripe cancel_url and nav links
 app.get("/pricing", (_req, res) => res.redirect("/#pricing"));
