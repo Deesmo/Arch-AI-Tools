@@ -1496,6 +1496,42 @@ function showLangTab(lang) {
   </div>
 </section>
 
+<!-- WHAT DOES $9 BUY -->
+<section style="padding:60px 0 40px;border-top:1px solid var(--border);">
+  <div class="wrap">
+    <div class="section-tag">Real numbers</div>
+    <h2 class="section-title">What does $9 actually buy?</h2>
+    <p class="section-sub" style="max-width:560px;">10,000 credits, never expire. Here's what that looks like in practice — pick any tool, run it, repeat until empty.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:36px;">
+      <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:14px;padding:24px 22px;">
+        <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--amber);line-height:1;">2,000</div>
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;margin:8px 0 4px;">Web Scrapes</div>
+        <div style="font-size:13px;color:var(--muted);">Full page content, markdown output, JS-rendered pages. 5 credits each.</div>
+        <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/web-scrape</div>
+      </div>
+      <div style="background:rgba(255,40,150,0.06);border:1px solid rgba(255,40,150,0.2);border-radius:14px;padding:24px 22px;">
+        <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--pink);line-height:1;">500</div>
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;margin:8px 0 4px;">AI Generations</div>
+        <div style="font-size:13px;color:var(--muted);">Claude, GPT-4, Grok, or Gemini — full text responses. 20 credits each.</div>
+        <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/ai-generate</div>
+      </div>
+      <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:14px;padding:24px 22px;">
+        <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--purple);line-height:1;">1,000</div>
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;margin:8px 0 4px;">Crypto Lookups</div>
+        <div style="font-size:13px;color:var(--muted);">Live prices, market cap, OHLCV data for any of 10,000+ tokens. 10 credits each.</div>
+        <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/crypto-price</div>
+      </div>
+      <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:14px;padding:24px 22px;">
+        <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--cyan);line-height:1;">1,400</div>
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;margin:8px 0 4px;">Conversions</div>
+        <div style="font-size:13px;color:var(--muted);">JSON↔YAML↔CSV↔XML, currency, timezone, units. ~7 credits each.</div>
+        <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/convert-format</div>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Mix and match across all 50 tools. Credits never expire — use them at your own pace.</p>
+  </div>
+</section>
+
 <!-- VS COMPETITORS -->
 <section id="compare" style="border-top:1px solid var(--border);padding:80px 0 60px;">
   <div class="wrap">
@@ -1583,6 +1619,66 @@ function showLangTab(lang) {
     </div>
     <div class="register-note">100 free credits on signup · No credit card required · Cancel anytime</div>
     <div id="reg-toast" class="reg-toast" style="display:none;" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="padding:72px 0 60px;border-top:1px solid var(--border);">
+  <div class="wrap">
+    <div class="section-tag">Questions</div>
+    <h2 class="section-title">Frequently asked</h2>
+    <p class="section-sub" style="margin-bottom:40px;">Everything you need to know before your first API call.</p>
+    <div style="max-width:760px;display:flex;flex-direction:column;gap:0;">
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;" open>
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          What happens when my credits run out?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Your API calls return a <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402 Payment Required</code> response with a credit count of 0. Your key stays active — just top up via Stripe or send USDC directly to unlock the endpoint. No service disruption, no account deletion. Your data and key are preserved.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          Do credits expire?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;"><strong style="color:var(--green);">No.</strong> One-time credit purchases never expire. Buy once, use whenever. Every other API platform we know of expires your credits monthly — we don't, and never will. Subscription plans auto-refill credits each month, but unused credits carry over and don't disappear.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          Can my AI agent pay without a human in the loop?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Yes — that's the entire point of the x402 protocol. Your agent hits a tool endpoint, receives a <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402</code> response with a USDC price and wallet address, signs the payment from its own wallet, and retries the request. The endpoint unlocks automatically. No human approves anything. No credit card required on the agent side. This is HTTP-native machine-to-machine payment.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          What's the difference between paying with USDC vs Stripe?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Both pay for the same tools at the same prices. The difference is who's paying. <strong style="color:var(--text);">Stripe</strong> is for humans — you buy a credit pack or subscribe with a credit card, credits are added to your account, and every tool call deducts from that balance. <strong style="color:var(--text);">USDC via x402</strong> is for AI agents — the agent pays directly per call, on-chain, in real time, with no pre-purchased balance needed. You can use both on the same account.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          Which blockchain networks are supported for payment?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">15 networks: <strong style="color:var(--text);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad</strong> (EVM/USDC), plus <strong style="color:var(--text);">Solana, Noble/Cosmos, Algorand, Stellar, Sui, Polkadot, Aptos</strong>. USDT is accepted on 6 EVM chains. Native tokens supported: ETH, BNB, NEAR, SOL, TAO. If your agent holds any of these, it can pay. No bridging, no wrapping — send natively.</p>
+      </details>
+
+      <details style="padding:20px 0;">
+        <summary style="font-family:var(--display);font-size:17px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--text);">
+          Is there a free tier? What do I actually get?
+          <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
+        </summary>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with your email — no credit card needed — and you instantly receive <strong style="color:var(--green);">100 free credits</strong>, refreshed every month. That's enough for ~20 web scrapes, ~50 hash/validate/UUID calls, or 5 AI generations. No time limit, no expiry, no upsell wall. Use it to test every tool before spending a dollar. When you're ready to scale, one-time credit packs start at $9.</p>
+      </details>
+
+    </div>
   </div>
 </section>
 

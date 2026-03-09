@@ -144,10 +144,10 @@
     },
     "/v1/tools/timezone-convert": {
       "post": { "operationId": "timezoneConvert", "summary": "Convert time between timezones", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["time", "from_tz", "to_tz"], "properties": {
-          "time": { "type": "string", "description": "Time to convert (e.g. 2024-01-15 14:30)" },
-          "from_tz": { "type": "string", "description": "Source timezone (e.g. America/New_York)" },
-          "to_tz": { "type": "string", "description": "Target timezone (e.g. Europe/London)" }
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["datetime", "from_tz", "to_tz"], "properties": {
+          "datetime": { "type": "string", "description": "ISO 8601 datetime to convert (e.g. 2024-01-15T14:30:00)" },
+          "from_tz": { "type": "string", "description": "Source IANA timezone (e.g. America/New_York)" },
+          "to_tz": { "type": "string", "description": "Target IANA timezone (e.g. Europe/London)" }
         }}}}},
         "responses": { "200": { "description": "Converted time" }}}
     },
@@ -158,6 +158,39 @@
           "algorithm": { "type": "string", "enum": ["sha256", "sha512", "md5", "sha1"], "default": "sha256" }
         }}}}},
         "responses": { "200": { "description": "Hashed value" }}}
+    },
+    "/v1/tools/convert-format": {
+      "post": { "operationId": "convertFormat", "summary": "Convert data between JSON, YAML, CSV, TOML, and XML formats", "tags": ["Utilities"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["input", "from", "to"], "properties": {
+          "input": { "type": "string", "description": "The content to convert (serialized as a string)" },
+          "from": { "type": "string", "enum": ["json", "yaml", "csv", "xml", "toml"], "description": "Source format" },
+          "to": { "type": "string", "enum": ["json", "yaml", "csv", "xml", "toml"], "description": "Target format" }
+        }}}}},
+        "responses": { "200": { "description": "Converted content" }}}
+    },
+    "/v1/tools/webhook-send": {
+      "post": { "operationId": "webhookSend", "summary": "POST a JSON payload to any webhook URL", "tags": ["Utilities"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["webhook_url", "payload"], "properties": {
+          "webhook_url": { "type": "string", "description": "The webhook endpoint URL to POST to" },
+          "payload": { "type": "object", "description": "JSON body to send in the POST request" },
+          "headers": { "type": "object", "description": "Optional custom headers to include" }
+        }}}}},
+        "responses": { "200": { "description": "Webhook response status and body" }}}
+    },
+    "/v1/tools/jsonpath-query": {
+      "post": { "operationId": "jsonpathQuery", "summary": "Run a JSONPath expression against a JSON object", "tags": ["Utilities"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["data", "path"], "properties": {
+          "data": { "type": "object", "description": "The JSON object to query" },
+          "path": { "type": "string", "description": "JSONPath expression, e.g. $.store.book[*].title" }
+        }}}}},
+        "responses": { "200": { "description": "Matching values from the JSONPath query" }}}
+    },
+    "/v1/tools/token-lookup": {
+      "post": { "operationId": "tokenLookup", "summary": "Search CoinGecko for a token by name or ticker symbol", "tags": ["Crypto"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["query"], "properties": {
+          "query": { "type": "string", "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)" }
+        }}}}},
+        "responses": { "200": { "description": "Token metadata including CoinGecko ID" }}}
     },
     "/v1/tools/ip-lookup": {
       "post": { "operationId": "ipLookup", "summary": "Look up geolocation and ISP info for an IP address", "tags": ["Utilities"],
