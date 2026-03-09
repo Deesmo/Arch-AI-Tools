@@ -657,7 +657,7 @@
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:12px;padding:20px 22px;">
             <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 1 — Get your key</div>
-            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> — your API key arrives in the confirmation email instantly. 100 free credits included.</p>
+            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> — your API key is shown on screen instantly. 100 free credits included, no credit card required.</p>
             <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--amber);text-decoration:none;border:1px solid rgba(255,144,16,0.3);border-radius:6px;padding:6px 12px;background:rgba(255,144,16,0.07);transition:all 0.15s;">Get free API key →</a>
           </div>
           <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:12px;padding:20px 22px;">
@@ -1930,7 +1930,7 @@ function showLangTab(lang) {
           How do I get an API key?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address — no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response. Your key is also emailed to you so you can always recover it. Store it safely — it's the only authentication you need for all 50 tools.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address — no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response and displayed on screen. Store it safely — it's the only authentication you need for all 50 tools.</p>
       </details>
 
     </div>
@@ -2086,7 +2086,7 @@ async function handleRegister() {
       // Redirect to signup success page so user sees key prominently with copy button
       window.location.href = '/signup?key=' + encodeURIComponent(apiKey) + '&credits=' + (data.credits || 100);
     } else if (data.error === 'email_exists' || (data.message && data.message.includes('Unique constraint'))) {
-      showToast(toast, '✓ Account exists — check your email for your API key.', 'success');
+      showToast(toast, '✓ Account already exists — sign in to access your dashboard.', 'success');
       btn.textContent = '$ register';
       btn.disabled = false;
     } else {
