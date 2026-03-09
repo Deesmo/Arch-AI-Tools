@@ -22,6 +22,7 @@ import { config } from "../config";
 const USDC_CONTRACTS: Record<string, string> = {
   base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   "base-sepolia": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  ethereum: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
 };
 
 // Solana USDC mint address (native USDC on Solana mainnet)
@@ -84,23 +85,42 @@ function buildPaymentRequired(toolName: string, price: string): object {
   const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
   const resource = `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`;
 
-  const accepts: object[] = [
-    // Option 1: USDC on Coinbase Base (EVM)
-    {
+  const evmWallet = config.x402.walletAddress;
+  const accepts: object[] = [];
+
+  // Option 1: USDC on Coinbase Base (EVM L2 — fast, cheap)
+  if (evmWallet) {
+    accepts.push({
       scheme: "exact",
       network: chainId,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Base)`,
       mimeType: "application/json",
-      payTo: config.x402.walletAddress,
+      payTo: evmWallet,
       maxTimeoutSeconds: 60,
-      asset: usdcContract,
+      asset: USDC_CONTRACTS["base"],
       extra: { name: "USD Coin", version: "2" },
-    },
-  ];
+    });
+  }
 
-  // Option 2: USDC on Solana (if wallet configured)
+  // Option 2: USDC on Ethereum mainnet (same EVM wallet address)
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:1",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Ethereum)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDC_CONTRACTS["ethereum"],
+      extra: { name: "USD Coin", version: "2" },
+    });
+  }
+
+  // Option 3: USDC on Solana
   const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
   if (solanaWallet) {
     accepts.push({
