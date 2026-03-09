@@ -449,7 +449,7 @@
           <li><a href="#crypto">crypto</a></li>
           <li><a href="#mcp">mcp</a></li>
           <li><a href="/blog-x402.html">blog</a></li>
-          <li><a href="/openapi.json" target="_blank">api docs</a></li>
+          <li><a href="/docs">api docs</a></li>
           <li><a href="/dashboard" style="color:var(--muted);">dashboard</a></li>
         </ul>
         <a href="/signup" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
@@ -1270,8 +1270,8 @@
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Every tool is a single POST request. Works from any language, any OS. Same API key across all methods.</p>
       <!-- Language tabs -->
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <button onclick="showLangTab('curl')" id="lang-tab-curl" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(0,229,176,0.4);background:rgba(0,229,176,0.08);color:#00e5b0;font-size:12px;font-family:var(--mono);cursor:pointer;font-weight:700;">curl</button>
-        <button onclick="showLangTab('ps')" id="lang-tab-ps" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">PowerShell</button>
+        <button onclick="showLangTab('curl')" id="lang-tab-curl" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(0,229,176,0.4);background:rgba(0,229,176,0.08);color:#00e5b0;font-size:12px;font-family:var(--mono);cursor:pointer;font-weight:700;">curl (Mac/Linux)</button>
+        <button onclick="showLangTab('ps')" id="lang-tab-ps" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">PowerShell (Win)</button>
         <button onclick="showLangTab('node')" id="lang-tab-node" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">Node.js</button>
         <button onclick="showLangTab('python')" id="lang-tab-python" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">Python</button>
       </div>
@@ -1691,7 +1691,7 @@ function showLangTab(lang) {
         <span class="prompt-text">arch@tools:~$</span>&nbsp;<span class="footer-cursor"></span>
       </div>
       <div class="footer-links">
-        <a href="/openapi.json" target="_blank">API Docs</a>
+        <a href="/docs">API Docs</a>
         <a href="/openapi.json" target="_blank">OpenAPI</a>
         <a href="/.well-known/x402" target="_blank">x402</a>
         <a href="/llms.txt" target="_blank">llms.txt</a>
