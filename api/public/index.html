@@ -446,6 +446,7 @@
           <li><a href="#tools">tools</a></li>
           <li><a href="#pricing">pricing</a></li>
           <li><a href="#compare">vs others</a></li>
+          <li><a href="#crypto">crypto</a></li>
           <li><a href="#mcp">mcp</a></li>
           <li><a href="/blog-x402.html">blog</a></li>
           <li><a href="/openapi.json" target="_blank">api docs</a></li>
@@ -519,7 +520,7 @@
               <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"X-PAYMENT: $USDC_PAYMENT_HEADER"</span></span>
               <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
               <span class="t-line">&nbsp;</span>
-              <span class="t-line"><span class="t-comment"># x402 protocol — USDC on Base, settled instantly</span></span>
+              <span class="t-line"><span class="t-comment"># x402 — USDC on Coinbase Base, settles instantly</span></span>
               <span class="t-line"><span class="t-out" style="color:#34d399;">&#123;"content":"...","paid_via":"x402","amount":"0.001 USDC"&#125;</span></span>
               <span class="t-line">&nbsp;</span>
               <span class="t-line"><span class="t-comment"># Or use API key + Stripe if you prefer</span></span>
@@ -549,7 +550,7 @@
       </div>
       <div class="stat-item">
         <div class="stat-label-top">AGENT_PAYMENT</div>
-        <div class="stat-val g-cy">USDC · Base</div>
+        <div class="stat-val g-cy">USDC on Coinbase Base</div>
       </div>
       <div class="stat-item">
         <div class="stat-label-top">CREDIT_PRICE</div>
@@ -613,7 +614,7 @@
         <div class="step-icon">⟠</div>
         <div class="step-num">Step 02</div>
         <div class="step-title">Pay with USDC or Stripe</div>
-        <div class="step-desc">Agents pay autonomously with USDC on Base via x402 — no human card needed. Humans can use Stripe. Both rails, one platform.</div>
+        <div class="step-desc">Agents pay autonomously with USDC on Coinbase Base via x402 — no human card needed. Humans can use Stripe. Both rails, one platform.</div>
       </div>
       <div class="step-card">
         <div class="step-icon">⚡</div>
@@ -1075,20 +1076,69 @@
 </section>
 
 <!-- X402 -->
+<!-- CRYPTO TOOLS SPOTLIGHT -->
+<section id="crypto" style="border-top:1px solid var(--border);padding:80px 0 60px;">
+  <div class="wrap">
+    <div class="section-tag">Finance &amp; Crypto</div>
+    <h2 class="section-title">Real-time crypto data. No exchange account needed.</h2>
+    <p class="section-sub">5 crypto tools powered by CoinGecko — live prices, market caps, news, historical data, and token lookup. Your trading agent or portfolio tracker gets real-time market data in one API call.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:36px;">
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">BTC</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Crypto Price</div>
+        <div style="color:var(--muted);font-size:13px;">Live spot price for any coin — BTC, ETH, SOL, and 10,000+ more</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /crypto-price</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">CAP</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Market Cap</div>
+        <div style="color:var(--muted);font-size:13px;">Market cap, volume, rank, and supply data for any token</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">3 credits · /crypto-market-cap</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">NEWS</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Crypto News</div>
+        <div style="color:var(--muted);font-size:13px;">Latest headlines from CoinDesk, CoinTelegraph, and Bitcoin Magazine</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">3 credits · /crypto-news</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">HIST</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Price History</div>
+        <div style="color:var(--muted);font-size:13px;">OHLCV historical data — daily, hourly, or minute-level charts</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">4 credits · /crypto-history</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">TKN</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Token Lookup</div>
+        <div style="color:var(--muted);font-size:13px;">Find any token by name or contract address — full metadata</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /token-lookup</div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-top:24px;">Powered by CoinGecko · No exchange account required · Works for any trading agent, portfolio tracker, or DeFi automation</p>
+  </div>
+</section>
+
 <section id="x402" style="background:rgba(12,11,34,0.4);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
   <div class="wrap">
     <div class="split-grid">
       <div>
-        <div class="section-tag">x402 Protocol</div>
+        <div class="section-tag">x402 Protocol · Powered by Coinbase Base</div>
         <h2 class="section-title">AI agents pay with USDC. Automatically.</h2>
-        <p class="section-sub">Arch supports the x402 payment protocol. Your agent discovers tools, sees the price, pays in USDC, and calls the endpoint — no human in the loop, no wallet setup, no API key management.</p>
+        <p class="section-sub">Arch supports the x402 payment protocol — built on <strong style="color:var(--fg);">Coinbase's Base network</strong>. Your agent discovers tools, sees the price in USDC, pays autonomously, and calls the endpoint. No human in the loop, no wallet setup, no credit card management.</p>
         <ul class="feature-list">
-          <li>Agent hits endpoint → receives HTTP 402 with price + wallet</li>
-          <li>Agent pays in USDC on Base — transaction confirmed in seconds</li>
-          <li>Endpoint unlocks, tool executes, result returned</li>
-          <li>No wallet setup on your side — all handled by the protocol</li>
-          <li>Fallback: traditional Stripe credits always available</li>
+          <li>→ Agent hits endpoint → receives HTTP 402 with price + wallet address</li>
+          <li>→ Agent pays in <strong style="color:var(--fg);">USDC on Base</strong> (Coinbase L2) — settles in seconds, costs fractions of a cent</li>
+          <li>→ Endpoint unlocks, tool executes, result returned</li>
+          <li>→ No wallet setup on your side — the protocol handles everything</li>
+          <li>→ Fallback: Stripe credits always available if you prefer traditional billing</li>
         </ul>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center;">
+          <span style="font-size:11px;color:rgba(255,255,255,0.35);font-family:var(--mono);">BUILT ON</span>
+          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,82,255,0.12);color:#4d8eff;border:1px solid rgba(0,82,255,0.3);">Coinbase Base</span>
+          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,229,176,0.10);color:#00e5b0;border:1px solid rgba(0,229,176,0.25);">USDC</span>
+          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,144,16,0.10);color:#FFB030;border:1px solid rgba(255,144,16,0.25);">x402 Protocol</span>
+          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border:1px solid var(--border);">Stripe</span>
+        </div>
       </div>
       <div class="code-block">
         <span class="t-line"><span class="code-comment"># Agent discovers tool pricing</span></span>
