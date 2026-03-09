@@ -34,6 +34,8 @@ const USDC_CONTRACTS = {
 };
 // Solana USDC mint address (native USDC on Solana mainnet)
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+// Aptos native USDC token address (Circle native, launched Jan 2025)
+const APTOS_USDC_ADDRESS = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b";
 // Per-tool pricing in USDC (string to avoid float issues)
 exports.X402_PRICES = {
     "validate-data": "0.001",
@@ -195,6 +197,22 @@ function buildPaymentRequired(toolName, price) {
             maxTimeoutSeconds: 60,
             asset: SOLANA_USDC_MINT,
             extra: { name: "USD Coin", version: "spl" },
+        });
+    }
+    // Option 8: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+    const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
+    if (aptosWallet) {
+        accepts.push({
+            scheme: "exact",
+            network: "aptos:mainnet",
+            maxAmountRequired: amountAtomic,
+            resource,
+            description: `Arch Tools — ${toolName} (USDC on Aptos)`,
+            mimeType: "application/json",
+            payTo: aptosWallet,
+            maxTimeoutSeconds: 60,
+            asset: APTOS_USDC_ADDRESS,
+            extra: { name: "USD Coin", version: "aptos-fa" },
         });
     }
     return {
