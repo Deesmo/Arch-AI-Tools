@@ -34,6 +34,16 @@ const USDC_CONTRACTS: Record<string, string> = {
 // Solana USDC mint address (native USDC on Solana mainnet)
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
+// USDT contract addresses by network (Tether)
+const USDT_CONTRACTS: Record<string, string> = {
+  ethereum:  "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  arbitrum:  "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+  polygon:   "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+  optimism:  "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+  avalanche: "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
+  base:      "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+};
+
 // Aptos native USDC token address (Circle native, launched Jan 2025)
 const APTOS_USDC_ADDRESS = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b";
 
@@ -343,6 +353,35 @@ function buildPaymentRequired(toolName: string, price: string): object {
       asset: APTOS_USDC_ADDRESS,
       extra: { name: "USD Coin", version: "aptos-fa" },
     });
+  }
+
+  // USDT options — Tether (higher market cap than USDC, widely held by trading agents)
+  const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
+  if (usdtWallet) {
+    const usdtNetworks: Array<{ network: string; chain: string }> = [
+      { network: "eip155:1",     chain: "ethereum" },
+      { network: "eip155:42161", chain: "arbitrum" },
+      { network: "eip155:137",   chain: "polygon" },
+      { network: "eip155:10",    chain: "optimism" },
+      { network: "eip155:43114", chain: "avalanche" },
+      { network: "eip155:8453",  chain: "base" },
+    ];
+    for (const { network, chain } of usdtNetworks) {
+      if (USDT_CONTRACTS[chain]) {
+        accepts.push({
+          scheme: "exact",
+          network,
+          maxAmountRequired: amountAtomic,
+          resource,
+          description: `Arch Tools — ${toolName} (USDT on ${chain.charAt(0).toUpperCase() + chain.slice(1)})`,
+          mimeType: "application/json",
+          payTo: usdtWallet,
+          maxTimeoutSeconds: 60,
+          asset: USDT_CONTRACTS[chain],
+          extra: { name: "Tether USD", version: "2" },
+        });
+      }
+    }
   }
 
   return {
