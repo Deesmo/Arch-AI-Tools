@@ -73,54 +73,113 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
 }
 
 // ─── Shared HTML layout ───
-function layout(title: string, body: string): string {
+function layout(title: string, body: string, accentColor = "#FF9010"): string {
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <style>
-  body{margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e5e5e5}
-  .wrap{max-width:560px;margin:40px auto;background:#111;border:1px solid #222;border-radius:12px;overflow:hidden}
-  .header{background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:32px 36px}
-  .header h1{margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.3px}
-  .header p{margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.7)}
-  .body{padding:32px 36px}
-  .body p{margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc}
-  .code{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:16px 20px;font-family:'Courier New',monospace;font-size:13px;color:#a78bfa;word-break:break-all;margin:0 0 20px}
-  .btn{display:inline-block;background:#7c3aed;color:#fff!important;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;margin:4px 0 20px}
-  .stat{display:inline-block;background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:12px 20px;margin:0 8px 8px 0;font-size:13px;color:#a78bfa;font-weight:600}
-  .warn{background:#1a0a00;border:1px solid #7c3000;border-radius:8px;padding:16px 20px;margin:0 0 20px;font-size:14px;color:#f97316}
-  .footer{padding:20px 36px;border-top:1px solid #1a1a1a;font-size:12px;color:#555;text-align:center}
-  .footer a{color:#7c3aed;text-decoration:none}
+  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+  body{margin:0;padding:0;background:#07061A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#F0EEFF;}
+  img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;}
+  .outer{background:#07061A;padding:32px 16px 48px;}
+  .wrap{max-width:560px;margin:0 auto;background:#0D0C24;border:1px solid #1C1A3A;border-radius:16px;overflow:hidden;}
+
+  /* HEADER */
+  .header{background:linear-gradient(135deg,#FF9010 0%,#FF2896 100%);padding:32px 36px 28px;}
+  .header-logo{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+  .logo-text{font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.3px;}
+  .header-sub{font-size:13px;color:rgba(255,255,255,0.75);margin:0;}
+
+  /* BODY */
+  .content{padding:32px 36px;}
+  .content p{margin:0 0 16px;font-size:15px;line-height:1.65;color:#C4BFDF;}
+  .content p strong{color:#F0EEFF;}
+  .content a{color:#FF9010;text-decoration:none;}
+
+  /* API KEY BOX */
+  .key-warning{background:rgba(255,144,16,0.08);border:1px solid rgba(255,144,16,0.3);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#FF9010;font-weight:500;}
+  .key-warning::before{content:"⚠️  ";}
+  .key-box{background:#070617;border:1px solid #2A2850;border-radius:10px;padding:18px 20px;margin-bottom:20px;word-break:break-all;font-family:'Courier New',Courier,monospace;font-size:14px;color:#AA77FF;letter-spacing:0.3px;line-height:1.6;}
+
+  /* STATS ROW */
+  .stats{display:flex;gap:10px;margin:0 0 24px;flex-wrap:wrap;}
+  .stat{background:#0D0C24;border:1px solid #1C1A3A;border-radius:8px;padding:10px 16px;font-size:12px;font-weight:600;color:#AA77FF;white-space:nowrap;}
+  .stat span{display:block;font-size:11px;font-weight:400;color:#8A85B0;margin-bottom:2px;}
+
+  /* BUTTON */
+  .btn-wrap{margin:4px 0 24px;}
+  .btn{display:inline-block;background:linear-gradient(135deg,#FF9010,#FF2896);color:#fff!important;text-decoration:none;padding:13px 28px;border-radius:10px;font-size:14px;font-weight:600;letter-spacing:0.1px;}
+
+  /* DIVIDER */
+  .divider{border:none;border-top:1px solid #1C1A3A;margin:24px 0;}
+
+  /* ALERT BOX */
+  .alert-warn{background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.25);border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:14px;color:#FF9010;line-height:1.6;}
+  .alert-success{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:14px;color:#34d399;line-height:1.6;}
+
+  /* ADMIN TABLE */
+  .info-table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+  .info-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid #1C1A3A;vertical-align:top;}
+  .info-table td:first-child{color:#8A85B0;width:38%;font-weight:500;}
+  .info-table td:last-child{color:#F0EEFF;font-family:'Courier New',monospace;word-break:break-all;}
+  .info-table tr:last-child td{border-bottom:none;}
+
+  /* FOOTER */
+  .footer{padding:20px 36px 24px;border-top:1px solid #1C1A3A;text-align:center;}
+  .footer p{margin:0;font-size:12px;color:#4A4570;line-height:1.8;}
+  .footer a{color:#8A85B0;text-decoration:none;}
+  .footer a:hover{color:#FF9010;}
+
+  @media(max-width:560px){
+    .content,.header,.footer{padding-left:24px;padding-right:24px;}
+    .stats{flex-direction:column;}
+    .stat{width:100%;box-sizing:border-box;}
+  }
 </style>
 </head>
 <body>
+<div class="outer">
 <div class="wrap">
   <div class="header">
-    <h1>⚡ Arch Tools</h1>
-    <p>Production-ready tools for developers &amp; AI agents</p>
+    <div class="header-logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="rgba(0,0,0,0.2)"/>
+        <path d="M16 6L28 26H4L16 6Z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+      <span class="logo-text">Arch Tools</span>
+    </div>
+    <p class="header-sub">AI-native API platform · archtools.dev</p>
   </div>
-  <div class="body">${body}</div>
+  <div class="content">${body}</div>
   <div class="footer">
-    <a href="${SITE}">${SITE}</a> &nbsp;·&nbsp;
-    <a href="${SITE}/legal/privacy">Privacy</a> &nbsp;·&nbsp;
-    <a href="${SITE}/legal/terms">Terms</a>
+    <p>
+      <a href="${SITE}">${SITE}</a> &nbsp;·&nbsp;
+      <a href="${SITE}/docs.html">Docs</a> &nbsp;·&nbsp;
+      <a href="${SITE}/privacy.html">Privacy</a> &nbsp;·&nbsp;
+      <a href="${SITE}/terms.html">Terms</a>
+    </p>
+    <p style="margin-top:8px;">You're receiving this because you signed up at archtools.dev.</p>
   </div>
 </div>
-</body></html>`;
+</div>
+</body>
+</html>`;
 }
 
 // ─── 1. Email Verification (magic link) ───
-// Called by auth.ts after signup
 export async function sendVerificationEmail(args: { to: string; verifyUrl: string }): Promise<void> {
   const { to, verifyUrl } = args;
   const subject = "Verify your email for Arch Tools";
   const text = `Verify your email to activate your Arch Tools account.\n\nClick this link (valid for 30 minutes):\n${verifyUrl}\n\nIf you did not request this, you can ignore this email.`;
   const html = layout(subject, `
-    <p>Click the button below to verify your email and activate your Arch Tools API key.</p>
-    <a class="btn" href="${verifyUrl}">Verify email →</a>
-    <p style="font-size:13px;color:#666">This link expires in 30 minutes. If you didn't request this, you can safely ignore this email.</p>
-    <p style="font-size:12px;color:#444;word-break:break-all">Or copy this link: ${verifyUrl}</p>
+    <p>One quick step to activate your API key — click the button below to verify your email.</p>
+    <div class="btn-wrap"><a class="btn" href="${verifyUrl}">Verify my email →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;margin:0;">This link expires in <strong style="color:#F0EEFF;">30 minutes</strong>. If you didn't sign up, you can safely ignore this email.</p>
+    <p style="font-size:12px;color:#4A4570;margin-top:12px;word-break:break-all;">Or copy this link:<br>${verifyUrl}</p>
   `);
   await sendEmail(to, subject, html, text);
   logger.info({ to }, "Verification email sent");
@@ -130,35 +189,38 @@ export async function sendVerificationEmail(args: { to: string; verifyUrl: strin
 export async function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number): Promise<void> {
   const subject = "Welcome to Arch Tools — Your API key is ready";
   const html = layout(subject, `
-    <p>You're all set. Here's your API key — <strong>save it now, it can't be retrieved later.</strong></p>
-    <div class="code">${apiKey}</div>
-    <p>You've been granted <strong>${creditsGranted} free credits</strong> to get started.</p>
-    <div>
-      <span class="stat">Agent: ${agentId.slice(0, 12)}…</span>
-      <span class="stat">${creditsGranted} credits</span>
-      <span class="stat">Free plan</span>
+    <p>You're in. Here's your API key — <strong>copy it now and store it somewhere safe. It cannot be retrieved again.</strong></p>
+    <div class="key-warning">Save this key now — it won't be shown again after you close this email.</div>
+    <div class="key-box">${apiKey}</div>
+    <div class="stats">
+      <div class="stat"><span>Credits granted</span>${creditsGranted.toLocaleString()}</div>
+      <div class="stat"><span>Plan</span>Free</div>
+      <div class="stat"><span>Agent ID</span>${agentId.slice(0, 14)}…</div>
     </div>
-    <br>
-    <a class="btn" href="${SITE}/docs">View Docs →</a>
-    <p style="font-size:13px;color:#666">Credits never expire. When you're ready to scale, grab a pack at <a href="${SITE}/pricing" style="color:#7c3aed">archtools.dev/pricing</a>.</p>
+    <p>Use your key in any HTTP request:</p>
+    <div class="key-box" style="font-size:13px;">x-api-key: ${apiKey.slice(0, 12)}…</div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Read the docs →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Credits never expire. When you're ready to scale, grab a credit pack at <a href="${SITE}/#pricing">archtools.dev/pricing</a>.</p>
   `);
-  await sendEmail(to, subject, html);
+  const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\nDocs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
+  await sendEmail(to, subject, html, text);
 }
 
 // ─── 3. Low Credit Alert ───
 export async function sendLowCreditAlert(to: string, creditsRemaining: number, agentId: string): Promise<void> {
   const subject = `⚠️ Low credits — ${creditsRemaining} remaining on Arch Tools`;
   const html = layout(subject, `
-    <div class="warn">⚠️ Your account is running low — <strong>${creditsRemaining} credits remaining</strong>.</div>
-    <p>Top up now to keep your pipelines running without interruption.</p>
-    <a class="btn" href="${SITE}/pricing">Buy credits →</a>
-    <div>
-      <span class="stat">Starter — 1,000 cr · $9</span>
-      <span class="stat">Pro — 10,000 cr · $49</span>
-      <span class="stat">Business — 100,000 cr · $199</span>
+    <div class="alert-warn"><strong>⚠️ Running low:</strong> You have <strong>${creditsRemaining} credits</strong> remaining. Top up now to keep your pipelines running without interruption.</div>
+    <p>Add credits with one click — they never expire and stack on your existing balance.</p>
+    <div class="stats">
+      <div class="stat"><span>Starter</span>1,000 credits · $9</div>
+      <div class="stat"><span>Pro</span>10,000 credits · $49</div>
+      <div class="stat"><span>Business</span>100,000 credits · $199</div>
     </div>
-    <br>
-    <p style="font-size:13px;color:#666">Agent: ${agentId.slice(0, 16)}…</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/#pricing">Top up credits →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}…</p>
   `);
   await sendEmail(to, subject, html);
 }
@@ -167,15 +229,15 @@ export async function sendLowCreditAlert(to: string, creditsRemaining: number, a
 export async function sendPurchaseConfirmation(to: string, credits: number, label: string, newBalance: number): Promise<void> {
   const subject = `✅ ${credits.toLocaleString()} credits added to your Arch Tools account`;
   const html = layout(subject, `
-    <p>Your payment was received and credits have been added to your account.</p>
-    <div>
-      <span class="stat">Pack: ${label}</span>
-      <span class="stat">+${credits.toLocaleString()} credits</span>
-      <span class="stat">Balance: ${newBalance.toLocaleString()}</span>
+    <div class="alert-success">✅ Payment received — <strong>${credits.toLocaleString()} credits</strong> have been added to your account instantly.</div>
+    <div class="stats">
+      <div class="stat"><span>Pack purchased</span>${label}</div>
+      <div class="stat"><span>Credits added</span>+${credits.toLocaleString()}</div>
+      <div class="stat"><span>New balance</span>${newBalance.toLocaleString()}</div>
     </div>
-    <br>
-    <a class="btn" href="${SITE}/dashboard">View Dashboard →</a>
-    <p style="font-size:13px;color:#666">Credits never expire. Questions? Reply to this email.</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Start building →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Credits never expire. Questions? Reply to this email and we'll get back to you.</p>
   `);
   await sendEmail(to, subject, html);
 }
@@ -183,8 +245,27 @@ export async function sendPurchaseConfirmation(to: string, credits: number, labe
 // ─── 5. Admin Alert (new payment / new signup) ───
 export async function sendAdminAlert(subject: string, body: string): Promise<void> {
   const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
-  if (!adminEmail) return; // silently skip if not configured
-  const html = layout(subject, `<p style="font-family:monospace;font-size:14px;line-height:1.6;">${body.replace(/\n/g, "<br>")}</p>`);
+  if (!adminEmail) return;
+
+  // Parse key: value lines into a table for readability
+  const rows = body.split("\n")
+    .filter(l => l.trim())
+    .map(line => {
+      const idx = line.indexOf(":");
+      if (idx > 0) {
+        const key = line.slice(0, idx).trim();
+        const val = line.slice(idx + 1).trim();
+        return `<tr><td>${key}</td><td>${val}</td></tr>`;
+      }
+      return `<tr><td colspan="2" style="color:#F0EEFF;">${line}</td></tr>`;
+    })
+    .join("");
+
+  const html = layout(subject, `
+    <p style="font-size:13px;color:#8A85B0;margin-bottom:16px;">Arch Tools · ${new Date().toUTCString()}</p>
+    <table class="info-table">${rows}</table>
+  `);
+
   await sendEmail(adminEmail, subject, html);
 }
 
@@ -193,14 +274,14 @@ export async function sendMonthlyRefreshEmail(to: string, credits: number, newBa
   const month = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
   const subject = `🔄 Your ${credits} free Arch Tools credits are refreshed for ${month}`;
   const html = layout(subject, `
-    <p>Your free monthly credits have been refreshed for <strong>${month}</strong>.</p>
-    <div>
-      <span class="stat">+${credits} credits added</span>
-      <span class="stat">Balance: ${newBalance.toLocaleString()}</span>
+    <div class="alert-success">🔄 Your free monthly credits have been refreshed for <strong>${month}</strong>.</div>
+    <div class="stats">
+      <div class="stat"><span>Credits added</span>+${credits.toLocaleString()}</div>
+      <div class="stat"><span>New balance</span>${newBalance.toLocaleString()}</div>
     </div>
-    <br>
-    <a class="btn" href="${SITE}/docs">Start building →</a>
-    <p style="font-size:13px;color:#666">Need more? <a href="${SITE}/pricing" style="color:#7c3aed">Upgrade your plan</a> for up to 100,000 credits.</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Start building →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Need more credits? <a href="${SITE}/#pricing">Upgrade your plan</a> for up to 100,000 credits per month.</p>
   `);
   await sendEmail(to, subject, html);
 }
