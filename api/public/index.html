@@ -251,6 +251,20 @@
     .footer-links{display:flex;gap:20px;flex-wrap:wrap;}
     .footer-links a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;transition:color 0.15s;}
     .footer-links a:hover{color:var(--text);}
+    .code-overlay{position:fixed;inset:0;background:rgba(3,5,15,.85);backdrop-filter:blur(8px);z-index:9998;opacity:0;pointer-events:none;transition:opacity .25s}
+    .code-overlay.active{opacity:1;pointer-events:auto}
+    .code-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:9999;background:var(--surface,#0D0B21);border:1px solid var(--border);border-radius:16px;width:min(90vw,720px);max-height:80vh;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+    .code-modal.active{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+    .code-modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+    .code-modal-title{font-family:var(--mono);font-size:13px;color:var(--muted)}
+    .code-modal-close{background:none;border:none;color:var(--dimmer);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .15s,background .15s}
+    .code-modal-close:hover{color:#fff;background:rgba(255,255,255,.08)}
+    .code-modal-body{overflow:auto;padding:20px;flex:1}
+    .code-modal-body pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--muted)}
+    .code-modal-loading{text-align:center;padding:40px;color:var(--dimmer);font-family:var(--mono);font-size:13px}
+    .code-modal-actions{display:flex;gap:10px;padding:12px 20px;border-top:1px solid var(--border);justify-content:flex-end}
+    .code-modal-btn{font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+    .code-modal-btn:hover{background:rgba(255,255,255,.06);color:#fff}
 
     /* ── V7 SPINNING CONIC BORDER ON CARD HOVER ── */
     /* @property --ba removed: iOS Safari crash */
@@ -1692,9 +1706,9 @@ function showLangTab(lang) {
       </div>
       <div class="footer-links">
         <a href="/docs">API Docs</a>
-        <a href="/openapi.json" target="_blank">OpenAPI</a>
-        <a href="/.well-known/x402" target="_blank">x402</a>
-        <a href="/llms.txt" target="_blank">llms.txt</a>
+        <a href="/openapi.json" data-code-view="OpenAPI Spec" onclick="openCodeViewer(event)">OpenAPI</a>
+        <a href="/.well-known/x402" data-code-view="x402 Payment Protocol" onclick="openCodeViewer(event)">x402</a>
+        <a href="/llms.txt" data-code-view="llms.txt" onclick="openCodeViewer(event)">llms.txt</a>
         <a href="/terms.html">Terms</a>
         <a href="/privacy.html">Privacy</a>
         <span style="color:var(--green);cursor:default;">● Operational</span>
@@ -1852,6 +1866,27 @@ function showToast(el, msg, type) {
   setTimeout(() => { el.style.display = 'none'; }, 6000);
 }
 }); // end DOMContentLoaded
+</script>
+
+<div class="code-overlay" id="code-overlay" onclick="closeCodeViewer()"></div>
+<div class="code-modal" id="code-modal">
+  <div class="code-modal-header">
+    <span class="code-modal-title" id="code-modal-title"></span>
+    <button class="code-modal-close" onclick="closeCodeViewer()" aria-label="Close">&times;</button>
+  </div>
+  <div class="code-modal-body" id="code-modal-body"></div>
+  <div class="code-modal-actions">
+    <button class="code-modal-btn" id="code-copy-btn" onclick="copyCodeContent()">Copy</button>
+    <button class="code-modal-btn" id="code-raw-btn" onclick="openRawUrl()">Open Raw &#x2197;</button>
+  </div>
+</div>
+<script>
+let currentRawUrl='';
+function openCodeViewer(e){e.preventDefault();const l=e.currentTarget,u=l.href,t=l.dataset.codeView||u;currentRawUrl=u;document.getElementById('code-modal-title').textContent=t;document.getElementById('code-modal-body').innerHTML='<div class="code-modal-loading">Loading…</div>';document.getElementById('code-overlay').classList.add('active');document.getElementById('code-modal').classList.add('active');document.body.style.overflow='hidden';fetch(u).then(r=>r.text()).then(txt=>{let f=txt;try{f=JSON.stringify(JSON.parse(txt),null,2)}catch(e){}document.getElementById('code-modal-body').innerHTML='<pre>'+f.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>'}).catch(()=>{document.getElementById('code-modal-body').innerHTML='<div class="code-modal-loading">Failed to load — <a href="'+u+'" target="_blank" style="color:var(--indigo)">open directly &#x2197;</a></div>'})}
+function closeCodeViewer(){document.getElementById('code-overlay').classList.remove('active');document.getElementById('code-modal').classList.remove('active');document.body.style.overflow=''}
+function copyCodeContent(){const p=document.querySelector('#code-modal-body pre');if(p){navigator.clipboard.writeText(p.textContent);const b=document.getElementById('code-copy-btn');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1500)}}
+function openRawUrl(){if(currentRawUrl)window.open(currentRawUrl,'_blank')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCodeViewer()});
 </script>
 </body>
 </html>
