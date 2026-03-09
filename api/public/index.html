@@ -213,6 +213,7 @@
     /* PRICING */
     .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
     @media(max-width:768px){.pricing-grid{grid-template-columns:1fr;}}
+    @media(max-width:900px){.quick-start-grid{grid-template-columns:1fr!important;}}
     .pricing-card{background:rgba(12,11,34,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;transition:transform 0.2s,box-shadow 0.2s;}
     .pricing-card:hover{transform:translateY(-4px);}
     .pricing-card.featured{background:rgba(136,68,255,0.08);border-color:rgba(136,68,255,0.4);box-shadow:0 0 60px rgba(136,68,255,0.12);}
@@ -647,7 +648,7 @@
     <div class="section-tag">Quick Start</div>
     <h2 class="section-title">First API call in 60 seconds</h2>
     <p class="section-sub" style="margin-bottom:40px;">Register free, get your key, make your first call. No credit card, no setup, no SDK required.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;" class="quick-start-grid">
       <div>
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:12px;padding:20px 22px;">
