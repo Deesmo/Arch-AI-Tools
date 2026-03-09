@@ -408,6 +408,34 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "BNB", version: "native" },
         });
     }
+    // Native NEAR on NEAR Protocol — #1 AI-agent blockchain, 24 decimals (yoctoNEAR), ~$4/NEAR
+    const nearWallet = process.env.NEAR_WALLET_ADDRESS;
+    if (nearWallet) {
+        const nearPriceFloat = parseFloat(price);
+        let yoctoNear;
+        if (nearPriceFloat <= 0.002)
+            yoctoNear = "250000000000000000000"; // 0.00025 NEAR ~$0.001
+        else if (nearPriceFloat <= 0.005)
+            yoctoNear = "750000000000000000000";
+        else if (nearPriceFloat <= 0.010)
+            yoctoNear = "1500000000000000000000";
+        else if (nearPriceFloat <= 0.020)
+            yoctoNear = "3000000000000000000000";
+        else
+            yoctoNear = "6000000000000000000000";
+        accepts.push({
+            scheme: "exact",
+            network: "near:mainnet",
+            maxAmountRequired: yoctoNear,
+            resource,
+            description: `Arch Tools — ${toolName} (NEAR token)`,
+            mimeType: "application/json",
+            payTo: nearWallet,
+            maxTimeoutSeconds: 120,
+            asset: "near",
+            extra: { name: "NEAR Protocol", version: "native", decimals: "24" },
+        });
+    }
     // Native SOL on Solana mainnet (~$150/SOL, 9 decimals / lamports)
     const solNativeWallet = process.env.SOL_NATIVE_WALLET_ADDRESS;
     if (solNativeWallet) {
