@@ -208,7 +208,24 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 8: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+  // Option 8: USDC on Noble (Cosmos native USDC issuance chain — IBC to 50+ Cosmos chains)
+  const nobleWallet = process.env.NOBLE_WALLET_ADDRESS;
+  if (nobleWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "cosmos:noble-1",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Noble/Cosmos)`,
+      mimeType: "application/json",
+      payTo: nobleWallet,
+      maxTimeoutSeconds: 60,
+      asset: "uusdc",
+      extra: { name: "USD Coin", version: "cosmos-ibc" },
+    });
+  }
+
+  // Option 9: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
   const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
   if (aptosWallet) {
     accepts.push({
