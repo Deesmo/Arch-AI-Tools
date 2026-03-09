@@ -367,6 +367,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     else if (ethPriceFloat <= 0.020)  ethWei = "4000000000000";  // ~$0.010
     else                               ethWei = "8000000000000";  // ~$0.020
 
+    // ETH on Ethereum mainnet
     accepts.push({
       scheme: "exact",
       network: "eip155:1",
@@ -378,6 +379,19 @@ function buildPaymentRequired(toolName: string, price: string): object {
       maxTimeoutSeconds: 300,
       asset: "0x0000000000000000000000000000000000000000",
       extra: { name: "Ether", version: "native" },
+    });
+    // ETH on Base (same wallet, faster + cheaper)
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:8453",
+      maxAmountRequired: ethWei,
+      resource,
+      description: `Arch Tools — ${toolName} (native ETH on Base)`,
+      mimeType: "application/json",
+      payTo: ethWallet,
+      maxTimeoutSeconds: 60,
+      asset: "0x0000000000000000000000000000000000000000",
+      extra: { name: "Ether", version: "native-base" },
     });
   }
 
