@@ -3,201 +3,926 @@
   "info": {
     "title": "Arch Tools API",
     "version": "1.7.0",
-    "description": "50 production-ready API tools for AI agents and developers. Web scraping, AI generation, image creation, audio transcription, crypto data, email, domain checks, and more.",
-    "contact": { "url": "https://archtools.dev", "email": "support@archtools.dev" }
+    "description": "45 production-ready API tools for AI agents and developers. Web scraping, AI generation, image creation, audio transcription, crypto data, email, domain checks, and more.",
+    "contact": {
+      "url": "https://archtools.dev",
+      "email": "support@archtools.dev"
+    }
   },
-  "servers": [{ "url": "https://arch-ai-tools.onrender.com" }],
-  "security": [{ "ApiKeyAuth": [] }],
+  "servers": [
+    {
+      "url": "https://archtools.dev"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
   "components": {
     "securitySchemes": {
-      "ApiKeyAuth": { "type": "apiKey", "in": "header", "name": "x-api-key" }
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
     }
   },
   "paths": {
     "/v1/tools/web-scrape": {
-      "post": { "operationId": "webScrape", "summary": "Scrape a webpage and return its content as markdown or HTML", "tags": ["Web"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["url"], "properties": {
-          "url": { "type": "string", "description": "URL to scrape" },
-          "format": { "type": "string", "enum": ["markdown", "html", "text"], "default": "markdown" },
-          "selector": { "type": "string", "description": "CSS selector to extract specific element" }
-        }}}}},
-        "responses": { "200": { "description": "Scraped content" }}}
+      "post": {
+        "operationId": "webScrape",
+        "summary": "Scrape a webpage and return its content as markdown or HTML",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "URL to scrape"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "markdown",
+                      "html",
+                      "text"
+                    ],
+                    "default": "markdown"
+                  },
+                  "selector": {
+                    "type": "string",
+                    "description": "CSS selector to extract specific element"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scraped content"
+          }
+        }
+      }
     },
     "/v1/tools/ai-generate": {
-      "post": { "operationId": "aiGenerate", "summary": "Generate text using AI models (Claude, GPT-4, Grok, Gemini)", "tags": ["AI"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["prompt"], "properties": {
-          "prompt": { "type": "string", "description": "The prompt or question" },
-          "model": { "type": "string", "enum": ["claude", "gpt4", "grok", "gemini"], "default": "claude", "description": "AI model to use" },
-          "system": { "type": "string", "description": "System prompt / persona" },
-          "max_tokens": { "type": "integer", "default": 1024 }
-        }}}}},
-        "responses": { "200": { "description": "Generated text" }}}
+      "post": {
+        "operationId": "aiGenerate",
+        "summary": "Generate text using AI models (Claude, GPT-4, Grok, Gemini)",
+        "tags": [
+          "AI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "The prompt or question"
+                  },
+                  "model": {
+                    "type": "string",
+                    "enum": [
+                      "claude",
+                      "gpt4",
+                      "grok",
+                      "gemini"
+                    ],
+                    "default": "claude",
+                    "description": "AI model to use"
+                  },
+                  "system": {
+                    "type": "string",
+                    "description": "System prompt / persona"
+                  },
+                  "max_tokens": {
+                    "type": "integer",
+                    "default": 1024
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated text"
+          }
+        }
+      }
     },
     "/v1/tools/design-create": {
-      "post": { "operationId": "designCreate", "summary": "Generate images from text prompts using DALL-E 3", "tags": ["Image"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["prompt"], "properties": {
-          "prompt": { "type": "string", "description": "Image description" },
-          "size": { "type": "string", "enum": ["1024x1024", "1792x1024", "1024x1792"], "default": "1024x1024" },
-          "quality": { "type": "string", "enum": ["standard", "hd"], "default": "standard" },
-          "style": { "type": "string", "enum": ["vivid", "natural"], "default": "vivid" }
-        }}}}},
-        "responses": { "200": { "description": "Image URL" }}}
+      "post": {
+        "operationId": "designCreate",
+        "summary": "Generate images from text prompts using DALL-E 3",
+        "tags": [
+          "Image"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "Image description"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": [
+                      "1024x1024",
+                      "1792x1024",
+                      "1024x1792"
+                    ],
+                    "default": "1024x1024"
+                  },
+                  "quality": {
+                    "type": "string",
+                    "enum": [
+                      "standard",
+                      "hd"
+                    ],
+                    "default": "standard"
+                  },
+                  "style": {
+                    "type": "string",
+                    "enum": [
+                      "vivid",
+                      "natural"
+                    ],
+                    "default": "vivid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image URL"
+          }
+        }
+      }
     },
     "/v1/tools/ocr-extract": {
-      "post": { "operationId": "ocrExtract", "summary": "Extract text from images using OCR", "tags": ["AI"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": {
-          "image_url": { "type": "string", "description": "Public URL of the image" },
-          "image_base64": { "type": "string", "description": "Base64-encoded image (alternative to image_url)" }
-        }}}}},
-        "responses": { "200": { "description": "Extracted text" }}}
+      "post": {
+        "operationId": "ocrExtract",
+        "summary": "Extract text from images using OCR",
+        "tags": [
+          "AI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image_url": {
+                    "type": "string",
+                    "description": "Public URL of the image"
+                  },
+                  "image_base64": {
+                    "type": "string",
+                    "description": "Base64-encoded image (alternative to image_url)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted text"
+          }
+        }
+      }
     },
     "/v1/tools/extract-pdf": {
-      "post": { "operationId": "extractPdf", "summary": "Extract text and content from PDF documents", "tags": ["AI"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": {
-          "pdf_url": { "type": "string", "description": "Public URL of the PDF" },
-          "pdf_base64": { "type": "string", "description": "Base64-encoded PDF (alternative to pdf_url)" }
-        }}}}},
-        "responses": { "200": { "description": "Extracted PDF content" }}}
+      "post": {
+        "operationId": "extractPdf",
+        "summary": "Extract text and content from PDF documents",
+        "tags": [
+          "AI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pdf_url": {
+                    "type": "string",
+                    "description": "Public URL of the PDF"
+                  },
+                  "pdf_base64": {
+                    "type": "string",
+                    "description": "Base64-encoded PDF (alternative to pdf_url)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted PDF content"
+          }
+        }
+      }
     },
     "/v1/tools/transcribe-audio": {
-      "post": { "operationId": "transcribeAudio", "summary": "Transcribe audio files to text using OpenAI Whisper", "tags": ["Audio"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["audio_url"], "properties": {
-          "audio_url": { "type": "string", "description": "Public URL of the audio file (MP3, WAV, M4A, OGG)" },
-          "language": { "type": "string", "description": "ISO-639-1 language code (auto-detected if omitted)" },
-          "prompt": { "type": "string", "description": "Context hint for better accuracy" }
-        }}}}},
-        "responses": { "200": { "description": "Transcript text" }}}
+      "post": {
+        "operationId": "transcribeAudio",
+        "summary": "Transcribe audio files to text using OpenAI Whisper",
+        "tags": [
+          "Audio"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "audio_url"
+                ],
+                "properties": {
+                  "audio_url": {
+                    "type": "string",
+                    "description": "Public URL of the audio file (MP3, WAV, M4A, OGG)"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "ISO-639-1 language code (auto-detected if omitted)"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "Context hint for better accuracy"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transcript text"
+          }
+        }
+      }
     },
     "/v1/tools/text-to-speech": {
-      "post": { "operationId": "textToSpeech", "summary": "Convert text to natural speech audio via ElevenLabs", "tags": ["Audio"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["text"], "properties": {
-          "text": { "type": "string", "description": "Text to convert (max 5,000 chars)" },
-          "voice_id": { "type": "string", "description": "ElevenLabs voice ID", "default": "EXAVITQu4vr4xnSDxMaL" }
-        }}}}},
-        "responses": { "200": { "description": "Base64 MP3 audio" }}}
+      "post": {
+        "operationId": "textToSpeech",
+        "summary": "Convert text to natural speech audio via ElevenLabs",
+        "tags": [
+          "Audio"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Text to convert (max 5,000 chars)"
+                  },
+                  "voice_id": {
+                    "type": "string",
+                    "description": "ElevenLabs voice ID",
+                    "default": "EXAVITQu4vr4xnSDxMaL"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Base64 MP3 audio"
+          }
+        }
+      }
     },
     "/v1/tools/crypto-price": {
-      "post": { "operationId": "cryptoPrice", "summary": "Get current cryptocurrency price", "tags": ["Crypto"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["symbol"], "properties": {
-          "symbol": { "type": "string", "description": "CoinGecko coin ID (e.g. bitcoin, ethereum, solana)" }
-        }}}}},
-        "responses": { "200": { "description": "Current price and market data" }}}
+      "post": {
+        "operationId": "cryptoPrice",
+        "summary": "Get current cryptocurrency price",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "symbol"
+                ],
+                "properties": {
+                  "symbol": {
+                    "type": "string",
+                    "description": "CoinGecko coin ID (e.g. bitcoin, ethereum, solana)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current price and market data"
+          }
+        }
+      }
     },
     "/v1/tools/crypto-news": {
-      "post": { "operationId": "cryptoNews", "summary": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine", "tags": ["Crypto"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": {
-          "symbol": { "type": "string", "description": "Filter by coin symbol (e.g. BTC, ETH)" },
-          "limit": { "type": "integer", "default": 10, "maximum": 20 }
-        }}}}},
-        "responses": { "200": { "description": "News articles" }}}
+      "post": {
+        "operationId": "cryptoNews",
+        "summary": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "symbol": {
+                    "type": "string",
+                    "description": "Filter by coin symbol (e.g. BTC, ETH)"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "maximum": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "News articles"
+          }
+        }
+      }
     },
     "/v1/tools/email-send": {
-      "post": { "operationId": "emailSend", "summary": "Send transactional email via Resend", "tags": ["Communication"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["to", "subject", "body"], "properties": {
-          "to": { "type": "string", "description": "Recipient email address" },
-          "subject": { "type": "string" },
-          "body": { "type": "string", "description": "Plain text email body" },
-          "html": { "type": "string", "description": "HTML email body (alternative to body)" },
-          "from": { "type": "string", "description": "Sender (default: no-reply@archtools.dev)" }
-        }}}}},
-        "responses": { "200": { "description": "Message ID" }}}
+      "post": {
+        "operationId": "emailSend",
+        "summary": "Send transactional email via Resend",
+        "tags": [
+          "Communication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "to",
+                  "subject",
+                  "body"
+                ],
+                "properties": {
+                  "to": {
+                    "type": "string",
+                    "description": "Recipient email address"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Plain text email body"
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "HTML email body (alternative to body)"
+                  },
+                  "from": {
+                    "type": "string",
+                    "description": "Sender (default: no-reply@archtools.dev)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message ID"
+          }
+        }
+      }
     },
     "/v1/tools/domain-check": {
-      "post": { "operationId": "domainCheck", "summary": "Check if a domain is available or registered via RDAP", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["domain"], "properties": {
-          "domain": { "type": "string", "description": "Domain name (e.g. example.com)" }
-        }}}}},
-        "responses": { "200": { "description": "Registration status, expiry, nameservers" }}}
+      "post": {
+        "operationId": "domainCheck",
+        "summary": "Check if a domain is available or registered via RDAP",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string",
+                    "description": "Domain name (e.g. example.com)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration status, expiry, nameservers"
+          }
+        }
+      }
     },
     "/v1/tools/qr-code": {
-      "post": { "operationId": "qrCode", "summary": "Generate a QR code", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["text"], "properties": {
-          "text": { "type": "string", "description": "Text or URL to encode" },
-          "size": { "type": "integer", "default": 200 }
-        }}}}},
-        "responses": { "200": { "description": "Base64 PNG QR code" }}}
+      "post": {
+        "operationId": "qrCode",
+        "summary": "Generate a QR code",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Text or URL to encode"
+                  },
+                  "size": {
+                    "type": "integer",
+                    "default": 200
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Base64 PNG QR code"
+          }
+        }
+      }
     },
     "/v1/tools/summarize-text": {
-      "post": { "operationId": "summarizeText", "summary": "Summarize long text using AI", "tags": ["AI"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["text"], "properties": {
-          "text": { "type": "string" },
-          "length": { "type": "string", "enum": ["short", "medium", "long"], "default": "medium" }
-        }}}}},
-        "responses": { "200": { "description": "Summary" }}}
+      "post": {
+        "operationId": "summarizeText",
+        "summary": "Summarize long text using AI",
+        "tags": [
+          "AI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "length": {
+                    "type": "string",
+                    "enum": [
+                      "short",
+                      "medium",
+                      "long"
+                    ],
+                    "default": "medium"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Summary"
+          }
+        }
+      }
     },
     "/v1/tools/translate-text": {
-      "post": { "operationId": "translateText", "summary": "Translate text to any language", "tags": ["AI"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["text", "target_language"], "properties": {
-          "text": { "type": "string" },
-          "target_language": { "type": "string", "description": "Target language (e.g. Spanish, French, Japanese)" },
-          "source_language": { "type": "string", "description": "Source language (auto-detected if omitted)" }
-        }}}}},
-        "responses": { "200": { "description": "Translated text" }}}
+      "post": {
+        "operationId": "translateText",
+        "summary": "Translate text to any language",
+        "tags": [
+          "AI"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text",
+                  "target_language"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "target_language": {
+                    "type": "string",
+                    "description": "Target language (e.g. Spanish, French, Japanese)"
+                  },
+                  "source_language": {
+                    "type": "string",
+                    "description": "Source language (auto-detected if omitted)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Translated text"
+          }
+        }
+      }
     },
     "/v1/tools/search-web": {
-      "post": { "operationId": "searchWeb", "summary": "Search the web and return results", "tags": ["Web"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["query"], "properties": {
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "default": 10, "maximum": 20 }
-        }}}}},
-        "responses": { "200": { "description": "Search results" }}}
+      "post": {
+        "operationId": "searchWeb",
+        "summary": "Search the web and return results",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "maximum": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results"
+          }
+        }
+      }
     },
     "/v1/tools/timezone-convert": {
-      "post": { "operationId": "timezoneConvert", "summary": "Convert time between timezones", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["datetime", "from_tz", "to_tz"], "properties": {
-          "datetime": { "type": "string", "description": "ISO 8601 datetime to convert (e.g. 2024-01-15T14:30:00)" },
-          "from_tz": { "type": "string", "description": "Source IANA timezone (e.g. America/New_York)" },
-          "to_tz": { "type": "string", "description": "Target IANA timezone (e.g. Europe/London)" }
-        }}}}},
-        "responses": { "200": { "description": "Converted time" }}}
+      "post": {
+        "operationId": "timezoneConvert",
+        "summary": "Convert time between timezones",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "datetime",
+                  "from_tz",
+                  "to_tz"
+                ],
+                "properties": {
+                  "datetime": {
+                    "type": "string",
+                    "description": "ISO 8601 datetime to convert (e.g. 2024-01-15T14:30:00)"
+                  },
+                  "from_tz": {
+                    "type": "string",
+                    "description": "Source IANA timezone (e.g. America/New_York)"
+                  },
+                  "to_tz": {
+                    "type": "string",
+                    "description": "Target IANA timezone (e.g. Europe/London)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Converted time"
+          }
+        }
+      }
     },
     "/v1/tools/generate-hash": {
-      "post": { "operationId": "generateHash", "summary": "Hash text using SHA256, MD5, SHA512, etc.", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["text"], "properties": {
-          "text": { "type": "string" },
-          "algorithm": { "type": "string", "enum": ["sha256", "sha512", "md5", "sha1"], "default": "sha256" }
-        }}}}},
-        "responses": { "200": { "description": "Hashed value" }}}
+      "post": {
+        "operationId": "generateHash",
+        "summary": "Hash text using SHA256, MD5, SHA512, etc.",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "enum": [
+                      "sha256",
+                      "sha512",
+                      "md5",
+                      "sha1"
+                    ],
+                    "default": "sha256"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hashed value"
+          }
+        }
+      }
     },
     "/v1/tools/convert-format": {
-      "post": { "operationId": "convertFormat", "summary": "Convert data between JSON, YAML, CSV, TOML, and XML formats", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["input", "from", "to"], "properties": {
-          "input": { "type": "string", "description": "The content to convert (serialized as a string)" },
-          "from": { "type": "string", "enum": ["json", "yaml", "csv", "xml", "toml"], "description": "Source format" },
-          "to": { "type": "string", "enum": ["json", "yaml", "csv", "xml", "toml"], "description": "Target format" }
-        }}}}},
-        "responses": { "200": { "description": "Converted content" }}}
+      "post": {
+        "operationId": "convertFormat",
+        "summary": "Convert data between JSON, YAML, CSV, TOML, and XML formats",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "input",
+                  "from",
+                  "to"
+                ],
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "description": "The content to convert (serialized as a string)"
+                  },
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "yaml",
+                      "csv",
+                      "xml",
+                      "toml"
+                    ],
+                    "description": "Source format"
+                  },
+                  "to": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "yaml",
+                      "csv",
+                      "xml",
+                      "toml"
+                    ],
+                    "description": "Target format"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Converted content"
+          }
+        }
+      }
     },
     "/v1/tools/webhook-send": {
-      "post": { "operationId": "webhookSend", "summary": "POST a JSON payload to any webhook URL", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["webhook_url", "payload"], "properties": {
-          "webhook_url": { "type": "string", "description": "The webhook endpoint URL to POST to" },
-          "payload": { "type": "object", "description": "JSON body to send in the POST request" },
-          "headers": { "type": "object", "description": "Optional custom headers to include" }
-        }}}}},
-        "responses": { "200": { "description": "Webhook response status and body" }}}
+      "post": {
+        "operationId": "webhookSend",
+        "summary": "POST a JSON payload to any webhook URL",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "webhook_url",
+                  "payload"
+                ],
+                "properties": {
+                  "webhook_url": {
+                    "type": "string",
+                    "description": "The webhook endpoint URL to POST to"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "description": "JSON body to send in the POST request"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "description": "Optional custom headers to include"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook response status and body"
+          }
+        }
+      }
     },
     "/v1/tools/jsonpath-query": {
-      "post": { "operationId": "jsonpathQuery", "summary": "Run a JSONPath expression against a JSON object", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["data", "path"], "properties": {
-          "data": { "type": "object", "description": "The JSON object to query" },
-          "path": { "type": "string", "description": "JSONPath expression, e.g. $.store.book[*].title" }
-        }}}}},
-        "responses": { "200": { "description": "Matching values from the JSONPath query" }}}
+      "post": {
+        "operationId": "jsonpathQuery",
+        "summary": "Run a JSONPath expression against a JSON object",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data",
+                  "path"
+                ],
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "description": "The JSON object to query"
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "JSONPath expression, e.g. $.store.book[*].title"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching values from the JSONPath query"
+          }
+        }
+      }
     },
     "/v1/tools/token-lookup": {
-      "post": { "operationId": "tokenLookup", "summary": "Search CoinGecko for a token by name or ticker symbol", "tags": ["Crypto"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["query"], "properties": {
-          "query": { "type": "string", "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)" }
-        }}}}},
-        "responses": { "200": { "description": "Token metadata including CoinGecko ID" }}}
+      "post": {
+        "operationId": "tokenLookup",
+        "summary": "Search CoinGecko for a token by name or ticker symbol",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token metadata including CoinGecko ID"
+          }
+        }
+      }
     },
     "/v1/tools/ip-lookup": {
-      "post": { "operationId": "ipLookup", "summary": "Look up geolocation and ISP info for an IP address", "tags": ["Utilities"],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": {
-          "ip": { "type": "string", "description": "IP address (uses caller's IP if omitted)" }
-        }}}}},
-        "responses": { "200": { "description": "Geolocation and ISP data" }}}
+      "post": {
+        "operationId": "ipLookup",
+        "summary": "Look up geolocation and ISP info for an IP address",
+        "tags": [
+          "Utilities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ip": {
+                    "type": "string",
+                    "description": "IP address (uses caller's IP if omitted)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Geolocation and ISP data"
+          }
+        }
+      }
     }
   }
 }
