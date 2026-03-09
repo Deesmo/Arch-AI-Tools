@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import path from "path";
 import { config } from "./config";
 
@@ -16,8 +17,10 @@ import workflowsRouter from "./routes/workflows";
 import seoRouter from "./routes/seo";
 import legalRouter from "./routes/legal";
 import oauthRouter from "./routes/oauth";
+import authRouter from "./routes/auth";
 import { SIGNUP_HTML } from "./assets/signupHtml";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml";
+import { LOGIN_HTML } from "./assets/loginHtml";
 
 const app = express();
 
@@ -87,6 +90,7 @@ app.use(globalLimiter);
 app.use("/webhooks/stripe", express.raw({ type: "application/json" }));
 
 app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Request ID ───────────────────────────────────────────────────────────────
@@ -153,10 +157,11 @@ app.use("/v1/workflows", workflowsRouter);
 
 // Legal
 app.use("/legal", legalRouter);
+app.use("/auth", authRouter);
 
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
-app.get("/login", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
+app.get("/login", (_req: Request, res: Response) => res.type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (_req: Request, res: Response) => res.type("text/html").send(DASHBOARD_HTML));
 
 // ─── Missing pages (referenced throughout the app) ────────────────────────────

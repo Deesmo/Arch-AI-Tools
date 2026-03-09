@@ -15,6 +15,7 @@ model Agent {
   apiKey       String       @unique @map("api_key")
   email        String       @unique
   name         String?
+  passwordHash String?      @map("password_hash")
   credits      Int          @default(0)
   tier         String       @default("free")
   totalCalls   Int          @default(0)

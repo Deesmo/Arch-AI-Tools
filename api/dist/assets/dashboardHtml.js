@@ -280,8 +280,8 @@ exports.DASHBOARD_HTML = `<!DOCTYPE html>
       }
     }
 
-    // Auto-load
-    (function() {
+    // Auto-load: try session cookie first, then URL param, then localStorage
+    (async function() {
       var params = new URLSearchParams(window.location.search);
       var qKey = params.get("key");
       if (qKey && qKey.startsWith("arch_")) {
@@ -291,10 +291,29 @@ exports.DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById("load-btn").click();
         return;
       }
+      // Try session cookie via /auth/me
+      try {
+        var meResp = await fetch("/auth/me", { credentials: "include" });
+        if (meResp.ok) {
+          var me = await meResp.json();
+          if (me.ok && me.api_key) {
+            document.getElementById("key-input").value = me.api_key;
+            localStorage.setItem("arch_api_key", me.api_key);
+            document.getElementById("load-btn").click();
+            var navLinks = document.querySelector(".at-nav-links");
+            if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
+            return;
+          }
+        }
+      } catch(_) {}
+      // Fall back to localStorage
       var saved = localStorage.getItem("arch_api_key");
       if (saved) {
         document.getElementById("key-input").value = saved;
         document.getElementById("load-btn").click();
+      } else {
+        var sub = document.querySelector(".page-sub");
+        if (sub) sub.innerHTML = 'Enter your API key below, or <a href="/login" style="color:var(--accent);">sign in with email & password →</a>';
       }
     })();
   </script>

@@ -1,7 +1,7 @@
 {
   "name": "arch-ai-tools",
   "version": "1.6.0",
-  "description": "Arch Tools \u2014 30 production-ready API tools for developers and AI agents",
+  "description": "Arch Tools — 30 production-ready API tools for developers and AI agents",
   "private": true,
   "scripts": {
     "build": "tsc",
@@ -17,9 +17,14 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@prisma/client": "^5.22.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/jsonwebtoken": "^9.0.10",
     "ajv": "^8.18.0",
     "axios": "^1.7.9",
+    "bcryptjs": "^3.0.3",
     "cheerio": "^1.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parse": "^5.6.0",
     "csv-stringify": "^6.5.2",
@@ -30,6 +35,7 @@
     "franc": "^6.2.0",
     "helmet": "^8.1.0",
     "js-yaml": "^4.1.0",
+    "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.11.18",
     "lru-cache": "^11.0.2",
     "marked": "^15.0.6",

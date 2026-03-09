@@ -41,6 +41,7 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const morgan_1 = __importDefault(require("morgan"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("./config");
 // Routes
@@ -53,8 +54,10 @@ const workflows_1 = __importDefault(require("./routes/workflows"));
 const seo_1 = __importDefault(require("./routes/seo"));
 const legal_1 = __importDefault(require("./routes/legal"));
 const oauth_1 = __importDefault(require("./routes/oauth"));
+const auth_1 = __importDefault(require("./routes/auth"));
 const signupHtml_1 = require("./assets/signupHtml");
 const dashboardHtml_1 = require("./assets/dashboardHtml");
+const loginHtml_1 = require("./assets/loginHtml");
 const app = (0, express_1.default)();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
@@ -113,6 +116,7 @@ app.use(globalLimiter);
 // Stripe webhook needs raw body — must come before express.json()
 app.use("/webhooks/stripe", express_1.default.raw({ type: "application/json" }));
 app.use(express_1.default.json({ limit: "10mb" }));
+app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.urlencoded({ extended: true }));
 // ─── Request ID ───────────────────────────────────────────────────────────────
 app.use((req, _res, next) => {
@@ -167,9 +171,10 @@ app.use("/admin", admin_1.default);
 app.use("/v1/workflows", workflows_1.default);
 // Legal
 app.use("/legal", legal_1.default);
+app.use("/auth", auth_1.default);
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req, res) => res.type("text/html").send(signupHtml_1.SIGNUP_HTML));
-app.get("/login", (_req, res) => res.type("text/html").send(signupHtml_1.SIGNUP_HTML));
+app.get("/login", (_req, res) => res.type("text/html").send(loginHtml_1.LOGIN_HTML));
 app.get("/dashboard", (_req, res) => res.type("text/html").send(dashboardHtml_1.DASHBOARD_HTML));
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — referenced in Stripe cancel_url and nav links
