@@ -1113,10 +1113,23 @@
 <!-- MCP -->
 <section id="mcp">
   <div class="wrap">
-    <div class="split-grid" style="direction:ltr;">
-      <div class="code-block" style="order:2;">
-        <span class="t-line"><span class="code-comment">// Mac: ~/Library/Application Support/Claude/claude_desktop_config.json</span></span>
-        <span class="t-line"><span class="code-comment">// Win: %APPDATA%\Claude\claude_desktop_config.json</span></span>
+    <div class="section-tag">MCP Compatible</div>
+    <h2 class="section-title">Plug into any AI tool or coding environment</h2>
+    <p class="section-sub">Arch ships a native MCP server. Pick your client below — copy the config, paste it in, and all 50 tools appear natively. Works on Mac, Windows, and Linux.</p>
+
+    <!-- Client tabs -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin:32px 0 20px;">
+      <button onclick="showMcpTab('claude')" id="mcp-tab-claude" style="padding:8px 18px;border-radius:8px;border:1px solid rgba(255,144,16,0.5);background:rgba(255,144,16,0.12);color:#FFB030;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;">Claude Desktop</button>
+      <button onclick="showMcpTab('cursor')" id="mcp-tab-cursor" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">Cursor</button>
+      <button onclick="showMcpTab('windsurf')" id="mcp-tab-windsurf" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">Windsurf</button>
+      <button onclick="showMcpTab('chatgpt')" id="mcp-tab-chatgpt" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">ChatGPT</button>
+      <button onclick="showMcpTab('api')" id="mcp-tab-api" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">REST API</button>
+    </div>
+
+    <!-- Claude Desktop -->
+    <div id="mcp-panel-claude">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Config file: <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Mac: ~/Library/Application Support/Claude/claude_desktop_config.json</code> &nbsp;|&nbsp; <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Win: %APPDATA%\Claude\claude_desktop_config.json</code> &nbsp;|&nbsp; <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Linux: ~/.config/Claude/claude_desktop_config.json</code></p>
+      <div class="code-block">
         <span class="t-line">&#123;</span>
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
@@ -1127,24 +1140,121 @@
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&#125;</span>
         <span class="t-line">&nbsp;</span>
-        <span class="t-line"><span class="code-comment">// Claude now has 50 tools natively</span></span>
         <span class="t-line"><span class="t-out">&#10003; arch-tools connected (50 tools available)</span></span>
       </div>
-      <div style="order:1;">
-        <div class="section-tag">MCP Compatible</div>
-        <h2 class="section-title">Plug into Claude, Cursor, Windsurf</h2>
-        <p class="section-sub">Arch ships a native MCP server. Drop 6 lines into your Claude Desktop config and every tool is immediately available as a native capability — no API calls in your prompts, no glue code.</p>
-        <ul class="feature-list">
-          <li>50 tools exposed as native MCP functions</li>
-          <li>Mac, Windows, Linux — same config</li>
-          <li>Claude Desktop, Cursor, Windsurf — any MCP client</li>
-          <li>Tool descriptions auto-loaded — Claude knows what each tool does</li>
-          <li>Credits deducted per call, same as REST API</li>
-        </ul>
+    </div>
+
+    <!-- Cursor -->
+    <div id="mcp-panel-cursor" style="display:none;">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Config file: <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Mac/Linux: ~/.cursor/mcp.json</code> &nbsp;|&nbsp; <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Win: %USERPROFILE%\.cursor\mcp.json</code></p>
+      <div class="code-block">
+        <span class="t-line">&#123;</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://arch-tools-mcp.onrender.com/sse"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123; <span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"arch_your_key"</span> &#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&#125;</span>
       </div>
     </div>
+
+    <!-- Windsurf -->
+    <div id="mcp-panel-windsurf" style="display:none;">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Config file: <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Mac/Linux: ~/.codeium/windsurf/mcp_config.json</code> &nbsp;|&nbsp; <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">Win: %USERPROFILE%\.codeium\windsurf\mcp_config.json</code></p>
+      <div class="code-block">
+        <span class="t-line">&#123;</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://arch-tools-mcp.onrender.com/sse"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123; <span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"arch_your_key"</span> &#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&nbsp;&nbsp;&#125;</span>
+        <span class="t-line">&#125;</span>
+      </div>
+    </div>
+
+    <!-- ChatGPT -->
+    <div id="mcp-panel-chatgpt" style="display:none;">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Connect Arch Tools to a Custom GPT in the ChatGPT store. Works on any OS — no config file needed.</p>
+      <ol style="color:var(--muted);line-height:2.2;padding-left:20px;font-size:14px;">
+        <li>Go to <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">chat.openai.com/gpts/editor</code> → Create</li>
+        <li>Click <strong style="color:var(--fg);">Actions</strong> → <strong style="color:var(--fg);">Import from URL</strong></li>
+        <li>Paste: <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">https://archtools.dev/openapi.json</code></li>
+        <li>Set auth type: <strong style="color:var(--fg);">API Key</strong> → header name <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">x-api-key</code></li>
+        <li>Publish — your GPT now has 18 core Arch Tools available natively</li>
+      </ol>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Note: Grok (xAI) and Gemini (Google) support API-level function calling — no consumer connector store yet. Use the REST API directly in your agent code.</p>
+    </div>
+
+    <!-- REST API -->
+    <div id="mcp-panel-api" style="display:none;">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Every tool is a single POST request. Works from any language, any OS. Same API key across all methods.</p>
+      <!-- Language tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button onclick="showLangTab('curl')" id="lang-tab-curl" style="padding:5px 14px;border-radius:6px;border:1px solid rgba(0,229,176,0.4);background:rgba(0,229,176,0.08);color:#00e5b0;font-size:12px;font-family:var(--mono);cursor:pointer;font-weight:700;">curl</button>
+        <button onclick="showLangTab('ps')" id="lang-tab-ps" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">PowerShell</button>
+        <button onclick="showLangTab('node')" id="lang-tab-node" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">Node.js</button>
+        <button onclick="showLangTab('python')" id="lang-tab-python" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;font-family:var(--mono);cursor:pointer;">Python</button>
+      </div>
+      <div id="lang-panel-curl" class="code-block">
+        <span class="t-line"><span class="code-comment"># Mac / Linux</span></span>
+        <span class="t-line">curl -X POST https://archtools.dev/v1/tools/web-scrape \</span>
+        <span class="t-line">&nbsp;&nbsp;-H <span class="code-val">"x-api-key: arch_your_key"</span> \</span>
+        <span class="t-line">&nbsp;&nbsp;-H <span class="code-val">"Content-Type: application/json"</span> \</span>
+        <span class="t-line">&nbsp;&nbsp;-d <span class="code-val">'&#123;"url":"https://example.com"&#125;'</span></span>
+      </div>
+      <div id="lang-panel-ps" class="code-block" style="display:none;">
+        <span class="t-line"><span class="code-comment"># Windows PowerShell</span></span>
+        <span class="t-line">Invoke-RestMethod -Uri <span class="code-val">"https://archtools.dev/v1/tools/web-scrape"</span> \`</span>
+        <span class="t-line">&nbsp;&nbsp;-Method POST \`</span>
+        <span class="t-line">&nbsp;&nbsp;-Headers @&#123; <span class="code-val">"x-api-key"</span> = <span class="code-val">"arch_your_key"</span>; <span class="code-val">"Content-Type"</span> = <span class="code-val">"application/json"</span> &#125; \`</span>
+        <span class="t-line">&nbsp;&nbsp;-Body <span class="code-val">'&#123;"url":"https://example.com"&#125;'</span></span>
+      </div>
+      <div id="lang-panel-node" class="code-block" style="display:none;">
+        <span class="t-line"><span class="code-comment">// Node.js — works in v18+ (built-in fetch)</span></span>
+        <span class="t-line">const res = await fetch(<span class="code-val">'https://archtools.dev/v1/tools/web-scrape'</span>, &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;method: <span class="code-val">'POST'</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;headers: &#123; <span class="code-val">'x-api-key'</span>: <span class="code-val">'arch_your_key'</span>, <span class="code-val">'Content-Type'</span>: <span class="code-val">'application/json'</span> &#125;,</span>
+        <span class="t-line">&nbsp;&nbsp;body: JSON.stringify(&#123; url: <span class="code-val">'https://example.com'</span> &#125;)</span>
+        <span class="t-line">&#125;);</span>
+        <span class="t-line">const data = await res.json();</span>
+      </div>
+      <div id="lang-panel-python" class="code-block" style="display:none;">
+        <span class="t-line"><span class="code-comment"># Python — pip install requests</span></span>
+        <span class="t-line">import requests</span>
+        <span class="t-line">res = requests.post(</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-val">"https://archtools.dev/v1/tools/web-scrape"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;headers=&#123;<span class="code-val">"x-api-key"</span>: <span class="code-val">"arch_your_key"</span>&#125;,</span>
+        <span class="t-line">&nbsp;&nbsp;json=&#123;<span class="code-val">"url"</span>: <span class="code-val">"https://example.com"</span>&#125;</span>
+        <span class="t-line">)</span>
+        <span class="t-line">print(res.json())</span>
+      </div>
+    </div>
+
   </div>
 </section>
+
+<script>
+function showMcpTab(tab) {
+  ['claude','cursor','windsurf','chatgpt','api'].forEach(t => {
+    document.getElementById('mcp-panel-'+t).style.display = t===tab?'block':'none';
+    const btn = document.getElementById('mcp-tab-'+t);
+    if(t===tab){btn.style.background='rgba(255,144,16,0.12)';btn.style.borderColor='rgba(255,144,16,0.5)';btn.style.color='#FFB030';btn.style.fontWeight='700';}
+    else{btn.style.background='transparent';btn.style.borderColor='var(--border)';btn.style.color='rgba(255,255,255,0.5)';btn.style.fontWeight='600';}
+  });
+}
+function showLangTab(lang) {
+  ['curl','ps','node','python'].forEach(l => {
+    document.getElementById('lang-panel-'+l).style.display = l===lang?'block':'none';
+    const btn = document.getElementById('lang-tab-'+l);
+    if(l===lang){btn.style.background='rgba(0,229,176,0.08)';btn.style.borderColor='rgba(0,229,176,0.4)';btn.style.color='#00e5b0';btn.style.fontWeight='700';}
+    else{btn.style.background='transparent';btn.style.borderColor='var(--border)';btn.style.color='rgba(255,255,255,0.4)';btn.style.fontWeight='400';}
+  });
+}
+</script>
 
 <!-- PRICING -->
 <section id="pricing" style="background:rgba(12,11,34,0.3);border-top:1px solid var(--border);">
