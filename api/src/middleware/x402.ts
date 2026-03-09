@@ -28,6 +28,7 @@ const USDC_CONTRACTS: Record<string, string> = {
   optimism:  "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
   avalanche: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
   unichain:  "0x078D782b760474a361dDA0AF3839290b0EF57AD6",
+  monad:     "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
 };
 
 // Solana USDC mint address (native USDC on Solana mainnet)
@@ -294,7 +295,23 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 13: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
+  // Option 13: USDC on Monad (EVM-compatible high-perf L1, chain ID 143)
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:143",
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDC on Monad)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDC_CONTRACTS["monad"],
+      extra: { name: "USD Coin", version: "2" },
+    });
+  }
+
+  // Option 14: USDC on Aptos (Move-based L1, native USDC since Jan 2025)
   const aptosWallet = process.env.APTOS_WALLET_ADDRESS;
   if (aptosWallet) {
     accepts.push({
