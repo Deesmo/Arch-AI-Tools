@@ -319,6 +319,18 @@
                     "type": "string",
                     "description": "ElevenLabs voice ID",
                     "default": "EXAVITQu4vr4xnSDxMaL"
+                  },
+                  "model_id": {
+                    "type": "string",
+                    "description": "ElevenLabs model ID (default: eleven_turbo_v2_5)"
+                  },
+                  "stability": {
+                    "type": "number",
+                    "description": "Voice stability 0-1 (default: 0.42)"
+                  },
+                  "similarity_boost": {
+                    "type": "number",
+                    "description": "Voice similarity boost 0-1 (default: 0.82)"
                   }
                 }
               }
@@ -810,6 +822,17 @@
                   "headers": {
                     "type": "object",
                     "description": "Optional custom headers to include"
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method (default: POST)",
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE"
+                    ]
                   }
                 }
               }

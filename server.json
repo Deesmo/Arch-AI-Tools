@@ -1,0 +1,61 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/server.json",
+  "name": "io.github.deesmo/arch-tools-mcp",
+  "version": "1.7.0",
+  "description": "45 production-ready AI tools for developers and agents. Web scraping, AI generation, crypto data, utilities, and more. Dual payment: Stripe credits or USDC via x402 on Base — agents pay autonomously with no human card required.",
+  "homepage": "https://archtools.dev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Deesmo/Arch-AI-Tools"
+  },
+  "server": {
+    "transport": [
+      {
+        "type": "http",
+        "url": "https://arch-tools-mcp.onrender.com/mcp"
+      },
+      {
+        "type": "sse",
+        "url": "https://arch-tools-mcp.onrender.com/sse"
+      }
+    ]
+  },
+  "packages": [
+    {
+      "registry": "npm",
+      "name": "@deesmo/arch-tools-mcp",
+      "version": "1.7.0",
+      "runtime": "node",
+      "args": []
+    }
+  ],
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "categories": [
+    "web-scraping",
+    "ai-generation",
+    "crypto",
+    "utilities",
+    "data-processing",
+    "payments"
+  ],
+  "keywords": [
+    "mcp",
+    "ai-tools",
+    "web-scraping",
+    "crypto",
+    "x402",
+    "usdc",
+    "autonomous-payments",
+    "agents"
+  ],
+  "contact": {
+    "name": "Arch Tools",
+    "url": "https://archtools.dev",
+    "email": "support@archtools.dev"
+  }
+}

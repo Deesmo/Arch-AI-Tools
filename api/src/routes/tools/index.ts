@@ -1376,21 +1376,44 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
   const { limit = 10, currency = "usd" } = req.body as { limit?: number; currency?: string };
   try {
     const n = Math.min(Math.max(1, limit), 100);
+
+    // Try CoinGecko with exponential backoff (Render IPs get rate-limited)
     const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
     const _cgHeaders = cgHeaders();
-    let r = await fetch(cgUrl, { headers: _cgHeaders });
-    if (!r.ok) {
-      // Retry once after 1 second
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      r = await fetch(cgUrl, { headers: _cgHeaders });
-      if (!r.ok) {
-        res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
-        return;
-      }
+    type CgCoin = { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number };
+    let cgData: CgCoin[] | null = null;
+
+    for (const delay of [0, 1500, 3000]) {
+      if (delay > 0) await new Promise(r => setTimeout(r, delay));
+      try {
+        const r = await fetch(cgUrl, { headers: _cgHeaders, signal: AbortSignal.timeout(8000) });
+        if (r.ok) { cgData = (await r.json()) as CgCoin[]; break; }
+        if (r.status === 429 || r.status === 503) continue; // rate limited — retry
+        break; // other error — don't retry
+      } catch { continue; }
     }
-    const data = await r.json() as { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number }[];
-    const coins = data.map(c => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
-    res.json({ ok: true, currency, coins, request_id: reqId() });
+
+    if (cgData && Array.isArray(cgData) && cgData.length > 0) {
+      const coins = cgData.map((c: CgCoin) => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
+      res.json({ ok: true, currency, coins, source: "coingecko", request_id: reqId() }); return;
+    }
+
+    // Fallback: CoinCap API (no rate limit on cloud IPs)
+    const ccUrl = `https://api.coincap.io/v2/assets?limit=${n}`;
+    const ccResp = await fetch(ccUrl, { signal: AbortSignal.timeout(8000) });
+    if (ccResp.ok) {
+      const ccJson = await ccResp.json() as { data: { rank: string; id: string; symbol: string; name: string; priceUsd: string; marketCapUsd: string; volumeUsd24Hr: string; changePercent24Hr: string }[] };
+      const coins = (ccJson.data || []).map(c => ({
+        rank: parseInt(c.rank), id: c.id, symbol: c.symbol.toLowerCase(), name: c.name,
+        price: parseFloat(c.priceUsd) || 0,
+        market_cap: parseFloat(c.marketCapUsd) || 0,
+        volume_24h: parseFloat(c.volumeUsd24Hr) || 0,
+        change_24h: parseFloat(c.changePercent24Hr) || 0,
+      }));
+      res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", request_id: reqId() }); return;
+    }
+
+    res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 

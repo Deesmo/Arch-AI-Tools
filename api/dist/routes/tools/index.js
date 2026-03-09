@@ -1755,21 +1755,48 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const { limit = 10, currency = "usd" } = req.body;
     try {
         const n = Math.min(Math.max(1, limit), 100);
+        // Try CoinGecko with exponential backoff (Render IPs get rate-limited)
         const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
         const _cgHeaders = cgHeaders();
-        let r = await fetch(cgUrl, { headers: _cgHeaders });
-        if (!r.ok) {
-            // Retry once after 1 second
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            r = await fetch(cgUrl, { headers: _cgHeaders });
-            if (!r.ok) {
-                res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: (0, credits_1.reqId)() });
-                return;
+        let cgData = null;
+        for (const delay of [0, 1500, 3000]) {
+            if (delay > 0)
+                await new Promise(r => setTimeout(r, delay));
+            try {
+                const r = await fetch(cgUrl, { headers: _cgHeaders, signal: AbortSignal.timeout(8000) });
+                if (r.ok) {
+                    cgData = (await r.json());
+                    break;
+                }
+                if (r.status === 429 || r.status === 503)
+                    continue; // rate limited — retry
+                break; // other error — don't retry
+            }
+            catch {
+                continue;
             }
         }
-        const data = await r.json();
-        const coins = data.map(c => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
-        res.json({ ok: true, currency, coins, request_id: (0, credits_1.reqId)() });
+        if (cgData && Array.isArray(cgData) && cgData.length > 0) {
+            const coins = cgData.map((c) => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
+            res.json({ ok: true, currency, coins, source: "coingecko", request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        // Fallback: CoinCap API (no rate limit on cloud IPs)
+        const ccUrl = `https://api.coincap.io/v2/assets?limit=${n}`;
+        const ccResp = await fetch(ccUrl, { signal: AbortSignal.timeout(8000) });
+        if (ccResp.ok) {
+            const ccJson = await ccResp.json();
+            const coins = (ccJson.data || []).map(c => ({
+                rank: parseInt(c.rank), id: c.id, symbol: c.symbol.toLowerCase(), name: c.name,
+                price: parseFloat(c.priceUsd) || 0,
+                market_cap: parseFloat(c.marketCapUsd) || 0,
+                volume_24h: parseFloat(c.volumeUsd24Hr) || 0,
+                change_24h: parseFloat(c.changePercent24Hr) || 0,
+            }));
+            res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", request_id: (0, credits_1.reqId)() });
+            return;
+        }
+        res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
