@@ -380,6 +380,34 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "Ether", version: "native-base" },
         });
     }
+    // Native BNB on BNB Smart Chain (chain ID 56)
+    const bnbWallet = process.env.BNB_WALLET_ADDRESS;
+    if (bnbWallet) {
+        const bnbPriceFloat = parseFloat(price);
+        let bnbWei;
+        if (bnbPriceFloat <= 0.002)
+            bnbWei = "1600000000000"; // ~$0.001 at ~$600/BNB
+        else if (bnbPriceFloat <= 0.005)
+            bnbWei = "3200000000000";
+        else if (bnbPriceFloat <= 0.010)
+            bnbWei = "8000000000000";
+        else if (bnbPriceFloat <= 0.020)
+            bnbWei = "16000000000000";
+        else
+            bnbWei = "32000000000000";
+        accepts.push({
+            scheme: "exact",
+            network: "eip155:56",
+            maxAmountRequired: bnbWei,
+            resource,
+            description: `Arch Tools — ${toolName} (native BNB on BNB Chain)`,
+            mimeType: "application/json",
+            payTo: bnbWallet,
+            maxTimeoutSeconds: 60,
+            asset: "0x0000000000000000000000000000000000000000",
+            extra: { name: "BNB", version: "native" },
+        });
+    }
     // USDT options — Tether (higher market cap than USDC, widely held by trading agents)
     const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
     if (usdtWallet) {
