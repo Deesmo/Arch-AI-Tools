@@ -470,11 +470,11 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
         return;
     }
     try {
-        // Brave Search (uses SERPER_API_KEY env var which is set to Brave key)
-        if (process.env.SERPER_API_KEY) {
+        // Primary: Brave Search
+        if (process.env.BRAVE_SEARCH_API_KEY) {
             try {
                 const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
-                    headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.SERPER_API_KEY },
+                    headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY },
                 });
                 if (resp.ok) {
                     const data = await resp.json();
@@ -485,23 +485,28 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                     }
                 }
             }
-            catch (_) { /* fall through to DDG */ }
+            catch (_) { /* fall through to Tavily */ }
         }
-        // Fallback: DuckDuckGo Instant Answer
-        const resp = await axios_1.default.get("https://api.duckduckgo.com/", {
-            params: { q: query, format: "json", no_redirect: 1, no_html: 1, skip_disambig: 1 },
-            timeout: 8000,
-        });
-        const data = resp.data;
-        const results = [];
-        if (data.AbstractText && data.AbstractURL) {
-            results.push({ title: query, url: data.AbstractURL, snippet: data.AbstractText.slice(0, 300) });
+        // Fallback: Tavily
+        if (process.env.TAVILY_API_KEY) {
+            try {
+                const resp = await fetch("https://api.tavily.com/search", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: Math.min(num_results, 10) }),
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.content ?? "" }));
+                    if (results.length > 0) {
+                        res.json({ ok: true, query, results, count: results.length, source: "tavily", request_id: (0, credits_1.reqId)() });
+                        return;
+                    }
+                }
+            }
+            catch (_) { /* fall through */ }
         }
-        (data.RelatedTopics ?? []).slice(0, num_results - results.length).forEach(t => {
-            if (t.Text && t.FirstURL)
-                results.push({ title: t.Text.slice(0, 80), url: t.FirstURL, snippet: t.Text.slice(0, 300) });
-        });
-        res.json({ ok: true, query, results: results.slice(0, num_results), count: results.length, request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable.", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
         res.status(502).json({ ok: false, error: "search_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
@@ -525,10 +530,41 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
         return;
     }
     try {
-        // Get raw results first
-        const raw = await axios_1.default.get("https://api.duckduckgo.com/", { params: { q: query, format: "json", no_html: 1 }, timeout: 6000 });
-        const d = raw.data;
-        const context = [d.AbstractText, ...(d.RelatedTopics ?? []).slice(0, 5).map(t => t.Text)].filter(Boolean).join("\n\n").slice(0, 3000);
+        // Get search context — Tavily primary, Brave fallback
+        let context = "";
+        let sources = [];
+        if (process.env.TAVILY_API_KEY) {
+            try {
+                const r = await fetch("https://api.tavily.com/search", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: 5, include_raw_content: false }),
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    sources = (d.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "" }));
+                    context = (d.results ?? []).map(r => `${r.title}\n${r.content}`).join("\n\n").slice(0, 4000);
+                }
+            }
+            catch (_) { /* fall through */ }
+        }
+        if (!context && process.env.BRAVE_SEARCH_API_KEY) {
+            try {
+                const r = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: "5" }), {
+                    headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY },
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    sources = (d.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "" }));
+                    context = (d.web?.results ?? []).map(r => `${r.title}\n${r.description}`).join("\n\n").slice(0, 4000);
+                }
+            }
+            catch (_) { /* fall through */ }
+        }
+        if (!context) {
+            res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable.", request_id: (0, credits_1.reqId)() });
+            return;
+        }
         // Synthesize with Claude
         const msg = await anthropic.messages.create({
             model: "claude-haiku-4-5-20251001",
@@ -536,7 +572,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
             messages: [{ role: "user", content: `Answer this query based on the following search context. Be concise and factual.\n\nQuery: ${query}\n\nContext:\n${context}\n\nAnswer:` }],
         });
         const answer = msg.content.find(b => b.type === "text")?.text ?? "";
-        res.json({ ok: true, query, answer, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, query, answer, sources, request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "search_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
