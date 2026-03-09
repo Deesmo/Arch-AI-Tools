@@ -174,12 +174,15 @@
         <a href="#crypto-ohlcv">crypto-ohlcv</a>
         <a href="#crypto-fear-greed">crypto-fear-greed</a>
         <a href="#crypto-news">crypto-news</a>
+        <a href="#crypto-sentiment">crypto-sentiment</a>
         <a href="#token-lookup">token-lookup</a>
         <a href="#text-to-speech">text-to-speech</a>
         <a href="#transcribe-audio">transcribe-audio</a>
         <a href="#email-send">email-send</a>
         <a href="#design-create">design-create</a>
         <a href="#domain-check">domain-check</a>
+        <a href="#browser-task">browser-task</a>
+        <a href="#workflow-agent">workflow-agent</a>
       </div>
     </nav>
 
@@ -770,6 +773,18 @@ print(res.json())</code></pre>
         </table>
       </div>
 
+      <!-- crypto-sentiment -->
+      <div class="tool-doc" id="crypto-sentiment">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-sentiment</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
+        <div class="tool-doc-desc">AI-powered sentiment analysis for a cryptocurrency. Aggregates recent news and social signals via CryptoPanic, returns bullish/bearish/neutral score with summary.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — e.g. "BTC", "ETH", "SOL"</td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/crypto-sentiment \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"symbol":"BTC"}'</code></pre></div>
+      </div>
+
       <!-- text-to-speech -->
       <div class="tool-doc" id="text-to-speech">
         <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/text-to-speech</span><span class="badge badge-post">POST</span><span class="badge badge-free">5 credits</span></div>
@@ -842,6 +857,35 @@ print(res.json())</code></pre>
         <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/domain-check \
   -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
   -d '{"domain":"archtools.dev"}'</code></pre></div>
+      </div>
+
+      <!-- browser-task -->
+      <div class="tool-doc" id="browser-task">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/browser-task</span><span class="badge badge-post">POST</span><span class="badge badge-free">10 credits</span></div>
+        <div class="tool-doc-desc">Headless browser automation powered by Playwright. Extract data, click elements, fill forms, and scrape JavaScript-rendered SPAs. Returns extracted content, screenshots, or structured data depending on the task.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>url</td><td>string</td><td><span class="req">required</span> — URL of the page to automate</td></tr>
+          <tr><td>task</td><td>string</td><td><span class="req">required</span> — Natural language description of what to do (e.g. "click the login button and return the page title")</td></tr>
+          <tr><td>selector</td><td>string</td><td>optional — CSS selector for targeted extraction</td></tr>
+          <tr><td>screenshot</td><td>boolean</td><td>optional — return a base64 screenshot of the final state. Default: false</td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/browser-task \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","task":"extract all product names from the page"}'</code></pre></div>
+      </div>
+
+      <!-- workflow-agent -->
+      <div class="tool-doc" id="workflow-agent">
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/workflow-agent</span><span class="badge badge-post">POST</span><span class="badge badge-free">25 credits</span></div>
+        <div class="tool-doc-desc">Multi-step AI agent that chains multiple Arch Tools together to complete a complex task. Describe the goal in plain language — the agent plans and executes the steps automatically using available tools.</div>
+        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
+          <tr><td>goal</td><td>string</td><td><span class="req">required</span> — What you want the agent to accomplish (e.g. "scrape the top 5 headlines from BBC News and summarize them")</td></tr>
+          <tr><td>model</td><td>string</td><td>optional — AI model to use for planning: claude (default), gpt-4, grok, gemini</td></tr>
+          <tr><td>max_steps</td><td>number</td><td>optional — Maximum tool calls allowed. Default: 5</td></tr>
+        </table>
+        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/workflow-agent \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"goal":"Find the current Bitcoin price and write a 2-sentence market summary","model":"claude"}'</code></pre></div>
       </div>
 
     </div>

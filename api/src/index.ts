@@ -162,6 +162,8 @@ app.get("/dashboard", (_req: Request, res: Response) => res.type("text/html").se
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — referenced in Stripe cancel_url and nav links
 app.get("/pricing", (_req: Request, res: Response) => res.redirect("/#pricing"));
+// /privacy and /legal — convenience redirects to canonical sub-paths
+app.get("/privacy", (_req: Request, res: Response) => res.redirect(301, "/legal/privacy"));
 
 // /docs — full API reference page
 app.get("/docs", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
