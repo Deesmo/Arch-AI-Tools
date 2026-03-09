@@ -420,6 +420,31 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
+  // Native SOL on Solana mainnet (~$150/SOL, 9 decimals / lamports)
+  const solNativeWallet = process.env.SOL_NATIVE_WALLET_ADDRESS;
+  if (solNativeWallet) {
+    const solPriceFloat = parseFloat(price);
+    let lamports: string;
+    if (solPriceFloat <= 0.002)       lamports = "7000";    // ~0.000007 SOL ~$0.001
+    else if (solPriceFloat <= 0.005)  lamports = "17000";
+    else if (solPriceFloat <= 0.010)  lamports = "35000";
+    else if (solPriceFloat <= 0.020)  lamports = "70000";
+    else                               lamports = "140000";
+
+    accepts.push({
+      scheme: "exact",
+      network: "solana:mainnet",
+      maxAmountRequired: lamports,
+      resource,
+      description: `Arch Tools — ${toolName} (native SOL)`,
+      mimeType: "application/json",
+      payTo: solNativeWallet,
+      maxTimeoutSeconds: 60,
+      asset: "native",
+      extra: { name: "Solana", version: "native", decimals: "9" },
+    });
+  }
+
   // uSOL (bridged SOL on Base via Coinbase/CCIP, ERC-20, 9 decimals, ~$150/SOL)
   const solBaseWallet = process.env.SOL_BASE_WALLET_ADDRESS;
   if (solBaseWallet) {
