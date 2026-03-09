@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg">
+  <meta name="theme-color" content="#07061A">
+  <title>Arch Tools — SDK & CLI Downloads</title>
+  <meta name="description" content="Download the Arch Tools SDK and CLI for Windows, Mac, and Linux. Integrate 50 AI tools into your project in minutes.">
+  <link rel="canonical" href="https://archtools.dev/sdk">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;--border:#1C1A3A;--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:1240px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.18) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.12) 0%,transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%,rgba(24,96,255,0.10) 0%,transparent 65%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;}
+    @media(max-width:768px){.wrap{padding:0 20px;}}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);}
+    @media(max-width:768px){nav{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(7,6,26,0.97);}}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo-mark{width:32px;height:32px;flex-shrink:0;}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
+    @media(max-width:640px){.nav-links{display:none;}}
+
+    /* PAGE HEADER */
+    .page-hero{padding:64px 0 48px;text-align:center;}
+    .page-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);border-radius:100px;padding:6px 14px;font-size:12px;font-family:var(--mono);color:var(--indigo2);margin-bottom:24px;}
+    .page-title{font-family:var(--display);font-size:clamp(2rem,5vw,3.2rem);font-weight:800;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,var(--text) 0%,var(--indigo2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .page-sub{font-size:17px;color:var(--muted);max-width:560px;margin:0 auto 0;}
+
+    /* QUICK INSTALL */
+    .quick-install{margin:48px 0;background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:16px;padding:32px;text-align:center;}
+    .quick-install h2{font-family:var(--display);font-size:1.4rem;margin-bottom:8px;}
+    .quick-install p{color:var(--muted);margin-bottom:20px;font-size:14px;}
+    .cmd-row{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;}
+    .cmd-block{display:flex;align-items:center;gap:12px;background:#0D0C24;border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-family:var(--mono);font-size:14px;color:var(--green);}
+    .cmd-block button{background:none;border:none;cursor:pointer;color:var(--muted);padding:0;transition:color 0.15s;flex-shrink:0;}
+    .cmd-block button:hover{color:var(--text);}
+    .cmd-block button svg{display:block;}
+    .cmd-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:16px;}
+    .cmd-tab{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:6px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+    .cmd-tab.active{background:rgba(136,68,255,0.15);border-color:rgba(136,68,255,0.4);color:var(--indigo2);}
+    .cmd-tab:hover:not(.active){color:var(--text);}
+
+    /* PLATFORM CARDS */
+    .section{margin:0 0 64px;}
+    .section-title{font-family:var(--display);font-size:1.6rem;font-weight:700;margin-bottom:8px;}
+    .section-sub{color:var(--muted);margin-bottom:32px;font-size:14px;}
+    .platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+    @media(max-width:900px){.platform-grid{grid-template-columns:1fr;}}
+
+    .platform-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:28px;transition:border-color 0.2s,background 0.2s;}
+    .platform-card:hover{border-color:var(--border2);background:rgba(255,255,255,0.05);}
+    .platform-icon{width:48px;height:48px;border-radius:12px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;font-size:24px;}
+    .platform-icon.win{background:rgba(0,120,215,0.15);}
+    .platform-icon.mac{background:rgba(255,255,255,0.06);}
+    .platform-icon.linux{background:rgba(255,144,16,0.1);}
+    .platform-name{font-family:var(--display);font-size:1.1rem;font-weight:700;margin-bottom:6px;}
+    .platform-desc{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;}
+    .platform-version{font-family:var(--mono);font-size:11px;color:var(--dimmer);margin-bottom:16px;}
+
+    .dl-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none;justify-content:center;font-family:var(--body);}
+    .dl-btn-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;margin-bottom:8px;}
+    .dl-btn-primary:hover{opacity:0.9;transform:translateY(-1px);}
+    .dl-btn-secondary{background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--border2);}
+    .dl-btn-secondary:hover{background:rgba(255,255,255,0.1);}
+    .dl-btn svg{flex-shrink:0;}
+
+    /* MCP SECTION */
+    .mcp-card{background:rgba(34,211,238,0.04);border:1px solid rgba(34,211,238,0.2);border-radius:16px;padding:32px;margin-bottom:64px;}
+    .mcp-header{display:flex;align-items:flex-start;gap:20px;margin-bottom:24px;}
+    .mcp-icon{width:48px;height:48px;border-radius:12px;background:rgba(34,211,238,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+    .mcp-title{font-family:var(--display);font-size:1.2rem;font-weight:700;margin-bottom:4px;}
+    .mcp-desc{color:var(--muted);font-size:13px;line-height:1.6;}
+    .mcp-steps{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    @media(max-width:700px){.mcp-steps{grid-template-columns:1fr;}}
+    .mcp-step{background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:12px;padding:20px;}
+    .step-num{font-family:var(--mono);font-size:11px;color:var(--cyan);margin-bottom:8px;font-weight:500;}
+    .step-title{font-size:13px;font-weight:500;margin-bottom:8px;}
+    .code-line{background:#0D0C24;border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--green);word-break:break-all;position:relative;}
+
+    /* SUPPORTED CLIENTS */
+    .clients-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:64px;}
+    @media(max-width:800px){.clients-grid{grid-template-columns:repeat(2,1fr);}}
+    .client-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;font-size:13px;}
+    .client-name{font-weight:500;margin-bottom:4px;}
+    .client-status{font-family:var(--mono);font-size:11px;color:var(--green);}
+
+    /* REST SDK */
+    .sdk-langs{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:64px;}
+    @media(max-width:700px){.sdk-langs{grid-template-columns:1fr;}}
+    .lang-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;}
+    .lang-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .lang-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .lang-name{font-weight:600;font-size:14px;}
+    .lang-install{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;}
+    .lang-code{background:#0D0C24;border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--cyan);line-height:1.7;overflow-x:auto;}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:32px 0;margin-top:0;}
+    .footer-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+    .footer-links{display:flex;gap:20px;}
+    .footer-links a{color:var(--muted);font-size:12px;font-family:var(--mono);text-decoration:none;transition:color 0.15s;}
+    .footer-links a:hover{color:var(--text);}
+    .footer-copy{color:var(--dimmer);font-size:12px;font-family:var(--mono);}
+
+    /* COPY TOAST */
+    .toast{position:fixed;bottom:24px;right:24px;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.4);border-radius:10px;padding:10px 18px;font-family:var(--mono);font-size:13px;color:var(--green);opacity:0;transform:translateY(8px);transition:all 0.2s;pointer-events:none;z-index:999;}
+    .toast.show{opacity:1;transform:translateY(0);}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        <svg class="logo-mark" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#07061A"/>
+          <path class="logo-arch-path" d="M16 5L27 26H5L16 5Z" fill="none" stroke="url(#ng)" stroke-width="2.2" stroke-linejoin="round"/>
+          <defs><linearGradient id="ng" x1="5" y1="5" x2="27" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9010"/><stop offset="1" stop-color="#FF2896"/></linearGradient></defs>
+        </svg>
+        Arch Tools
+      </a>
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/docs.html">Docs</a></li>
+        <li><a href="/sdk.html" style="color:var(--text)">SDK & CLI</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="https://archtools.dev/v1/agent/register" class="nav-cta">Get API Key</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- PAGE HERO -->
+  <div class="page-hero">
+    <div class="page-badge">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" fill="#34d399" opacity="0.3"/><circle cx="6" cy="6" r="2.5" fill="#34d399"/></svg>
+      v1.7.0 — Latest
+    </div>
+    <h1 class="page-title">SDK &amp; CLI Downloads</h1>
+    <p class="page-sub">Integrate Arch Tools into any project — REST SDK, MCP server, or standalone CLI. Runs anywhere AI agents run.</p>
+  </div>
+
+  <!-- QUICK INSTALL -->
+  <div class="quick-install">
+    <h2>Quickest path to 50 AI tools</h2>
+    <p>Pick your package manager and get started in 30 seconds</p>
+    <div class="cmd-tabs">
+      <button class="cmd-tab active" onclick="setTab('npm')">npm</button>
+      <button class="cmd-tab" onclick="setTab('pnpm')">pnpm</button>
+      <button class="cmd-tab" onclick="setTab('yarn')">yarn</button>
+      <button class="cmd-tab" onclick="setTab('bun')">bun</button>
+    </div>
+    <div class="cmd-row">
+      <div class="cmd-block">
+        <span id="cmd-text">npm install @deesmo/arch-tools-mcp</span>
+        <button onclick="copyCmd()" title="Copy">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLATFORM DOWNLOADS -->
+  <div class="section">
+    <div class="section-title">CLI Downloads</div>
+    <div class="section-sub">Standalone binaries — no Node.js required. Download, chmod, run.</div>
+    <div class="platform-grid">
+
+      <!-- WINDOWS -->
+      <div class="platform-card">
+        <div class="platform-icon win">🪟</div>
+        <div class="platform-name">Windows</div>
+        <div class="platform-desc">Native x64 binary for Windows 10 and 11. Run from PowerShell or CMD.</div>
+        <div class="platform-version">arch-tools-cli-win-x64.exe · v1.7.0</div>
+        <a class="dl-btn dl-btn-primary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-win-x64.exe">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download .exe
+        </a>
+        <button class="dl-btn dl-btn-secondary" onclick="copyText('arch-tools-cli-win-x64.exe')">Copy filename</button>
+      </div>
+
+      <!-- MAC -->
+      <div class="platform-card">
+        <div class="platform-icon mac">🍎</div>
+        <div class="platform-name">macOS</div>
+        <div class="platform-desc">Universal binary for Apple Silicon (M1/M2/M3) and Intel Macs.</div>
+        <div class="platform-version">arch-tools-cli-macos · v1.7.0</div>
+        <a class="dl-btn dl-btn-primary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-macos-arm64">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Apple Silicon (M1/M2/M3)
+        </a>
+        <a class="dl-btn dl-btn-secondary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-macos-x64" style="margin-top:0;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,0.06);color:var(--text);transition:all 0.15s;">Intel (x64)</a>
+      </div>
+
+      <!-- LINUX -->
+      <div class="platform-card">
+        <div class="platform-icon linux">🐧</div>
+        <div class="platform-name">Linux</div>
+        <div class="platform-desc">x64 and ARM64 binaries for Debian, Ubuntu, RHEL, Alpine, and more.</div>
+        <div class="platform-version">arch-tools-cli-linux · v1.7.0</div>
+        <a class="dl-btn dl-btn-primary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-linux-x64">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          x64 Binary
+        </a>
+        <a class="dl-btn dl-btn-secondary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-linux-arm64" style="margin-top:0;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,0.06);color:var(--text);transition:all 0.15s;">ARM64 (Raspberry Pi / servers)</a>
+      </div>
+
+    </div>
+
+    <!-- Install note -->
+    <div style="margin-top:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px 24px;">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;">After downloading on Mac/Linux, make it executable:</div>
+      <div class="code-line" style="font-size:12px;color:var(--green);">chmod +x arch-tools-cli-* &amp;&amp; ./arch-tools-cli-* --help</div>
+    </div>
+  </div>
+
+  <!-- MCP SERVER -->
+  <div class="mcp-card">
+    <div class="mcp-header">
+      <div class="mcp-icon">🔌</div>
+      <div>
+        <div class="mcp-title">MCP Server — Model Context Protocol</div>
+        <div class="mcp-desc">Give Claude, GPT-4, Cursor, and any MCP-compatible AI instant access to all 50 Arch Tools. One install, 50 tools appear in your AI's context.</div>
+      </div>
+    </div>
+    <div class="mcp-steps">
+      <div class="mcp-step">
+        <div class="step-num">STEP 1 — INSTALL</div>
+        <div class="step-title">Install the MCP package</div>
+        <div class="code-line">npm install -g @deesmo/arch-tools-mcp</div>
+      </div>
+      <div class="mcp-step">
+        <div class="step-num">STEP 2 — CONFIGURE</div>
+        <div class="step-title">Add to your AI client config</div>
+        <div class="code-line">arch-tools-mcp --api-key YOUR_KEY</div>
+      </div>
+      <div class="mcp-step">
+        <div class="step-num">STEP 3 — CLAUDE DESKTOP</div>
+        <div class="step-title">claude_desktop_config.json</div>
+        <div class="code-line" style="white-space:pre;font-size:11px;">{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "arch-tools-mcp",
+      "env": {
+        "ARCH_API_KEY": "your_key"
+      }
+    }
+  }
+}</div>
+      </div>
+      <div class="mcp-step">
+        <div class="step-num">STEP 4 — STREAMABLE HTTP</div>
+        <div class="step-title">Use the hosted MCP endpoint</div>
+        <div class="code-line" style="font-size:11px;">https://arch-tools-mcp.onrender.com/mcp</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--muted);">Pass <span style="font-family:var(--mono);color:var(--cyan);">Authorization: Bearer YOUR_KEY</span> header</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPORTED CLIENTS -->
+  <div class="section">
+    <div class="section-title">Supported AI Clients</div>
+    <div class="section-sub">Arch Tools MCP works with every major AI client that supports Model Context Protocol.</div>
+    <div class="clients-grid">
+      <div class="client-card"><div class="client-name">Claude Desktop</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">Cursor</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">Windsurf</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">Continue.dev</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">Zed</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">Cline</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">OpenClaw</div><div class="client-status">✓ Supported</div></div>
+      <div class="client-card"><div class="client-name">Any MCP Client</div><div class="client-status">✓ Supported</div></div>
+    </div>
+  </div>
+
+  <!-- REST SDK -->
+  <div class="section">
+    <div class="section-title">REST SDK — Code Examples</div>
+    <div class="section-sub">Integrate directly via HTTP — no SDK required. Works in any language.</div>
+    <div class="sdk-langs">
+
+      <div class="lang-card">
+        <div class="lang-header">
+          <div class="lang-dot" style="background:#f7df1e;"></div>
+          <div class="lang-name">JavaScript / Node.js</div>
+        </div>
+        <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># No SDK needed — plain fetch works</div>
+        <div class="lang-code">const res = await fetch(
+  'https://archtools.dev/v1/tools/search-web',
+  {
+    method: 'POST',
+    headers: {
+      'x-api-key': 'YOUR_KEY',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query: 'AI agents' })
+  }
+);
+const data = await res.json();</div>
+      </div>
+
+      <div class="lang-card">
+        <div class="lang-header">
+          <div class="lang-dot" style="background:#3572A5;"></div>
+          <div class="lang-name">Python</div>
+        </div>
+        <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># pip install requests</div>
+        <div class="lang-code">import requests
+
+r = requests.post(
+  'https://archtools.dev/v1/tools/search-web',
+  headers={'x-api-key': 'YOUR_KEY'},
+  json={'query': 'AI agents'}
+)
+data = r.json()</div>
+      </div>
+
+      <div class="lang-card">
+        <div class="lang-header">
+          <div class="lang-dot" style="background:#00ADD8;"></div>
+          <div class="lang-name">Go</div>
+        </div>
+        <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># Standard library only</div>
+        <div class="lang-code">req, _ := http.NewRequest(
+  "POST",
+  "https://archtools.dev/v1/tools/search-web",
+  strings.NewReader(`{"query":"AI"}`),
+)
+req.Header.Set("x-api-key", "YOUR_KEY")
+resp, _ := http.DefaultClient.Do(req)</div>
+      </div>
+
+      <div class="lang-card">
+        <div class="lang-header">
+          <div class="lang-dot" style="background:#e34c26;"></div>
+          <div class="lang-name">cURL</div>
+        </div>
+        <div class="lang-install" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;"># Works from any terminal</div>
+        <div class="lang-code">curl -X POST \
+  https://archtools.dev/v1/tools/search-web \
+  -H "x-api-key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "AI agents"}'</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/docs.html">Docs</a>
+        <a href="/openapi.json">OpenAPI</a>
+        <a href="https://github.com/Deesmo/Arch-AI-Tools" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">© 2025 Arch Tools · archtools.dev</div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+const cmds = {
+  npm: 'npm install @deesmo/arch-tools-mcp',
+  pnpm: 'pnpm add @deesmo/arch-tools-mcp',
+  yarn: 'yarn add @deesmo/arch-tools-mcp',
+  bun: 'bun add @deesmo/arch-tools-mcp'
+};
+
+function setTab(pkg) {
+  document.querySelectorAll('.cmd-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('cmd-text').textContent = cmds[pkg];
+}
+
+function copyCmd() {
+  const txt = document.getElementById('cmd-text').textContent;
+  navigator.clipboard.writeText(txt).then(() => showToast());
+}
+
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(() => showToast());
+}
+
+function showToast() {
+  const toast = document.getElementById('toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
