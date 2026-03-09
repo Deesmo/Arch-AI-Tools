@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@mendable/firecrawl-js": "^4.15.4",
     "@prisma/client": "^5.22.0",
+    "@sentry/node": "^10.42.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/jsonwebtoken": "^9.0.10",

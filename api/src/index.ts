@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -6,6 +7,11 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { config } from "./config";
+
+// Init Sentry before anything else
+if (process.env.SENTRY_DSN) {
+  Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV ?? "development", tracesSampleRate: 0.1 });
+}
 
 // Routes
 import discoveryRouter from "./routes/discovery";

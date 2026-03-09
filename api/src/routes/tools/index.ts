@@ -295,9 +295,24 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
     const links: Array<{ text: string; href: string }> = [];
     $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http")) links.push({ text: $(el).text().trim().slice(0, 100), href: h }); });
     res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
-  } catch (e) {
-    const status = axios.isAxiosError(e) ? (e.response?.status ?? 502) : 500;
-    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(e), request_id: reqId() });
+  } catch (_axiosErr) {
+    // Fallback: Firecrawl (handles JS-heavy / bot-protected sites)
+    if (process.env.FIRECRAWL_API_KEY) {
+      try {
+        const fc = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}` },
+          body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+        });
+        if (fc.ok) {
+          const fd = await fc.json() as { data?: { markdown?: string; metadata?: { title?: string; description?: string } } };
+          const text = fd.data?.markdown ?? "";
+          res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", request_id: reqId() }); return;
+        }
+      } catch (_) { /* fall through to error */ }
+    }
+    const status = axios.isAxiosError(_axiosErr) ? (_axiosErr.response?.status ?? 502) : 500;
+    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), request_id: reqId() });
   }
 });
 
@@ -1676,6 +1691,22 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
       console.error("[design-create] OpenAI error:", r.status, err);
+      // Fallback: Stability AI
+      if (process.env.STABILITY_API_KEY) {
+        try {
+          const sr = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${process.env.STABILITY_API_KEY}`, Accept: "application/json" },
+            body: (() => { const fd = new FormData(); fd.append("prompt", prompt); fd.append("aspect_ratio", "1:1"); fd.append("output_format", "webp"); return fd; })(),
+          });
+          if (sr.ok) {
+            const sd = await sr.json() as { image?: string };
+            if (sd.image) {
+              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality, style, source: "stability", request_id: reqId() }); return;
+            }
+          }
+        } catch (_) { /* fall through */ }
+      }
       res.status(502).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
