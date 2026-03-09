@@ -106,6 +106,16 @@ async function main() {
         });
         // Streamable HTTP transport — used by Smithery and modern MCP clients (POST-based)
         // Inject Accept header if missing — some clients (Smithery) omit it
+        // GET /mcp — server-initiated events stream (required by Streamable HTTP spec)
+        app.get("/mcp", (req, res) => {
+            res.setHeader("Content-Type", "text/event-stream");
+            res.setHeader("Cache-Control", "no-cache");
+            res.setHeader("Connection", "keep-alive");
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            // Send endpoint event so client knows where to POST
+            res.write(`event: endpoint\ndata: /mcp\n\n`);
+            req.on("close", () => res.end());
+        });
         // Streamable HTTP endpoint — custom implementation bypassing SDK transport Accept header check
         // Handles initialize, tools/list, tools/call for Smithery + modern MCP clients
         app.post("/mcp", async (req, res) => {
