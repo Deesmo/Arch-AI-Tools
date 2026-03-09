@@ -408,6 +408,34 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "BNB", version: "native" },
         });
     }
+    // uSOL (bridged SOL on Base via Coinbase/CCIP, ERC-20, 9 decimals, ~$150/SOL)
+    const solBaseWallet = process.env.SOL_BASE_WALLET_ADDRESS;
+    if (solBaseWallet) {
+        const solPriceFloat = parseFloat(price);
+        let solAtomic;
+        if (solPriceFloat <= 0.002)
+            solAtomic = "7000"; // 0.000007 SOL ~$0.001
+        else if (solPriceFloat <= 0.005)
+            solAtomic = "17000";
+        else if (solPriceFloat <= 0.010)
+            solAtomic = "35000";
+        else if (solPriceFloat <= 0.020)
+            solAtomic = "70000";
+        else
+            solAtomic = "140000";
+        accepts.push({
+            scheme: "exact",
+            network: "eip155:8453",
+            maxAmountRequired: solAtomic,
+            resource,
+            description: `Arch Tools — ${toolName} (SOL on Base)`,
+            mimeType: "application/json",
+            payTo: solBaseWallet,
+            maxTimeoutSeconds: 60,
+            asset: "0x311935cd80b76769bf2ecc9d8ab7635b2139cf82",
+            extra: { name: "Solana (Base)", version: "usol-erc20", decimals: "9" },
+        });
+    }
     // TAO (Bittensor) — AI-native blockchain, 9 decimals (Rao), ~$400/TAO
     const taoWallet = process.env.TAO_WALLET_ADDRESS;
     if (taoWallet) {
