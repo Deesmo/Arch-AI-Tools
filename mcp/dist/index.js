@@ -17,7 +17,7 @@ async function getTools() {
     if (toolCache)
         return toolCache;
     const res = await fetch(`${baseUrl}/v1/tools`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers: { "x-api-key": apiKey },
     });
     if (!res.ok)
         throw new Error(`Failed to fetch tools: ${res.status}`);
@@ -28,7 +28,7 @@ async function getTools() {
 async function invokeTool(toolName, input) {
     const res = await fetch(`${baseUrl}/v1/tools/${toolName}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
         body: JSON.stringify(input ?? {}),
     });
     if (!res.ok) {
@@ -145,7 +145,11 @@ async function main() {
                     case "tools/list": {
                         const tools = await getTools();
                         send({ jsonrpc: "2.0", id: body.id, result: {
-                                tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
+                                tools: tools.map((t) => ({
+                                    name: t.name,
+                                    description: t.description,
+                                    inputSchema: t.inputSchema ?? { type: "object", properties: {}, additionalProperties: true }
+                                }))
                             } });
                         break;
                     }
