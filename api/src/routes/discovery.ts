@@ -15,7 +15,7 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
       prisma.tool.count(),
       prisma.agent.count(),
     ]);
-    res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "connected", tools: toolCount || 50, agents: agentCount });
+    res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "connected", tools: toolCount || 45, agents: agentCount });
   } catch {
     res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "error" });
   }
@@ -23,6 +23,43 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
 
 // GET /.well-known/x402 — x402 discovery (no duplicates)
 router.get("/.well-known/x402", (_req: Request, res: Response): void => {
+  const evmWallet = process.env.WALLET_ADDRESS ?? "";
+  const solanaWallet = process.env.SOLANA_WALLET_ADDRESS ?? "";
+  const chainId = NETWORK === "base" ? "eip155:8453" : "eip155:84532";
+  const usdcBase = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+  const usdcSolana = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+
+  // Build accepts array from live wallet config
+  const accepts: object[] = [];
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: chainId,
+      asset: usdcBase,
+      payTo: evmWallet,
+      token: "USDC",
+      description: "USDC on Coinbase Base (fast, ~$0.01 gas)",
+    });
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:1",
+      asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      payTo: evmWallet,
+      token: "USDC",
+      description: "USDC on Ethereum mainnet",
+    });
+  }
+  if (solanaWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "solana:mainnet",
+      asset: usdcSolana,
+      payTo: solanaWallet,
+      token: "USDC",
+      description: "USDC on Solana (fast, cheap)",
+    });
+  }
+
   const endpoints = Object.entries(X402_PRICES).map(([tool, price]) => ({
     path: `/v1/tools/${tool}`,
     method: "POST",
@@ -32,18 +69,19 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   res.json({
     name: "Arch Tools",
-    description: "The first API platform built for autonomous agent payments. 50 production tools, USDC on Base via x402 or Stripe.",
+    description: "The first API platform built for autonomous agent payments. 45 production tools, USDC on Base via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
     version: "1",
+    accepts,
     endpoints,
     payment: {
       stripe: { url: `${BASE_URL}/pricing` },
-      x402: { status: "active", networks: [NETWORK], token: "USDC" },
+      x402: { status: "active", networks: [NETWORK, "eip155:1", "solana:mainnet"], token: "USDC" },
     },
     mcp: {
       server: "arch-tools-mcp",
-      transport: ["stdio", "sse"],
+      transport: ["stdio", "sse", "streamable-http"],
       discovery: "/v1/tools",
     },
     llms_txt: `${API_BASE}/llms.txt`,
@@ -115,7 +153,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 50 production-ready tools. One key. USDC on Base via x402 or Stripe.
+> 45 production-ready tools. One key. USDC on Base via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -140,7 +178,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:        60,000 credits — $49   ($0.00082/credit)
   Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (50 total)
+## All Tools (45 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -229,7 +267,7 @@ Privacy: ${BASE_URL}/privacy.html
 
 const OPENAPI_STUB = {
   openapi: "3.0.3",
-  info: { title: "Arch Tools API", version: "1.7.0", description: "50 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
+  info: { title: "Arch Tools API", version: "1.7.0", description: "45 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
   servers: [{ url: API_BASE }],
   tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
   components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },

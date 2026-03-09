@@ -165,6 +165,17 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   -H "Content-Type: application/json" \
   -d &#39;{"text":"hello world","algorithm":"sha256"}&#39;</pre>
       </div>
+
+      <!-- SET PASSWORD -->
+      <div class="card" id="set-password-card" style="display:none;">
+        <div class="card-label">Set Login Password</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Set a password to sign in with email next time — no need to enter your API key.</p>
+        <div style="display:flex;gap:10px;margin-bottom:8px;">
+          <input id="new-password" type="password" placeholder="New password (min 8 chars)" style="flex:1;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.92);padding:0 14px;font-family:inherit;font-size:13px;outline:none;" />
+          <button onclick="setPassword()" style="height:42px;padding:0 18px;border-radius:10px;border:0;background:linear-gradient(135deg,#FF9010,#FF2896);color:#fff;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap;">Set Password</button>
+        </div>
+        <div id="pw-status" style="font-size:12px;min-height:16px;"></div>
+      </div>
     </div>
 
   </div>
@@ -269,6 +280,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         // Hide input after success
         document.getElementById("key-input").style.display = "none";
         document.getElementById("load-btn").style.display = "none";
+        // Show set-password card only if not already logged in via session
+        fetch("/auth/me", { credentials: "include" }).then(r => r.json()).then(function(me) {
+          if (!me.ok) document.getElementById("set-password-card").style.display = "block";
+        }).catch(function() { document.getElementById("set-password-card").style.display = "block"; });
 
       } catch(_) {
         setStatus("Connection error", "#f87171");
@@ -313,6 +328,32 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         if (sub) sub.innerHTML = 'Enter your API key below, or <a href="/login" style="color:var(--accent);">sign in with email & password →</a>';
       }
     })();
+
+    async function setPassword() {
+      var pw = (document.getElementById("new-password").value || "").trim();
+      var statusEl = document.getElementById("pw-status");
+      if (!pw || pw.length < 8) { statusEl.style.color="#f87171"; statusEl.textContent="Password must be at least 8 characters."; return; }
+      if (!fullKey) { statusEl.style.color="#f87171"; statusEl.textContent="Load your API key first."; return; }
+      statusEl.style.color="var(--muted)"; statusEl.textContent="Setting password…";
+      try {
+        var r = await fetch("/auth/set-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ api_key: fullKey, password: pw })
+        });
+        var d = await r.json();
+        if (d.ok) {
+          statusEl.style.color="var(--green)"; statusEl.textContent="✓ Password set — you can now sign in with email & password.";
+          document.getElementById("set-password-card").style.border = "1px solid rgba(0,229,176,0.3)";
+          document.getElementById("new-password").value = "";
+        } else {
+          statusEl.style.color="#f87171"; statusEl.textContent = d.message || "Something went wrong.";
+        }
+      } catch(_) {
+        statusEl.style.color="#f87171"; statusEl.textContent="Connection error. Try again.";
+      }
+    }
   </script>
 </body>
 </html>`;
