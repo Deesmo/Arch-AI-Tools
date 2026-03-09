@@ -132,6 +132,9 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
           <button id="btn" class="btn-primary">Get API Key</button>
         </div>
+        <div style="margin-top:10px;">
+          <input id="password" type="password" placeholder="Set a password (optional — enables login later)" autocomplete="new-password" style="width:100%;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.92);padding:0 14px;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+        </div>
 
         <div id="status" class="status"></div>
 
@@ -204,9 +207,22 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         let data;
         try { data = await res.json(); } catch(_) { data = {}; }
         if (res.ok && data.api_key) {
+          // If password provided, set it and log in via session cookie
+          const pw = (document.getElementById('password').value || '').trim();
+          if (pw && pw.length >= 8) {
+            try {
+              await fetch('/auth/set-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ api_key: data.api_key, password: pw })
+              });
+            } catch(_) {}
+          }
           showSuccess(data.api_key, data.credits || 100);
           btn.style.display = 'none';
           document.getElementById('email').style.display = 'none';
+          document.getElementById('password').style.display = 'none';
         } else {
           const msg = data.error === 'email_exists'
             ? 'An account with this email already exists. <a href="/dashboard" style="color:#22d3ee">&#8594; Open Dashboard</a>'
