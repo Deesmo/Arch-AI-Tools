@@ -306,18 +306,25 @@ exports.DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById("load-btn").click();
         return;
       }
-      // Try session cookie via /auth/me
+      // Try session cookie via /auth/api-key (me endpoint no longer returns key — security fix)
       try {
         var meResp = await fetch("/auth/me", { credentials: "include" });
         if (meResp.ok) {
           var me = await meResp.json();
-          if (me.ok && me.api_key) {
-            document.getElementById("key-input").value = me.api_key;
-            localStorage.setItem("arch_api_key", me.api_key);
-            document.getElementById("load-btn").click();
-            var navLinks = document.querySelector(".at-nav-links");
-            if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
-            return;
+          if (me.ok) {
+            // Session valid — fetch key explicitly
+            var keyResp = await fetch("/auth/api-key", { credentials: "include" });
+            if (keyResp.ok) {
+              var kd = await keyResp.json();
+              if (kd.ok && kd.api_key) {
+                document.getElementById("key-input").value = kd.api_key;
+                localStorage.setItem("arch_api_key", kd.api_key);
+                document.getElementById("load-btn").click();
+                var navLinks = document.querySelector(".at-nav-links");
+                if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
+                return;
+              }
+            }
           }
         }
       } catch(_) {}

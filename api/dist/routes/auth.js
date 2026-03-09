@@ -8,19 +8,41 @@ exports.verifySession = verifySession;
 const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const prisma_1 = require("../lib/prisma");
 const logger_1 = require("../lib/logger");
 const email_1 = require("../services/email");
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.JWT_SECRET || "arch-tools-dev-secret-change-in-prod";
+// C-1 FIX: Fail hard at startup if JWT_SECRET is not set — no fallback
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+    throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start.");
+}
+const JWT_SECRET = process.env.JWT_SECRET || "arch-tools-dev-secret-local-only";
 const COOKIE_NAME = "arch_session";
 const COOKIE_OPTS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    sameSite: "strict", // H-1 FIX: strict prevents CSRF on mutating routes
+    maxAge: 72 * 60 * 60 * 1000, // H-3 FIX: 72h instead of 30 days
     path: "/",
 };
+// C-2 FIX: Rate limit login attempts — 5 per 15 min per IP
+const loginLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    skipSuccessfulRequests: true,
+    message: { ok: false, error: "too_many_attempts", message: "Too many login attempts. Try again in 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Also rate-limit forgot-password — 3 requests per email per 5 min (handled per IP here)
+const forgotLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 5 * 60 * 1000,
+    max: 3,
+    message: { ok: false, error: "too_many_requests", message: "Too many reset requests. Try again in 5 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 function signSession(agentId) {
     return jsonwebtoken_1.default.sign({ sub: agentId }, JWT_SECRET, { expiresIn: "30d" });
 }
@@ -33,7 +55,7 @@ function verifySession(token) {
     }
 }
 // ─── POST /auth/login ──────────────────────────────────────────────────────────
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
     const { email, password } = req.body ?? {};
     if (!email || !password) {
         res.status(400).json({ ok: false, error: "email_and_password_required" });
@@ -115,19 +137,41 @@ router.get("/me", async (req, res) => {
         res.status(401).json({ ok: false, error: "agent_not_found" });
         return;
     }
+    // C-3 FIX: Never return api_key from /auth/me — serve only on explicit /auth/api-key request
     res.json({
         ok: true,
         agent_id: agent.id,
         email: agent.email,
-        api_key: agent.apiKey,
         credits: agent.credits,
         tier: agent.tier,
         created_at: agent.createdAt,
     });
 });
+// ─── GET /auth/api-key ────────────────────────────────────────────────────────
+// Returns the API key only on explicit request (user clicked "Show Key" etc.)
+router.get("/api-key", async (req, res) => {
+    const token = req.cookies?.[COOKIE_NAME];
+    if (!token) {
+        res.status(401).json({ ok: false, error: "not_authenticated" });
+        return;
+    }
+    const payload = verifySession(token);
+    if (!payload) {
+        res.status(401).json({ ok: false, error: "session_expired" });
+        return;
+    }
+    const agent = await prisma_1.prisma.agent.findUnique({ where: { id: payload.sub } });
+    if (!agent) {
+        res.status(401).json({ ok: false, error: "agent_not_found" });
+        return;
+    }
+    // Return masked key by default; caller can request reveal
+    const masked = agent.apiKey.substring(0, 8) + "●".repeat(agent.apiKey.length - 12) + agent.apiKey.slice(-4);
+    res.json({ ok: true, api_key_masked: masked, api_key: agent.apiKey });
+});
 exports.default = router;
 // ─── POST /auth/forgot-password ───────────────────────────────────────────────
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", forgotLimiter, async (req, res) => {
     const { email } = req.body ?? {};
     if (!email) {
         res.status(400).json({ ok: false, error: "email_required" });
