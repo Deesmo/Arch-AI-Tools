@@ -170,17 +170,100 @@ async function main() {
                         break;
                     }
                     case "resources/list":
-                        send({ jsonrpc: "2.0", id: body.id, result: { resources: [] } });
+                        send({ jsonrpc: "2.0", id: body.id, result: { resources: [
+                                    {
+                                        uri: "arch://tools/catalog",
+                                        name: "Arch AI Tools Catalog",
+                                        description: "Complete catalog of all 53 available Arch AI Tools with descriptions, categories, and credit costs",
+                                        mimeType: "application/json"
+                                    },
+                                    {
+                                        uri: "arch://docs/quickstart",
+                                        name: "Quick Start Guide",
+                                        description: "Getting started guide for the Arch AI Tools MCP server — authentication, usage, and examples",
+                                        mimeType: "text/markdown"
+                                    }
+                                ] } });
                         break;
-                    case "resources/read":
-                        send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Resource not found" } });
+                    case "resources/read": {
+                        const uri = body.params?.uri;
+                        if (uri === "arch://tools/catalog") {
+                            try {
+                                const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+                                const toolsData = await toolsRes.json();
+                                send({ jsonrpc: "2.0", id: body.id, result: { contents: [{
+                                                uri, mimeType: "application/json",
+                                                text: JSON.stringify(toolsData, null, 2)
+                                            }] } });
+                            }
+                            catch (e) {
+                                send({ jsonrpc: "2.0", id: body.id, error: { code: -32000, message: e?.message || "Failed to fetch catalog" } });
+                            }
+                        }
+                        else if (uri === "arch://docs/quickstart") {
+                            send({ jsonrpc: "2.0", id: body.id, result: { contents: [{
+                                            uri, mimeType: "text/markdown",
+                                            text: `# Arch AI Tools — Quick Start\n\nConnect to 53 powerful AI tools via MCP.\n\n## Authentication\nAll tools require an \`x-api-key\` header with your Arch API key.\nGet a free key at: https://archtools.dev/signup\n\n## Usage Example\n\`\`\`json\n{\n  "tool": "search-web",\n  "input": { "query": "latest AI news" }\n}\n\`\`\`\n\n## Tool Categories\n- **AI**: ai-generate, summarize, sentiment-analysis, web-search, research-report, fact-check\n- **Search**: search-web, news-search, rss-parse\n- **Crypto**: crypto-price, crypto-market-cap, crypto-fear-greed, crypto-ohlcv\n- **Web**: web-scrape, extract-page, screenshot-capture, whois-lookup\n- **Utilities**: generate-uuid, generate-hash, qr-code, url-shorten, timezone-convert\n\nFull documentation: https://archtools.dev/docs`
+                                        }] } });
+                        }
+                        else {
+                            send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Resource not found" } });
+                        }
                         break;
+                    }
                     case "prompts/list":
-                        send({ jsonrpc: "2.0", id: body.id, result: { prompts: [] } });
+                        send({ jsonrpc: "2.0", id: body.id, result: { prompts: [
+                                    {
+                                        name: "research-topic",
+                                        description: "Deep research on any topic — searches multiple sources and synthesizes a structured report with citations",
+                                        arguments: [
+                                            { name: "topic", description: "The topic or question to research", required: true },
+                                            { name: "depth", description: "Research depth: 'standard' or 'deep'", required: false }
+                                        ]
+                                    },
+                                    {
+                                        name: "fact-check-claim",
+                                        description: "Verify whether a claim is true, false, mixed, or unverified — returns verdict with confidence score and evidence",
+                                        arguments: [
+                                            { name: "claim", description: "The claim or statement to fact-check", required: true }
+                                        ]
+                                    },
+                                    {
+                                        name: "analyze-url",
+                                        description: "Comprehensive analysis of a URL — extracts content, metadata, takes screenshot, and summarizes",
+                                        arguments: [
+                                            { name: "url", description: "The URL to analyze", required: true }
+                                        ]
+                                    }
+                                ] } });
                         break;
-                    case "prompts/get":
-                        send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Prompt not found" } });
+                    case "prompts/get": {
+                        const promptName = body.params?.name;
+                        const promptArgs = body.params?.arguments || {};
+                        if (promptName === "research-topic") {
+                            const topic = promptArgs.topic || "[topic]";
+                            const depth = promptArgs.depth || "standard";
+                            send({ jsonrpc: "2.0", id: body.id, result: { description: "Research prompt", messages: [{
+                                            role: "user", content: { type: "text", text: `Please research the following topic using the research-report tool and provide a comprehensive report:\n\nTopic: ${topic}\nDepth: ${depth}\n\nUse the research-report tool with query="${topic}" and depth="${depth}".` }
+                                        }] } });
+                        }
+                        else if (promptName === "fact-check-claim") {
+                            const claim = promptArgs.claim || "[claim]";
+                            send({ jsonrpc: "2.0", id: body.id, result: { description: "Fact-check prompt", messages: [{
+                                            role: "user", content: { type: "text", text: `Please fact-check the following claim using the fact-check tool:\n\nClaim: "${claim}"\n\nUse the fact-check tool and provide the verdict, confidence score, and key evidence.` }
+                                        }] } });
+                        }
+                        else if (promptName === "analyze-url") {
+                            const url = promptArgs.url || "[url]";
+                            send({ jsonrpc: "2.0", id: body.id, result: { description: "URL analysis prompt", messages: [{
+                                            role: "user", content: { type: "text", text: `Please perform a comprehensive analysis of this URL: ${url}\n\n1. Use extract-page to get the main content\n2. Use extract-metadata to get title, description, OG tags\n3. Use screenshot-capture to capture a visual\n4. Summarize what you found.` }
+                                        }] } });
+                        }
+                        else {
+                            send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Prompt not found" } });
+                        }
                         break;
+                    }
                     default:
                         send({ jsonrpc: "2.0", id: body.id, error: { code: -32601, message: "Method not found" } });
                 }
