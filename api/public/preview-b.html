@@ -1,0 +1,196 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Option B — Live x402 Payment Animation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;--bg:#07061A;--border:#1C1A3A;--border2:#2A2850;--indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;--text:#F0EEFF;--muted:#8A85B0;--dim:#4A4570;--max:1600px;--mono:'JetBrains Mono',monospace;--disp:'Syne',sans-serif;--body:'DM Sans',sans-serif}
+html,body{background:#07061A;color:var(--text);font-family:var(--body)}
+body{background-image:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,.12) 0%,transparent 55%)}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(136,68,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.w{max-width:var(--max);margin:0 auto;padding:0 40px}
+.grad{background:linear-gradient(135deg,var(--amber) 0%,var(--pink) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gam{background:linear-gradient(135deg,var(--amber),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gcy{background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+nav{border-bottom:1px solid var(--border);background:rgba(7,6,26,.9);backdrop-filter:blur(20px)}
+.ni{display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--disp);font-weight:700;font-size:18px;color:var(--text)}
+.li{width:32px;height:32px;background:linear-gradient(135deg,var(--amber),var(--pink));border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff}
+.nl{display:flex;gap:2px;list-style:none}
+.nl a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 9px;font-family:var(--mono);border-radius:6px}
+.nc{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;padding:7px 16px;border-radius:8px;font-family:var(--mono);font-size:13px;text-decoration:none}
+.ns{border:1px solid var(--border2);color:var(--muted);padding:7px 16px;border-radius:8px;font-family:var(--mono);font-size:13px;text-decoration:none;margin-right:8px}
+
+/* HERO: 40/60 — give most space to the terminal (it's the star) */
+.hero{padding:64px 0 52px;display:grid;grid-template-columns:40fr 60fr;gap:48px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(136,68,255,.1);border:1px solid rgba(136,68,255,.3);border-radius:100px;padding:6px 14px;font-size:12px;font-family:var(--mono);color:var(--indigo2);margin-bottom:22px}
+.badge .d{width:6px;height:6px;border-radius:50%;background:var(--green)}
+h1{font-family:var(--disp);font-size:clamp(34px,3.6vw,64px);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:18px}
+.sub{font-size:15px;color:var(--muted);line-height:1.75;margin-bottom:22px;max-width:460px}
+.pw{display:flex;align-items:center;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+.pl{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+.pill{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:100px;font-weight:500}
+.pc{background:rgba(255,144,16,.15);border:1px solid rgba(255,144,16,.3);color:var(--amber)}
+.pg{background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.25);color:var(--cyan)}
+.pk{background:rgba(136,68,255,.12);border:1px solid rgba(136,68,255,.3);color:var(--indigo2)}
+.pm{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:var(--green)}
+.btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:26px}
+.bp{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;padding:12px 22px;border-radius:10px;font-family:var(--mono);font-size:14px;font-weight:500;text-decoration:none}
+.bg{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--muted);padding:12px 22px;border-radius:10px;border:1px solid var(--border2);font-family:var(--mono);font-size:14px;text-decoration:none}
+.trust{display:flex;gap:20px}
+.tv{font-family:var(--mono);font-size:18px;font-weight:700;line-height:1}
+.tl{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+
+/* RIGHT: Live payment sequence — FULL HEIGHT terminal */
+.live-panel{background:rgba(8,7,24,.9);border:1px solid rgba(136,68,255,.28);border-radius:20px;overflow:hidden;box-shadow:0 0 60px rgba(136,68,255,.15),inset 0 1px 0 rgba(255,255,255,.06)}
+.lp-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(255,255,255,.06)}
+.lp-dots{display:flex;gap:7px}
+.ld{width:10px;height:10px;border-radius:50%}
+.ld.r{background:#FF5F56}.ld.y{background:#FFBD2E}.ld.g{background:#27C93F}
+.lp-title{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.live-badge{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--green)}
+.lb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* Step-by-step animated x402 flow */
+.flow{padding:22px}
+.step{display:flex;gap:16px;margin-bottom:18px;opacity:0;transform:translateY(8px);transition:all .4s ease}
+.step.show{opacity:1;transform:translateY(0)}
+.step-num{width:24px;height:24px;border-radius:50%;border:1px solid var(--border2);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--dim);flex-shrink:0;margin-top:2px}
+.step.done .step-num{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4);color:var(--green)}
+.step.active .step-num{background:rgba(136,68,255,.15);border-color:rgba(136,68,255,.4);color:var(--indigo2);animation:ring .8s ease-in-out infinite}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(136,68,255,.4)}70%{box-shadow:0 0 0 6px rgba(136,68,255,0)}}
+.step-content{flex:1}
+.step-label{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px}
+.step-code{font-family:var(--mono);font-size:12px;line-height:1.75;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px 14px}
+.cm{color:var(--dim)}.kw{color:var(--indigo2)}.st{color:var(--amber)}.out{color:var(--cyan)}.ok{color:var(--green)}.pr{color:var(--pink)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:100px;font-family:var(--mono);margin-top:6px}
+.tag-402{background:rgba(255,40,150,.12);border:1px solid rgba(255,40,150,.25);color:var(--pink)}
+.tag-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green)}
+.tag-usdc{background:rgba(255,144,16,.12);border:1px solid rgba(255,144,16,.25);color:var(--amber)}
+.cursor{display:inline-block;width:8px;height:13px;background:var(--green);vertical-align:middle;animation:blink .9s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.sbar{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(7,6,26,.5);padding:22px 0}
+.si{display:flex;justify-content:space-around;align-items:center}
+.sl{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.sv{font-family:var(--mono);font-size:20px;font-weight:700}
+.mq{padding:22px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden}
+.mr{display:flex;gap:10px;white-space:nowrap;animation:mq 28s linear infinite;will-change:transform;backface-visibility:hidden}
+.mr.rv{animation-direction:reverse;margin-top:8px}
+@keyframes mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.mp{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:100px;font-size:11px;font-family:var(--mono);border:1px solid var(--border2);color:var(--muted);background:rgba(12,11,34,.4)}
+.md{width:6px;height:6px;border-radius:50%}
+</style>
+</head>
+<body>
+<nav><div class="w"><div class="ni">
+  <a href="#" class="logo"><div class="li">A</div>ARCH TOOLS</a>
+  <ul class="nl"><li><a href="#">tools</a></li><li><a href="#">pricing</a></li><li><a href="#">vs others</a></li><li><a href="#">crypto</a></li><li><a href="#">mcp</a></li><li><a href="#">blog</a></li><li><a href="#">api docs</a></li><li><a href="#">sdk & cli</a></li><li><a href="#">dashboard</a></li></ul>
+  <div style="display:flex;align-items:center"><a href="#" class="ns">sign in</a><a href="#" class="nc">$ get-api-key</a></div>
+</div></div></nav>
+
+<div class="w">
+<section class="hero">
+  <div>
+    <div class="badge"><span class="d"></span>One API key. 53 tools. No setup.</div>
+    <h1><span class="grad">53 Tools</span> Your AI Agent Can Call Right Now.</h1>
+    <p class="sub">Give your agent one API key. It can instantly scrape the web, generate text with Claude, GPT-4, Grok, or Gemini, convert files, detect PII, look up crypto prices, send email, transcribe audio, and more — and pay autonomously in USDC across 15 blockchains. No credit card needed.</p>
+    <div class="pw"><span class="pl">Powered by</span><span class="pill pc">Claude</span><span class="pill pg">GPT-4</span><span class="pill pk">Grok</span><span class="pill pm">Gemini</span></div>
+    <div class="btns"><a href="#" class="bp">$ get-api-key →</a><a href="#" class="bg">how x402 works</a></div>
+    <div class="trust">
+      <div><div class="tv gam">53</div><div class="tl">Tools</div></div>
+      <div><div class="tv gcy">&lt;200ms</div><div class="tl">Response</div></div>
+      <div><div class="tv" style="background:linear-gradient(135deg,#8844FF,#1860FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">15</div><div class="tl">Chains</div></div>
+      <div><div class="tv gam">FREE</div><div class="tl">To Start</div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Live animated x402 payment flow — the differentiator -->
+  <div class="live-panel">
+    <div class="lp-header">
+      <div class="lp-dots"><div class="ld r"></div><div class="ld y"></div><div class="ld g"></div></div>
+      <span class="lp-title">x402 — autonomous agent payment flow</span>
+      <span class="live-badge"><span class="lb-dot"></span>live</span>
+    </div>
+    <div class="flow">
+      <div class="step show done" id="s1">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-label">AGENT CALLS TOOL</div>
+          <div class="step-code"><span class="kw">curl</span> https://archtools.dev/v1/tools/<span class="st">web-scrape</span>
+  -d <span class="st">'{"url":"https://example.com"}'</span></div>
+        </div>
+      </div>
+      <div class="step show done" id="s2">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-label">SERVER RETURNS PRICE</div>
+          <div class="step-code"><span class="pr">HTTP 402 Payment Required</span>
+{<span class="kw">"price"</span>:<span class="st">"0.000005"</span>,<span class="kw">"currency"</span>:<span class="st">"USDC"</span>,
+ <span class="kw">"network"</span>:<span class="st">"base"</span>,<span class="kw">"wallet"</span>:<span class="st">"0xArch..."</span>}</div>
+          <span class="tag tag-402">402 Payment Required</span>
+        </div>
+      </div>
+      <div class="step show active" id="s3">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-label">AGENT PAYS IN USDC</div>
+          <div class="step-code"><span class="cm"># Agent sends payment on Base</span>
+<span class="out">0.000005 USDC → 0xArch... (Base)</span>
+<span class="cm">tx: 0xabc123...def789</span></div>
+          <span class="tag tag-usdc">💳 0.000005 USDC · Base Network</span>
+        </div>
+      </div>
+      <div class="step show" id="s4">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-label">TOOL EXECUTES — RESULT RETURNED</div>
+          <div class="step-code"><span class="ok">✓ 200 OK · 138ms · tx verified</span>
+{<span class="kw">"content"</span>:<span class="st">"# Example Domain\n..."</span>,
+ <span class="kw">"paid_via"</span>:<span class="st">"x402"</span>}<span class="cursor"></span></div>
+          <span class="tag tag-ok">✓ Tool executed · No human needed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="sbar"><div class="w"><div class="si">
+  <div><div class="sl">API_TOOLS</div><div class="sv gam">53</div></div>
+  <div><div class="sl">AI_MODELS</div><div class="sv" style="font-size:14px;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Claude · GPT-4 · Grok · Gemini</div></div>
+  <div><div class="sl">AGENT_PAYMENT</div><div class="sv gcy">USDC · 15 Networks</div></div>
+  <div><div class="sl">CREDIT_PRICE</div><div class="sv gam">$0.001</div></div>
+  <div><div class="sl">UPTIME_SLA</div><div class="sv gcy">99.9%</div></div>
+</div></div></div>
+
+<div class="mq">
+  <div class="mr"><span class="mp"><span class="md" style="background:#8844FF"></span>AI Generate</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Web Scrape</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>OCR Extract</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Web Search (AI)</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Convert Format</span>&nbsp;<span class="mp"><span class="md" style="background:#FF2896"></span>Text to Speech</span>&nbsp;<span class="mp"><span class="md" style="background:#22d3ee"></span>Vector Store</span>&nbsp;<span class="mp"><span class="md" style="background:#FFD700"></span>Crypto Price</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>Sentiment Analysis</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Screenshot</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>PII Detect</span>&nbsp;<span class="mp"><span class="md" style="background:#FF9010"></span>Email Verify</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Extract PDF</span>&nbsp;<span class="mp"><span class="md" style="background:#60a5fa"></span>Deploy Check</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>Language Detect</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>JSONPath</span>&nbsp;<span class="mp"><span class="md" style="background:#FF2896"></span>Transcribe Audio</span>&nbsp;<span class="mp"><span class="md" style="background:#FFD700"></span>Currency Convert</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Browser Task</span>&nbsp;<span class="mp"><span class="md" style="background:#f87171"></span>Legal Consult</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>AI Generate</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Web Scrape</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>OCR Extract</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Web Search (AI)</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Convert Format</span>&nbsp;<span class="mp"><span class="md" style="background:#FF2896"></span>Text to Speech</span>&nbsp;<span class="mp"><span class="md" style="background:#22d3ee"></span>Vector Store</span>&nbsp;<span class="mp"><span class="md" style="background:#FFD700"></span>Crypto Price</span></div>
+  <div class="mr rv"><span class="mp"><span class="md" style="background:#8844FF"></span>Image Generate</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Extract Page</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Generate Hash</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Transform Text</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Whois Lookup</span>&nbsp;<span class="mp"><span class="md" style="background:#FF9010"></span>Phone Validate</span>&nbsp;<span class="mp"><span class="md" style="background:#22d3ee"></span>Vector Search</span>&nbsp;<span class="mp"><span class="md" style="background:#FFD700"></span>Currency Convert</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>Extract Entities</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>RSS Parse</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Diff Text</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>HTML to Markdown</span>&nbsp;<span class="mp"><span class="md" style="background:#60a5fa"></span>Error Monitor</span>&nbsp;<span class="mp"><span class="md" style="background:#8844FF"></span>Image Generate</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Extract Page</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Generate Hash</span>&nbsp;<span class="mp"><span class="md" style="background:#a78bfa"></span>Transform Text</span>&nbsp;<span class="mp"><span class="md" style="background:#34d399"></span>Whois Lookup</span>&nbsp;<span class="mp"><span class="md" style="background:#FF9010"></span>Phone Validate</span>&nbsp;<span class="mp"><span class="md" style="background:#22d3ee"></span>Vector Search</span></div>
+</div>
+
+<script>
+// Animate steps in sequence, then loop
+let phase=0;
+const steps=['s1','s2','s3','s4'];
+function advance(){
+  steps.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.classList.remove('active','done');
+    if(i<phase)el.classList.add('done');
+    else if(i===phase)el.classList.add('active');
+    else{el.style.opacity=0;el.style.transform='translateY(8px)'}
+  });
+  // Make current and past visible
+  steps.slice(0,phase+1).forEach(id=>document.getElementById(id).classList.add('show'));
+  phase=(phase+1)%5;
+  if(phase===4){setTimeout(reset,2000);}
+}
+function reset(){
+  phase=0;
+  steps.forEach(id=>{const el=document.getElementById(id);el.className='step';el.style.opacity=0;el.style.transform='translateY(8px)'});
+  setTimeout(run,500);
+}
+function run(){advance();if(phase<5&&phase>0)setTimeout(run,1800);}
+setTimeout(()=>{steps.forEach(id=>{const el=document.getElementById(id);el.className='step'});run()},2000);
+</script>
+</body></html>
