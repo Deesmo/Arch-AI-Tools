@@ -1,6 +1,6 @@
 {
   "name": "@deesmo/arch-tools-mcp",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "mcpName": "io.github.deesmo/arch-tools",
   "description": "MCP server for Arch Tools — 45 production-ready API tools for AI agents. Web scraping, AI generation, crypto data, data validation, OCR, and more. Supports USDC payments via x402.",
   "type": "module",

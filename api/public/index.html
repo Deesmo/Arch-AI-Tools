@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Arch Tools">
   <meta name="theme-color" content="#07061A">
   <title>Arch Tools — The First API Platform AI Agents Can Pay Autonomously</title>
-  <meta name="description" content="The first API platform where AI agents pay autonomously with USDC via x402 across 15 blockchains. 50 tools, one key, no credit card required.">
+  <meta name="description" content="The first API platform where AI agents pay autonomously with USDC via x402 across 15 blockchains. 53 tools, one key, no credit card required.">
   <meta property="og:title" content="Arch Tools — 50 API Tools for AI Agents">
   <meta property="og:description" content="50 AI tools. USDC + USDT payments on 15 blockchains via x402. No human card needed.">
   <meta property="og:url" content="https://archtools.dev">
@@ -485,7 +485,7 @@
       <div class="hero-left">
         <div class="hero-badge">
           <span class="dot"></span>
-          One API key. 50 tools. No setup.
+          One API key. 53 tools. No setup.
         </div>
         <h1 class="hero-h1">
           <span class="grad">50 Tools</span> Your AI<br>
@@ -594,13 +594,13 @@
 <section id="what-is" style="padding:80px 0 60px;border-top:1px solid var(--border);">
   <div class="wrap">
     <div class="section-tag">What is Arch Tools?</div>
-    <h2 class="section-title">50 tools. One key. Built for agents.</h2>
+    <h2 class="section-title">53 tools. One key. Built for agents.</h2>
     <p class="section-sub">Arch Tools is an API platform. You get one key, and behind it are 50 ready-to-use tools your agent (or your code) can call with a single POST request. No infrastructure to run, no libraries to install, no APIs to sign up for separately.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:48px;">
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:32px;">
         <div style="font-size:32px;margin-bottom:16px;">🤖</div>
         <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--fg);">For AI Agents</h3>
-        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Give your agent an API key. It can call any of the 50 tools to complete tasks — scrape data, generate text, look up prices, send email — and pay autonomously in USDC via x402. No human needs to approve anything.</p>
+        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Give your agent an API key. It can call any of the 53 tools to complete tasks — scrape data, generate text, look up prices, send email — and pay autonomously in USDC via x402. No human needs to approve anything.</p>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:32px;">
         <div style="font-size:32px;margin-bottom:16px;">👨‍💻</div>
@@ -610,7 +610,7 @@
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:32px;">
         <div style="font-size:32px;margin-bottom:16px;">🔌</div>
         <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--fg);">For MCP Clients</h3>
-        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Using Claude Desktop, Cursor, or Windsurf? Add 6 lines to your config and all 50 tools appear natively — Claude knows what each one does and can use them automatically. No API calls in your prompts.</p>
+        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Using Claude Desktop, Cursor, or Windsurf? Add 6 lines to your config and all 53 tools appear natively — Claude knows what each one does and can use them automatically. No API calls in your prompts.</p>
       </div>
     </div>
   </div>
@@ -662,7 +662,7 @@
           </div>
           <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:12px;padding:20px 22px;">
             <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 2 — Pick a tool</div>
-            <p style="font-size:14px;color:var(--muted);margin:0;line-height:1.6;">Browse all 50 tools below. Each has one endpoint, one JSON body, one response. No auth flows, no OAuth, no rate-limit tokens to manage.</p>
+            <p style="font-size:14px;color:var(--muted);margin:0;line-height:1.6;">Browse all 53 tools below. Each has one endpoint, one JSON body, one response. No auth flows, no OAuth, no rate-limit tokens to manage.</p>
           </div>
           <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:12px;padding:20px 22px;">
             <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 3 — Call it</div>
@@ -1153,6 +1153,36 @@
         <div class="tool-endpoint">POST /v1/tools/error-monitor</div>
       </div>
 
+      <div class="tool-card" data-cat="Research">
+        <div class="tool-header">
+          <div class="tool-icon-badge" style="background:rgba(251,191,36,0.10);color:#fbbf24;">NEWS</div>
+          <div class="tool-name">News Search</div>
+          <span class="tool-credits">3 cr</span>
+        </div>
+        <div class="tool-desc">Search real-time news articles by keyword or topic. Returns headlines, sources, and publication dates from top news outlets.</div>
+        <div class="tool-endpoint">POST /v1/tools/news-search</div>
+      </div>
+
+      <div class="tool-card" data-cat="Research">
+        <div class="tool-header">
+          <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">RPT</div>
+          <div class="tool-name">Research Report</div>
+          <span class="tool-credits">10 cr</span>
+        </div>
+        <div class="tool-desc">Generate a structured research report on any topic. Searches the web, synthesizes findings, and returns a formatted markdown report with sources.</div>
+        <div class="tool-endpoint">POST /v1/tools/research-report</div>
+      </div>
+
+      <div class="tool-card" data-cat="Research">
+        <div class="tool-header">
+          <div class="tool-icon-badge" style="background:rgba(239,68,68,0.10);color:#ef4444;">FCK</div>
+          <div class="tool-name">Fact Check</div>
+          <span class="tool-credits">5 cr</span>
+        </div>
+        <div class="tool-desc">Verify claims against real-time web sources. Returns a verdict (true/false/unverified), confidence score, and supporting evidence with citations.</div>
+        <div class="tool-endpoint">POST /v1/tools/fact-check</div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1266,7 +1296,7 @@
   <div class="wrap">
     <div class="section-tag">MCP Compatible</div>
     <h2 class="section-title">Plug into any AI tool or coding environment</h2>
-    <p class="section-sub">Arch ships a native MCP server. Pick your client below — copy the config, paste it in, and all 50 tools appear natively. Works on Mac, Windows, and Linux.</p>
+    <p class="section-sub">Arch ships a native MCP server. Pick your client below — copy the config, paste it in, and all 53 tools appear natively. Works on Mac, Windows, and Linux.</p>
 
     <!-- Client tabs -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:32px 0 20px;">
@@ -1291,7 +1321,7 @@
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&#125;</span>
         <span class="t-line">&nbsp;</span>
-        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (50 tools available)</span></span>
+        <span class="t-line"><span class="t-out">&#10003; arch-tools connected (53 tools available)</span></span>
       </div>
     </div>
 
@@ -1434,7 +1464,7 @@ function showLangTab(lang) {
           <div class="plan-sub">10,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>10,000 credits</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>API key included</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
@@ -1447,7 +1477,7 @@ function showLangTab(lang) {
           <div class="plan-sub">60,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>60,000 credits</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>MCP server access</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
@@ -1460,7 +1490,7 @@ function showLangTab(lang) {
           <div class="plan-sub">250,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>250,000 credits</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>MCP server access</li>
             <li>Priority support</li>
             <li>Stripe or USDC</li>
@@ -1483,7 +1513,7 @@ function showLangTab(lang) {
           <div class="plan-sub">600 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>600 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>API key included</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
@@ -1496,7 +1526,7 @@ function showLangTab(lang) {
           <div class="plan-sub">3,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>3,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>MCP server access</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
@@ -1509,7 +1539,7 @@ function showLangTab(lang) {
           <div class="plan-sub">12,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
             <li>12,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>MCP server access</li>
             <li>Priority support</li>
             <li>Stripe billing</li>
@@ -1532,7 +1562,7 @@ function showLangTab(lang) {
           <div class="plan-sub">$81 billed annually &middot; 600 credits/month</div>
           <ul class="plan-features">
             <li>600 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>API key included</li>
             <li>Save $27 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1545,7 +1575,7 @@ function showLangTab(lang) {
           <div class="plan-sub">$261 billed annually &middot; 3,000 credits/month</div>
           <ul class="plan-features">
             <li>3,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>MCP server access</li>
             <li>Save $87 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1558,7 +1588,7 @@ function showLangTab(lang) {
           <div class="plan-sub">$801 billed annually &middot; 12,000 credits/month</div>
           <ul class="plan-features">
             <li>12,000 credits every month</li>
-            <li>All 50 tools</li>
+            <li>All 53 tools</li>
             <li>MCP server access</li>
             <li>Save $267 vs monthly</li>
             <li>Cancel anytime</li>
@@ -1656,7 +1686,7 @@ function showLangTab(lang) {
         <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/convert-format</div>
       </div>
     </div>
-    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Mix and match across all 50 tools. Credits never expire — use them at your own pace.</p>
+    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Mix and match across all 53 tools. Credits never expire — use them at your own pace.</p>
   </div>
 </section>
 
@@ -1725,7 +1755,7 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Why Arch</div>
     <h2 class="section-title">The math doesn't lie.</h2>
-    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get 50 tools, 15 payment networks, and MCP support for $9. No other platform comes close.</p>
+    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get 53 tools, 15 payment networks, and MCP support for $9. No other platform comes close.</p>
     <div class="section-line"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
     <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin-top:32px;">
@@ -1743,7 +1773,7 @@ function showLangTab(lang) {
         <tr style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.35);border-radius:8px;">
           <td style="padding:14px 16px;font-weight:700;color:var(--text);white-space:nowrap;">⚡ Arch Tools</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">$9</td>
-          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">50 tools</td>
+          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">53 tools</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Native</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
@@ -1930,7 +1960,7 @@ function showLangTab(lang) {
           How do I get an API key?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address — no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response and displayed on screen. Store it safely — it's the only authentication you need for all 50 tools.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address — no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response and displayed on screen. Store it safely — it's the only authentication you need for all 53 tools.</p>
       </details>
 
     </div>

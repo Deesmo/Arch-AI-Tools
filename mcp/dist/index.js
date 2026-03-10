@@ -87,7 +87,7 @@ async function main() {
             res.json({
                 name: "Arch Tools",
                 description: "50 production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.",
-                version: "1.7.0",
+                version: "1.8.0",
                 homepage: "https://archtools.dev",
                 repository: "https://github.com/Deesmo/Arch-AI-Tools",
                 auth: {
@@ -137,7 +137,7 @@ async function main() {
                         send({ jsonrpc: "2.0", id: body.id, result: {
                                 protocolVersion: "2024-11-05",
                                 capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
-                                serverInfo: { name: "arch-tools-mcp", version: "1.7.0" }
+                                serverInfo: { name: "arch-tools-mcp", version: "1.8.0" }
                             } });
                         break;
                     case "notifications/initialized":

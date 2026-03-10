@@ -523,6 +523,25 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
             }
             catch (_) { /* fall through */ }
         }
+        // Third fallback: Serper
+        if (process.env.SERPER_API_KEY) {
+            try {
+                const resp = await fetch("https://google.serper.dev/search", {
+                    method: "POST",
+                    headers: { "X-API-KEY": process.env.SERPER_API_KEY, "Content-Type": "application/json" },
+                    body: JSON.stringify({ q: query, num: Math.min(num_results, 10) }),
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const results = (data.organic ?? []).map(r => ({ title: r.title ?? "", url: r.link ?? "", snippet: r.snippet ?? "" }));
+                    if (results.length > 0) {
+                        res.json({ ok: true, query, results, count: results.length, source: "serper", request_id: (0, credits_1.reqId)() });
+                        return;
+                    }
+                }
+            }
+            catch (_) { /* fall through */ }
+        }
         res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable.", request_id: (0, credits_1.reqId)() });
     }
     catch (e) {
@@ -677,18 +696,38 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req, res)
         return;
     }
     const clean = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
-    try {
-        const resp = await axios_1.default.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
-        const data = resp.data;
+    // Helper: parse RDAP response into a normalized object
+    const parseRdap = (data) => {
         const events = data.events ?? [];
         const nameservers = (data.nameservers ?? []).map(ns => ns.ldhName);
         const created = events.find(e => e.eventAction === "registration")?.eventDate ?? null;
         const expires = events.find(e => e.eventAction === "expiration")?.eventDate ?? null;
         const updated = events.find(e => e.eventAction === "last changed")?.eventDate ?? null;
-        res.json({ ok: true, domain: clean, status: data.status, registered: created, expires, last_updated: updated, nameservers, registrar: data.entities?.[0]?.handle ?? null, request_id: (0, credits_1.reqId)() });
+        return { ok: true, domain: clean, status: data.status, registered: created, expires, last_updated: updated, nameservers, registrar: data.entities?.[0]?.handle ?? null, request_id: (0, credits_1.reqId)() };
+    };
+    // Exponential backoff retry against rdap.org (3 attempts: 500ms, 1s, 2s)
+    const delays = [500, 1000, 2000];
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            if (attempt > 0)
+                await new Promise(r => setTimeout(r, delays[attempt - 1]));
+            const resp = await axios_1.default.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
+            res.json(parseRdap(resp.data));
+            return;
+        }
+        catch (e) {
+            lastError = e;
+        }
+    }
+    // Fallback: IANA RDAP
+    try {
+        const resp = await axios_1.default.get(`https://rdap.iana.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
+        res.json({ ...parseRdap(resp.data), source: "iana_fallback" });
+        return;
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "whois_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "whois_error", message: (0, credits_1.safeErr)(lastError ?? e), request_id: (0, credits_1.reqId)() });
     }
 });
 // ─── 14. EMAIL-VERIFY ────────────────────────────────────────────────────────
