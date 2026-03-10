@@ -7,24 +7,8 @@
   <link rel="icon" type="image/svg+xml" href="/arch-icon.svg">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    
-    .container{max-width:760px;margin:0 auto;}
-    .back{display:inline-flex;align-items:center;gap:8px;color:#8844FF;text-decoration:none;font-size:14px;margin-bottom:40px;}
-    .back:hover{color:#FF9010;}
-    h1{font-size:clamp(28px,5vw,42px);font-weight:800;margin-bottom:8px;}
-    .updated{color:#6B6A8A;font-size:14px;margin-bottom:48px;}
-    h2{font-size:20px;font-weight:700;color:#FF9010;margin:40px 0 12px;}
-    p,li{color:#B8B7D0;margin-bottom:12px;}
-    ul{padding-left:20px;}
-    a{color:#8844FF;}
-    a:hover{color:#FF9010;}
-    footer{margin-top:80px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);color:#6B6A8A;font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
-  </style>
-
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{--bg:#07061A;--border:rgba(255,255,255,0.10);--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.55);--grad:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);--amber:#FF9010;}
-    html,
+    html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
     .at-nav{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);backdrop-filter:blur(16px);position:sticky;top:0;z-index:100;}
     .at-nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text);}
     .at-logo-mark{width:32px;height:32px;border-radius:8px;background:var(--bg);border:1px solid rgba(255,144,16,0.4);display:flex;align-items:center;justify-content:center;}
@@ -33,15 +17,17 @@
     .at-nav-links a{color:var(--muted);text-decoration:none;transition:color 0.15s;}
     .at-nav-links a:hover{color:var(--text);}
     .at-nav-cta{background:var(--grad);color:#fff !important;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px !important;}
-    .legal-
+    .legal-body{max-width:760px;margin:0 auto;padding:60px 24px 80px;}
     .legal-body h1{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;margin-bottom:8px;color:var(--text);}
     .legal-body .updated{font-size:13px;color:var(--muted);margin-bottom:40px;}
     .legal-body h2{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--amber);margin:32px 0 12px;}
-    .legal-body p,.legal-body li{color:rgba(255,255,255,0.75);font-size:15px;}
+    .legal-body p,.legal-body li{color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;margin-bottom:12px;}
     .legal-body ul{padding-left:20px;margin:8px 0;}
     .legal-body strong{color:var(--text);}
     .legal-body a{color:var(--amber);text-decoration:none;}
     .legal-body a:hover{text-decoration:underline;}
+    .back{display:inline-flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;font-size:14px;margin-bottom:40px;}
+    .back:hover{opacity:0.8;}
     .at-footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-size:12px;color:var(--muted);}
     .at-footer a{color:var(--muted);text-decoration:none;margin:0 8px;}
     .at-footer a:hover{color:var(--text);}
@@ -55,92 +41,118 @@
     <a class="at-nav-logo" href="/">
       <div class="at-logo-mark">
         <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+          <path d="M16 3L29 26H3L16 3Z" stroke="url(#tg)" stroke-width="2.5" fill="none"/>
+          <defs><linearGradient id="tg" x1="3" y1="26" x2="29" y2="3" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB030"/><stop offset="0.5" stop-color="#FF1888"/><stop offset="1" stop-color="#5522FF"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span class="at-nav-brand">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/">Home</a>
+      <a href="/docs">Docs</a>
+      <a href="/login">Sign In</a>
+      <a href="/signup" class="at-nav-cta">Get API Key →</a>
+    </div>
+  </nav>
 
-    <h2>1. Acceptance of Terms</h2>
-    <p>By accessing or using Arch Tools ("the Service"), operated by MCMetaverse LLC, a South Carolina limited liability company, you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+  <main>
+    <div class="legal-body">
+      <a class="back" href="/">← Back to Arch Tools</a>
+      <h1>Terms of Service</h1>
+      <p class="updated">Last updated: March 2025</p>
 
-    <h2>2. Description of Service</h2>
-    <p>Arch Tools provides a pay-per-use API platform offering 50 developer tools and AI agent utilities including web scraping, AI text generation, image generation, audio transcription, text-to-speech, email delivery, crypto data, and more. Access is granted via API key upon registration. Credits are consumed per API call. Arch Tools also offers monthly and annual subscription plans that refresh credits on a recurring basis.</p>
+      <h2>1. Acceptance of Terms</h2>
+      <p>By accessing or using Arch Tools ("the Service"), operated by MCMetaverse LLC, a South Carolina limited liability company, you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
 
-    <h2>3. Account Registration</h2>
-    <p>You must provide a valid email address to register. You are responsible for keeping your API key confidential. Do not share your API key or allow unauthorized access to your account.</p>
+      <h2>2. Description of Service</h2>
+      <p>Arch Tools provides a pay-per-use API platform offering 53 developer tools and AI agent utilities including web scraping, AI text generation, image generation, audio transcription, text-to-speech, email delivery, crypto data, and more. Access is granted via API key upon registration. Credits are consumed per API call. Arch Tools also offers monthly and annual subscription plans that refresh credits on a recurring basis.</p>
 
-    <h2>4. Acceptable Use</h2>
-    <p>You agree not to:</p>
-    <ul>
-      <li>Use the Service for any unlawful purpose</li>
-      <li>Reverse engineer, scrape, copy, resell, or sublicense the Service or its tool outputs</li>
-      <li>Resell, transfer, or redistribute your API key or credits to any third party</li>
-      <li>Attempt to exceed rate limits, bypass authentication, or abuse the platform</li>
-      <li>Use the Service to generate spam, malware, or harmful content</li>
-      <li>Use automated scraping to systematically extract tool definitions, schemas, or pricing data</li>
-      <li>Violate any third-party rights or applicable laws</li>
-      <li><strong>Email tool:</strong> You may not use the email-send tool to send unsolicited commercial email (spam), in violation of the CAN-SPAM Act, GDPR, or any applicable anti-spam law. You are solely responsible for compliance with email regulations including obtaining proper consent from recipients.</li>
-      <li><strong>Image generation:</strong> You may not use the design-create tool to generate illegal, defamatory, sexually explicit, or harmful imagery, or to create non-consensual likenesses of real individuals (deepfakes). Content must comply with OpenAI's usage policies.</li>
-      <li><strong>Text-to-speech:</strong> You may not use the text-to-speech tool to clone voices without consent, produce fraudulent audio impersonations, or create content intended to deceive listeners about the source of the audio.</li>
-      <li><strong>AI-generated content:</strong> You are responsible for reviewing and validating all AI-generated outputs before use. Arch Tools makes no warranty as to the accuracy, completeness, or fitness of AI-generated content.</li>
-    </ul>
+      <h2>3. Account Registration</h2>
+      <p>You must provide a valid email address to register. You are responsible for keeping your API key confidential. Do not share your API key or allow unauthorized access to your account.</p>
 
-    <h2>5. Credits and Billing</h2>
-    <p>Free accounts receive 100 credits upon registration. Additional credits may be purchased via Stripe or paid automatically via x402 USDC micropayments.</p>
-    <ul>
-      <li><strong>Non-refundable:</strong> Credits and subscription payments are non-refundable except where required by applicable law.</li>
-      <li><strong>Non-transferable:</strong> Credits are tied to a single API key and account. They may not be transferred, sold, gifted, or assigned to any other account or party.</li>
-      <li><strong>Non-expiring (one-time packs):</strong> Credits purchased via one-time packs do not expire as long as your account remains in good standing.</li>
-      <li><strong>Subscription credits:</strong> Credits granted via monthly or annual subscription plans are refreshed at the start of each billing cycle. Unused subscription credits do not roll over to the next cycle and expire at cycle end.</li>
-      <li><strong>Subscription cancellation:</strong> You may cancel a subscription at any time via your account dashboard or by emailing support@archtools.dev. Cancellation takes effect at the end of the current billing period. You retain access to subscription credits until the period ends. No partial refunds are issued for unused time.</li>
-      <li><strong>Auto-renewal:</strong> Subscription plans renew automatically at the end of each billing cycle using your payment method on file. You will receive a reminder email before renewal. To avoid being charged, cancel before the renewal date.</li>
-      <li><strong>No resale:</strong> Purchasing credits or subscriptions for the purpose of reselling access to the Service is strictly prohibited.</li>
-      <li><strong>Account suspension:</strong> Violation of these billing terms may result in immediate account suspension without refund.</li>
-    </ul>
+      <h2>4. Acceptable Use</h2>
+      <p>You agree not to:</p>
+      <ul>
+        <li>Use the Service for any unlawful purpose</li>
+        <li>Reverse engineer, scrape, copy, resell, or sublicense the Service or its tool outputs</li>
+        <li>Resell, transfer, or redistribute your API key or credits to any third party</li>
+        <li>Attempt to exceed rate limits, bypass authentication, or abuse the platform</li>
+        <li>Use the Service to generate spam, malware, or harmful content</li>
+        <li>Use automated scraping to systematically extract tool definitions, schemas, or pricing data</li>
+        <li>Violate any third-party rights or applicable laws</li>
+        <li><strong>Email tool:</strong> You may not use the email-send tool to send unsolicited commercial email (spam), in violation of the CAN-SPAM Act, GDPR, or any applicable anti-spam law. You are solely responsible for compliance with email regulations including obtaining proper consent from recipients.</li>
+        <li><strong>Image generation:</strong> You may not use the design-create tool to generate illegal, defamatory, sexually explicit, or harmful imagery, or to create non-consensual likenesses of real individuals (deepfakes). Content must comply with OpenAI's usage policies.</li>
+        <li><strong>Text-to-speech:</strong> You may not use the text-to-speech tool to clone voices without consent, produce fraudulent audio impersonations, or create content intended to deceive listeners about the source of the audio.</li>
+        <li><strong>AI-generated content:</strong> You are responsible for reviewing and validating all AI-generated outputs before use. Arch Tools makes no warranty as to the accuracy, completeness, or fitness of AI-generated content.</li>
+      </ul>
 
-    <h2>5a. Rate Limits</h2>
-    <p>Rate limits are applied per API key per tier to ensure fair access for all users:</p>
-    <ul>
-      <li><strong>Free tier:</strong> 30 requests/minute, 500 requests/day</li>
-      <li><strong>Starter:</strong> 60 requests/minute, 5,000 requests/day</li>
-      <li><strong>Pro:</strong> 120 requests/minute, 20,000 requests/day</li>
-      <li><strong>Business:</strong> 300 requests/minute, 100,000 requests/day</li>
-    </ul>
-    <p>Burst allowances may apply. Sustained abuse of burst capacity may result in throttling or suspension. Rate limits are subject to change with reasonable notice.</p>
+      <h2>5. Credits and Billing</h2>
+      <p>Free accounts receive 100 credits upon registration. Additional credits may be purchased via Stripe or paid automatically via x402 USDC micropayments.</p>
+      <ul>
+        <li><strong>Non-refundable:</strong> Credits and subscription payments are non-refundable except where required by applicable law.</li>
+        <li><strong>Non-transferable:</strong> Credits are tied to a single API key and account. They may not be transferred, sold, gifted, or assigned to any other account or party.</li>
+        <li><strong>Non-expiring (one-time packs):</strong> Credits purchased via one-time packs do not expire as long as your account remains in good standing.</li>
+        <li><strong>Subscription credits:</strong> Credits granted via monthly or annual subscription plans are refreshed at the start of each billing cycle. Unused subscription credits do not roll over to the next cycle and expire at cycle end.</li>
+        <li><strong>Subscription cancellation:</strong> You may cancel a subscription at any time via your account dashboard or by emailing support@archtools.dev. Cancellation takes effect at the end of the current billing period. You retain access to subscription credits until the period ends. No partial refunds are issued for unused time.</li>
+        <li><strong>Auto-renewal:</strong> Subscription plans renew automatically at the end of each billing cycle using your payment method on file. You will receive a reminder email before renewal. To avoid being charged, cancel before the renewal date.</li>
+        <li><strong>No resale:</strong> Purchasing credits or subscriptions for the purpose of reselling access to the Service is strictly prohibited.</li>
+        <li><strong>Account suspension:</strong> Violation of these billing terms may result in immediate account suspension without refund.</li>
+      </ul>
 
-    <h2>6. Service Availability</h2>
-    <p>We aim for high availability but do not guarantee uninterrupted access. We reserve the right to modify, suspend, or discontinue the Service at any time with reasonable notice.</p>
+      <h2>5a. Rate Limits</h2>
+      <p>Rate limits are applied per API key per tier to ensure fair access for all users:</p>
+      <ul>
+        <li><strong>Free tier:</strong> 30 requests/minute, 500 requests/day</li>
+        <li><strong>Starter:</strong> 60 requests/minute, 5,000 requests/day</li>
+        <li><strong>Pro:</strong> 120 requests/minute, 20,000 requests/day</li>
+        <li><strong>Business:</strong> 300 requests/minute, 100,000 requests/day</li>
+      </ul>
+      <p>Burst allowances may apply. Sustained abuse of burst capacity may result in throttling or suspension. Rate limits are subject to change with reasonable notice.</p>
 
-    <h2>7. Intellectual Property</h2>
-    <p>All content, code, and branding associated with Arch Tools is proprietary. Your data and outputs generated through the Service remain yours.</p>
+      <h2>6. Service Availability</h2>
+      <p>We aim for high availability but do not guarantee uninterrupted access. We reserve the right to modify, suspend, or discontinue the Service at any time with reasonable notice.</p>
 
-    <h2>8. Privacy</h2>
-    <p>We collect only your email address and API usage data. We do not sell your data. See our <a href="/legal/privacy">Privacy Policy</a> for details.</p>
+      <h2>7. Intellectual Property</h2>
+      <p>All content, code, and branding associated with Arch Tools is proprietary. Your data and outputs generated through the Service remain yours.</p>
 
-    <h2>9. Changes to Terms</h2>
-    <p>We may update these terms at any time. Continued use of the Service after changes constitutes acceptance of the updated terms.</p>
+      <h2>8. Privacy</h2>
+      <p>We collect only your email address and API usage data. We do not sell your data. See our <a href="/legal/privacy">Privacy Policy</a> for details.</p>
 
-    <h2>10. Disclaimer of Warranties</h2>
-    <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MCMETAVERSE LLC EXPRESSLY DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.</p>
-    <p>We do not warrant that: (a) the Service will be uninterrupted, error-free, or secure; (b) any AI-generated content is accurate, complete, or fit for any particular purpose; (c) the Service will meet your specific requirements; or (d) any defects will be corrected. AI-generated outputs may be inaccurate, biased, or incomplete. You are solely responsible for validating all outputs before use in any production, legal, medical, financial, or other consequential context.</p>
-    <p>We are not responsible for outages, inaccuracies, or failures caused by third-party services including but not limited to Anthropic, OpenAI, ElevenLabs, Resend, CoinGecko, or any other upstream provider.</p>
+      <h2>9. Changes to Terms</h2>
+      <p>We may update these terms at any time. Continued use of the Service after changes constitutes acceptance of the updated terms.</p>
 
-    <h2>11. Limitation of Liability</h2>
-    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MCMETAVERSE LLC SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS OPPORTUNITIES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
-    <p>OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNT YOU PAID US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR (B) TWENTY-FIVE DOLLARS ($25.00).</p>
-    <p>SOME JURISDICTIONS DO NOT ALLOW EXCLUSION OF IMPLIED WARRANTIES OR LIMITATION OF LIABILITY FOR CERTAIN TYPES OF DAMAGES. IN SUCH JURISDICTIONS, OUR LIABILITY IS LIMITED TO THE MAXIMUM EXTENT PERMITTED BY LAW.</p>
+      <h2>10. Disclaimer of Warranties</h2>
+      <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MCMETAVERSE LLC EXPRESSLY DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.</p>
+      <p>We do not warrant that: (a) the Service will be uninterrupted, error-free, or secure; (b) any AI-generated content is accurate, complete, or fit for any particular purpose; (c) the Service will meet your specific requirements; or (d) any defects will be corrected. AI-generated outputs may be inaccurate, biased, or incomplete. You are solely responsible for validating all outputs before use in any production, legal, medical, financial, or other consequential context.</p>
+      <p>We are not responsible for outages, inaccuracies, or failures caused by third-party services including but not limited to Anthropic, OpenAI, ElevenLabs, Resend, CoinGecko, or any other upstream provider.</p>
 
-    <h2>12. Indemnification</h2>
-    <p>You agree to indemnify, defend, and hold harmless MCMetaverse LLC, its members, officers, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising from or related to: (a) your use of or access to the Service; (b) your violation of these Terms; (c) your violation of any third-party rights, including intellectual property rights or privacy rights; (d) any content you transmit through the Service; or (e) any AI-generated output you use or distribute based on use of the Service.</p>
+      <h2>11. Limitation of Liability</h2>
+      <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MCMETAVERSE LLC SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS OPPORTUNITIES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+      <p>OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNT YOU PAID US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR (B) TWENTY-FIVE DOLLARS ($25.00).</p>
+      <p>SOME JURISDICTIONS DO NOT ALLOW EXCLUSION OF IMPLIED WARRANTIES OR LIMITATION OF LIABILITY FOR CERTAIN TYPES OF DAMAGES. IN SUCH JURISDICTIONS, OUR LIABILITY IS LIMITED TO THE MAXIMUM EXTENT PERMITTED BY LAW.</p>
 
-    <h2>13. Governing Law & Dispute Resolution</h2>
-    <p>These Terms are governed by the laws of the State of South Carolina, United States, without regard to conflict of law principles. Any disputes shall be resolved exclusively in the state or federal courts located in South Carolina. You waive any objection to jurisdiction or venue in such courts.</p>
+      <h2>12. Indemnification</h2>
+      <p>You agree to indemnify, defend, and hold harmless MCMetaverse LLC, its members, officers, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising from or related to: (a) your use of or access to the Service; (b) your violation of these Terms; (c) your violation of any third-party rights, including intellectual property rights or privacy rights; (d) any content you transmit through the Service; or (e) any AI-generated output you use or distribute based on use of the Service.</p>
 
-    <h2>14. GDPR / International Users</h2>
-    <p>If you are located in the European Economic Area (EEA), our lawful basis for processing your personal data is the performance of a contract (providing the Service you signed up for). You have the right to access, correct, or delete your data at any time by emailing <a href="mailto:support@archtools.dev">support@archtools.dev</a>.</p>
+      <h2>13. Governing Law &amp; Dispute Resolution</h2>
+      <p>These Terms are governed by the laws of the State of South Carolina, United States, without regard to conflict of law principles. Any disputes shall be resolved exclusively in the state or federal courts located in South Carolina. You waive any objection to jurisdiction or venue in such courts.</p>
 
-    <h2>15. Contact</h2>
-    <p>Questions? Email <a href="mailto:support@archtools.dev">support@archtools.dev</a></p>
+      <h2>14. GDPR / International Users</h2>
+      <p>If you are located in the European Economic Area (EEA), our lawful basis for processing your personal data is the performance of a contract (providing the Service you signed up for). You have the right to access, correct, or delete your data at any time by emailing <a href="mailto:support@archtools.dev">support@archtools.dev</a>.</p>
 
-    
-  </div>
+      <h2>15. Contact</h2>
+      <p>Questions? Email <a href="mailto:support@archtools.dev">support@archtools.dev</a></p>
+    </div>
   </main>
-  
+
+  <footer class="at-footer">
+    <span>© 2026 Arch Tools · MCMetaverse LLC</span>
+    <span>
+      <a href="/legal/privacy">Privacy</a>
+      <a href="/legal/terms">Terms</a>
+      <a href="/docs">Docs</a>
+      <a href="mailto:support@archtools.dev">Contact</a>
+    </span>
+  </footer>
 </body>
 </html>
