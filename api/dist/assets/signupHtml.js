@@ -12,7 +12,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
   <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -179,7 +179,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
     function showSuccess(apiKey, credits) {
       if (apiKey) localStorage.setItem('arch_api_key', apiKey);
       showStatus(
-        '<div style="margin-bottom:12px;font-size:17px;font-weight:800;color:#00e5b0">&#9989; Account created!</div>' +
+        '<div style="margin-bottom:12px;font-size:17px;font-weight:800;color:#34d399">&#9989; Account created!</div>' +
         '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
         '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
