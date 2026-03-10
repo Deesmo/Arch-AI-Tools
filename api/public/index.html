@@ -84,7 +84,7 @@
     @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 
     .hero-h1{
-      font-family:var(--display);font-size:clamp(38px,3vw,44px);
+      font-family:var(--display);font-size:clamp(38px,5vw,62px);
       font-weight:800;line-height:1.05;letter-spacing:-1.5px;color:var(--text);margin-bottom:24px;
     }
     .grad{
@@ -425,8 +425,9 @@
        RESPONSIVE — DESKTOP WIDE (min-width: 1400px)
     ══════════════════════════════════════════════════ */
     @media (min-width: 1400px) {
+      :root { --max: 1600px; }
       .tools-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-      .hero-h1 { font-size: 44px; letter-spacing: -1px; }
+      .hero-h1 { font-size: 68px; }
     }
 
 
@@ -522,7 +523,7 @@
           <div class="trust-item"><div class="trust-val g-am">53</div><div class="trust-lbl">Tools</div></div>
           <div class="trust-item"><div class="trust-val g-cy">&lt;200ms</div><div class="trust-lbl">Response</div></div>
           <div class="trust-item"><div class="trust-val g-bl">15</div><div class="trust-lbl">Chains</div></div>
-          <div class="trust-item"><div class="trust-val g-am" style="font-size:18px;">FREE</div><div class="trust-lbl">To Start</div></div>
+          <div class="trust-item"><div class="trust-val g-am">FREE</div><div class="trust-lbl">To Start</div></div>
         </div>
       </div>
 
