@@ -8,14 +8,14 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
       --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
       --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
-      --green: #00e5b0;
+      --green: #34d399;
     }
     body {
       font-family: Syne, system-ui, sans-serif;
@@ -172,7 +172,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Set a password to sign in with email next time — no need to enter your API key.</p>
         <div style="display:flex;gap:10px;margin-bottom:8px;">
           <input id="new-password" type="password" placeholder="New password (min 8 chars)" style="flex:1;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.92);padding:0 14px;font-family:inherit;font-size:13px;outline:none;" />
-          <button onclick="setPassword()" style="height:42px;padding:0 18px;border-radius:10px;border:0;background:linear-gradient(135deg,#FF9010,#FF2896);color:#fff;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap;">Set Password</button>
+          <button onclick="setPassword()" style="height:42px;padding:0 18px;border-radius:10px;border:0;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap;">Set Password</button>
         </div>
         <div id="pw-status" style="font-size:12px;min-height:16px;"></div>
       </div>
