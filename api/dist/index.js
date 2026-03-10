@@ -196,6 +196,9 @@ app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
 app.get("/docs", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/docs.html')));
 app.get("/docs/:slug", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/docs.html')));
+app.get("/blog", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/blog.html')));
+app.get("/blog/:slug", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/blog.html')));
+app.get("/sdk", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/sdk.html')));
 // /success — Stripe post-checkout success page
 app.get("/success", (_req, res) => {
     res.type("text/html").send(`<!DOCTYPE html>
