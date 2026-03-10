@@ -12,16 +12,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Arch Tools">
   <meta name="theme-color" content="#07061A">
-  <title>Arch Tools — The First API Platform AI Agents Can Pay Autonomously</title>
-  <meta name="description" content="53 AI-powered tools in a single API. Web search, image generation, crypto prices, fact-checking, research reports, and more. Pay per use — no subscriptions.">
-  <meta property="og:title" content="Arch Tools — 53 Tools, One API Key">
+  <title>Arch Tools - The First API Platform AI Agents Can Pay Autonomously</title>
+  <meta name="description" content="53 AI-powered tools in a single API. Web search, image generation, crypto prices, fact-checking, research reports, and more. Pay per use - no subscriptions.">
+  <meta property="og:title" content="Arch Tools - 53 Tools, One API Key">
   <meta property="og:description" content="53 AI-powered tools for developers and AI agents. Web search, image generation, crypto prices, fact-checking, research reports, domain analysis, and more.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://archtools.dev/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Arch Tools — 53 Tools, One API Key">
-  <meta name="twitter:description" content="53 AI-powered tools for developers and AI agents. Pay per use — no subscriptions.">
+  <meta name="twitter:title" content="Arch Tools - 53 Tools, One API Key">
+  <meta name="twitter:description" content="53 AI-powered tools for developers and AI agents. Pay per use - no subscriptions.">
   <link rel="canonical" href="https://archtools.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,7 +58,7 @@
 
     /* NAV */
     nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);-webkit-transform:translateZ(0);transform:translateZ(0);}
-    /* iOS Safari: backdrop-filter on sticky nav causes scroll blanking — disable on mobile */
+    /* iOS Safari: backdrop-filter on sticky nav causes scroll blanking - disable on mobile */
     @media(max-width:768px){nav{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(7,6,26,0.97);}}
     .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
     .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
@@ -68,10 +68,10 @@
     .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
     .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
     .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
-    @media(max-width:640px){.nav-links{display:none;}} /* nav-links hidden on mobile — CTA still visible */
+    @media(max-width:640px){.nav-links{display:none;}} /* nav-links hidden on mobile - CTA still visible */
 
     /* HERO */
-    .hero{padding:80px 0 64px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+    .hero{padding:80px 0 64px;display:grid;grid-template-columns:60fr 40fr;gap:60px;align-items:center;}
     @media(max-width:900px){.hero{grid-template-columns:1fr;padding:48px 0 40px;gap:32px;}}
 
     .hero-badge{
@@ -93,7 +93,7 @@
     }
     .hero-sub{font-size:17px;color:var(--muted);line-height:1.75;max-width:520px;margin-bottom:36px;}
     .hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
-    /* TRUST BAR — desktop only */
+    /* TRUST BAR - desktop only */
     .hero-trust-bar{display:none;}
     @media(min-width:900px){
       .hero-trust-bar{display:grid;grid-template-columns:repeat(4,1fr);background:rgba(136,68,255,0.05);border:1px solid rgba(136,68,255,0.12);border-radius:12px;padding:14px 16px;margin-top:24px;gap:4px;}
@@ -116,6 +116,62 @@
       transition:color 0.2s,border-color 0.2s;cursor:pointer;
     }
     .btn-ghost:hover{color:var(--text);border-color:var(--purple);}
+
+    /* STAT CARDS GRID (hero right - preview-d layout) */
+    .sg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .sc{background:rgba(136,68,255,.06);border:1px solid rgba(136,68,255,.14);border-radius:14px;padding:22px 18px;text-align:center;}
+    .sc.sa{background:rgba(255,144,16,.06);border-color:rgba(255,144,16,.18);}
+    .sc.sc2{background:rgba(34,211,238,.04);border-color:rgba(34,211,238,.14);}
+    .sn{font-family:var(--display);font-size:38px;font-weight:800;line-height:1;}
+    .sl{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:.5px;text-transform:uppercase;}
+    .ss{font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:3px;}
+    .sc-live{display:flex;align-items:center;gap:5px;justify-content:center;margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--green);}
+
+    /* FULL-WIDTH TERMINAL (below hero) */
+    .terminal-section-new{padding:0 0 6px;}
+    .tw{background:rgba(7,6,22,.97);border:1px solid rgba(136,68,255,.28);border-radius:20px;overflow:hidden;box-shadow:0 0 80px rgba(136,68,255,.18),inset 0 1px 0 rgba(255,255,255,.06);}
+    .tw-head{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.07);}
+    .tw-dots{display:flex;gap:8px;}.tw-dot{width:10px;height:10px;border-radius:50%;}
+    .tw-dot.r{background:#FF5F56}.tw-dot.y{background:#FFBD2E}.tw-dot.g{background:#27C93F}
+    .tw-title{font-family:var(--mono);font-size:12px;color:var(--muted);}
+    .ttabs{display:flex;gap:6px;}
+    .tt{font-family:var(--mono);font-size:12px;padding:5px 14px;border-radius:7px;cursor:pointer;color:var(--dimmer);border:1px solid transparent;transition:background .15s,color .15s,border-color .15s;background:none;}
+    .tt.active{background:rgba(136,68,255,.15);border-color:rgba(136,68,255,.3);color:var(--indigo2);}
+    .tt.tx{color:var(--amber);}.tt.tx.active{background:rgba(255,144,16,.12);border-color:rgba(255,144,16,.3);color:var(--amber);}
+    /* FIXED HEIGHT: all tabs exactly 320px, zero layout shift possible */
+    .term-body-new{height:320px;overflow:hidden;position:relative;}
+    .tb-new{display:none;height:100%;}.tb-new.active{display:block;}
+    /* Req/Resp panels */
+    .trr{display:grid;grid-template-columns:1fr 1fr;height:100%;}
+    .trl{padding:22px 26px;overflow:hidden;}
+    .trr2{padding:22px 26px;overflow:hidden;border-left:1px solid rgba(255,255,255,.06);}
+    .trlbl{font-family:var(--mono);font-size:10px;color:var(--dimmer);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;}
+    .tcode{font-family:var(--mono);font-size:12px;line-height:1.85;white-space:pre;}
+    .tcm{color:var(--dimmer);}.tkw{color:var(--indigo2);}.tst{color:var(--amber);}.tot{color:var(--cyan);}.tok{color:var(--green);}.tpr{color:var(--pink);}.thl{color:#fff;}
+    .trbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green);font-size:10px;padding:3px 10px;border-radius:100px;margin-bottom:8px;font-family:var(--mono);}
+    /* x402 flow panel */
+    .xfp{display:grid;grid-template-columns:1fr 1fr;gap:0;height:100%;}
+    .xfc{padding:20px 22px;overflow:hidden;}
+    .xfc+.xfc{border-left:1px solid rgba(255,255,255,.06);}
+    .xfhdr{font-family:var(--mono);font-size:10px;color:var(--dimmer);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .xlive{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--green);}
+    /* Steps always in DOM - opacity only, never removed from layout */
+    .xstep{opacity:.3;transition:opacity .35s ease;margin-bottom:14px;}
+    .xstep:last-child{margin-bottom:0;}
+    .xstep.done{opacity:.6;}.xstep.active{opacity:1;}
+    .xshd{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+    .xsnum{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-family:var(--mono);font-size:10px;color:var(--dimmer);flex-shrink:0;transition:background .3s,border-color .3s,color .3s,box-shadow .3s;}
+    .xstep.done .xsnum{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4);color:var(--green);}
+    .xstep.active .xsnum{background:rgba(136,68,255,.2);border-color:rgba(136,68,255,.6);color:var(--indigo2);box-shadow:0 0 8px rgba(136,68,255,.4);}
+    .xsnm{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.4px;transition:color .3s;}
+    .xstep.active .xsnm{color:var(--text);}
+    .xscode{font-family:var(--mono);font-size:11px;line-height:1.7;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:8px 12px;transition:border-color .3s;}
+    .xstep.active .xscode{border-color:rgba(136,68,255,.25);}
+    .xtag{display:inline-flex;align-items:center;font-size:9px;padding:1px 7px;border-radius:100px;font-family:var(--mono);margin-top:4px;}
+    .xtag-pk{background:rgba(255,40,150,.12);border:1px solid rgba(255,40,150,.25);color:var(--pink);}
+    .xtag-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green);}
+    .xtag-usd{background:rgba(255,144,16,.12);border:1px solid rgba(255,144,16,.25);color:var(--amber);}
+    @media(max-width:900px){.terminal-section-new{display:none;}.sg{display:none;}}
 
     /* GLASS DASHBOARD */
     .glass-dashboard{
@@ -160,9 +216,9 @@
     /* MARQUEE */
     .marquee-section{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;transform:translateZ(0);}
     .mq-track{display:flex;flex-direction:column;gap:10px;}
-    .mq-row{display:flex;gap:10px;animation:marquee 32s linear infinite;white-space:nowrap;}
-    .mq-row.rev{animation-direction:reverse;margin-top:10px;}
-    @keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+    /* Marquee: CSS animation removed - RAF JS drives it (no jank on Windows Chrome) */
+    .mq-row{display:flex;gap:10px;white-space:nowrap;will-change:transform;}
+    .mq-row.rev{margin-top:10px;}
     .mq-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;font-size:12px;font-family:var(--mono);border:1px solid var(--border2);color:var(--muted);flex-shrink:0;background:rgba(12,11,34,0.4);cursor:pointer;transition:background 0.15s,border-color 0.15s,color 0.15s;-webkit-appearance:none;appearance:none;}
     .mq-pill:hover{background:rgba(136,68,255,0.12);border-color:rgba(136,68,255,0.35);color:var(--text);}
     .mq-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
@@ -292,7 +348,7 @@
 
 
     /* ══════════════════════════════════════════════════
-       RESPONSIVE — TABLET (max-width: 1024px)
+       RESPONSIVE - TABLET (max-width: 1024px)
     ══════════════════════════════════════════════════ */
     @media (max-width: 1024px) {
       .hero { gap: 40px; }
@@ -301,13 +357,13 @@
     }
 
     /* ══════════════════════════════════════════════════
-       RESPONSIVE — TABLET/PHABLET (max-width: 768px)
+       RESPONSIVE - TABLET/PHABLET (max-width: 768px)
     ══════════════════════════════════════════════════ */
     @media (max-width: 768px) {
       /* Sections */
       section { padding: 56px 0; }
 
-      /* Stats bar — wrap into 2x2+1 grid */
+      /* Stats bar - wrap into 2x2+1 grid */
       .stats-inner { flex-wrap: wrap; }
       .stat-item {
         flex: none;
@@ -352,7 +408,7 @@
       .pricing-card { padding: 24px; }
       .plan-price { font-size: 40px; }
 
-      /* Register form — stack vertically */
+      /* Register form - stack vertically */
       .register-form { flex-direction: column; max-width: 100%; }
       .register-input { width: 100%; }
       .register-form .btn-primary { width: 100%; justify-content: center; }
@@ -360,7 +416,7 @@
       /* Code blocks */
       .code-block { font-size: 11px; padding: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-      /* Split grid — reverse order on mobile so text comes before code */
+      /* Split grid - reverse order on mobile so text comes before code */
       .split-grid.reverse-mobile { direction: rtl; }
       .split-grid.reverse-mobile > * { direction: ltr; }
 
@@ -373,36 +429,36 @@
       .cat-filters::-webkit-scrollbar { display: none; }
       .cat-pill { flex-shrink: 0; }
 
-      /* Quick Start — stack to 1 col on mobile */
+      /* Quick Start - stack to 1 col on mobile */
       #quickstart .qs-grid { grid-template-columns: 1fr !important; }
       #quickstart .qs-grid > div { min-width: 0; overflow: hidden; }
       #quickstart .qs-grid pre { overflow-x: auto; max-width: 100%; word-break: break-all; }
     }
 
     /* ══════════════════════════════════════════════════
-       RESPONSIVE — MOBILE (max-width: 480px)
+       RESPONSIVE - MOBILE (max-width: 480px)
     ══════════════════════════════════════════════════ */
     @media (max-width: 480px) {
       section { padding: 48px 0; }
 
-      /* Nav — show a compact CTA even when links are hidden */
+      /* Nav - show a compact CTA even when links are hidden */
       .nav-cta { padding: 6px 12px !important; font-size: 12px !important; }
 
-      /* Hero — tighter */
+      /* Hero - tighter */
       .hero-h1 { font-size: clamp(30px, 9vw, 44px); line-height: 1.08; }
       .hero-badge { font-size: 11px; padding: 5px 12px; }
       .hero-sub { font-size: 14px; line-height: 1.65; }
 
-      /* Stats — full width each on very small screens */
+      /* Stats - full width each on very small screens */
       .stat-item { width: 50%; }
 
-      /* Glass dashboard — smaller stat nums */
+      /* Glass dashboard - smaller stat nums */
       .dash-stat-num { font-size: 20px; }
 
-      /* Tools — single column on small phones */
+      /* Tools - single column on small phones */
       .tools-grid { grid-template-columns: 1fr; }
 
-      /* Marquee — slightly smaller pills */
+      /* Marquee - slightly smaller pills */
       .mq-pill { font-size: 11px; padding: 5px 12px; }
 
       /* Steps */
@@ -423,7 +479,7 @@
     }
 
     /* ══════════════════════════════════════════════════
-       RESPONSIVE — DESKTOP WIDE (min-width: 1400px)
+       RESPONSIVE - DESKTOP WIDE (min-width: 1400px)
     ══════════════════════════════════════════════════ */
     @media (min-width: 1400px) {
       :root { --max: 1600px; }
@@ -506,7 +562,7 @@
           Right Now.
         </h1>
         <p class="hero-sub">
-          Give your agent one API key. It can instantly scrape the web, generate text with Claude, GPT-4, Grok, or Gemini, convert files, detect PII, look up crypto prices, send email, transcribe audio, and more — and pay autonomously in USDC across 15 blockchains. No credit card needed.
+          Give your agent one API key. It can instantly scrape the web, generate text with Claude, GPT-4, Grok, or Gemini, convert files, detect PII, look up crypto prices, send email, transcribe audio, and more - and pay autonomously in USDC across 15 blockchains. No credit card needed.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;align-items:center;">
           <span style="font-size:11px;color:rgba(255,255,255,0.4);font-family:var(--mono);letter-spacing:0.05em;">POWERED BY</span>
@@ -519,7 +575,7 @@
           <a class="btn-primary" href="/signup">$ get-api-key →</a>
           <a class="btn-ghost" href="#x402">how x402 works</a>
         </div>
-        <!-- TRUST BAR — desktop only -->
+        <!-- TRUST BAR - desktop only -->
         <div class="hero-trust-bar">
           <div class="trust-item"><div class="trust-val g-am">53</div><div class="trust-lbl">Tools</div></div>
           <div class="trust-item"><div class="trust-val g-cy">&lt;200ms</div><div class="trust-lbl">Response</div></div>
@@ -528,53 +584,119 @@
         </div>
       </div>
 
-      <!-- GLASS DASHBOARD (v9 hero right) -->
+      <!-- STAT CARDS (preview-d hero right) -->
       <div class="hero-right">
-        <div class="glass-dashboard">
-          <div class="dash-header">
-            <span class="dash-title">arch@tools:~</span>
-            <span class="dash-live"><span class="dash-live-dot"></span>All systems operational</span>
-          </div>
-          <div class="dash-stats-row">
-            <div class="dash-stat-box">
-              <div class="dash-stat-num g-am">53</div>
-              <div class="dash-stat-label">Tools</div>
-            </div>
-            <div class="dash-stat-box">
-              <div class="dash-stat-num g-cy" style="font-size:18px;letter-spacing:-0.5px;">&lt;200ms</div>
-              <div class="dash-stat-label">Avg Response</div>
-            </div>
-            <div class="dash-stat-box">
-              <div class="dash-stat-num g-bl" style="font-size:18px;letter-spacing:-0.5px;">$0.001</div>
-              <div class="dash-stat-label">Per Credit</div>
-            </div>
-          </div>
-          <div class="terminal">
-            <div class="terminal-bar">
-              <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
-              <span class="terminal-url">archtools.dev — zsh</span>
-            </div>
-            <div class="terminal-body">
-              <span class="t-line"><span class="t-comment"># Agent pays autonomously — no human card</span></span>
-              <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl https://archtools.dev/v1/tools/web-scrape</span></span>
-              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"X-PAYMENT: $USDC_PAYMENT_HEADER"</span></span>
-              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
-              <span class="t-line">&nbsp;</span>
-              <span class="t-line"><span class="t-comment"># x402 — USDC/USDT/native tokens · 15 networks, settles instantly</span></span>
-              <span class="t-line"><span class="t-out" style="color:#34d399;">&#123;"content":"...","paid_via":"x402","amount":"0.001 USDC"&#125;</span></span>
-              <span class="t-line">&nbsp;</span>
-              <span class="t-line"><span class="t-comment"># Or use API key + Stripe if you prefer</span></span>
-              <span class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">curl https://archtools.dev/v1/tools/web-scrape</span></span>
-              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-H</span> <span class="t-str">"x-api-key: $ARCH_KEY"</span></span>
-              <span class="t-line">&nbsp;&nbsp;<span class="t-key">-d</span> <span class="t-str">'&#123;"url":"https://example.com"&#125;'</span></span>
-              <span class="t-line"><span class="t-out">&#123;"content":"...","credits_used":5,"remaining":9995&#125;</span> <span class="t-cursor"></span></span>
-            </div>
-          </div>
+        <div class="sg">
+          <div class="sc sa"><div class="sn g-am">53</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
+          <div class="sc sc2"><div class="sn g-cy" style="font-size:28px">&lt;200ms</div><div class="sl">Avg Response</div><div class="ss">p95 &lt;500ms</div></div>
+          <div class="sc"><div class="sn g-bl">15</div><div class="sl">Blockchains</div><div class="ss">USDC · USDT · ETH</div></div>
+          <div class="sc"><div class="sn g-am" style="font-size:28px">FREE</div><div class="sl">To Start</div><div class="ss">100 credits included</div><div class="sc-live"><span class="dot"></span>all systems ok</div></div>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- FULL-WIDTH TERMINAL (preview-d) -->
+<div class="terminal-section-new">
+<div class="wrap">
+<div class="tw">
+  <div class="tw-head">
+    <div class="tw-dots"><div class="tw-dot r"></div><div class="tw-dot y"></div><div class="tw-dot g"></div></div>
+    <span class="tw-title">archtools.dev · REST API · x402 + Stripe</span>
+    <div class="ttabs">
+      <button type="button" class="tt tx active" id="hb0">⚡ x402 Flow</button>
+      <button type="button" class="tt" id="hb1">🌐 Web Scrape</button>
+      <button type="button" class="tt" id="hb2">🧠 AI Generate</button>
+      <button type="button" class="tt" id="hb3">₿ Crypto</button>
+      <button type="button" class="tt" id="hb4">🤖 MCP</button>
+    </div>
+  </div>
+  <div class="term-body-new">
+    <!-- TAB 0: x402 animated flow -->
+    <div class="tb-new active" id="ht0">
+      <div class="xfp">
+        <div class="xfc">
+          <div class="xfhdr">Request sequence <span class="xlive"><span class="dot"></span>live</span></div>
+          <div class="xstep done" id="xs1">
+            <div class="xshd"><div class="xsnum">1</div><span class="xsnm">AGENT CALLS TOOL</span></div>
+            <div class="xscode"><span class="tcm"># No payment header needed</span>
+<span class="thl">$</span> curl https://archtools.dev/v1/tools/<span class="tst">web-scrape</span> \
+  -d <span class="tst">'{"url":"https://example.com"}'</span></div>
+          </div>
+          <div class="xstep" id="xs2">
+            <div class="xshd"><div class="xsnum">2</div><span class="xsnm">HTTP 402 — PRICE RETURNED</span></div>
+            <div class="xscode"><span class="tpr">402 Payment Required</span>
+{<span class="tkw">"price"</span>:<span class="tst">"0.000005"</span>,<span class="tkw">"currency"</span>:<span class="tst">"USDC"</span>,
+ <span class="tkw">"network"</span>:<span class="tst">"base"</span>}</div>
+            <span class="xtag xtag-pk">402 Payment Required</span>
+          </div>
+        </div>
+        <div class="xfc">
+          <div class="xfhdr">Payment + response</div>
+          <div class="xstep" id="xs3">
+            <div class="xshd"><div class="xsnum">3</div><span class="xsnm">AGENT PAYS IN USDC</span></div>
+            <div class="xscode"><span class="tot">0.000005 USDC → 0xArch... (Base · 2s)</span>
+<span class="tcm">tx: 0xabc123...def789</span></div>
+            <span class="xtag xtag-usd">💳 0.000005 USDC</span>
+          </div>
+          <div class="xstep" id="xs4">
+            <div class="xshd"><div class="xsnum">4</div><span class="xsnm">TOOL EXECUTES</span></div>
+            <div class="xscode"><span class="tok">✓ 200 OK · 138ms · verified</span>
+{<span class="tkw">"content"</span>:<span class="tst">"# Example..."</span>,
+ <span class="tkw">"paid_via"</span>:<span class="tst">"x402"</span>}<span class="t-cursor"></span></div>
+            <span class="xtag xtag-ok">✓ No human needed · 15 chains</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- TAB 1: Web Scrape -->
+    <div class="tb-new" id="ht1"><div class="trr"><div class="trl"><div class="trlbl">Request</div><div class="tcode"><span class="tcm"># Scrape any URL — JS-rendered included</span>
+<span class="thl">$</span> curl -X POST https://archtools.dev/v1/tools/<span class="tst">web-scrape</span> \
+  -H <span class="tkw">"x-api-key: arch_your_key"</span> \
+  -d <span class="tst">'{"url":"https://example.com","format":"markdown"}'</span></div></div><div class="trr2"><div class="trlbl">Response</div><div class="tcode"><div class="trbadge">✓ 200 OK · 142ms · 5 credits</div>
+{
+  <span class="tkw">"content"</span>: <span class="tst">"# Example Domain\n..."</span>,
+  <span class="tkw">"word_count"</span>: <span class="tot">342</span>,
+  <span class="tkw">"credits_remaining"</span>: <span class="tot">9995</span>
+}<span class="t-cursor"></span></div></div></div></div>
+    <!-- TAB 2: AI Generate -->
+    <div class="tb-new" id="ht2"><div class="trr"><div class="trl"><div class="trlbl">Request</div><div class="tcode"><span class="tcm"># Claude, GPT-4, Grok, or Gemini</span>
+<span class="thl">$</span> curl -X POST https://archtools.dev/v1/tools/<span class="tst">ai-generate</span> \
+  -H <span class="tkw">"x-api-key: arch_your_key"</span> \
+  -d <span class="tst">'{"prompt":"Summarize","model":"claude-3-5-sonnet"}'</span></div></div><div class="trr2"><div class="trlbl">Response</div><div class="tcode"><div class="trbadge">✓ 200 OK · 890ms · 10 credits</div>
+{
+  <span class="tkw">"output"</span>: <span class="tst">"The article covers..."</span>,
+  <span class="tkw">"model_used"</span>: <span class="tst">"claude-3-5-sonnet"</span>,
+  <span class="tkw">"credits_remaining"</span>: <span class="tot">9985</span>
+}<span class="t-cursor"></span></div></div></div></div>
+    <!-- TAB 3: Crypto -->
+    <div class="tb-new" id="ht3"><div class="trr"><div class="trl"><div class="trlbl">Request</div><div class="tcode"><span class="tcm"># 10,000+ coins live</span>
+<span class="thl">$</span> curl -X POST https://archtools.dev/v1/tools/<span class="tst">crypto-price</span> \
+  -H <span class="tkw">"x-api-key: arch_your_key"</span> \
+  -d <span class="tst">'{"coin":"bitcoin","currency":"usd"}'</span></div></div><div class="trr2"><div class="trlbl">Response</div><div class="tcode"><div class="trbadge">✓ 200 OK · 88ms · 2 credits</div>
+{
+  <span class="tkw">"coin"</span>: <span class="tst">"bitcoin"</span>,
+  <span class="tkw">"price_usd"</span>: <span class="tot">83241.50</span>,
+  <span class="tkw">"change_24h"</span>: <span class="tok">+2.14%</span>
+}<span class="t-cursor"></span></div></div></div></div>
+    <!-- TAB 4: MCP -->
+    <div class="tb-new" id="ht4"><div class="trr"><div class="trl"><div class="trlbl">Config (6 lines)</div><div class="tcode">{
+  <span class="tkw">"mcpServers"</span>: {
+    <span class="tkw">"arch-tools"</span>: {
+      <span class="tkw">"command"</span>: <span class="tst">"npx"</span>,
+      <span class="tkw">"args"</span>: [<span class="tst">"-y"</span>,<span class="tst">"mcp-remote"</span>,
+        <span class="tst">"https://arch-tools-mcp.onrender.com/sse"</span>],
+      <span class="tkw">"env"</span>:{<span class="tkw">"ARCH_API_KEY"</span>:<span class="tst">"arch_your_key"</span>}
+    }
+  }
+}</div></div><div class="trr2"><div class="trlbl">Result</div><div class="tcode"><span class="tok">✓ arch-tools connected</span>
+<span class="tok">  53 tools available</span>
+
+<span class="tcm"># Claude Desktop · Cursor · Windsurf</span>
+<span class="tcm"># All 53 tools appear natively</span><span class="t-cursor"></span></div></div></div></div>
+  </div><!-- end .term-body-new -->
+</div></div></div>
 
 <!-- STATS BAR (v8 env-var style) -->
 <div class="stats-bar">
@@ -620,17 +742,17 @@
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:32px;">
         <div style="font-size:32px;margin-bottom:16px;">🤖</div>
         <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--fg);">For AI Agents</h3>
-        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Give your agent an API key. It can call any of the 53 tools to complete tasks — scrape data, generate text, look up prices, send email — and pay autonomously in USDC via x402. No human needs to approve anything.</p>
+        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Give your agent an API key. It can call any of the 53 tools to complete tasks - scrape data, generate text, look up prices, send email - and pay autonomously in USDC via x402. No human needs to approve anything.</p>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:32px;">
         <div style="font-size:32px;margin-bottom:16px;">👨‍💻</div>
         <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--fg);">For Developers</h3>
-        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Stop rebuilding the same utilities in every project. Need to hash data? Validate a phone number? Extract text from a PDF? One POST request, credits deducted, done. No monthly fees — buy credits once, they never expire.</p>
+        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Stop rebuilding the same utilities in every project. Need to hash data? Validate a phone number? Extract text from a PDF? One POST request, credits deducted, done. No monthly fees - buy credits once, they never expire.</p>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:32px;">
         <div style="font-size:32px;margin-bottom:16px;">🔌</div>
         <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--fg);">For MCP Clients</h3>
-        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Using Claude Desktop, Cursor, or Windsurf? Add 6 lines to your config and all 53 tools appear natively — Claude knows what each one does and can use them automatically. No API calls in your prompts.</p>
+        <p style="color:var(--muted);line-height:1.7;font-size:15px;">Using Claude Desktop, Cursor, or Windsurf? Add 6 lines to your config and all 53 tools appear natively - Claude knows what each one does and can use them automatically. No API calls in your prompts.</p>
       </div>
     </div>
   </div>
@@ -648,19 +770,19 @@
         <div class="step-icon">🔑</div>
         <div class="step-num">Step 01</div>
         <div class="step-title">Register &amp; get your key</div>
-        <div class="step-desc">Sign up with your email. You instantly receive an API key and 100 free credits — no credit card required to start.</div>
+        <div class="step-desc">Sign up with your email. You instantly receive an API key and 100 free credits - no credit card required to start.</div>
       </div>
       <div class="step-card">
         <div class="step-icon">⟠</div>
         <div class="step-num">Step 02</div>
         <div class="step-title">Pay with USDC or Stripe</div>
-        <div class="step-desc">Agents pay autonomously with USDC · 15 Networks via x402 — no human card needed. Humans can use Stripe. Both rails, one platform.</div>
+        <div class="step-desc">Agents pay autonomously with USDC · 15 Networks via x402 - no human card needed. Humans can use Stripe. Both rails, one platform.</div>
       </div>
       <div class="step-card">
         <div class="step-icon">⚡</div>
         <div class="step-num">Step 03</div>
         <div class="step-title">Call any tool via REST</div>
-        <div class="step-desc">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too.</div>
+        <div class="step-desc">Every tool is a single POST request. JSON in, JSON out. Built for machines - works great for humans too.</div>
       </div>
     </div>
   </div>
@@ -676,16 +798,16 @@
       <div>
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 1 — Get your key</div>
-            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> — your API key is shown on screen instantly. 100 free credits included, no credit card required.</p>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 1 - Get your key</div>
+            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> - your API key is shown on screen instantly. 100 free credits included, no credit card required.</p>
             <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--amber);text-decoration:none;border:1px solid rgba(255,144,16,0.3);border-radius:6px;padding:6px 12px;background:rgba(255,144,16,0.07);transition:all 0.15s;">Get free API key →</a>
           </div>
           <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 2 — Pick a tool</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 2 - Pick a tool</div>
             <p style="font-size:14px;color:var(--muted);margin:0;line-height:1.6;">Browse all 53 tools below. Each has one endpoint, one JSON body, one response. No auth flows, no OAuth, no rate-limit tokens to manage.</p>
           </div>
           <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 3 — Call it</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 3 - Call it</div>
             <p style="font-size:14px;color:var(--muted);margin:0;line-height:1.6;">Pass <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:12px;">x-api-key: YOUR_KEY</code> in the header. That's the only auth step, forever.</p>
           </div>
         </div>
@@ -734,7 +856,7 @@
   <div class="wrap">
     <div class="section-tag">Tool Suite</div>
     <h2 class="section-title">The tools every agent needs to actually work</h2>
-    <p class="section-sub">Every tool is a single POST request. JSON in, JSON out. Built for machines — works great for humans too. Scraping that handles JavaScript, AI that routes to any model, voice in and out, real-time memory, SMS, email, payments, legal.</p>
+    <p class="section-sub">Every tool is a single POST request. JSON in, JSON out. Built for machines - works great for humans too. Scraping that handles JavaScript, AI that routes to any model, voice in and out, real-time memory, SMS, email, payments, legal.</p>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 32px;align-items:center;">
       <span style="font-size:11px;color:rgba(255,255,255,0.35);font-family:var(--mono);">AI POWERED BY</span>
       <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(204,102,255,0.12);color:#cc66ff;border:1px solid rgba(204,102,255,0.3);">Claude (Anthropic)</span>
@@ -764,7 +886,7 @@
           <div class="tool-name">AI Generate</div>
           <span class="tool-credits">20 cr</span>
         </div>
-        <div class="tool-desc">Text generation across Claude, GPT-4o, Gemini, and Grok — all from one call. Pass a model param to route to any model. One key replaces four separate AI accounts.</div>
+        <div class="tool-desc">Text generation across Claude, GPT-4o, Gemini, and Grok - all from one call. Pass a model param to route to any model. One key replaces four separate AI accounts.</div>
         <div class="tool-endpoint">POST /v1/tools/ai-generate</div>
       </div>
       <div class="tool-card" data-cat="AI">
@@ -773,7 +895,7 @@
           <div class="tool-name">Image Generate</div>
           <span class="tool-credits">15 cr</span>
         </div>
-        <div class="tool-desc">Generate images from text prompts without spinning up a separate image API. Returns URL or base64. Your agent gets visuals in one call — no pipeline to build.</div>
+        <div class="tool-desc">Generate images from text prompts without spinning up a separate image API. Returns URL or base64. Your agent gets visuals in one call - no pipeline to build.</div>
         <div class="tool-endpoint">POST /v1/tools/image-generate</div>
       </div>
       <div class="tool-card" data-cat="AI">
@@ -782,7 +904,7 @@
           <div class="tool-name">OCR Extract</div>
           <span class="tool-credits">10 cr</span>
         </div>
-        <div class="tool-desc">Receipts, invoices, screenshots, handwriting — send the image URL, get back clean text. Agents that process documents skip building a vision pipeline entirely.</div>
+        <div class="tool-desc">Receipts, invoices, screenshots, handwriting - send the image URL, get back clean text. Agents that process documents skip building a vision pipeline entirely.</div>
         <div class="tool-endpoint">POST /v1/tools/ocr-extract</div>
       </div>
       <div class="tool-card" data-cat="AI">
@@ -791,7 +913,7 @@
           <div class="tool-name">Summarize</div>
           <span class="tool-credits">10 cr</span>
         </div>
-        <div class="tool-desc">Turn any long-form text into a paragraph, bullets, TL;DR, headline, or executive summary. Pass up to 8,000 words — get back exactly what your agent needs downstream.</div>
+        <div class="tool-desc">Turn any long-form text into a paragraph, bullets, TL;DR, headline, or executive summary. Pass up to 8,000 words - get back exactly what your agent needs downstream.</div>
         <div class="tool-endpoint">POST /v1/tools/summarize</div>
       </div>
       <div class="tool-card" data-cat="AI">
@@ -800,7 +922,7 @@
           <div class="tool-name">Sentiment Analysis</div>
           <span class="tool-credits">8 cr</span>
         </div>
-        <div class="tool-desc">Know how text feels before your agent acts on it. Returns sentiment score plus 6 emotion dimensions — joy, anger, fear, sadness, surprise, disgust — with confidence scores.</div>
+        <div class="tool-desc">Know how text feels before your agent acts on it. Returns sentiment score plus 6 emotion dimensions - joy, anger, fear, sadness, surprise, disgust - with confidence scores.</div>
         <div class="tool-endpoint">POST /v1/tools/sentiment-analysis</div>
       </div>
       <div class="tool-card" data-cat="AI">
@@ -845,7 +967,7 @@
           <div class="tool-name">Screenshot Capture</div>
           <span class="tool-credits">10 cr</span>
         </div>
-        <div class="tool-desc">Agents that need to see a page — not just scrape it — send a URL and get back a full PNG. Full-page or viewport. Handles JS-rendered SPAs. No browser to manage.</div>
+        <div class="tool-desc">Agents that need to see a page - not just scrape it - send a URL and get back a full PNG. Full-page or viewport. Handles JS-rendered SPAs. No browser to manage.</div>
         <div class="tool-endpoint">POST /v1/tools/screenshot-capture</div>
       </div>
       <div class="tool-card" data-cat="Web">
@@ -872,7 +994,7 @@
           <div class="tool-name">Search Web</div>
           <span class="tool-credits">5 cr</span>
         </div>
-        <div class="tool-desc">Web search with structured results — title, URL, snippet. Up to 10 results. No API key needed for basic use.</div>
+        <div class="tool-desc">Web search with structured results - title, URL, snippet. Up to 10 results. No API key needed for basic use.</div>
         <div class="tool-endpoint">POST /v1/tools/search-web</div>
       </div>
       <div class="tool-card" data-cat="Web">
@@ -881,7 +1003,7 @@
           <div class="tool-name">Browser Task</div>
           <span class="tool-credits">10 cr</span>
         </div>
-        <div class="tool-desc">Headless browser automation — extract, click, type, scrape JS-rendered pages and SPAs. Playwright-powered.</div>
+        <div class="tool-desc">Headless browser automation - extract, click, type, scrape JS-rendered pages and SPAs. Playwright-powered.</div>
         <div class="tool-endpoint">POST /v1/tools/browser-task</div>
       </div>
       <div class="tool-card" data-cat="Web">
@@ -980,7 +1102,7 @@
           <div class="tool-name">PII Detect</div>
           <span class="tool-credits">10 cr</span>
         </div>
-        <div class="tool-desc">Before your agent logs, stores, or passes data anywhere — run it through here. Detects and redacts emails, SSNs, phones, credit cards with position-aware output. One call keeps your pipeline clean.</div>
+        <div class="tool-desc">Before your agent logs, stores, or passes data anywhere - run it through here. Detects and redacts emails, SSNs, phones, credit cards with position-aware output. One call keeps your pipeline clean.</div>
         <div class="tool-endpoint">POST /v1/tools/pii-detect</div>
       </div>
       <div class="tool-card" data-cat="Utils">
@@ -1025,7 +1147,7 @@
           <div class="tool-name">Whois Lookup</div>
           <span class="tool-credits">3 cr</span>
         </div>
-        <div class="tool-desc">Domain registration date, expiry, nameservers via RDAP. Clean structured JSON — no parsing messy whois text.</div>
+        <div class="tool-desc">Domain registration date, expiry, nameservers via RDAP. Clean structured JSON - no parsing messy whois text.</div>
         <div class="tool-endpoint">POST /v1/tools/whois-lookup</div>
       </div>
       <div class="tool-card" data-cat="Comms">
@@ -1106,7 +1228,7 @@
           <div class="tool-name">Transcribe Audio</div>
           <span class="tool-credits">8 cr</span>
         </div>
-        <div class="tool-desc">Transcribe audio files to text via OpenAI Whisper. Pass a URL — 100+ languages, timestamps optional.</div>
+        <div class="tool-desc">Transcribe audio files to text via OpenAI Whisper. Pass a URL - 100+ languages, timestamps optional.</div>
         <div class="tool-endpoint">POST /v1/tools/transcribe-audio</div>
       </div>
       <div class="tool-card" data-cat="Comms">
@@ -1115,7 +1237,7 @@
           <div class="tool-name">Email Send</div>
           <span class="tool-credits">3 cr</span>
         </div>
-        <div class="tool-desc">Send transactional emails via Resend. Plain text or HTML. From, to, subject, body — done.</div>
+        <div class="tool-desc">Send transactional emails via Resend. Plain text or HTML. From, to, subject, body - done.</div>
         <div class="tool-endpoint">POST /v1/tools/email-send</div>
       </div>
       <div class="tool-card" data-cat="Memory">
@@ -1124,7 +1246,7 @@
           <div class="tool-name">Vector Store</div>
           <span class="tool-credits">5 cr</span>
         </div>
-        <div class="tool-desc">Embed and store text chunks in a managed vector database. Pass content and a namespace — retrieval-ready in seconds. The foundation of any agent with long-term memory or a knowledge base.</div>
+        <div class="tool-desc">Embed and store text chunks in a managed vector database. Pass content and a namespace - retrieval-ready in seconds. The foundation of any agent with long-term memory or a knowledge base.</div>
         <div class="tool-endpoint">POST /v1/tools/vector-store</div>
       </div>
       <div class="tool-card" data-cat="Memory">
@@ -1151,7 +1273,7 @@
           <div class="tool-name">Crypto Price</div>
           <span class="tool-credits">2 cr</span>
         </div>
-        <div class="tool-desc">Live spot prices, tickers, and order book snapshots for any trading pair. Real-time market data for trading agents, portfolio trackers, and DeFi automations — no exchange account needed.</div>
+        <div class="tool-desc">Live spot prices, tickers, and order book snapshots for any trading pair. Real-time market data for trading agents, portfolio trackers, and DeFi automations - no exchange account needed.</div>
         <div class="tool-endpoint">POST /v1/tools/crypto-price</div>
       </div>
       <div class="tool-card" data-cat="Web">
@@ -1222,12 +1344,12 @@
   <div class="wrap">
     <div class="section-tag">Finance &amp; Crypto</div>
     <h2 class="section-title">Real-time crypto data. No exchange account needed.</h2>
-    <p class="section-sub">5 crypto tools powered by CoinGecko — live prices, market caps, news, historical data, and token lookup. Your trading agent or portfolio tracker gets real-time market data in one API call.</p>
+    <p class="section-sub">5 crypto tools powered by CoinGecko - live prices, market caps, news, historical data, and token lookup. Your trading agent or portfolio tracker gets real-time market data in one API call.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:36px;">
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">BTC</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Crypto Price</div>
-        <div style="color:var(--muted);font-size:13px;">Live spot price for any coin — BTC, ETH, SOL, and 10,000+ more</div>
+        <div style="color:var(--muted);font-size:13px;">Live spot price for any coin - BTC, ETH, SOL, and 10,000+ more</div>
         <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /crypto-price</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
@@ -1245,13 +1367,13 @@
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">HIST</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Price History</div>
-        <div style="color:var(--muted);font-size:13px;">OHLCV historical data — daily, hourly, or minute-level charts</div>
+        <div style="color:var(--muted);font-size:13px;">OHLCV historical data - daily, hourly, or minute-level charts</div>
         <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">4 credits · /crypto-history</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">TKN</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Token Lookup</div>
-        <div style="color:var(--muted);font-size:13px;">Find any token by name or contract address — full metadata</div>
+        <div style="color:var(--muted);font-size:13px;">Find any token by name or contract address - full metadata</div>
         <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /token-lookup</div>
       </div>
     </div>
@@ -1265,12 +1387,12 @@
       <div>
         <div class="section-tag">x402 Protocol · 15 Networks</div>
         <h2 class="section-title">AI agents pay with USDC, USDT, or ETH. Automatically.</h2>
-        <p class="section-sub">Arch supports the x402 payment protocol — built on <strong style="color:var(--fg);">Coinbase Base</strong>, Ethereum, Arbitrum, Polygon, Optimism, and Solana. Your agent discovers tools, sees the price in USDC, pays autonomously, and calls the endpoint. No human in the loop, no wallet setup, no credit card management.</p>
+        <p class="section-sub">Arch supports the x402 payment protocol - built on <strong style="color:var(--fg);">Coinbase Base</strong>, Ethereum, Arbitrum, Polygon, Optimism, and Solana. Your agent discovers tools, sees the price in USDC, pays autonomously, and calls the endpoint. No human in the loop, no wallet setup, no credit card management.</p>
         <ul class="feature-list">
           <li>→ Agent hits endpoint → receives HTTP 402 with price + wallet address</li>
-          <li>→ Agent pays in USDC on <strong style="color:var(--fg);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Aptos, Noble (Cosmos)</strong>, or <strong style="color:var(--fg);">Solana</strong> — settles in seconds</li>
+          <li>→ Agent pays in USDC on <strong style="color:var(--fg);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Aptos, Noble (Cosmos)</strong>, or <strong style="color:var(--fg);">Solana</strong> - settles in seconds</li>
           <li>→ Endpoint unlocks, tool executes, result returned</li>
-          <li>→ No wallet setup on your side — the protocol handles everything</li>
+          <li>→ No wallet setup on your side - the protocol handles everything</li>
           <li>→ Fallback: Stripe credits always available if you prefer traditional billing</li>
         </ul>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center;">
@@ -1325,7 +1447,7 @@
   <div class="wrap">
     <div class="section-tag">MCP Compatible</div>
     <h2 class="section-title">Plug into any AI tool or coding environment</h2>
-    <p class="section-sub">Arch ships a native MCP server. Pick your client below — copy the config, paste it in, and all 53 tools appear natively. Works on Mac, Windows, and Linux.</p>
+    <p class="section-sub">Arch ships a native MCP server. Pick your client below - copy the config, paste it in, and all 53 tools appear natively. Works on Mac, Windows, and Linux.</p>
 
     <!-- Client tabs -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:32px 0 20px;">
@@ -1390,21 +1512,21 @@
 
     <!-- ChatGPT -->
     <div id="mcp-panel-chatgpt" style="display:none;">
-      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Connect Arch Tools to a Custom GPT in the ChatGPT store. Works on any OS — no config file needed.</p>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Connect Arch Tools to a Custom GPT in the ChatGPT store. Works on any OS - no config file needed.</p>
       <ol style="color:var(--muted);line-height:2.2;padding-left:20px;font-size:14px;">
         <li>Go to <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">chat.openai.com/gpts/editor</code> → Create</li>
         <li>Click <strong style="color:var(--fg);">Actions</strong> → <strong style="color:var(--fg);">Import from URL</strong></li>
         <li>Paste: <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">https://archtools.dev/openapi.json</code></li>
         <li>Set auth type: <strong style="color:var(--fg);">API Key</strong> → header name <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">x-api-key</code></li>
-        <li>Publish — your GPT now has 18 core Arch Tools available natively</li>
+        <li>Publish - your GPT now has 18 core Arch Tools available natively</li>
       </ol>
     </div>
 
     <!-- Grok -->
     <div id="mcp-panel-grok" style="display:none;">
-      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Grok uses OpenAI-compatible function calling. Pass Arch Tools as tools in your request — Grok will call them autonomously when needed.</p>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Grok uses OpenAI-compatible function calling. Pass Arch Tools as tools in your request - Grok will call them autonomously when needed.</p>
       <div class="code-block">
-        <span class="t-line"><span class="code-comment"># Python — Grok function calling with Arch Tools</span></span>
+        <span class="t-line"><span class="code-comment"># Python - Grok function calling with Arch Tools</span></span>
         <span class="t-line">from openai import OpenAI</span>
         <span class="t-line">import requests</span>
         <span class="t-line">&nbsp;</span>
@@ -1421,14 +1543,14 @@
         <span class="t-line">&nbsp;&nbsp;headers=&#123;<span class="code-val">"x-api-key"</span>: <span class="code-val">"arch_your_key"</span>&#125;,</span>
         <span class="t-line">&nbsp;&nbsp;json=&#123;<span class="code-val">"query"</span>: tool_call.args[<span class="code-val">"query"</span>]&#125;)</span>
       </div>
-      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Full OpenAPI spec at <code style="color:var(--text);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">archtools.dev/openapi.json</code> — import directly into your Grok agent for all 53 tools.</p>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Full OpenAPI spec at <code style="color:var(--text);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">archtools.dev/openapi.json</code> - import directly into your Grok agent for all 53 tools.</p>
     </div>
 
     <!-- Gemini -->
     <div id="mcp-panel-gemini" style="display:none;">
-      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Gemini supports native function calling via the Google AI SDK. Register Arch Tools as functions — Gemini invokes them automatically during inference.</p>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Gemini supports native function calling via the Google AI SDK. Register Arch Tools as functions - Gemini invokes them automatically during inference.</p>
       <div class="code-block">
-        <span class="t-line"><span class="code-comment"># Python — Gemini function calling with Arch Tools</span></span>
+        <span class="t-line"><span class="code-comment"># Python - Gemini function calling with Arch Tools</span></span>
         <span class="t-line">import google.generativeai as genai</span>
         <span class="t-line">import requests</span>
         <span class="t-line">&nbsp;</span>
@@ -1447,7 +1569,7 @@
         <span class="t-line">&nbsp;&nbsp;headers=&#123;<span class="code-val">"x-api-key"</span>: <span class="code-val">"arch_your_key"</span>&#125;,</span>
         <span class="t-line">&nbsp;&nbsp;json=&#123;<span class="code-val">"query"</span>: fn_call.args[<span class="code-val">"query"</span>]&#125;)</span>
       </div>
-      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Full OpenAPI spec at <code style="color:var(--text);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">archtools.dev/openapi.json</code> — register any of the 53 tools as Gemini functions.</p>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Full OpenAPI spec at <code style="color:var(--text);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">archtools.dev/openapi.json</code> - register any of the 53 tools as Gemini functions.</p>
     </div>
 
     <!-- REST API -->
@@ -1475,7 +1597,7 @@
         <span class="t-line">&nbsp;&nbsp;-Body <span class="code-val">'&#123;"url":"https://example.com"&#125;'</span></span>
       </div>
       <div id="lang-panel-node" class="code-block" style="display:none;">
-        <span class="t-line"><span class="code-comment">// Node.js — works in v18+ (built-in fetch)</span></span>
+        <span class="t-line"><span class="code-comment">// Node.js - works in v18+ (built-in fetch)</span></span>
         <span class="t-line">const res = await fetch(<span class="code-val">'https://archtools.dev/v1/tools/web-scrape'</span>, &#123;</span>
         <span class="t-line">&nbsp;&nbsp;method: <span class="code-val">'POST'</span>,</span>
         <span class="t-line">&nbsp;&nbsp;headers: &#123; <span class="code-val">'x-api-key'</span>: <span class="code-val">'arch_your_key'</span>, <span class="code-val">'Content-Type'</span>: <span class="code-val">'application/json'</span> &#125;,</span>
@@ -1484,7 +1606,7 @@
         <span class="t-line">const data = await res.json();</span>
       </div>
       <div id="lang-panel-python" class="code-block" style="display:none;">
-        <span class="t-line"><span class="code-comment"># Python — pip install requests</span></span>
+        <span class="t-line"><span class="code-comment"># Python - pip install requests</span></span>
         <span class="t-line">import requests</span>
         <span class="t-line">res = requests.post(</span>
         <span class="t-line">&nbsp;&nbsp;<span class="code-val">"https://archtools.dev/v1/tools/web-scrape"</span>,</span>
@@ -1686,7 +1808,7 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Rate Limits</div>
     <h2 class="section-title">Built for real workloads</h2>
-    <p class="section-sub" style="margin-bottom:36px;">Limits are per API key. x402 micropayment calls bypass rate limits entirely — the chain is the ratelimiter.</p>
+    <p class="section-sub" style="margin-bottom:36px;">Limits are per API key. x402 micropayment calls bypass rate limits entirely - the chain is the ratelimiter.</p>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:560px;">
         <thead>
@@ -1739,7 +1861,7 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Real numbers</div>
     <h2 class="section-title">What does $9 actually buy?</h2>
-    <p class="section-sub" style="max-width:560px;">10,000 credits, never expire. Here's what that looks like in practice — pick any tool, run it, repeat until empty.</p>
+    <p class="section-sub" style="max-width:560px;">10,000 credits, never expire. Here's what that looks like in practice - pick any tool, run it, repeat until empty.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:36px;">
       <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:14px;padding:24px 22px;">
         <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--amber);line-height:1;">2,000</div>
@@ -1750,7 +1872,7 @@ function showLangTab(lang) {
       <div style="background:rgba(255,40,150,0.06);border:1px solid rgba(255,40,150,0.2);border-radius:14px;padding:24px 22px;">
         <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--pink);line-height:1;">500</div>
         <div style="font-family:var(--display);font-size:16px;font-weight:700;margin:8px 0 4px;">AI Generations</div>
-        <div style="font-size:13px;color:var(--muted);">Claude, GPT-4, Grok, or Gemini — full text responses. 20 credits each.</div>
+        <div style="font-size:13px;color:var(--muted);">Claude, GPT-4, Grok, or Gemini - full text responses. 20 credits each.</div>
         <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/ai-generate</div>
       </div>
       <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:14px;padding:24px 22px;">
@@ -1766,7 +1888,7 @@ function showLangTab(lang) {
         <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--dimmer);">POST /v1/tools/convert-format</div>
       </div>
     </div>
-    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Mix and match across all 53 tools. Credits never expire — use them at your own pace.</p>
+    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">Mix and match across all 53 tools. Credits never expire - use them at your own pace.</p>
   </div>
 </section>
 
@@ -1802,26 +1924,26 @@ function showLangTab(lang) {
           <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:13px 16px;font-weight:600;color:var(--text);">Conversion & Data</td>
             <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Currency, format convert, JSONPath, language detect</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--cyan);font-weight:600;">3–5</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">2,000–3,333</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--cyan);font-weight:600;">3-5</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">2,000-3,333</td>
           </tr>
           <tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);">
             <td style="padding:13px 16px;font-weight:600;color:var(--text);">Crypto & Finance</td>
             <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Crypto price, OHLCV, fear/greed, sentiment</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--cyan);font-weight:600;">5–10</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">1,000–2,000</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--cyan);font-weight:600;">5-10</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">1,000-2,000</td>
           </tr>
           <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:13px 16px;font-weight:600;color:var(--text);">Web & Search</td>
             <td style="padding:13px 16px;color:var(--muted);font-size:13px;">Web scrape, search, RSS parse, screenshot</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--amber);font-weight:600;">5–10</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">1,000–2,000</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--amber);font-weight:600;">5-10</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">1,000-2,000</td>
           </tr>
           <tr style="background:rgba(255,255,255,0.01);">
             <td style="padding:13px 16px;font-weight:600;color:var(--text);">AI Generation</td>
             <td style="padding:13px 16px;color:var(--muted);font-size:13px;">AI text, image generate, OCR, browser task</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--pink);font-weight:600;">10–25</td>
-            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">400–1,000</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--pink);font-weight:600;">10-25</td>
+            <td style="padding:13px 16px;text-align:center;font-family:var(--mono);color:var(--muted);">400-1,000</td>
           </tr>
         </tbody>
       </table>
@@ -1925,16 +2047,16 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Quick Start</div>
     <h2 class="section-title">Up and running in 3 steps.</h2>
-    <p class="section-sub" style="margin-bottom:40px;">Get your API key, make your first call, and integrate with your agent — all in under 5 minutes.</p>
+    <p class="section-sub" style="margin-bottom:40px;">Get your API key, make your first call, and integrate with your agent - all in under 5 minutes.</p>
 
     <div class="qs-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:8px;">
-      <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--amber);">STEP 1 — GET YOUR KEY</div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--purple);">STEP 2 — FIRST CALL</div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--cyan);">STEP 3 — USE IN AGENT</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--amber);">STEP 1 - GET YOUR KEY</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--purple);">STEP 2 - FIRST CALL</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.08em;padding-bottom:8px;border-bottom:2px solid var(--cyan);">STEP 3 - USE IN AGENT</div>
     </div>
     <div class="qs-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:36px;">
       <div class="code-block" style="margin:0;">
-        <span class="t-line"><span class="code-comment"># Register — get 100 free credits</span></span>
+        <span class="t-line"><span class="code-comment"># Register - get 100 free credits</span></span>
         <span class="t-line"><span class="t-prompt">$</span> curl -X POST https://archtools.dev/v1/agent/register \</span>
         <span class="t-line">&nbsp;&nbsp;-H <span class="code-str">"Content-Type: application/json"</span> \</span>
         <span class="t-line">&nbsp;&nbsp;-d <span class="code-str">'{"email":"you@example.com"}'</span></span>
@@ -1976,7 +2098,7 @@ function showLangTab(lang) {
           What happens when my credits run out?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Your API calls return a <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402 Payment Required</code> response with a credit count of 0. Your key stays active — just top up via Stripe or send USDC directly to unlock the endpoint. No service disruption, no account deletion. Your data and key are preserved.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Your API calls return a <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402 Payment Required</code> response with a credit count of 0. Your key stays active - just top up via Stripe or send USDC directly to unlock the endpoint. No service disruption, no account deletion. Your data and key are preserved.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -1984,7 +2106,7 @@ function showLangTab(lang) {
           Do credits expire?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;"><strong style="color:var(--green);">No.</strong> One-time credit purchases never expire. Buy once, use whenever. Every other API platform we know of expires your credits monthly — we don't, and never will. Subscription plans auto-refill credits each month, but unused credits carry over and don't disappear.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;"><strong style="color:var(--green);">No.</strong> One-time credit purchases never expire. Buy once, use whenever. Every other API platform we know of expires your credits monthly - we don't, and never will. Subscription plans auto-refill credits each month, but unused credits carry over and don't disappear.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -1992,7 +2114,7 @@ function showLangTab(lang) {
           Can my AI agent pay without a human in the loop?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Yes — that's the entire point of the x402 protocol. Your agent hits a tool endpoint, receives a <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402</code> response with a USDC price and wallet address, signs the payment from its own wallet, and retries the request. The endpoint unlocks automatically. No human approves anything. No credit card required on the agent side. This is HTTP-native machine-to-machine payment.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Yes - that's the entire point of the x402 protocol. Your agent hits a tool endpoint, receives a <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402</code> response with a USDC price and wallet address, signs the payment from its own wallet, and retries the request. The endpoint unlocks automatically. No human approves anything. No credit card required on the agent side. This is HTTP-native machine-to-machine payment.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -2000,7 +2122,7 @@ function showLangTab(lang) {
           What's the difference between paying with USDC vs Stripe?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Both pay for the same tools at the same prices. The difference is who's paying. <strong style="color:var(--text);">Stripe</strong> is for humans — you buy a credit pack or subscribe with a credit card, credits are added to your account, and every tool call deducts from that balance. <strong style="color:var(--text);">USDC via x402</strong> is for AI agents — the agent pays directly per call, on-chain, in real time, with no pre-purchased balance needed. You can use both on the same account.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Both pay for the same tools at the same prices. The difference is who's paying. <strong style="color:var(--text);">Stripe</strong> is for humans - you buy a credit pack or subscribe with a credit card, credits are added to your account, and every tool call deducts from that balance. <strong style="color:var(--text);">USDC via x402</strong> is for AI agents - the agent pays directly per call, on-chain, in real time, with no pre-purchased balance needed. You can use both on the same account.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -2008,7 +2130,7 @@ function showLangTab(lang) {
           Which blockchain networks are supported for payment?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">15 networks: <strong style="color:var(--text);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad</strong> (EVM/USDC), plus <strong style="color:var(--text);">Solana, Noble/Cosmos, Algorand, Stellar, Sui, Polkadot, Aptos</strong>. USDT is accepted on 6 EVM chains. Native tokens supported: ETH, BNB, NEAR, SOL, TAO. If your agent holds any of these, it can pay. No bridging, no wrapping — send natively.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">15 networks: <strong style="color:var(--text);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad</strong> (EVM/USDC), plus <strong style="color:var(--text);">Solana, Noble/Cosmos, Algorand, Stellar, Sui, Polkadot, Aptos</strong>. USDT is accepted on 6 EVM chains. Native tokens supported: ETH, BNB, NEAR, SOL, TAO. If your agent holds any of these, it can pay. No bridging, no wrapping - send natively.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -2016,7 +2138,7 @@ function showLangTab(lang) {
           Is there a free tier? What do I actually get?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with your email — no credit card needed — and you instantly receive <strong style="color:var(--green);">100 free credits</strong>, refreshed every month. That's enough for ~20 web scrapes, ~50 hash/validate/UUID calls, or 5 AI generations. No time limit, no expiry, no upsell wall. Use it to test every tool before spending a dollar. When you're ready to scale, one-time credit packs start at $9.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with your email - no credit card needed - and you instantly receive <strong style="color:var(--green);">100 free credits</strong>, refreshed every month. That's enough for ~20 web scrapes, ~50 hash/validate/UUID calls, or 5 AI generations. No time limit, no expiry, no upsell wall. Use it to test every tool before spending a dollar. When you're ready to scale, one-time credit packs start at $9.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -2024,7 +2146,7 @@ function showLangTab(lang) {
           What exactly is a credit?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">A credit is the unit of usage on Arch Tools. Each successful API call deducts credits from your balance — most utility tools (hash, UUID, validate) cost <strong style="color:var(--green);">1 credit</strong>. Mid-tier tools (web scrape, currency convert) cost 2–5 credits. AI generation and advanced tools cost 10–25 credits. Failed requests (4xx errors) are always free. Your current balance is returned in every API response as <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">credits_remaining</code>.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">A credit is the unit of usage on Arch Tools. Each successful API call deducts credits from your balance - most utility tools (hash, UUID, validate) cost <strong style="color:var(--green);">1 credit</strong>. Mid-tier tools (web scrape, currency convert) cost 2-5 credits. AI generation and advanced tools cost 10-25 credits. Failed requests (4xx errors) are always free. Your current balance is returned in every API response as <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">credits_remaining</code>.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -2032,7 +2154,7 @@ function showLangTab(lang) {
           What is x402 and how does it work?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">x402 is an open HTTP payment protocol — an extension of the classic <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402 Payment Required</code> status code. When an AI agent calls a tool without a pre-purchased balance, the server responds with a 402 containing a USDC price and wallet address. The agent signs a payment on-chain (Base, Solana, or Ethereum), includes the signed receipt in a retry request, and the endpoint unlocks immediately — all without a human or credit card. Arch Tools is the first production API platform to implement x402 natively. Learn more at <a href="https://x402.org" target="_blank" style="color:var(--purple);">x402.org</a>.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">x402 is an open HTTP payment protocol - an extension of the classic <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">402 Payment Required</code> status code. When an AI agent calls a tool without a pre-purchased balance, the server responds with a 402 containing a USDC price and wallet address. The agent signs a payment on-chain (Base, Solana, or Ethereum), includes the signed receipt in a retry request, and the endpoint unlocks immediately - all without a human or credit card. Arch Tools is the first production API platform to implement x402 natively. Learn more at <a href="https://x402.org" target="_blank" style="color:var(--purple);">x402.org</a>.</p>
       </details>
 
       <details style="padding:20px 0;">
@@ -2040,7 +2162,7 @@ function showLangTab(lang) {
           How do I get an API key?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address — no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response and displayed on screen. Store it safely — it's the only authentication you need for all 53 tools.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address - no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response and displayed on screen. Store it safely - it's the only authentication you need for all 53 tools.</p>
       </details>
 
     </div>
@@ -2098,7 +2220,7 @@ function applyToolFilters() {
 
 // Safari-safe: wrap all DOM-dependent code in DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
-// Category filter (legacy — kept for marquee scroll-to behavior)
+// Category filter (legacy - kept for marquee scroll-to behavior)
 function filterTools(cat, btn) {
   var matchBtn = btn || [...document.querySelectorAll('#tool-cat-filters .cat-pill')].find(function(p){ return p.dataset.filter === cat; });
   filterToolCat(cat, matchBtn);
@@ -2211,7 +2333,7 @@ async function handleRegister() {
       // Redirect to signup success page so user sees key prominently with copy button
       window.location.href = '/signup?key=' + encodeURIComponent(apiKey) + '&credits=' + (data.credits || 100);
     } else if (data.error === 'email_exists' || (data.message && data.message.includes('Unique constraint'))) {
-      showToast(toast, '✓ Account already exists — sign in to access your dashboard.', 'success');
+      showToast(toast, '✓ Account already exists - sign in to access your dashboard.', 'success');
       btn.textContent = '$ register';
       btn.disabled = false;
     } else {
@@ -2220,7 +2342,7 @@ async function handleRegister() {
       btn.disabled = false;
     }
   } catch (e) {
-    showToast(toast, 'Network error — please try again.', 'error');
+    showToast(toast, 'Network error - please try again.', 'error');
     btn.textContent = '$ register';
     btn.disabled = false;
   }
@@ -2248,11 +2370,74 @@ function showToast(el, msg, type) {
 </div>
 <script>
 let currentRawUrl='';
-function openCodeViewer(e){e.preventDefault();const l=e.currentTarget,u=l.href,t=l.dataset.codeView||u;currentRawUrl=u;document.getElementById('code-modal-title').textContent=t;document.getElementById('code-modal-body').innerHTML='<div class="code-modal-loading">Loading…</div>';document.getElementById('code-overlay').classList.add('active');document.getElementById('code-modal').classList.add('active');document.body.style.overflow='hidden';fetch(u).then(r=>r.text()).then(txt=>{let f=txt;try{f=JSON.stringify(JSON.parse(txt),null,2)}catch(e){}document.getElementById('code-modal-body').innerHTML='<pre>'+f.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>'}).catch(()=>{document.getElementById('code-modal-body').innerHTML='<div class="code-modal-loading">Failed to load — <a href="'+u+'" target="_blank" style="color:var(--indigo)">open directly &#x2197;</a></div>'})}
+function openCodeViewer(e){e.preventDefault();const l=e.currentTarget,u=l.href,t=l.dataset.codeView||u;currentRawUrl=u;document.getElementById('code-modal-title').textContent=t;document.getElementById('code-modal-body').innerHTML='<div class="code-modal-loading">Loading…</div>';document.getElementById('code-overlay').classList.add('active');document.getElementById('code-modal').classList.add('active');document.body.style.overflow='hidden';fetch(u).then(r=>r.text()).then(txt=>{let f=txt;try{f=JSON.stringify(JSON.parse(txt),null,2)}catch(e){}document.getElementById('code-modal-body').innerHTML='<pre>'+f.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>'}).catch(()=>{document.getElementById('code-modal-body').innerHTML='<div class="code-modal-loading">Failed to load - <a href="'+u+'" target="_blank" style="color:var(--indigo)">open directly &#x2197;</a></div>'})}
 function closeCodeViewer(){document.getElementById('code-overlay').classList.remove('active');document.getElementById('code-modal').classList.remove('active');document.body.style.overflow=''}
 function copyCodeContent(){const p=document.querySelector('#code-modal-body pre');if(p){navigator.clipboard.writeText(p.textContent);const b=document.getElementById('code-copy-btn');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1500)}}
 function openRawUrl(){if(currentRawUrl)window.open(currentRawUrl,'_blank')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCodeViewer()});
+</script>
+
+<script>
+// ── HERO TERMINAL: Tab switching + x402 animated flow ──────────────────
+(function(){
+  var cur=0, autoT, paused=false;
+  function sw(i, manual){
+    ['hb0','hb1','hb2','hb3','hb4'].forEach(function(id,j){
+      var el=document.getElementById(id); if(el) el.classList.toggle('active',j===i);
+    });
+    ['ht0','ht1','ht2','ht3','ht4'].forEach(function(id,j){
+      var el=document.getElementById(id); if(el) el.classList.toggle('active',j===i);
+    });
+    cur=i;
+    if(i===0) startFlow(); else stopFlow();
+    if(manual){paused=true;clearTimeout(autoT);setTimeout(function(){paused=false;sched();},30000);}
+  }
+  ['hb0','hb1','hb2','hb3','hb4'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    if(el) el.addEventListener('click',function(){sw(i,true);});
+  });
+  function sched(){clearTimeout(autoT);autoT=setTimeout(function(){if(!paused){sw((cur+1)%5);sched();}},cur===0?11000:7000);}
+
+  // x402 step animation
+  var XS=['xs1','xs2','xs3','xs4'], fp=0, fT;
+  function hi(n){XS.forEach(function(id,i){var e=document.getElementById(id);if(!e)return;e.classList.remove('active','done');if(i<n)e.classList.add('done');else if(i===n)e.classList.add('active');});}
+  function ftick(){hi(fp);fp++;if(fp<XS.length)fT=setTimeout(ftick,1800);else fT=setTimeout(floop,3000);}
+  function floop(){fp=0;hi(-1);fT=setTimeout(ftick,400);}
+  function startFlow(){clearTimeout(fT);fp=0;hi(-1);fT=setTimeout(ftick,300);}
+  function stopFlow(){clearTimeout(fT);}
+
+  // Boot
+  startFlow();
+  sched();
+})();
+
+// ── RAF MARQUEE: replaces CSS animation — zero jank on Windows Chrome ──
+window.addEventListener('load', function(){
+  var SPEED = 70; // px per second
+  var rows = document.querySelectorAll('.mq-row');
+  if (!rows.length) return;
+  rows.forEach(function(row, i){
+    var rev = row.classList.contains('rev');
+    // Measure half-width (content is duplicated so full scrollWidth = 2x one set)
+    var setW = row.scrollWidth / 2;
+    if (setW <= 0) return;
+    var x = rev ? -setW : 0;
+    var last = null;
+    function tick(ts){
+      if (last !== null){
+        var d = (ts - last) / 1000;
+        var dx = SPEED * d;
+        x += rev ? dx : -dx;
+        if (!rev && x <= -setW) x += setW;
+        if (rev && x >= 0) x = -setW;
+        row.style.transform = 'translate3d(' + (Math.round(x * 10) / 10) + 'px,0,0)';
+      }
+      last = ts;
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+});
 </script>
 </body>
 </html>
