@@ -3,8 +3,8 @@ services:
     name: Arch-AI-Tools
     runtime: node
     rootDir: api
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && node dist/index.js
+    buildCommand: npm install --include=dev --ignore-scripts && chmod +x ./node_modules/.bin/prisma && node ./node_modules/prisma/build/index.js generate
+    startCommand: node migrate-startup.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
