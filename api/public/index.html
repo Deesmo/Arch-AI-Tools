@@ -1314,6 +1314,8 @@
       <button onclick="showMcpTab('cursor')" id="mcp-tab-cursor" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">Cursor</button>
       <button onclick="showMcpTab('windsurf')" id="mcp-tab-windsurf" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">Windsurf</button>
       <button onclick="showMcpTab('chatgpt')" id="mcp-tab-chatgpt" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">ChatGPT</button>
+      <button onclick="showMcpTab('grok')" id="mcp-tab-grok" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">Grok (xAI)</button>
+      <button onclick="showMcpTab('gemini')" id="mcp-tab-gemini" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">Gemini</button>
       <button onclick="showMcpTab('api')" id="mcp-tab-api" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;">REST API</button>
     </div>
 
@@ -1377,7 +1379,56 @@
         <li>Set auth type: <strong style="color:var(--fg);">API Key</strong> → header name <code style="color:var(--fg);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">x-api-key</code></li>
         <li>Publish — your GPT now has 18 core Arch Tools available natively</li>
       </ol>
-      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Note: Grok (xAI) and Gemini (Google) support API-level function calling — no consumer connector store yet. Use the REST API directly in your agent code.</p>
+    </div>
+
+    <!-- Grok -->
+    <div id="mcp-panel-grok" style="display:none;">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Grok uses OpenAI-compatible function calling. Pass Arch Tools as tools in your request — Grok will call them autonomously when needed.</p>
+      <div class="code-block">
+        <span class="t-line"><span class="code-comment"># Python — Grok function calling with Arch Tools</span></span>
+        <span class="t-line">from openai import OpenAI</span>
+        <span class="t-line">import requests</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line">client = OpenAI(api_key=<span class="code-val">"xai-your-key"</span>, base_url=<span class="code-val">"https://api.x.ai/v1"</span>)</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line">tools = [&#123;<span class="code-key">"type"</span>: <span class="code-val">"function"</span>, <span class="code-key">"function"</span>: &#123;</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"name"</span>: <span class="code-val">"web_search"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"description"</span>: <span class="code-val">"Search the web via Arch Tools"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"parameters"</span>: &#123;<span class="code-key">"type"</span>:<span class="code-val">"object"</span>,<span class="code-key">"properties"</span>:&#123;<span class="code-key">"query"</span>:&#123;<span class="code-key">"type"</span>:<span class="code-val">"string"</span>&#125;&#125;,<span class="code-key">"required"</span>:[<span class="code-val">"query"</span>]&#125;</span>
+        <span class="t-line">&#125;&#125;]</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line"><span class="code-comment"># When Grok calls web_search, forward to Arch Tools:</span></span>
+        <span class="t-line">requests.post(<span class="code-val">"https://archtools.dev/v1/tools/web-search"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;headers=&#123;<span class="code-val">"x-api-key"</span>: <span class="code-val">"arch_your_key"</span>&#125;,</span>
+        <span class="t-line">&nbsp;&nbsp;json=&#123;<span class="code-val">"query"</span>: tool_call.args[<span class="code-val">"query"</span>]&#125;)</span>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Full OpenAPI spec at <code style="color:var(--text);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">archtools.dev/openapi.json</code> — import directly into your Grok agent for all 53 tools.</p>
+    </div>
+
+    <!-- Gemini -->
+    <div id="mcp-panel-gemini" style="display:none;">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Gemini supports native function calling via the Google AI SDK. Register Arch Tools as functions — Gemini invokes them automatically during inference.</p>
+      <div class="code-block">
+        <span class="t-line"><span class="code-comment"># Python — Gemini function calling with Arch Tools</span></span>
+        <span class="t-line">import google.generativeai as genai</span>
+        <span class="t-line">import requests</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line">genai.configure(api_key=<span class="code-val">"your-gemini-key"</span>)</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line">web_search = genai.protos.Tool(function_declarations=[&#123;</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"name"</span>: <span class="code-val">"web_search"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"description"</span>: <span class="code-val">"Search the web via Arch Tools"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"parameters"</span>: &#123;<span class="code-key">"type"</span>:<span class="code-val">"OBJECT"</span>,<span class="code-key">"properties"</span>:&#123;<span class="code-key">"query"</span>:&#123;<span class="code-key">"type"</span>:<span class="code-val">"STRING"</span>&#125;&#125;&#125;</span>
+        <span class="t-line">&#125;])</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line">model = genai.GenerativeModel(<span class="code-val">"gemini-1.5-pro"</span>, tools=[web_search])</span>
+        <span class="t-line">&nbsp;</span>
+        <span class="t-line"><span class="code-comment"># When Gemini calls web_search, forward to Arch Tools:</span></span>
+        <span class="t-line">requests.post(<span class="code-val">"https://archtools.dev/v1/tools/web-search"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;headers=&#123;<span class="code-val">"x-api-key"</span>: <span class="code-val">"arch_your_key"</span>&#125;,</span>
+        <span class="t-line">&nbsp;&nbsp;json=&#123;<span class="code-val">"query"</span>: fn_call.args[<span class="code-val">"query"</span>]&#125;)</span>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Full OpenAPI spec at <code style="color:var(--text);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;">archtools.dev/openapi.json</code> — register any of the 53 tools as Gemini functions.</p>
     </div>
 
     <!-- REST API -->
@@ -1430,7 +1481,7 @@
 
 <script>
 function showMcpTab(tab) {
-  ['claude','cursor','windsurf','chatgpt','api'].forEach(t => {
+  ['claude','cursor','windsurf','chatgpt','grok','gemini','api'].forEach(t => {
     document.getElementById('mcp-panel-'+t).style.display = t===tab?'block':'none';
     const btn = document.getElementById('mcp-tab-'+t);
     if(t===tab){btn.style.background='rgba(255,144,16,0.12)';btn.style.borderColor='rgba(255,144,16,0.5)';btn.style.color='#FFB030';btn.style.fontWeight='700';}
