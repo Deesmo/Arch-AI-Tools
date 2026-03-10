@@ -11,13 +11,13 @@ exports.LOGIN_HTML = `<!DOCTYPE html>
   <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #07061A; --border: rgba(255,255,255,0.10);
       --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
-      --grad: linear-gradient(135deg,#FF9010,#FF2896);
+      --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
       --green: #34d399; --red: #f87171;
     }
     body {
@@ -53,7 +53,7 @@ exports.LOGIN_HTML = `<!DOCTYPE html>
       padding:0 14px; font-family:inherit; font-size:14px; outline:none;
       transition:border-color 0.15s, box-shadow 0.15s;
     }
-    .field input:focus { border-color:rgba(255,144,16,0.5); box-shadow:0 0 0 3px rgba(255,144,16,0.08); }
+    .field input:focus { border-color:rgba(34,211,238,0.5); box-shadow:0 0 0 3px rgba(34,211,238,0.08); }
     .btn-submit {
       width:100%; height:48px; border-radius:12px; border:none;
       background:var(--grad); color:#fff; font-family:inherit;
@@ -92,7 +92,7 @@ exports.LOGIN_HTML = `<!DOCTYPE html>
   <div class="nav-links">
     <a href="/">Home</a>
     <a href="/docs.html">Docs</a>
-    <a href="/signup">Register</a>
+    <a href="/signup">Sign Up</a>
   </div>
 </nav>
 
