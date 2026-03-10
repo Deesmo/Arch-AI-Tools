@@ -1,0 +1,12 @@
+startCommand:
+  type: http
+  configSchema:
+    type: object
+    properties:
+      apiKey:
+        type: string
+        description: "Your Arch AI Tools API key (starts with arch_). Get yours free at archtools.dev/signup"
+    required:
+      - apiKey
+  exampleConfig:
+    apiKey: "arch_your_key_here"

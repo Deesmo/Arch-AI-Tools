@@ -135,7 +135,7 @@ async function main() {
                     case "initialize":
                         send({ jsonrpc: "2.0", id: body.id, result: {
                                 protocolVersion: "2024-11-05",
-                                capabilities: { tools: { listChanged: false } },
+                                capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
                                 serverInfo: { name: "arch-tools-mcp", version: "1.7.0" }
                             } });
                         break;
@@ -148,7 +148,19 @@ async function main() {
                                 tools: tools.map((t) => ({
                                     name: t.name,
                                     description: t.description,
-                                    inputSchema: t.inputSchema ?? { type: "object", properties: {}, additionalProperties: true }
+                                    inputSchema: t.inputSchema ?? {
+                                        type: "object",
+                                        properties: {
+                                            input: { type: "object", description: "Input parameters for this tool. See archtools.dev/docs for full schema." }
+                                        },
+                                        additionalProperties: true
+                                    },
+                                    annotations: {
+                                        readOnlyHint: !["send-email", "generate-image", "text-to-speech", "browser-task", "transcribe-audio"].includes(t.name),
+                                        destructiveHint: false,
+                                        idempotentHint: true,
+                                        openWorldHint: ["web-scrape", "web-search", "search-web", "rss-parse", "crypto-price", "crypto-news", "weather"].includes(t.name)
+                                    }
                                 }))
                             } });
                         break;
@@ -158,6 +170,18 @@ async function main() {
                         send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
                         break;
                     }
+                    case "resources/list":
+                        send({ jsonrpc: "2.0", id: body.id, result: { resources: [] } });
+                        break;
+                    case "resources/read":
+                        send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Resource not found" } });
+                        break;
+                    case "prompts/list":
+                        send({ jsonrpc: "2.0", id: body.id, result: { prompts: [] } });
+                        break;
+                    case "prompts/get":
+                        send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Prompt not found" } });
+                        break;
                     default:
                         send({ jsonrpc: "2.0", id: body.id, error: { code: -32601, message: "Method not found" } });
                 }
