@@ -6,7 +6,16 @@ startCommand:
       apiKey:
         type: string
         description: "Your Arch AI Tools API key (starts with arch_). Get yours free at archtools.dev/signup"
+      baseUrl:
+        type: string
+        description: "API base URL. Defaults to https://archtools.dev"
+        default: "https://archtools.dev"
+      timeout:
+        type: number
+        description: "Request timeout in milliseconds. Defaults to 30000"
+        default: 30000
     required:
       - apiKey
   exampleConfig:
     apiKey: "arch_your_key_here"
+    baseUrl: "https://archtools.dev"

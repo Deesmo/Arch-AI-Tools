@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { TOOL_SCHEMAS } from "./schemas.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
@@ -177,18 +178,16 @@ async function main() {
               tools: tools.map((t: any) => ({
                 name: t.name,
                 description: t.description,
-                inputSchema: t.inputSchema ?? {
+                inputSchema: TOOL_SCHEMAS[t.name] ?? t.inputSchema ?? {
                   type: "object",
-                  properties: {
-                    input: { type: "object", description: "Input parameters for this tool. See archtools.dev/docs for full schema." }
-                  },
+                  properties: {},
                   additionalProperties: true
                 },
                 annotations: {
-                  readOnlyHint: !["send-email","generate-image","text-to-speech","browser-task","transcribe-audio"].includes(t.name),
+                  readOnlyHint: !["send-email","generate-image","text-to-speech","browser-task","transcribe-audio","image-generate","webhook-send"].includes(t.name),
                   destructiveHint: false,
                   idempotentHint: true,
-                  openWorldHint: ["web-scrape","web-search","search-web","rss-parse","crypto-price","crypto-news","weather"].includes(t.name)
+                  openWorldHint: ["web-scrape","web-search","search-web","rss-parse","crypto-price","crypto-news","crypto-market-cap","crypto-fear-greed","crypto-ohlcv","crypto-sentiment","whois-lookup","check-domain","extract-metadata","extract-page"].includes(t.name)
                 }
               }))
             }});
