@@ -56,6 +56,10 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
       background: var(--grad); color: #fff !important; font-weight: 700;
       padding: 7px 14px; border-radius: 8px; font-size: 12px !important;
     }
+    @media (max-width: 640px) {
+      .at-nav-links a:not(.at-nav-cta) { display: none; }
+      .at-logo-name { font-size: 13px; }
+    }
     /* ── PAGE ── */
     .page {
       display: flex; align-items: center; justify-content: center;
