@@ -93,6 +93,14 @@
     }
     .hero-sub{font-size:17px;color:var(--muted);line-height:1.75;max-width:520px;margin-bottom:36px;}
     .hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+    /* TRUST BAR — desktop only */
+    .hero-trust-bar{display:none;}
+    @media(min-width:900px){
+      .hero-trust-bar{display:grid;grid-template-columns:repeat(4,1fr);background:rgba(136,68,255,0.05);border:1px solid rgba(136,68,255,0.12);border-radius:12px;padding:14px 16px;margin-top:24px;gap:4px;}
+      .trust-item{text-align:center;}
+      .trust-val{font-family:var(--display);font-size:22px;font-weight:800;line-height:1.1;}
+      .trust-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-top:3px;text-transform:uppercase;}
+    }
     .btn-primary{
       display:inline-flex;align-items:center;gap:8px;
       background:linear-gradient(135deg,var(--amber),var(--pink));
@@ -508,6 +516,13 @@
         <div class="hero-btns">
           <a class="btn-primary" href="/signup">$ get-api-key →</a>
           <a class="btn-ghost" href="#x402">how x402 works</a>
+        </div>
+        <!-- TRUST BAR — desktop only -->
+        <div class="hero-trust-bar">
+          <div class="trust-item"><div class="trust-val g-am">53</div><div class="trust-lbl">Tools</div></div>
+          <div class="trust-item"><div class="trust-val g-cy">&lt;200ms</div><div class="trust-lbl">Response</div></div>
+          <div class="trust-item"><div class="trust-val g-bl">15</div><div class="trust-lbl">Chains</div></div>
+          <div class="trust-item"><div class="trust-val g-am">$0</div><div class="trust-lbl">To Start</div></div>
         </div>
       </div>
 
