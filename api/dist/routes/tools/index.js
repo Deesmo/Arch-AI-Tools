@@ -2336,4 +2336,208 @@ router.post("/check-domain", ...toolMiddleware("domain-check"), async (req, res)
         }
     }
 });
+// ─── 51. NEWS-SEARCH ──────────────────────────────────────────────────────────
+router.get("/news-search", auth_1.requireAuth, async (req, res) => {
+    const query = String(req.query.query ?? "").trim();
+    const limit = Math.min(Number(req.query.limit ?? 5), 10);
+    const _ok1 = await (0, credits_1.deductCredits)(req, res, "news-search", 3);
+    if (!_ok1)
+        return;
+    if (!query)
+        return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
+    // Try Brave News first
+    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
+    const tavilyKey = process.env.TAVILY_API_KEY;
+    const serperKey = process.env.SERPER_API_KEY;
+    if (braveKey) {
+        try {
+            const r = await axios_1.default.get("https://api.search.brave.com/res/v1/news/search", {
+                params: { q: query, count: limit, safesearch: "off" },
+                headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
+                timeout: 10000
+            });
+            const results = (r.data.results ?? []).slice(0, limit).map(a => ({
+                title: a.title, url: a.url, description: a.description ?? "", published: a.age ?? null, source: a.source?.name ?? null
+            }));
+            return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, request_id: (0, credits_1.reqId)() });
+        }
+        catch (_) { /* fall through to Tavily */ }
+    }
+    if (tavilyKey) {
+        try {
+            const r = await axios_1.default.post("https://api.tavily.com/search", {
+                api_key: tavilyKey, query, topic: "news", max_results: limit, include_answer: false
+            }, { timeout: 10000 });
+            const results = (r.data.results ?? []).slice(0, limit).map(a => ({
+                title: a.title, url: a.url, description: a.content ?? "", published: a.published_date ?? null, source: a.source ?? null
+            }));
+            return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, request_id: (0, credits_1.reqId)() });
+        }
+        catch (_) { /* fall through to Serper */ }
+    }
+    if (serperKey) {
+        try {
+            const r = await axios_1.default.post("https://google.serper.dev/news", { q: query, num: limit }, {
+                headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" }, timeout: 10000
+            });
+            const results = (r.data.news ?? []).slice(0, limit).map(a => ({
+                title: a.title, url: a.link, description: a.snippet ?? "", published: a.date ?? null, source: a.source ?? null
+            }));
+            return void res.json({ ok: true, query, results, source: "serper", credits_used: 3, request_id: (0, credits_1.reqId)() });
+        }
+        catch (e) {
+            return void res.status(502).json({ ok: false, error: "search_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        }
+    }
+    return void res.status(503).json({ ok: false, error: "no_provider", message: "No news search provider configured", request_id: (0, credits_1.reqId)() });
+});
+// ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
+router.get("/research-report", auth_1.requireAuth, async (req, res) => {
+    const query = String(req.query.query ?? "").trim();
+    const depth = String(req.query.depth ?? "standard").toLowerCase();
+    const _ok2 = await (0, credits_1.deductCredits)(req, res, "research-report", 15);
+    if (!_ok2)
+        return;
+    if (!query)
+        return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
+    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
+    const tavilyKey = process.env.TAVILY_API_KEY;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const numResults = depth === "deep" ? 10 : 5;
+    // Step 1: Gather search results
+    let searchResults = [];
+    if (tavilyKey) {
+        try {
+            const r = await axios_1.default.post("https://api.tavily.com/search", {
+                api_key: tavilyKey, query, max_results: numResults, include_answer: true, search_depth: depth === "deep" ? "advanced" : "basic"
+            }, { timeout: 15000 });
+            searchResults = (r.data.results ?? []).map(a => ({
+                title: a.title, url: a.url, description: a.content ?? ""
+            }));
+        }
+        catch (_) { /* try Brave */ }
+    }
+    if (searchResults.length === 0 && braveKey) {
+        try {
+            const r = await axios_1.default.get("https://api.search.brave.com/res/v1/web/search", {
+                params: { q: query, count: numResults, safesearch: "off" },
+                headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
+                timeout: 10000
+            });
+            searchResults = (r.data.web?.results ?? []).map(a => ({
+                title: a.title, url: a.url, description: a.description ?? ""
+            }));
+        }
+        catch (_) { /* fall through */ }
+    }
+    if (searchResults.length === 0) {
+        return void res.status(502).json({ ok: false, error: "search_failed", message: "No search results available", request_id: (0, credits_1.reqId)() });
+    }
+    // Step 2: Synthesize with Claude
+    if (!anthropicKey) {
+        return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured", credits_used: 15, request_id: (0, credits_1.reqId)() });
+    }
+    const sourcesText = searchResults.map((s, i) => `[${i + 1}] ${s.title}\n${s.url}\n${s.description}`).join("\n\n");
+    const systemPrompt = `You are a research analyst. Write a concise, well-structured research report based on the provided sources. Include: an executive summary, key findings, and a conclusion. Cite sources using [N] notation. Be factual and objective.`;
+    const userPrompt = `Research query: "${query}"\n\nSources:\n${sourcesText}\n\nWrite a ${depth === "deep" ? "comprehensive" : "concise"} research report.`;
+    try {
+        const claude = await axios_1.default.post("https://api.anthropic.com/v1/messages", {
+            model: "claude-haiku-4-5", max_tokens: depth === "deep" ? 2000 : 1000,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }]
+        }, {
+            headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+            timeout: 30000
+        });
+        const report = (claude.data.content?.[0]?.text ?? "").trim();
+        return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, request_id: (0, credits_1.reqId)() });
+    }
+    catch (e) {
+        return void res.status(502).json({ ok: false, error: "synthesis_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+    }
+});
+// ─── 53. FACT-CHECK ───────────────────────────────────────────────────────────
+router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
+    const claim = String(req.query.claim ?? "").trim();
+    const _ok3 = await (0, credits_1.deductCredits)(req, res, "fact-check", 10);
+    if (!_ok3)
+        return;
+    if (!claim)
+        return void res.status(400).json({ ok: false, error: "missing_param", message: "claim is required" });
+    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
+    const tavilyKey = process.env.TAVILY_API_KEY;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    // Step 1: Search for evidence
+    let evidence = [];
+    if (tavilyKey) {
+        try {
+            const r = await axios_1.default.post("https://api.tavily.com/search", {
+                api_key: tavilyKey, query: `fact check: ${claim}`, max_results: 8, include_answer: false, search_depth: "advanced"
+            }, { timeout: 12000 });
+            evidence = (r.data.results ?? []).map(a => ({
+                title: a.title, url: a.url, description: a.content ?? ""
+            }));
+        }
+        catch (_) { /* try Brave */ }
+    }
+    if (evidence.length === 0 && braveKey) {
+        try {
+            const r = await axios_1.default.get("https://api.search.brave.com/res/v1/web/search", {
+                params: { q: `fact check "${claim}"`, count: 8, safesearch: "off" },
+                headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
+                timeout: 10000
+            });
+            evidence = (r.data.web?.results ?? []).map(a => ({
+                title: a.title, url: a.url, description: a.description ?? ""
+            }));
+        }
+        catch (_) { /* fall through */ }
+    }
+    if (!anthropicKey) {
+        return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured", credits_used: 10, request_id: (0, credits_1.reqId)() });
+    }
+    // Step 2: Analyze with Claude
+    const evidenceText = evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.description}`).join("\n\n");
+    const systemPrompt = `You are a professional fact-checker. Analyze the provided claim and evidence to determine its accuracy. Respond in JSON with exactly these fields:
+- verdict: "TRUE" | "FALSE" | "MIXED" | "UNVERIFIED" | "MISLEADING"  
+- confidence: number 0-100 representing how confident you are
+- summary: 2-3 sentence explanation of your verdict
+- supporting_evidence: array of quote strings from sources that support the claim
+- contradicting_evidence: array of quote strings that contradict the claim
+- caveats: any important nuances or context`;
+    try {
+        const claude = await axios_1.default.post("https://api.anthropic.com/v1/messages", {
+            model: "claude-haiku-4-5", max_tokens: 1000,
+            system: systemPrompt,
+            messages: [{ role: "user", content: `Claim to fact-check: "${claim}"\n\nEvidence:\n${evidenceText}\n\nRespond with valid JSON only.` }]
+        }, {
+            headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+            timeout: 20000
+        });
+        const raw = claude.data.content?.[0]?.text ?? "{}";
+        let analysis = {};
+        try {
+            // Extract JSON from response (may have markdown wrapping)
+            const jsonMatch = raw.match(/\{[\s\S]*\}/);
+            analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+        }
+        catch (_) {
+            analysis = { verdict: "UNVERIFIED", summary: raw };
+        }
+        return void res.json({
+            ok: true, claim,
+            verdict: analysis.verdict ?? "UNVERIFIED",
+            confidence: analysis.confidence ?? null,
+            summary: analysis.summary ?? null,
+            supporting_evidence: analysis.supporting_evidence ?? [],
+            contradicting_evidence: analysis.contradicting_evidence ?? [],
+            caveats: analysis.caveats ?? null,
+            sources: evidence,
+            credits_used: 10, request_id: (0, credits_1.reqId)()
+        });
+    }
+    catch (e) {
+        return void res.status(502).json({ ok: false, error: "analysis_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+    }
+});
 //# sourceMappingURL=index.js.map

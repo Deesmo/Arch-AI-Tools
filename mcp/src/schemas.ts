@@ -405,3 +405,27 @@ export const TOOL_SCHEMAS: Record<string, object> = {
     required: ["task"]
   }
 };
+// New tools added 2026-03-09
+TOOL_SCHEMAS["news-search"] = {
+  type: "object",
+  properties: {
+    query: { type: "string", description: "News search query (e.g. 'AI regulations 2025')" },
+    limit: { type: "number", description: "Number of results to return (default: 5, max: 10)" }
+  },
+  required: ["query"]
+};
+TOOL_SCHEMAS["research-report"] = {
+  type: "object",
+  properties: {
+    query: { type: "string", description: "Research topic or question to investigate" },
+    depth: { type: "string", description: "Research depth: 'standard' (5 sources) or 'deep' (10 sources + advanced synthesis). Default: standard" }
+  },
+  required: ["query"]
+};
+TOOL_SCHEMAS["fact-check"] = {
+  type: "object",
+  properties: {
+    claim: { type: "string", description: "The claim or statement to fact-check (e.g. 'The Great Wall of China is visible from space')" }
+  },
+  required: ["claim"]
+};
