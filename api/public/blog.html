@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog — Arch Tools</title>
+  <meta name="description" content="Engineering articles and updates from Arch Tools — the API platform for AI agents and developers.">
+  <meta property="og:title" content="Arch Tools Blog">
+  <meta property="og:description" content="Engineering articles and updates from Arch Tools — 53 AI tools, one API key.">
+  <meta property="og:url" content="https://archtools.dev/blog">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;--border:rgba(255,255,255,0.08);--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.15) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.09) 0%,transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%,rgba(24,96,255,0.08) 0%,transparent 65%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.03) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    .wrap{max-width:800px;margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:640px){.wrap{padding:0 20px;}}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);backdrop-filter:blur(20px);}
+    @media(max-width:768px){nav{backdrop-filter:none;background:rgba(7,6,26,0.99);}}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo svg{width:28px;height:28px;flex-shrink:0;}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover,.nav-links a.active{color:var(--text);background:rgba(255,255,255,0.05);}
+    @media(max-width:640px){.nav-links{display:none;}}
+
+    /* HERO */
+    .blog-hero{padding:64px 0 40px;}
+    .blog-tag{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    .blog-hero h1{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:800;letter-spacing:-1.2px;line-height:1.08;margin-bottom:16px;}
+    .blog-hero p{color:var(--muted);font-size:16px;max-width:540px;line-height:1.7;}
+
+    /* POST LIST */
+    .post-list{display:flex;flex-direction:column;gap:0;margin-top:48px;}
+    .post-item{padding:32px 0;border-top:1px solid var(--border);display:flex;gap:32px;align-items:flex-start;text-decoration:none;color:inherit;transition:background 0.15s;border-radius:4px;}
+    .post-item:last-child{border-bottom:1px solid var(--border);}
+    .post-item:hover .post-title{color:var(--indigo2);}
+    .post-meta{min-width:130px;flex-shrink:0;}
+    .post-date{font-family:var(--mono);font-size:12px;color:var(--dimmer);}
+    .post-cat-tag{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:10px;background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.25);color:var(--indigo2);padding:2px 9px;border-radius:100px;letter-spacing:0.3px;}
+    .post-body{flex:1;min-width:0;}
+    .post-title{font-family:var(--display);font-size:20px;font-weight:700;line-height:1.25;margin-bottom:10px;color:var(--text);transition:color 0.15s;}
+    .post-excerpt{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:12px;}
+    .post-read-more{font-family:var(--mono);font-size:12px;color:var(--purple);}
+    @media(max-width:600px){
+      .post-item{flex-direction:column;gap:12px;}
+      .post-meta{min-width:auto;}
+    }
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:40px 0 32px;margin-top:80px;}
+    .footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+    .footer-left{font-family:var(--mono);font-size:12px;color:var(--muted);}
+    .footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+    .footer-links a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;transition:color 0.15s;}
+    .footer-links a:hover{color:var(--text);}
+  </style>
+</head>
+<body>
+
+<!-- ARCH SVG DEFS -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF9010"/>
+      <stop offset="60%" stop-color="#FF2896"/>
+      <stop offset="100%" stop-color="#8844FF"/>
+    </linearGradient>
+    <filter id="arch-neon">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <symbol id="arch-mark" viewBox="0 10 100 90" overflow="visible">
+      <path fill="url(#arch-grad)" filter="url(#arch-neon)"
+        d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z
+           M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<nav>
+  <div class="wrap" style="max-width:1240px;">
+    <div class="nav-inner">
+      <a class="logo" href="/" aria-label="Arch Tools home">
+        <svg viewBox="0 10 100 90" overflow="visible" aria-hidden="true">
+          <use href="#arch-mark"/>
+        </svg>
+        ARCH TOOLS
+      </a>
+      <ul class="nav-links">
+        <li><a href="/#tools">tools</a></li>
+        <li><a href="/#pricing">pricing</a></li>
+        <li><a href="/blog.html" class="active">blog</a></li>
+        <li><a href="/docs">api docs</a></li>
+        <li><a href="/signup" style="background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;padding:7px 14px;border-radius:8px;">$ get-api-key</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="blog-hero">
+    <div class="blog-tag">Blog</div>
+    <h1>Engineering &amp; Updates</h1>
+    <p>Technical posts from the team building Arch Tools — the API platform for AI agents and developers.</p>
+  </div>
+
+  <div class="post-list">
+
+    <!-- POST 1 -->
+    <a class="post-item" href="/blog-x402.html">
+      <div class="post-meta">
+        <div class="post-date">March 7, 2026</div>
+        <div class="post-cat-tag">Payments &amp; x402</div>
+      </div>
+      <div class="post-body">
+        <div class="post-title">The First Developer Tool API Natively Accepting Crypto from AI Agents</div>
+        <div class="post-excerpt">AI agents can now pay autonomously with USDC, USDT, and native tokens across 15 networks via the x402 protocol. No human credit card. No subscription. Every major API platform requires a human with a credit card to fund API access — that made sense in 2015. It doesn't make sense in 2026.</div>
+        <div class="post-read-more">Read article →</div>
+      </div>
+    </a>
+
+  </div>
+
+  <div style="margin-top:48px;">
+    <a href="/" style="font-family:var(--mono);font-size:13px;color:var(--muted);text-decoration:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border2);border-radius:8px;padding:8px 16px;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--purple)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">← Back to Home</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap" style="max-width:1240px;">
+    <div class="footer-inner">
+      <div class="footer-left">Arch Tools · Built in Columbia, SC · MCMetaverse LLC</div>
+      <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/docs">API Docs</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/privacy.html">Privacy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

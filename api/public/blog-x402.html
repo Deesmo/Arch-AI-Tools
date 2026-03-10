@@ -105,6 +105,8 @@
     <p>Both paths hit the same endpoints. Your agent doesn't need special integration — just a different payment header.</p>
 
     <h3>Code: x402 Payment Flow</h3>
+    <div style="position:relative;">
+    <button onclick="(function(btn){var pre=btn.parentElement.querySelector('pre');var text=pre.innerText||pre.textContent;navigator.clipboard.writeText(text).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)" style="position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;z-index:2;" onmouseover="this.style.background='rgba(255,255,255,0.16)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.55)'">Copy</button>
     <pre><code><span class="comment"># Step 1: Agent discovers x402 pricing</span>
 curl https://archtools.dev/.well-known/x402
 
@@ -132,6 +134,7 @@ curl https://archtools.dev/v1/tools/web-scrape \
   "amount": "0.001 USDC",
   "receipt": "0x..."
 }</span></code></pre>
+    </div>
 
     <h2>Why Every Competitor Is Stripe-Only</h2>
 

@@ -13,14 +13,15 @@
   <meta name="apple-mobile-web-app-title" content="Arch Tools">
   <meta name="theme-color" content="#07061A">
   <title>Arch Tools — The First API Platform AI Agents Can Pay Autonomously</title>
-  <meta name="description" content="The first API platform where AI agents pay autonomously with USDC via x402 across 15 blockchains. 53 tools, one key, no credit card required.">
-  <meta property="og:title" content="Arch Tools — 50 API Tools for AI Agents">
-  <meta property="og:description" content="50 AI tools. USDC + USDT payments on 15 blockchains via x402. No human card needed.">
+  <meta name="description" content="53 AI-powered tools in a single API. Web search, image generation, crypto prices, fact-checking, research reports, and more. Pay per use — no subscriptions.">
+  <meta property="og:title" content="Arch AI Tools — 53 Tools, One API Key">
+  <meta property="og:description" content="53 AI-powered tools for developers and AI agents. Web search, image generation, crypto prices, fact-checking, research reports, domain analysis, and more.">
   <meta property="og:url" content="https://archtools.dev">
   <meta property="og:type" content="website">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Arch Tools — 50 API Tools for AI Agents">
-  <meta name="twitter:description" content="50 AI tools. USDC + USDT payments on 15 blockchains via x402. No human card needed.">
+  <meta name="twitter:title" content="Arch AI Tools — 53 Tools, One API Key">
+  <meta name="twitter:description" content="53 AI-powered tools for developers and AI agents. Pay per use — no subscriptions.">
   <link rel="canonical" href="https://archtools.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -466,7 +467,7 @@
           <li><a href="#compare">vs others</a></li>
           <li><a href="#crypto">crypto</a></li>
           <li><a href="#mcp">mcp</a></li>
-          <li><a href="/blog-x402.html">blog</a></li>
+          <li><a href="/blog.html">blog</a></li>
           <li><a href="/docs">api docs</a></li>
           <li><a href="/sdk.html">sdk &amp; cli</a></li>
           <li><a href="/dashboard" style="color:var(--muted);">dashboard</a></li>
@@ -676,13 +677,18 @@
             <div style="display:flex;gap:6px;"><div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div><div style="width:10px;height:10px;border-radius:50%;background:#ffbd2e;"></div><div style="width:10px;height:10px;border-radius:50%;background:#28ca41;"></div></div>
             <span style="font-family:var(--mono);font-size:11px;color:var(--dimmer);">cURL · Web Search</span>
           </div>
-          <pre style="margin:0;padding:20px;font-family:var(--mono);font-size:12.5px;color:#A8FF78;line-height:1.8;overflow-x:auto;">curl -X POST https://archtools.dev/v1/tools/search-web \
+          <div style="position:relative;">
+            <button onclick="(function(btn){var pre=btn.parentElement.querySelector('pre');navigator.clipboard.writeText(pre.textContent).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)" style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;z-index:2;" onmouseover="this.style.background='rgba(255,255,255,0.16)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.55)'">Copy</button>
+            <pre style="margin:0;padding:20px;font-family:var(--mono);font-size:12.5px;color:#A8FF78;line-height:1.8;overflow-x:auto;">curl -X POST https://archtools.dev/v1/tools/search-web \
   -H "x-api-key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"query": "AI agent payments 2025"}'</pre>
+          </div>
           <div style="border-top:1px solid var(--border);padding:14px 20px;background:rgba(255,255,255,0.02);">
             <div style="font-family:var(--mono);font-size:11px;color:var(--dimmer);margin-bottom:8px;">Response</div>
-            <pre style="margin:0;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;overflow-x:auto;">{
+            <div style="position:relative;">
+              <button onclick="(function(btn){var pre=btn.parentElement.querySelector('pre');navigator.clipboard.writeText(pre.textContent).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)" style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;z-index:2;" onmouseover="this.style.background='rgba(255,255,255,0.16)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.55)'">Copy</button>
+              <pre style="margin:0;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;overflow-x:auto;">{
   "ok": true,
   "results": [
     {
@@ -694,6 +700,7 @@
   "credits_used": 3,
   "request_id": "req_abc123"
 }</pre>
+            </div>
           </div>
         </div>
       </div>
@@ -715,17 +722,18 @@
       <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(66,133,244,0.12);color:#4285f4;border:1px solid rgba(66,133,244,0.3);">Gemini (Google)</span>
     </div>
 
-    <div class="cat-filters">
-      <button type="button" class="cat-pill active" data-filter="all">All 50</button>
-      <button type="button" class="cat-pill" data-filter="AI" style="--c:#8844FF">AI</button>
-      <button type="button" class="cat-pill" data-filter="Web" style="--c:#34d399">Web</button>
-      <button type="button" class="cat-pill" data-filter="Voice" style="--c:#FF2896">Voice</button>
-      <button type="button" class="cat-pill" data-filter="Memory" style="--c:#22d3ee">Memory</button>
-      <button type="button" class="cat-pill" data-filter="Comms" style="--c:#FF9010">Comms</button>
-      <button type="button" class="cat-pill" data-filter="Finance" style="--c:#FFD700">Finance</button>
-      <button type="button" class="cat-pill" data-filter="Infra" style="--c:#60a5fa">Infra</button>
-      <button type="button" class="cat-pill" data-filter="Utils" style="--c:#a78bfa">Utils</button>
-      <button type="button" class="cat-pill" data-filter="Legal" style="--c:#f87171">Legal</button>
+    <!-- TOOL SEARCH -->
+    <div style="margin-bottom:16px;">
+      <input id="tool-search" type="search" placeholder="Search tools…" autocomplete="off" style="width:100%;background:rgba(12,11,34,0.7);border:1px solid var(--border2);border-radius:10px;padding:11px 16px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border2)'" oninput="filterToolSearch(this.value)">
+    </div>
+    <div class="cat-filters" id="tool-cat-filters">
+      <button type="button" class="cat-pill active" data-filter="all" onclick="filterToolCat('all',this)">All</button>
+      <button type="button" class="cat-pill" data-filter="AI" style="--c:#8844FF" onclick="filterToolCat('AI',this)">AI Generation</button>
+      <button type="button" class="cat-pill" data-filter="Web" style="--c:#34d399" onclick="filterToolCat('Web',this)">Web &amp; Search</button>
+      <button type="button" class="cat-pill" data-filter="Finance" style="--c:#FFD700" onclick="filterToolCat('Finance',this)">Crypto</button>
+      <button type="button" class="cat-pill" data-filter="Utils" style="--c:#a78bfa" onclick="filterToolCat('Utils',this)">Utility</button>
+      <button type="button" class="cat-pill" data-filter="Conversion" style="--c:#22d3ee" onclick="filterToolCat('Conversion',this)">Conversion</button>
+      <button type="button" class="cat-pill" data-filter="Validation" style="--c:#FF9010" onclick="filterToolCat('Validation',this)">Validation</button>
     </div>
 
     <div class="tools-grid" id="tools-grid">
@@ -1989,19 +1997,39 @@ function showLangTab(lang) {
 </footer>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// Tool search + category filter
+var _currentCat = 'all';
+var _currentSearch = '';
+function filterToolSearch(q) {
+  _currentSearch = q.toLowerCase().trim();
+  applyToolFilters();
+}
+function filterToolCat(cat, btn) {
+  _currentCat = cat;
+  document.querySelectorAll('#tool-cat-filters .cat-pill').forEach(function(p){p.classList.remove('active');});
+  if (btn) btn.classList.add('active');
+  _currentSearch = '';
+  var si = document.getElementById('tool-search');
+  if (si) si.value = '';
+  applyToolFilters();
+}
+function applyToolFilters() {
+  document.querySelectorAll('.tool-card').forEach(function(card) {
+    var catMatch = _currentCat === 'all' || card.dataset.cat === _currentCat;
+    var name = (card.querySelector('.tool-name')||{}).textContent||'';
+    var desc = (card.querySelector('.tool-desc')||{}).textContent||'';
+    var endpoint = (card.querySelector('.tool-endpoint')||{}).textContent||'';
+    var searchMatch = !_currentSearch || (name+desc+endpoint).toLowerCase().indexOf(_currentSearch) !== -1;
+    card.style.display = (catMatch && searchMatch) ? '' : 'none';
+  });
+}
+
 // Safari-safe: wrap all DOM-dependent code in DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
-// Category filter
+// Category filter (legacy — kept for marquee scroll-to behavior)
 function filterTools(cat, btn) {
-  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  else {
-    const match = [...document.querySelectorAll('.cat-pill')].find(p => p.dataset.filter === cat);
-    if (match) match.classList.add('active');
-  }
-  document.querySelectorAll('.tool-card').forEach(card => {
-    card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
-  });
+  var matchBtn = btn || [...document.querySelectorAll('#tool-cat-filters .cat-pill')].find(function(p){ return p.dataset.filter === cat; });
+  filterToolCat(cat, matchBtn);
 }
 function goToCategory(cat) {
   filterTools(cat, null);
@@ -2065,12 +2093,7 @@ async function buySubscription(planId) {
   } catch(e) { alert('Something went wrong. Please try again.'); }
 }
 
-// Event delegation: cat-filter buttons
-const catFilters = document.querySelector('.cat-filters'); if (catFilters) catFilters.addEventListener('click', function(e) {
-  const btn = e.target.closest('.cat-pill');
-  if (!btn) return;
-  filterTools(btn.dataset.filter, btn);
-});
+// Event delegation: cat-filter buttons (handled via inline onclick on pills above)
 
 // Event delegation: marquee pills (data-cat attribute)
 const marqueeSection = document.querySelector('.marquee-section'); if (marqueeSection) marqueeSection.addEventListener('click', function(e) {
