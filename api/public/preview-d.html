@@ -77,9 +77,9 @@ h1{font-family:var(--di);font-size:clamp(38px,4.8vw,72px);font-weight:800;line-h
 .flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
 .flow-title{font-family:var(--mo);font-size:10px;color:var(--dm);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
 /* Steps always visible — no opacity:0 ever */
-.step{opacity:.2;transition:opacity .4s ease;position:relative}
+.step{opacity:.35;transition:opacity .4s ease;position:relative}
 .step+.step{margin-top:14px}
-.step.done{opacity:.55}
+.step.done{opacity:.6}
 .step.active{opacity:1}
 /* Active glow bar on left */
 .step.active::before{content:'';position:absolute;left:-12px;top:0;bottom:0;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--pu),var(--pk));animation:gbar .4s ease forwards}
