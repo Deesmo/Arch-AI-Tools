@@ -1,43 +1,21 @@
-name: Arch Tools MCP
-description: >
-  50 production-ready API tools for AI agents — web scraping, AI generation
-  (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio
-  transcription, text-to-speech, crypto data, email, domain lookup, and more.
-  Pay via Stripe credits or autonomous x402 USDC payments — no signup needed
-  for AI agents.
-version: 1.7.0
-homepage: https://archtools.dev
-repository: https://github.com/Deesmo/Arch-AI-Tools
-license: MIT
-author: MCMetaverse LLC
-categories:
-  - developer-tools
-  - ai-agents
-  - data
-  - utilities
-keywords:
-  - mcp
-  - api
-  - tools
-  - x402
-  - usdc
-  - ai-agents
-  - web-scraping
-  - image-generation
-  - transcription
-  - crypto
-
 startCommand:
-  type: url
-  url: https://arch-tools-mcp.onrender.com/mcp
-
-configSchema:
-  type: object
-  properties:
-    apiKey:
-      type: string
-      description: >
-        Your Arch Tools API key. Get one free at https://archtools.dev/signup
-      title: Arch Tools API Key
-  required:
-    - apiKey
+  type: http
+  configSchema:
+    type: object
+    properties:
+      apiKey:
+        type: string
+        description: "Your Arch AI Tools API key (starts with arch_). Get yours free at archtools.dev/signup"
+      baseUrl:
+        type: string
+        description: "API base URL. Defaults to https://archtools.dev"
+        default: "https://archtools.dev"
+      timeout:
+        type: number
+        description: "Request timeout in milliseconds. Defaults to 30000"
+        default: 30000
+    required:
+      - apiKey
+  exampleConfig:
+    apiKey: "arch_your_key_here"
+    baseUrl: "https://archtools.dev"
