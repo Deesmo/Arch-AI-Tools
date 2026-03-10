@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Arch Tools — Combined D</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Arch Tools — Option E (Existing Layout + Animated Tabs)</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -17,67 +17,62 @@ nav{border-bottom:1px solid var(--br);background:rgba(7,6,26,.9);backdrop-filter
 .nl{display:flex;gap:2px;list-style:none}.nl a{text-decoration:none;color:var(--mu);font-size:13px;padding:6px 9px;font-family:var(--mo);border-radius:6px}
 .nc{background:linear-gradient(135deg,var(--a),var(--pk));color:#fff;padding:7px 16px;border-radius:8px;font-family:var(--mo);font-size:13px;text-decoration:none}
 .ns{border:1px solid var(--br2);color:var(--mu);padding:7px 16px;border-radius:8px;font-family:var(--mo);font-size:13px;text-decoration:none;margin-right:8px}
-.hero{padding:60px 0 44px;display:grid;grid-template-columns:60fr 40fr;gap:48px;align-items:center}
+/* HERO — matches existing 2-column structure */
+.hero{padding:64px 0 52px;display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:start}
 .badge{display:inline-flex;align-items:center;gap:8px;background:rgba(136,68,255,.1);border:1px solid rgba(136,68,255,.3);border-radius:100px;padding:6px 14px;font-size:12px;font-family:var(--mo);color:var(--iv);margin-bottom:22px}
 .badge .d{width:6px;height:6px;border-radius:50%;background:var(--gr)}
-h1{font-family:var(--di);font-size:clamp(38px,4.8vw,72px);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:18px}
-.sub{font-size:16px;color:var(--mu);line-height:1.75;margin-bottom:22px}
-.pw{display:flex;align-items:center;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+h1{font-family:var(--di);font-size:clamp(38px,4.2vw,68px);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:18px}
+.sub{font-size:16px;color:var(--mu);line-height:1.75;margin-bottom:24px}
+.pw{display:flex;align-items:center;gap:8px;margin-bottom:24px;flex-wrap:wrap}
 .pl{font-family:var(--mo);font-size:10px;color:var(--dm);letter-spacing:1px;text-transform:uppercase}
 .pill{font-family:var(--mo);font-size:11px;padding:3px 10px;border-radius:100px}
 .pc{background:rgba(255,144,16,.15);border:1px solid rgba(255,144,16,.3);color:var(--a)}
 .pg{background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.25);color:var(--cy)}
 .pk2{background:rgba(136,68,255,.12);border:1px solid rgba(136,68,255,.3);color:var(--iv)}
 .pm{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:var(--gr)}
-.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btns{display:flex;gap:12px;margin-bottom:28px}
 .bp{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--a),var(--pk));color:#fff;padding:13px 26px;border-radius:10px;font-family:var(--mo);font-size:14px;font-weight:500;text-decoration:none}
 .bg{display:inline-flex;align-items:center;gap:8px;color:var(--mu);padding:13px 26px;border-radius:10px;border:1px solid var(--br2);font-family:var(--mo);font-size:14px;text-decoration:none}
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.sc{background:rgba(136,68,255,.06);border:1px solid rgba(136,68,255,.14);border-radius:14px;padding:22px 18px;text-align:center}
-.sc.a{background:rgba(255,144,16,.06);border-color:rgba(255,144,16,.18)}
-.sc.c{background:rgba(34,211,238,.04);border-color:rgba(34,211,238,.14)}
-.sn{font-family:var(--di);font-size:38px;font-weight:800;line-height:1}
-.sl{font-family:var(--mo);font-size:10px;color:var(--mu);margin-top:6px;letter-spacing:.5px;text-transform:uppercase}
-.ss{font-family:var(--mo);font-size:10px;color:var(--dm);margin-top:3px}
-.ld{width:5px;height:5px;border-radius:50%;background:var(--gr);animation:pulse 1.5s ease-in-out infinite;display:inline-block}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.live{display:flex;align-items:center;gap:5px;justify-content:center;margin-top:5px;font-family:var(--mo);font-size:10px;color:var(--gr)}
-.terminal-section{padding:0 0 6px}
-.tw{background:rgba(7,6,22,.97);border:1px solid rgba(136,68,255,.28);border-radius:20px;overflow:hidden;box-shadow:0 0 80px rgba(136,68,255,.18),inset 0 1px 0 rgba(255,255,255,.06)}
-.th{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.07)}
-.dots{display:flex;gap:8px}.dot{width:10px;height:10px;border-radius:50%}
+.trust{display:flex;gap:24px}
+.tv{font-family:var(--mo);font-size:20px;font-weight:700;line-height:1}
+.tl{font-family:var(--mo);font-size:10px;color:var(--dm);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+/* RIGHT: Upgraded terminal with tabs */
+.rt{background:rgba(10,9,28,.85);border:1px solid rgba(136,68,255,.22);border-radius:20px;overflow:hidden;box-shadow:0 0 50px rgba(136,68,255,.12),inset 0 1px 0 rgba(255,255,255,.05)}
+.rtop{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(255,255,255,.07)}
+.dots{display:flex;gap:7px}.dot{width:9px;height:9px;border-radius:50%}
 .dr{background:#FF5F56}.dy{background:#FFBD2E}.dg{background:#27C93F}
-.tp{font-family:var(--mo);font-size:12px;color:var(--mu)}
-.ttabs{display:flex;gap:6px}
-.tt{font-family:var(--mo);font-size:12px;padding:5px 14px;border-radius:7px;cursor:pointer;color:var(--dm);border:1px solid transparent;transition:background .15s,color .15s,border-color .15s}
-.tt.active{background:rgba(136,68,255,.15);border-color:rgba(136,68,255,.3);color:var(--iv)}
-.tt.x{color:var(--a)}.tt.x.active{background:rgba(255,144,16,.12);border-color:rgba(255,144,16,.3);color:var(--a)}
+.rturl{font-family:var(--mo);font-size:11px;color:var(--mu)}
+.live-b{display:flex;align-items:center;gap:5px;font-family:var(--mo);font-size:10px;color:var(--gr)}
+.ld2{width:5px;height:5px;border-radius:50%;background:var(--gr);animation:p 1.5s ease-in-out infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}
+.tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.07)}
+.tab{padding:10px 16px;font-family:var(--mo);font-size:12px;color:var(--mu);border-bottom:2px solid transparent;cursor:pointer;transition:.2s;white-space:nowrap}
+.tab.active{color:var(--iv);border-bottom-color:var(--pu);background:rgba(136,68,255,.06)}
+.tab.x{color:var(--a)}.tab.x.active{color:var(--a);border-bottom-color:var(--a);background:rgba(255,144,16,.06)}
 .tb{display:none}.tb.active{display:block}
-.rr{display:grid;grid-template-columns:1fr 1fr;min-height:220px}
-.rl,.rr2{padding:24px 28px}.rr2{border-left:1px solid rgba(255,255,255,.06)}
-.rlbl{font-family:var(--mo);font-size:10px;color:var(--dm);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
-.code{font-family:var(--mo);font-size:13px;line-height:1.9;white-space:pre}
+/* Stats row at top of right column */
+.rs{display:flex;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.rsb{flex:1;background:rgba(136,68,255,.06);border:1px solid rgba(136,68,255,.1);border-radius:10px;padding:12px;text-align:center}
+.rsn{font-family:var(--di);font-size:24px;font-weight:800;line-height:1}
+.rsl{font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.code{font-family:var(--mo);font-size:12px;line-height:1.85;white-space:pre;padding:18px 20px}
 .cm{color:var(--dm)}.kw{color:var(--iv)}.st{color:var(--a)}.ot{color:var(--cy)}.ok{color:var(--gr)}.pr{color:var(--pk)}.hl{color:#fff}
-.rbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--gr);font-size:10px;padding:3px 10px;border-radius:100px;margin-bottom:10px;font-family:var(--mo)}
+.rbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--gr);font-size:10px;padding:3px 10px;border-radius:100px;margin-bottom:6px;font-family:var(--mo)}
 .cursor{display:inline-block;width:8px;height:14px;background:var(--gr);vertical-align:middle;animation:blink .9s step-end infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-.flow-panel{padding:28px}
-.flow-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.flow-lbl{font-family:var(--mo);font-size:11px;color:var(--mu)}
-.live-badge{display:flex;align-items:center;gap:6px;font-family:var(--mo);font-size:11px;color:var(--gr)}
-.flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
-.flow-title{font-family:var(--mo);font-size:10px;color:var(--dm);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
-.step{opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease}
+/* x402 compact flow in right column */
+.xflow{padding:16px 18px}
+.step{opacity:0;transform:translateY(5px);transition:opacity .35s,transform .35s;font-family:var(--mo);font-size:12px;line-height:1.75}
+.step+.step{margin-top:10px}
 .step.vis{opacity:1;transform:translateY(0)}
-.step+.step{margin-top:14px}
-.shd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.snum{width:24px;height:24px;border-radius:50%;border:1px solid var(--br2);display:grid;place-items:center;font-family:var(--mo);font-size:11px;color:var(--dm);flex-shrink:0;transition:background .3s,border-color .3s,color .3s}
+.shd{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.snum{width:20px;height:20px;border-radius:50%;border:1px solid var(--br2);display:grid;place-items:center;font-size:10px;color:var(--dm);flex-shrink:0;transition:.3s}
 .step.done .snum{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4);color:var(--gr)}
-.step.active .snum{background:rgba(136,68,255,.15);border-color:rgba(136,68,255,.5);color:var(--iv);animation:ring .8s ease infinite}
-@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(136,68,255,.5)}70%{box-shadow:0 0 0 6px rgba(136,68,255,0)}}
-.snm{font-family:var(--mo);font-size:11px;color:var(--mu);letter-spacing:.5px}
-.scode{font-family:var(--mo);font-size:12px;line-height:1.85;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px 16px}
-.tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 9px;border-radius:100px;font-family:var(--mo);margin-top:7px}
+.step.active .snum{background:rgba(136,68,255,.15);border-color:rgba(136,68,255,.4);color:var(--iv);animation:ring .8s ease infinite}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(136,68,255,.4)}70%{box-shadow:0 0 0 4px rgba(136,68,255,0)}}
+.snm{font-family:var(--mo);font-size:10px;color:var(--mu);letter-spacing:.5px}
+.scode{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.05);border-radius:7px;padding:8px 12px;font-size:12px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:9px;padding:2px 7px;border-radius:100px;font-family:var(--mo);margin-top:5px}
 .t4{background:rgba(255,40,150,.12);border:1px solid rgba(255,40,150,.25);color:var(--pk)}
 .tok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--gr)}
 .tusd{background:rgba(255,144,16,.12);border:1px solid rgba(255,144,16,.25);color:var(--a)}
@@ -101,120 +96,70 @@ h1{font-family:var(--di);font-size:clamp(38px,4.8vw,72px);font-weight:800;line-h
 </div></div></nav>
 <div class="w">
 <section class="hero">
+  <!-- LEFT: exact existing copy -->
   <div>
     <div class="badge"><span class="d"></span>One API key. 53 tools. No setup.</div>
     <h1><span class="grad">53 Tools</span> Your AI Agent Can Call Right Now.</h1>
     <p class="sub">Give your agent one API key. It can instantly scrape the web, generate text with Claude, GPT-4, Grok, or Gemini, convert files, detect PII, look up crypto prices, send email, transcribe audio, and more — and pay autonomously in USDC across 15 blockchains. No credit card needed.</p>
     <div class="pw"><span class="pl">Powered by</span><span class="pill pc">Claude</span><span class="pill pg">GPT-4</span><span class="pill pk2">Grok</span><span class="pill pm">Gemini</span></div>
     <div class="btns"><a href="#" class="bp">$ get-api-key →</a><a href="#" class="bg">how x402 works</a></div>
-  </div>
-  <div class="sg">
-    <div class="sc a"><div class="sn gam">53</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
-    <div class="sc c"><div class="sn gcy" style="font-size:28px">&lt;200ms</div><div class="sl">Avg Response</div><div class="ss">p95 &lt;500ms</div></div>
-    <div class="sc"><div class="sn" style="background:linear-gradient(135deg,#8844FF,#1860FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">15</div><div class="sl">Blockchains</div><div class="ss">USDC · USDT · ETH</div></div>
-    <div class="sc"><div class="sn gam" style="font-size:28px">FREE</div><div class="sl">To Start</div><div class="ss">100 credits included</div><div class="live"><span class="ld"></span>all systems ok</div></div>
-  </div>
-</section>
-<div class="terminal-section">
-<div class="tw">
-  <div class="th">
-    <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
-    <span class="tp">archtools.dev · REST API · x402 + Stripe</span>
-    <div class="ttabs">
-      <div class="tt x active" id="btn0" onclick="st(0)">⚡ x402 Flow</div>
-      <div class="tt" id="btn1" onclick="st(1)">🌐 Web Scrape</div>
-      <div class="tt" id="btn2" onclick="st(2)">🧠 AI Generate</div>
-      <div class="tt" id="btn3" onclick="st(3)">₿ Crypto</div>
-      <div class="tt" id="btn4" onclick="st(4)">🤖 MCP</div>
+    <div class="trust">
+      <div><div class="tv gam">53</div><div class="tl">Tools</div></div>
+      <div><div class="tv gcy">&lt;200ms</div><div class="tl">Response</div></div>
+      <div><div class="tv" style="background:linear-gradient(135deg,#8844FF,#1860FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">15</div><div class="tl">Chains</div></div>
+      <div><div class="tv gam">FREE</div><div class="tl">To Start</div></div>
     </div>
   </div>
-  <div class="tb active" id="tab0">
-    <div class="flow-panel">
-      <div class="flow-hdr">
-        <span class="flow-lbl">Autonomous payment — no human card, no wallet setup required</span>
-        <span class="live-badge"><span class="ld"></span>live demo · loops every 10s</span>
-      </div>
-      <div class="flow-grid">
-        <div>
-          <div class="flow-title">Request sequence</div>
-          <div class="step" id="s1">
-            <div class="shd"><div class="snum">1</div><span class="snm">AGENT CALLS TOOL</span></div>
-            <div class="scode"><span class="cm"># No payment header needed</span>
-<span class="hl">$</span> curl https://archtools.dev/v1/tools/<span class="st">web-scrape</span> \
-  -d <span class="st">'{"url":"https://example.com"}'</span></div>
-          </div>
-          <div class="step" id="s2">
-            <div class="shd"><div class="snum">2</div><span class="snm">SERVER RETURNS PRICE</span></div>
-            <div class="scode"><span class="pr">HTTP 402 Payment Required</span>
-{<span class="kw">"price"</span>:<span class="st">"0.000005"</span>,<span class="kw">"currency"</span>:<span class="st">"USDC"</span>,
- <span class="kw">"network"</span>:<span class="st">"base"</span>,<span class="kw">"wallet"</span>:<span class="st">"0xArch..."</span>}</div>
-            <span class="tag t4">402 Payment Required</span>
-          </div>
-        </div>
-        <div>
-          <div class="flow-title">Payment + response</div>
-          <div class="step" id="s3">
-            <div class="shd"><div class="snum">3</div><span class="snm">AGENT PAYS IN USDC</span></div>
-            <div class="scode"><span class="cm"># Broadcasts on Base — confirms in 2s</span>
-<span class="ot">0.000005 USDC → 0xArch... (Base)</span>
-<span class="cm">tx: 0xabc123...def789</span></div>
-            <span class="tag tusd">💳 0.000005 USDC · Base Network</span>
-          </div>
-          <div class="step" id="s4">
-            <div class="shd"><div class="snum">4</div><span class="snm">TOOL EXECUTES — RESULT RETURNED</span></div>
-            <div class="scode"><span class="ok">✓ 200 OK · 138ms · tx verified</span>
-{<span class="kw">"content"</span>:<span class="st">"# Example Domain..."</span>,
- <span class="kw">"paid_via"</span>:<span class="st">"x402"</span>}<span class="cursor"></span></div>
-            <span class="tag tok">✓ No human needed · 15 chains</span>
-          </div>
-        </div>
+  <!-- RIGHT: existing structure + animated tabs -->
+  <div class="rt">
+    <div class="rtop">
+      <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+      <span class="rturl">archtools.dev</span>
+      <span class="live-b"><span class="ld2"></span>All systems operational</span>
+    </div>
+    <div class="rs">
+      <div class="rsb"><div class="rsn gam">53</div><div class="rsl">Tools</div></div>
+      <div class="rsb"><div class="rsn gcy" style="font-size:18px">&lt;200ms</div><div class="rsl">Response</div></div>
+      <div class="rsb"><div class="rsn gam" style="font-size:18px">$0.001</div><div class="rsl">Per Credit</div></div>
+    </div>
+    <div class="tabs">
+      <div class="tab x active" id="e0">⚡ x402 Flow</div>
+      <div class="tab" id="e1">$ API Key</div>
+      <div class="tab" id="e2">🤖 MCP</div>
+    </div>
+    <!-- Tab 0: animated x402 -->
+    <div class="tb active" id="et0">
+      <div class="xflow">
+        <div class="step" id="es1"><div class="shd"><div class="snum">1</div><span class="snm">AGENT CALLS TOOL</span></div><div class="scode"><span class="cm"># No auth header — agent discovers price</span>
+<span class="hl">$</span> curl https://archtools.dev/v1/tools/<span class="st">web-scrape</span> -d <span class="st">'{"url":"..."}'</span></div></div>
+        <div class="step" id="es2"><div class="shd"><div class="snum">2</div><span class="snm">HTTP 402 — PRICE RETURNED</span></div><div class="scode"><span class="pr">HTTP 402 Payment Required</span>
+{<span class="kw">"price"</span>:<span class="st">"0.000005"</span>, <span class="kw">"currency"</span>:<span class="st">"USDC"</span>, <span class="kw">"network"</span>:<span class="st">"base"</span>}</div><span class="tag t4">402 Payment Required</span></div>
+        <div class="step" id="es3"><div class="shd"><div class="snum">3</div><span class="snm">AGENT PAYS IN USDC</span></div><div class="scode"><span class="ot">0.000005 USDC → 0xArch... (Base · 2s confirm)</span></div><span class="tag tusd">💳 0.000005 USDC · Base</span></div>
+        <div class="step" id="es4"><div class="shd"><div class="snum">4</div><span class="snm">TOOL EXECUTES</span></div><div class="scode"><span class="ok">✓ 200 OK · 138ms</span>
+{<span class="kw">"content"</span>:<span class="st">"# Example..."</span>, <span class="kw">"paid_via"</span>:<span class="st">"x402"</span>}<span class="cursor"></span></div><span class="tag tok">✓ No human needed</span></div>
       </div>
     </div>
-  </div>
-  <div class="tb" id="tab1"><div class="rr"><div class="rl"><div class="rlbl">Request</div><div class="code"><span class="cm"># Scrape any URL, JS-rendered pages included</span>
+    <!-- Tab 1: API Key -->
+    <div class="tb" id="et1"><div class="code"><span class="cm"># API key + Stripe — works the same way</span>
 <span class="hl">$</span> curl -X POST https://archtools.dev/v1/tools/<span class="st">web-scrape</span> \
   -H <span class="kw">"x-api-key: arch_your_key"</span> \
-  -d <span class="st">'{"url":"https://example.com","format":"markdown"}'</span></div></div><div class="rr2"><div class="rlbl">Response</div><div class="code"><div class="rbadge">✓ 200 OK · 142ms · 5 credits</div>
-{
-  <span class="kw">"content"</span>: <span class="st">"# Example Domain\n..."</span>,
-  <span class="kw">"word_count"</span>: <span class="ot">342</span>,
-  <span class="kw">"credits_remaining"</span>: <span class="ot">9995</span>
-}<span class="cursor"></span></div></div></div></div>
-  <div class="tb" id="tab2"><div class="rr"><div class="rl"><div class="rlbl">Request</div><div class="code"><span class="cm"># Claude, GPT-4, Grok, or Gemini — one call</span>
-<span class="hl">$</span> curl -X POST https://archtools.dev/v1/tools/<span class="st">ai-generate</span> \
-  -H <span class="kw">"x-api-key: arch_your_key"</span> \
-  -d <span class="st">'{"prompt":"Summarize this","model":"claude-3-5-sonnet"}'</span></div></div><div class="rr2"><div class="rlbl">Response</div><div class="code"><div class="rbadge">✓ 200 OK · 890ms · 10 credits</div>
-{
-  <span class="kw">"output"</span>: <span class="st">"The article covers..."</span>,
-  <span class="kw">"model_used"</span>: <span class="st">"claude-3-5-sonnet"</span>,
-  <span class="kw">"credits_remaining"</span>: <span class="ot">9985</span>
-}<span class="cursor"></span></div></div></div></div>
-  <div class="tb" id="tab3"><div class="rr"><div class="rl"><div class="rlbl">Request</div><div class="code"><span class="cm"># Live price — 10,000+ coins</span>
-<span class="hl">$</span> curl -X POST https://archtools.dev/v1/tools/<span class="st">crypto-price</span> \
-  -H <span class="kw">"x-api-key: arch_your_key"</span> \
-  -d <span class="st">'{"coin":"bitcoin","currency":"usd"}'</span></div></div><div class="rr2"><div class="rlbl">Response</div><div class="code"><div class="rbadge">✓ 200 OK · 88ms · 2 credits</div>
-{
-  <span class="kw">"coin"</span>: <span class="st">"bitcoin"</span>,
-  <span class="kw">"price_usd"</span>: <span class="ot">83241.50</span>,
-  <span class="kw">"change_24h"</span>: <span class="ok">+2.14%</span>
-}<span class="cursor"></span></div></div></div></div>
-  <div class="tb" id="tab4"><div class="rr"><div class="rl"><div class="rlbl">Config (6 lines)</div><div class="code">{
-  <span class="kw">"mcpServers"</span>: {
-    <span class="kw">"arch-tools"</span>: {
-      <span class="kw">"command"</span>: <span class="st">"npx"</span>,
-      <span class="kw">"args"</span>: [<span class="st">"-y"</span>,<span class="st">"mcp-remote"</span>,
-               <span class="st">"https://arch-tools-mcp.onrender.com/sse"</span>],
-      <span class="kw">"env"</span>:{<span class="kw">"ARCH_API_KEY"</span>:<span class="st">"arch_your_key"</span>}
-    }
-  }
-}</div></div><div class="rr2"><div class="rlbl">Result</div><div class="code"><span class="ok">✓ arch-tools connected</span>
-<span class="ok">  53 tools available</span>
+  -d <span class="st">'{"url":"https://example.com","format":"markdown"}'</span>
 
-<span class="cm"># Claude uses all 53 tools natively</span>
-<span class="cm"># Works: Claude Desktop · Cursor · Windsurf</span>
-<span class="cm"># No API calls in your prompts</span><span class="cursor"></span></div></div></div></div>
-</div>
-</div>
+<div class="rbadge">✓ 200 OK · 142ms</div>
+{<span class="kw">"content"</span>: <span class="st">"# Example Domain..."</span>, <span class="kw">"word_count"</span>: <span class="ot">342</span>,
+ <span class="kw">"credits_used"</span>: <span class="ot">5</span>, <span class="kw">"credits_remaining"</span>: <span class="ot">9995</span>}<span class="cursor"></span></div></div>
+    <!-- Tab 2: MCP -->
+    <div class="tb" id="et2"><div class="code">{<span class="kw">"mcpServers"</span>:{<span class="kw">"arch-tools"</span>:{
+  <span class="kw">"command"</span>:<span class="st">"npx"</span>,
+  <span class="kw">"args"</span>:[<span class="st">"-y"</span>,<span class="st">"mcp-remote"</span>,<span class="st">"https://arch-tools-mcp.onrender.com/sse"</span>],
+  <span class="kw">"env"</span>:{<span class="kw">"ARCH_API_KEY"</span>:<span class="st">"arch_your_key"</span>}
+}}}
+
+<span class="ok">✓ arch-tools connected (53 tools available)</span>
+<span class="cm"># Claude Desktop · Cursor · Windsurf</span>
+<span class="cm"># All 53 tools appear natively — no prompts needed</span><span class="cursor"></span></div></div>
+  </div>
+</section>
 </div>
 <div class="sbar"><div class="w"><div class="si">
   <div><div class="sbl">API_TOOLS</div><div class="sbv gam">53</div></div>
@@ -228,36 +173,24 @@ h1{font-family:var(--di);font-size:clamp(38px,4.8vw,72px);font-weight:800;line-h
   <div class="mq-track rv"><div class="mq-inner"><span class="mp"><span class="md" style="background:#8844FF"></span>Image Generate</span><span class="mp"><span class="md" style="background:#34d399"></span>Extract Page</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Generate Hash</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Transform Text</span><span class="mp"><span class="md" style="background:#34d399"></span>Whois Lookup</span><span class="mp"><span class="md" style="background:#FF9010"></span>Phone Validate</span><span class="mp"><span class="md" style="background:#22d3ee"></span>Vector Search</span><span class="mp"><span class="md" style="background:#FFD700"></span>Currency Convert</span><span class="mp"><span class="md" style="background:#8844FF"></span>Extract Entities</span><span class="mp"><span class="md" style="background:#34d399"></span>RSS Parse</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Diff Text</span><span class="mp"><span class="md" style="background:#34d399"></span>HTML to Markdown</span><span class="mp"><span class="md" style="background:#60a5fa"></span>Error Monitor</span><span class="mp"><span class="md" style="background:#8844FF"></span>Summarize</span><span class="mp"><span class="md" style="background:#34d399"></span>URL Shorten</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Validate Data</span><span class="mp"><span class="md" style="background:#FF2896"></span>Barcode Generate</span><span class="mp"><span class="md" style="background:#8844FF"></span>Regex Generate</span><span class="mp"><span class="md" style="background:#FFD700"></span>Timezone Convert</span><span class="mp"><span class="md" style="background:#34d399"></span>QR Code</span></div><div class="mq-inner"><span class="mp"><span class="md" style="background:#8844FF"></span>Image Generate</span><span class="mp"><span class="md" style="background:#34d399"></span>Extract Page</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Generate Hash</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Transform Text</span><span class="mp"><span class="md" style="background:#34d399"></span>Whois Lookup</span><span class="mp"><span class="md" style="background:#FF9010"></span>Phone Validate</span><span class="mp"><span class="md" style="background:#22d3ee"></span>Vector Search</span><span class="mp"><span class="md" style="background:#FFD700"></span>Currency Convert</span><span class="mp"><span class="md" style="background:#8844FF"></span>Extract Entities</span><span class="mp"><span class="md" style="background:#34d399"></span>RSS Parse</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Diff Text</span><span class="mp"><span class="md" style="background:#34d399"></span>HTML to Markdown</span><span class="mp"><span class="md" style="background:#60a5fa"></span>Error Monitor</span><span class="mp"><span class="md" style="background:#8844FF"></span>Summarize</span><span class="mp"><span class="md" style="background:#34d399"></span>URL Shorten</span><span class="mp"><span class="md" style="background:#a78bfa"></span>Validate Data</span><span class="mp"><span class="md" style="background:#FF2896"></span>Barcode Generate</span><span class="mp"><span class="md" style="background:#8844FF"></span>Regex Generate</span><span class="mp"><span class="md" style="background:#FFD700"></span>Timezone Convert</span><span class="mp"><span class="md" style="background:#34d399"></span>QR Code</span></div></div>
 </div>
 <script>
-// Tab switching — manual click disables auto-cycle for 30s
-let curTab=0,autoT,pauseT,paused=false;
-function st(i,manual){
-  document.querySelectorAll('.tt').forEach((t,j)=>t.classList.toggle('active',i===j));
-  document.querySelectorAll('.tb').forEach((b,j)=>b.classList.toggle('active',i===j));
-  curTab=i;
+let curT=0,aT,paused=false;
+const TABS=3;
+function st(i,m){
+  ['e0','e1','e2'].forEach((id,j)=>document.getElementById(id).classList.toggle('active',j===i));
+  ['et0','et1','et2'].forEach((id,j)=>document.getElementById(id).classList.toggle('active',j===i));
+  curT=i;
   if(i===0)startFlow();else stopFlow();
-  if(manual){paused=true;clearTimeout(pauseT);pauseT=setTimeout(()=>{paused=false;schedAuto();},30000);}
+  if(m){paused=true;clearTimeout(aT);setTimeout(()=>{paused=false;sched();},30000);}
 }
-document.querySelectorAll('.tt').forEach((t,i)=>t.onclick=()=>st(i,true));
-function schedAuto(){if(paused)return;clearTimeout(autoT);autoT=setTimeout(()=>{if(!paused){const n=(curTab+1)%5;st(n);schedAuto();}},curTab===0?12000:7000);}
-
-// x402 flow — starts immediately, clean loop
-const SN=['s1','s2','s3','s4'];
+['e0','e1','e2'].forEach((id,i)=>document.getElementById(id).onclick=()=>st(i,true));
+function sched(){clearTimeout(aT);aT=setTimeout(()=>{if(!paused){st((curT+1)%TABS);sched();}},curT===0?11000:6000);}
+const SN=['es1','es2','es3','es4'];
 let fp=0,fT;
-function vis(n){
-  SN.forEach((id,i)=>{
-    const el=document.getElementById(id);if(!el)return;
-    el.classList.remove('vis','active','done');
-    if(i<n)el.classList.add('vis','done');
-    else if(i===n)el.classList.add('vis','active');
-  });
-}
-function tick(){vis(fp);fp++;if(fp<SN.length){fT=setTimeout(tick,1800);}else{fT=setTimeout(reset,3000);}}
-function reset(){fp=0;SN.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('vis','active','done');});fT=setTimeout(tick,500);}
+function vis(n){SN.forEach((id,i)=>{const e=document.getElementById(id);if(!e)return;e.classList.remove('vis','active','done');if(i<n)e.classList.add('vis','done');else if(i===n)e.classList.add('vis','active');});}
+function tick(){vis(fp);fp++;if(fp<SN.length)fT=setTimeout(tick,1700);else fT=setTimeout(reset,2800);}
+function reset(){fp=0;SN.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('vis','active','done');});fT=setTimeout(tick,400);}
 function startFlow(){clearTimeout(fT);reset();}
 function stopFlow(){clearTimeout(fT);}
-
-// Boot
-startFlow();
-schedAuto();
+startFlow();sched();
 </script>
 </body></html>
