@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Arch Tools">
   <meta name="theme-color" content="#07061A">
+  <script>if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(regs=>{regs.forEach(r=>r.unregister())});}</script>
   <title>Arch Tools - The First API Platform AI Agents Can Pay Autonomously</title>
   <meta name="description" content="53 AI-powered tools in a single API. Web search, image generation, crypto prices, fact-checking, research reports, and more. Pay per use - no subscriptions.">
   <meta property="og:title" content="Arch Tools - 53 Tools, One API Key">
@@ -2438,6 +2439,9 @@ window.addEventListener('load', function(){
     requestAnimationFrame(tick);
   });
 });
+</script>
+<script>
+  (async()=>{try{const r=await fetch('/health');if(!r.ok)return;const d=await r.json();const n=d.tools;if(!n||n===53)return;const sv=document.querySelector('.stats-bar .stat-item .stat-val.g-am');if(sv&&sv.closest('.stat-item')?.querySelector('.stat-label-top')?.textContent==='API_TOOLS')sv.textContent=n;const tt=document.querySelector('.hero-trust-bar .trust-item:first-child .trust-val');if(tt)tt.textContent=n;}catch{}})();
 </script>
 </body>
 </html>
