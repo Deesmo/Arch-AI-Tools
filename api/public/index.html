@@ -172,7 +172,21 @@
     .xtag-pk{background:rgba(255,40,150,.12);border:1px solid rgba(255,40,150,.25);color:var(--pink);}
     .xtag-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green);}
     .xtag-usd{background:rgba(255,144,16,.12);border:1px solid rgba(255,144,16,.25);color:var(--amber);}
-    @media(max-width:900px){.terminal-section-new{display:none;}.sg{display:none;}}
+    @media(max-width:900px){
+      .sg{display:none;}
+      .hero-right{display:none;}
+      .terminal-section-new{padding:16px 0 40px;}
+      .ttabs{overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;scrollbar-width:none;}
+      .ttabs::-webkit-scrollbar{display:none;}
+      .tt{flex-shrink:0;}
+      .tw-head{padding:10px 14px;flex-wrap:wrap;gap:8px;}
+      .tw-title{font-size:10px;}
+      .xfp{grid-template-columns:1fr;}
+      .term-body-new{height:auto;min-height:260px;}
+      .xscode{font-size:11px;line-height:1.5;}
+      .xfhdr{font-size:11px;}
+      .xstep{margin-bottom:10px;}
+    }
 
     /* GLASS DASHBOARD */
     .glass-dashboard{
