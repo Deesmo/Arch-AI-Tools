@@ -13,9 +13,9 @@
  * Official package: npm install x402-express (swap this in for production if preferred)
  */
 import axios from "axios";
-import { prisma } from "../lib/prisma";
-import { config } from "../config";
-import { redis } from "../lib/redis";
+import { prisma } from "../lib/prisma.js";
+import { config } from "../config.js";
+import { redis } from "../lib/redis.js";
 // USDC contract addresses by network (native USDC, not bridged)
 const USDC_CONTRACTS = {
     base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",

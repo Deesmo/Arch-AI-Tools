@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma.js";
 import crypto, { timingSafeEqual } from "crypto";
 
 const router = Router();

@@ -6,7 +6,7 @@
  * Render Cron: Schedule 0 2 * * 0 (Sunday 2am) | Command: npm run db:cleanup
  */
 import "dotenv/config";
-import { prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma.js";
 
 async function main() {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);

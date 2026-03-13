@@ -8,7 +8,7 @@
  * Safe to run multiple times — upserts by (date, toolName).
  */
 import "dotenv/config";
-import { prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma.js";
 
 async function main() {
   const today = new Date().toISOString().slice(0, 10);

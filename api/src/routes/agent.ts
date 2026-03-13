@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../lib/prisma";
-import { requireAuth, AuthedRequest } from "../middleware/auth";
-import { reqId, safeErr } from "../utils/credits";
-import { sendWelcomeEmail, sendAdminAlert } from "../services/email";
+import { prisma } from "../lib/prisma.js";
+import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { reqId, safeErr } from "../utils/credits.js";
+import { sendWelcomeEmail, sendAdminAlert } from "../services/email.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 

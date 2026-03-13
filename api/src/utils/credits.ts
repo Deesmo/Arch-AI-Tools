@@ -1,8 +1,8 @@
-import { prisma } from "../lib/prisma";
-import { AuthedRequest } from "../middleware/auth";
+import { prisma } from "../lib/prisma.js";
+import { AuthedRequest } from "../middleware/auth.js";
 import { Response } from "express";
-import { fingerprintCaller } from "../lib/fingerprint";
-import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email";
+import { fingerprintCaller } from "../lib/fingerprint.js";
+import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
 
 export async function deductCredits(
   req: AuthedRequest,

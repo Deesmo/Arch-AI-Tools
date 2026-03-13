@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma.js";
 import { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 export async function requireAuth(req, res, next) {

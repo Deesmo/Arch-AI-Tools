@@ -3,9 +3,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
-import { prisma } from "../lib/prisma";
-import { logger } from "../lib/logger";
-import { sendPasswordResetEmail } from "../services/email";
+import { prisma } from "../lib/prisma.js";
+import { logger } from "../lib/logger.js";
+import { sendPasswordResetEmail } from "../services/email.js";
 const router = Router();
 // Security: fail hard at startup if JWT_SECRET is not set — never use a hardcoded fallback.
 // This applies in ALL environments; a missing secret is always a configuration error.

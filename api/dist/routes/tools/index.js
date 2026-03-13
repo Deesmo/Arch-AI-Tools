@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { requireAuth } from "../../middleware/auth";
-import { x402Middleware } from "../../middleware/x402";
-import { deductCredits, reqId, safeErr } from "../../utils/credits";
-import { config } from "../../config";
-import { validateUrl } from "../../lib/ssrf";
+import { requireAuth } from "../../middleware/auth.js";
+import { x402Middleware } from "../../middleware/x402.js";
+import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
+import { config } from "../../config.js";
+import { validateUrl } from "../../lib/ssrf.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";

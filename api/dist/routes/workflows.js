@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth";
-import { reqId } from "../utils/credits";
+import { requireAuth } from "../middleware/auth.js";
+import { reqId } from "../utils/credits.js";
 import axios from "axios";
 const router = Router();
 const API_BASE = `http://localhost:${process.env.PORT ?? "3000"}`;

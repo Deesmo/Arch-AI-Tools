@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../lib/prisma";
-import { stripe } from "../lib/stripe";
-import { requireAuth, AuthedRequest } from "../middleware/auth";
-import { reqId } from "../utils/credits";
-import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email";
+import { prisma } from "../lib/prisma.js";
+import { stripe } from "../lib/stripe.js";
+import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { reqId } from "../utils/credits.js";
+import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 
 const router = Router();
 

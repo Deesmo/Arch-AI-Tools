@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { prisma } from "../lib/prisma";
-import { X402_PRICES } from "../middleware/x402";
+import { prisma } from "../lib/prisma.js";
+import { X402_PRICES } from "../middleware/x402.js";
 const router = Router();
 const BASE_URL = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const API_BASE = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";

@@ -15,9 +15,9 @@
 
 import { Request, Response, NextFunction } from "express";
 import axios from "axios";
-import { prisma } from "../lib/prisma";
-import { config } from "../config";
-import { redis } from "../lib/redis";
+import { prisma } from "../lib/prisma.js";
+import { config } from "../config.js";
+import { redis } from "../lib/redis.js";
 
 // USDC contract addresses by network (native USDC, not bridged)
 const USDC_CONTRACTS: Record<string, string> = {

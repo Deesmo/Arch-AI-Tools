@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
-import { requireAuth, AuthedRequest } from "../middleware/auth";
-import { reqId } from "../utils/credits";
+import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { reqId } from "../utils/credits.js";
 import axios from "axios";
 
 const router = Router();

@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { config } from "./config";
+import { config } from "./config.js";
 
 // ESM-compatible __dirname (safe in both CommonJS and ESM builds)
 const __filename = fileURLToPath(import.meta.url);
@@ -20,19 +20,19 @@ if (process.env.SENTRY_DSN) {
 }
 
 // Routes
-import discoveryRouter from "./routes/discovery";
-import agentRouter from "./routes/agent";
-import toolsRouter from "./routes/tools/index";
-import billingRouter from "./routes/billing";
-import adminRouter from "./routes/admin";
-import workflowsRouter from "./routes/workflows";
-import seoRouter from "./routes/seo";
-import legalRouter from "./routes/legal";
-import oauthRouter from "./routes/oauth";
-import authRouter, { verifySession } from "./routes/auth";
-import { SIGNUP_HTML } from "./assets/signupHtml";
-import { DASHBOARD_HTML } from "./assets/dashboardHtml";
-import { LOGIN_HTML } from "./assets/loginHtml";
+import discoveryRouter from "./routes/discovery.js";
+import agentRouter from "./routes/agent.js";
+import toolsRouter from "./routes/tools/index.js";
+import billingRouter from "./routes/billing.js";
+import adminRouter from "./routes/admin.js";
+import workflowsRouter from "./routes/workflows.js";
+import seoRouter from "./routes/seo.js";
+import legalRouter from "./routes/legal.js";
+import oauthRouter from "./routes/oauth.js";
+import authRouter, { verifySession } from "./routes/auth.js";
+import { SIGNUP_HTML } from "./assets/signupHtml.js";
+import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
+import { LOGIN_HTML } from "./assets/loginHtml.js";
 
 const app = express();
 

@@ -1,6 +1,6 @@
-import { prisma } from "../lib/prisma";
-import { fingerprintCaller } from "../lib/fingerprint";
-import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email";
+import { prisma } from "../lib/prisma.js";
+import { fingerprintCaller } from "../lib/fingerprint.js";
+import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
 export async function deductCredits(req, res, toolName, cost) {
     const agent = req.agent;
     if (!agent) {

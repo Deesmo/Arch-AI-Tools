@@ -1,4 +1,4 @@
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest } from "../middleware/auth.js";
 import { Response } from "express";
 export declare function deductCredits(req: AuthedRequest, res: Response, toolName: string, cost: number): Promise<boolean>;
 export declare function logError(agentId: string, toolName: string, cost: number): Promise<void>;
