@@ -1,10 +1,7 @@
-"use strict";
 /**
  * Disposable email domain detection.
  * Checks against a list of well-known throwaway email providers.
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.isDisposable = isDisposable;
 const DISPOSABLE_DOMAINS = new Set([
     "mailinator.com", "guerrillamail.com", "tempmail.com", "throwam.com",
     "trashmail.com", "yopmail.com", "sharklasers.com", "guerrillamailblock.com",
@@ -21,7 +18,7 @@ const DISPOSABLE_DOMAINS = new Set([
     "oneoffmail.com", "onewaymail.com", "online.ms", "onqin.com",
     "mailtemp.info", "dispostable.email", "temp-mail.org", "temp-mail.io",
 ]);
-function isDisposable(domain) {
+export function isDisposable(domain) {
     if (!domain)
         return false;
     return DISPOSABLE_DOMAINS.has(domain.toLowerCase());

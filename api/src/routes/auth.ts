@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
@@ -8,18 +9,24 @@ import { sendPasswordResetEmail } from "../services/email";
 
 const router = Router();
 
-// C-1 FIX: Fail hard at startup if JWT_SECRET is not set — no fallback
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start.");
+// Security: fail hard at startup if JWT_SECRET is not set — never use a hardcoded fallback.
+// This applies in ALL environments; a missing secret is always a configuration error.
+if (!process.env.JWT_SECRET) {
+  throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start. Set a strong random secret.");
 }
-const JWT_SECRET = process.env.JWT_SECRET || "arch-tools-dev-secret-local-only";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const COOKIE_NAME = "arch_session";
+// Security: JWT expiry and cookie maxAge are intentionally set to the SAME value (7 days).
+// Mismatched expiry (e.g. 30d JWT + 72h cookie) allows stolen tokens to remain valid
+// long after the user's browser session has expired.
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const SESSION_TTL_JWT = "7d"; // must match SESSION_TTL_MS
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,   // H-1 FIX: strict prevents CSRF on mutating routes
-  maxAge: 72 * 60 * 60 * 1000,  // H-3 FIX: 72h instead of 30 days
+  sameSite: "strict" as const,
+  maxAge: SESSION_TTL_MS,
   path: "/",
 };
 
@@ -43,7 +50,7 @@ const forgotLimiter = rateLimit({
 });
 
 export function signSession(agentId: string): string {
-  return jwt.sign({ sub: agentId }, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign({ sub: agentId }, JWT_SECRET, { expiresIn: SESSION_TTL_JWT });
 }
 
 export function verifySession(token: string): { sub: string } | null {
@@ -184,7 +191,7 @@ router.post("/forgot-password", forgotLimiter, async (req: Request, res: Respons
   // Always return 200 to prevent user enumeration
   const agent = await prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (agent) {
-    const token = require("crypto").randomBytes(32).toString("hex");
+    const token = crypto.randomBytes(32).toString("hex");
     const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await prisma.agent.update({
       where: { id: agent.id },

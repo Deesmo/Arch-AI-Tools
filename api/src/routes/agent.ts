@@ -4,6 +4,7 @@ import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { reqId, safeErr } from "../utils/credits";
 import { sendWelcomeEmail, sendAdminAlert } from "../services/email";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
@@ -42,14 +43,17 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     }
 
     const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
-    // TODO: Migrate to hashed keys. See SECURITY.md for migration plan.
-    // API keys are currently stored in plaintext. A schema migration is required
-    // to add apiKeyHash before this can be safely changed.
+    // Security: store a bcrypt hash of the API key (saltRounds=10) for secure comparison.
+    // The first 12 chars are stored as apiKeyPrefix for fast indexed lookup.
+    const apiKeyPrefix = apiKey.slice(0, 12);
+    const apiKeyHash = await bcrypt.hash(apiKey, 10);
     const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "100", 10);
 
     const agent = await prisma.agent.create({
       data: {
         apiKey,
+        apiKeyPrefix,
+        apiKeyHash,
         email,
         name: name ?? "",
         credits: freeCredits,

@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-nocheck
 /**
  * Daily Usage Rollup
@@ -9,14 +7,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
  *
  * Safe to run multiple times — upserts by (date, toolName).
  */
-require("dotenv/config");
-const prisma_1 = require("../lib/prisma");
+import "dotenv/config";
+import { prisma } from "../lib/prisma";
 async function main() {
     const today = new Date().toISOString().slice(0, 10);
     const logDays = Number(process.env.LOG_RETENTION_DAYS ?? 30);
     const cutoff = new Date(Date.now() - logDays * 24 * 60 * 60 * 1000);
     // Aggregate today's ApiRequest rows into DailyUsage
-    const rows = await prisma_1.prisma.$queryRaw `
+    const rows = await prisma.$queryRaw `
     SELECT "toolName", COUNT(*)::int AS "callCount"
     FROM "ApiRequest"
     WHERE "createdAt" >= ${new Date(today)}
@@ -24,7 +22,7 @@ async function main() {
   `;
     let upserted = 0;
     for (const row of rows) {
-        await prisma_1.prisma.dailyUsage.upsert({
+        await prisma.dailyUsage.upsert({
             where: { date_toolName: { date: today, toolName: row.toolName } },
             update: { callCount: Number(row.callCount) },
             create: { date: today, toolName: row.toolName, callCount: Number(row.callCount) },
@@ -32,16 +30,16 @@ async function main() {
         upserted++;
     }
     // Prune old ApiRequest rows beyond retention window
-    const deleted = await prisma_1.prisma.apiRequest.deleteMany({
+    const deleted = await prisma.apiRequest.deleteMany({
         where: { createdAt: { lt: cutoff } },
     });
     console.log(JSON.stringify({ ok: true, date: today, upserted, deleted_logs: deleted.count }));
 }
 main()
-    .then(() => prisma_1.prisma.$disconnect())
+    .then(() => prisma.$disconnect())
     .catch(async (e) => {
     console.error("dailyRollup failed:", e);
-    await prisma_1.prisma.$disconnect();
+    await prisma.$disconnect();
     process.exit(1);
 });
 //# sourceMappingURL=dailyRollup.js.map

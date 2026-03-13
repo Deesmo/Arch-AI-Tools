@@ -22,7 +22,9 @@ const SUBSCRIPTION_PLANS = [
     billing: "monthly",
     credits_per_month: 600,
     amount: 900,     // $9/mo
-    priceId: process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY ?? "price_1T8pQtKzBSl1smzF1927svjM",
+    // Security: price IDs must be set via environment variables — no hardcoded fallbacks.
+    // Set STRIPE_PRICE_SUB_STARTER_MONTHLY in your environment. See .env.example.
+    priceId: process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY ?? "",
   },
   {
     id: "pro-monthly",
@@ -30,7 +32,7 @@ const SUBSCRIPTION_PLANS = [
     billing: "monthly",
     credits_per_month: 3000,
     amount: 2900,    // $29/mo
-    priceId: process.env.STRIPE_PRICE_SUB_PRO_MONTHLY ?? "price_1T8pQtKzBSl1smzF3Lv6bPEr",
+    priceId: process.env.STRIPE_PRICE_SUB_PRO_MONTHLY ?? "",
   },
   {
     id: "business-monthly",
@@ -38,7 +40,7 @@ const SUBSCRIPTION_PLANS = [
     billing: "monthly",
     credits_per_month: 12000,
     amount: 8900,    // $89/mo
-    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY ?? "price_1T8pQuKzBSl1smzF8WWHHAr8",
+    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY ?? "",
   },
   {
     id: "starter-annual",
@@ -48,7 +50,7 @@ const SUBSCRIPTION_PLANS = [
     credits_per_year: 7200,
     amount: 8100,    // $81/yr = $6.75/mo (25% off)
     amount_monthly_equiv: 675,
-    priceId: process.env.STRIPE_PRICE_SUB_STARTER_ANNUAL ?? "price_1T8pQuKzBSl1smzFRoaBUtBf",
+    priceId: process.env.STRIPE_PRICE_SUB_STARTER_ANNUAL ?? "",
   },
   {
     id: "pro-annual",
@@ -58,7 +60,7 @@ const SUBSCRIPTION_PLANS = [
     credits_per_year: 36000,
     amount: 26100,   // $261/yr = $21.75/mo (25% off)
     amount_monthly_equiv: 2175,
-    priceId: process.env.STRIPE_PRICE_SUB_PRO_ANNUAL ?? "price_1T8pQuKzBSl1smzFa6rrFn18",
+    priceId: process.env.STRIPE_PRICE_SUB_PRO_ANNUAL ?? "",
   },
   {
     id: "business-annual",
@@ -68,7 +70,7 @@ const SUBSCRIPTION_PLANS = [
     credits_per_year: 144000,
     amount: 80100,   // $801/yr = $66.75/mo (25% off)
     amount_monthly_equiv: 6675,
-    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_ANNUAL ?? "price_1T8pQvKzBSl1smzFzM34v689",
+    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_ANNUAL ?? "",
   },
 ];
 

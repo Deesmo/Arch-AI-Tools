@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.LANDING_HTML = void 0;
 // Auto-generated: landing page HTML embedded as string constant
 // This avoids filesystem lookups at runtime
-exports.LANDING_HTML = `<!doctype html>
+export const LANDING_HTML = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

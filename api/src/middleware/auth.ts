@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma";
 import { timingSafeEqual } from "crypto";
+import bcrypt from "bcryptjs";
 
 export interface AuthedRequest extends Request {
   agent?: {
@@ -52,9 +53,24 @@ export async function requireAuth(
         agent = await prisma.agent.findUnique({ where: { id: oauthToken.agentId } });
       }
     } else {
-      // Standard API key
-      // TODO: Migrate to hashed keys. See SECURITY.md for migration plan.
-      agent = await prisma.agent.findUnique({ where: { apiKey } });
+      // Standard API key — use bcrypt comparison when a hash is available.
+      // Lookup by the first 12-char prefix (fast indexed scan), then bcrypt.compare the full key.
+      const prefix = apiKey.slice(0, 12);
+      const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } });
+      if (candidate) {
+        if (candidate.apiKeyHash) {
+          // New path: secure bcrypt comparison
+          const match = await bcrypt.compare(apiKey, candidate.apiKeyHash);
+          agent = match ? candidate : null;
+        } else {
+          // Legacy path: plaintext comparison (migration period — no hash stored yet)
+          agent = candidate.apiKey === apiKey ? candidate : null;
+        }
+      } else {
+        // No prefix match — fall back to exact plaintext lookup for agents that
+        // pre-date the apiKeyPrefix column (populated by migration backfill).
+        agent = await prisma.agent.findUnique({ where: { apiKey } });
+      }
     }
 
     if (!agent) {
@@ -99,10 +115,13 @@ export function requireAdmin(
   res: Response,
   next: NextFunction
 ): void {
+  // Security: admin key must be supplied via Authorization header or x-admin-key header.
+  // Query param (?key=...) is intentionally NOT accepted — query params are logged by
+  // proxies, load balancers, and access logs, which would expose the admin secret.
   const key = String(
     req.headers["x-admin-key"] ??
     req.headers.authorization?.replace("Bearer ", "") ??
-    req.query["key"] ?? ""
+    ""
   );
 
   const expected = process.env.ADMIN_KEY ?? "";

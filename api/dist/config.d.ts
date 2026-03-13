@@ -27,6 +27,7 @@ export declare const config: {
     coingecko: {
         apiKey: string;
     };
+    redisUrl: string;
     x402: {
         walletAddress: string;
         network: string;

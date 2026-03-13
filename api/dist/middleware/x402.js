@@ -1,4 +1,3 @@
-"use strict";
 /**
  * x402 Payment Middleware — v15
  *
@@ -13,15 +12,10 @@
  *
  * Official package: npm install x402-express (swap this in for production if preferred)
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.X402_PRICES = void 0;
-exports.x402Middleware = x402Middleware;
-const axios_1 = __importDefault(require("axios"));
-const prisma_1 = require("../lib/prisma");
-const config_1 = require("../config");
+import axios from "axios";
+import { prisma } from "../lib/prisma";
+import { config } from "../config";
+import { redis } from "../lib/redis";
 // USDC contract addresses by network (native USDC, not bridged)
 const USDC_CONTRACTS = {
     base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
@@ -48,7 +42,7 @@ const USDT_CONTRACTS = {
 // Aptos native USDC token address (Circle native, launched Jan 2025)
 const APTOS_USDC_ADDRESS = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b";
 // Per-tool pricing in USDC (string to avoid float issues)
-exports.X402_PRICES = {
+export const X402_PRICES = {
     "validate-data": "0.001",
     "generate-hash": "0.001",
     "qr-code": "0.002",
@@ -96,13 +90,13 @@ exports.X402_PRICES = {
     "token-lookup": "0.001",
 };
 function buildPaymentRequired(toolName, price) {
-    const network = config_1.config.x402.network;
+    const network = config.x402.network;
     const chainId = network === "base" ? "eip155:8453" : "eip155:84532";
     const usdcContract = USDC_CONTRACTS[network] ?? USDC_CONTRACTS["base"];
     // Convert price to USDC atomic units (6 decimals)
     const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
     const resource = `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`;
-    const evmWallet = config_1.config.x402.walletAddress;
+    const evmWallet = config.x402.walletAddress;
     const accepts = [];
     // Option 1: USDC on Coinbase Base (EVM L2 — fast, cheap)
     if (evmWallet) {
@@ -582,11 +576,52 @@ function buildPaymentRequired(toolName, price) {
         error: "X-PAYMENT-REQUIRED",
     };
 }
+/**
+ * Extract a nonce from the X-Payment header payload.
+ * The x402 payment header is a base64-encoded JSON object. We extract the
+ * `nonce` field (if present) for replay-attack prevention.
+ */
+function extractNonce(paymentHeader) {
+    try {
+        const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
+        const payload = JSON.parse(decoded);
+        const nonce = payload["nonce"];
+        if (typeof nonce === "string" && nonce.length > 0)
+            return nonce;
+        // Some implementations nest under payload.payload
+        const inner = payload["payload"];
+        if (inner && typeof inner === "object") {
+            const innerNonce = inner["nonce"];
+            if (typeof innerNonce === "string" && innerNonce.length > 0)
+                return innerNonce;
+        }
+        return null;
+    }
+    catch {
+        return null;
+    }
+}
+const NONCE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
+/**
+ * Check whether a nonce has been seen before (replay attack detection).
+ * Returns true if the nonce is NEW (safe to proceed), false if already used.
+ * If Redis is unavailable, falls back to allowing the request (non-blocking).
+ */
+async function checkAndStoreNonce(nonce) {
+    if (!redis) {
+        console.warn("[x402] Redis not configured — nonce deduplication disabled. Set REDIS_URL to enable replay protection.");
+        return true; // allow but warn
+    }
+    const key = `x402:nonce:${nonce}`;
+    // SET key "1" NX EX <ttl> — atomic: set only if not exists, returns null if already exists
+    const result = await redis.set(key, "1", "EX", NONCE_TTL_SECONDS, "NX");
+    return result === "OK"; // "OK" = new nonce stored; null = already existed (replay)
+}
 async function verifyPayment(paymentHeader, toolName) {
-    if (!config_1.config.x402.facilitatorUrl)
+    if (!config.x402.facilitatorUrl)
         return false;
     try {
-        const res = await axios_1.default.post(`${config_1.config.x402.facilitatorUrl}/verify`, { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` }, { timeout: 8000 });
+        const res = await axios.post(`${config.x402.facilitatorUrl}/verify`, { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` }, { timeout: 8000 });
         return res.data?.isValid === true;
     }
     catch {
@@ -594,10 +629,10 @@ async function verifyPayment(paymentHeader, toolName) {
     }
 }
 async function settlePayment(paymentHeader, toolName) {
-    if (!config_1.config.x402.facilitatorUrl)
+    if (!config.x402.facilitatorUrl)
         return null;
     try {
-        const res = await axios_1.default.post(`${config_1.config.x402.facilitatorUrl}/settle`, { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` }, { timeout: 10000 });
+        const res = await axios.post(`${config.x402.facilitatorUrl}/settle`, { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` }, { timeout: 10000 });
         return res.data?.txHash ?? null;
     }
     catch {
@@ -609,10 +644,10 @@ async function settlePayment(paymentHeader, toolName) {
  * Checks for X-Payment header; if missing + no valid API key, returns 402.
  * If X-Payment present, verifies with facilitator and logs payment.
  */
-function x402Middleware(toolName) {
+export function x402Middleware(toolName) {
     return async (req, res, next) => {
         // If wallet address not configured, skip x402 (Stripe-only mode)
-        if (!config_1.config.x402.walletAddress) {
+        if (!config.x402.walletAddress) {
             next();
             return;
         }
@@ -627,16 +662,40 @@ function x402Middleware(toolName) {
                 return;
             }
             // Return 402 Payment Required
-            const price = exports.X402_PRICES[toolName] ?? "0.005";
+            const price = X402_PRICES[toolName] ?? "0.005";
             res.status(402)
                 .header("Content-Type", "application/json")
                 .header("Access-Control-Expose-Headers", "X-Payment-Required")
                 .json(buildPaymentRequired(toolName, price));
             return;
         }
+        // Security: extract and deduplicate nonce to prevent replay attacks.
+        // A valid x402 payment header MUST include a `nonce` field.
+        const nonce = extractNonce(paymentHeader);
+        if (!nonce) {
+            res.status(402).json({
+                ok: false,
+                error: "payment_nonce_missing",
+                message: "x402 payment header must include a unique nonce field to prevent replay attacks.",
+            });
+            return;
+        }
+        const isNewNonce = await checkAndStoreNonce(nonce);
+        if (!isNewNonce) {
+            res.status(402).json({
+                ok: false,
+                error: "payment_replay_detected",
+                message: "x402 nonce has already been used. Each payment must have a unique nonce.",
+            });
+            return;
+        }
         // Payment header present — verify with facilitator
         const isValid = await verifyPayment(paymentHeader, toolName);
         if (!isValid) {
+            // Nonce was already stored — clean it up on verification failure so the agent
+            // can retry with the same nonce after fixing their payment header.
+            if (redis)
+                await redis.del(`x402:nonce:${nonce}`).catch(() => { });
             res.status(402).json({
                 ok: false,
                 error: "payment_invalid",
@@ -646,15 +705,15 @@ function x402Middleware(toolName) {
         }
         // Settle payment
         const txHash = await settlePayment(paymentHeader, toolName);
-        const price = exports.X402_PRICES[toolName] ?? "0.005";
+        const price = X402_PRICES[toolName] ?? "0.005";
         // Log the x402 payment
         try {
-            await prisma_1.prisma.x402Payment.create({
+            await prisma.x402Payment.create({
                 data: {
                     toolName,
                     amountUsdc: price,
                     txHash: txHash ?? undefined,
-                    network: config_1.config.x402.network,
+                    network: config.x402.network,
                     status: "settled",
                 },
             });
@@ -666,7 +725,7 @@ function x402Middleware(toolName) {
         req.x402Paid = true;
         // Log x402 tool call to ApiRequest for admin stats visibility
         try {
-            await prisma_1.prisma.apiRequest.create({
+            await prisma.apiRequest.create({
                 data: {
                     agentId: "x402_anonymous",
                     toolName,

@@ -1,13 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.deductCredits = deductCredits;
-exports.logError = logError;
-exports.reqId = reqId;
-exports.safeErr = safeErr;
-const prisma_1 = require("../lib/prisma");
-const fingerprint_1 = require("../lib/fingerprint");
-const email_1 = require("../services/email");
-async function deductCredits(req, res, toolName, cost) {
+import { prisma } from "../lib/prisma";
+import { fingerprintCaller } from "../lib/fingerprint";
+import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email";
+export async function deductCredits(req, res, toolName, cost) {
     const agent = req.agent;
     if (!agent) {
         res.status(401).json({ ok: false, error: "unauthorized", request_id: crypto.randomUUID() });
@@ -25,7 +19,7 @@ async function deductCredits(req, res, toolName, cost) {
         return false;
     }
     // Deduct credits atomically
-    await prisma_1.prisma.agent.update({
+    await prisma.agent.update({
         where: { id: agent.id },
         data: {
             credits: { decrement: cost },
@@ -35,16 +29,16 @@ async function deductCredits(req, res, toolName, cost) {
     // Update agent object in-place for use in handler
     agent.credits -= cost;
     // Low credit alert (non-blocking)
-    if (agent.credits <= email_1.LOW_CREDIT_THRESHOLD && agent.credits > 0) {
-        prisma_1.prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
+    if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
+        prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
             .then(a => { if (a?.email)
-            (0, email_1.sendLowCreditAlert)(a.email, agent.credits, agent.id).catch(() => { }); })
+            sendLowCreditAlert(a.email, agent.credits, agent.id).catch(() => { }); })
             .catch(() => { });
     }
     // Log the request with agent fingerprint
     try {
-        const fp = (0, fingerprint_1.fingerprintCaller)(req.headers["user-agent"]);
-        await prisma_1.prisma.apiRequest.create({
+        const fp = fingerprintCaller(req.headers["user-agent"]);
+        await prisma.apiRequest.create({
             data: {
                 agentId: agent.id,
                 toolName,
@@ -57,7 +51,7 @@ async function deductCredits(req, res, toolName, cost) {
         });
         // Update daily rollup
         const today = new Date().toISOString().slice(0, 10);
-        await prisma_1.prisma.dailyUsage.upsert({
+        await prisma.dailyUsage.upsert({
             where: { date_toolName: { date: today, toolName } },
             update: { callCount: { increment: 1 } },
             create: { date: today, toolName, callCount: 1 },
@@ -68,9 +62,9 @@ async function deductCredits(req, res, toolName, cost) {
     }
     return true;
 }
-async function logError(agentId, toolName, cost) {
+export async function logError(agentId, toolName, cost) {
     try {
-        await prisma_1.prisma.apiRequest.create({
+        await prisma.apiRequest.create({
             data: {
                 agentId,
                 toolName,
@@ -83,11 +77,11 @@ async function logError(agentId, toolName, cost) {
         // Non-fatal
     }
 }
-function reqId() {
+export function reqId() {
     return `req_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
 }
 // Safe error message — never leak internals in production
-function safeErr(e) {
+export function safeErr(e) {
     if (process.env.NODE_ENV === "production")
         return "An error occurred. Please try again.";
     return String(e);

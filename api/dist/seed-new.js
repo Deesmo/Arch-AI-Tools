@@ -1,7 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
 async function main() {
     const tools = [
         { name: "news-search", description: "Search for recent news articles on any topic. Returns title, URL, description, source, and publication date from Brave News, Tavily, or Serper.", category: "search", credits: 3 },

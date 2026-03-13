@@ -1,73 +1,40 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const Sentry = __importStar(require("@sentry/node"));
-const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
-const helmet_1 = __importDefault(require("helmet"));
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const morgan_1 = __importDefault(require("morgan"));
-const cookie_parser_1 = __importDefault(require("cookie-parser"));
-const path_1 = __importDefault(require("path"));
-const config_1 = require("./config");
+import * as Sentry from "@sentry/node";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import { config } from "./config";
+// ESM-compatible __dirname (safe in both CommonJS and ESM builds)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 // Init Sentry before anything else
 if (process.env.SENTRY_DSN) {
     Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV ?? "development", tracesSampleRate: 0.1 });
 }
 // Routes
-const discovery_1 = __importDefault(require("./routes/discovery"));
-const agent_1 = __importDefault(require("./routes/agent"));
-const index_1 = __importDefault(require("./routes/tools/index"));
-const billing_1 = __importDefault(require("./routes/billing"));
-const admin_1 = __importDefault(require("./routes/admin"));
-const workflows_1 = __importDefault(require("./routes/workflows"));
-const seo_1 = __importDefault(require("./routes/seo"));
-const legal_1 = __importDefault(require("./routes/legal"));
-const oauth_1 = __importDefault(require("./routes/oauth"));
-const auth_1 = __importDefault(require("./routes/auth"));
-const signupHtml_1 = require("./assets/signupHtml");
-const dashboardHtml_1 = require("./assets/dashboardHtml");
-const loginHtml_1 = require("./assets/loginHtml");
-const app = (0, express_1.default)();
+import discoveryRouter from "./routes/discovery";
+import agentRouter from "./routes/agent";
+import toolsRouter from "./routes/tools/index";
+import billingRouter from "./routes/billing";
+import adminRouter from "./routes/admin";
+import workflowsRouter from "./routes/workflows";
+import seoRouter from "./routes/seo";
+import legalRouter from "./routes/legal";
+import oauthRouter from "./routes/oauth";
+import authRouter, { verifySession } from "./routes/auth";
+import { SIGNUP_HTML } from "./assets/signupHtml";
+import { DASHBOARD_HTML } from "./assets/dashboardHtml";
+import { LOGIN_HTML } from "./assets/loginHtml";
+const app = express();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
 // ─── Security headers (helmet) ────────────────────────────────────────────────
-app.use((0, helmet_1.default)({
+app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
@@ -83,7 +50,7 @@ app.use((0, helmet_1.default)({
 }));
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 // Global limit (all routes) — stops bots and DoS
-const globalLimiter = (0, express_rate_limit_1.default)({
+const globalLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
     max: 300,
     standardHeaders: true,
@@ -96,7 +63,7 @@ const globalLimiter = (0, express_rate_limit_1.default)({
     skip: (req) => req.path === "/health" || req.path.startsWith("/.well-known"),
 });
 // Auth endpoint limit — prevent brute force
-const authLimiter = (0, express_rate_limit_1.default)({
+const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 20,
     standardHeaders: true,
@@ -106,7 +73,7 @@ const authLimiter = (0, express_rate_limit_1.default)({
 });
 // Registration-specific limit — prevent credit farming via bulk account creation
 // 5 new accounts per IP per hour is generous for real users, blocks bots
-const registerLimiter = (0, express_rate_limit_1.default)({
+const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 5,
     standardHeaders: true,
@@ -115,28 +82,28 @@ const registerLimiter = (0, express_rate_limit_1.default)({
     message: { ok: false, error: "rate_limited", message: "Too many registration attempts. Try again in 1 hour." },
 });
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use((0, cors_1.default)({ origin: config_1.config.corsOrigin, credentials: true }));
-app.use((0, morgan_1.default)("combined"));
+app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(morgan("combined"));
 app.use(globalLimiter);
 // Stripe webhook needs raw body — must come before express.json()
-app.use("/webhooks/stripe", express_1.default.raw({ type: "application/json" }));
-app.use(express_1.default.json({ limit: "10mb" }));
-app.use((0, cookie_parser_1.default)());
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use("/webhooks/stripe", express.raw({ type: "application/json" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 // ─── Request ID ───────────────────────────────────────────────────────────────
 app.use((req, _res, next) => {
     req.headers["x-request-id"] = req.headers["x-request-id"] ?? crypto.randomUUID();
     next();
 });
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
-app.get('/favicon.ico', (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/favicon.ico'), (err) => {
+app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
     if (err)
         res.redirect(301, '/arch-icon.svg');
 }));
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
-app.use(express_1.default.static(path_1.default.join(__dirname, "../public"), {
+app.use(express.static(path.join(__dirname, "../public"), {
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
@@ -150,43 +117,42 @@ app.use(express_1.default.static(path_1.default.join(__dirname, "../public"), {
 app.get("/og-image.png", (_req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    res.sendFile(path_1.default.join(__dirname, "../public/og-image.svg"));
+    res.sendFile(path.join(__dirname, "../public/og-image.svg"));
 });
 // ─── Routes ───────────────────────────────────────────────────────────────────
 // Discovery & health (no auth)
-app.use("/", discovery_1.default);
+app.use("/", discoveryRouter);
 // SEO free tool pages + no-auth API endpoints
-app.use("/tools", seo_1.default);
-app.use("/v1/tools", seo_1.default); // Free endpoint proxies
+app.use("/tools", seoRouter);
+app.use("/v1/tools", seoRouter); // Free endpoint proxies
 // Agent registration — tight limit to prevent credit farming
 app.use("/v1/agent/register", registerLimiter);
 // Agent usage & other agent routes — auth brute force protection
-app.use("/v1/agent", authLimiter, agent_1.default);
+app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
-app.use("/oauth", authLimiter, oauth_1.default);
+app.use("/oauth", authLimiter, oauthRouter);
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
-app.use("/v1/tools", index_1.default);
+app.use("/v1/tools", toolsRouter);
 // Billing
-app.use("/v1/billing", billing_1.default);
-app.use("/webhooks", billing_1.default);
+app.use("/v1/billing", billingRouter);
+app.use("/webhooks", billingRouter);
 // Admin
-app.use("/v1/admin", admin_1.default);
-app.use("/admin", admin_1.default);
+app.use("/v1/admin", adminRouter);
+app.use("/admin", adminRouter);
 // Workflows
-app.use("/v1/workflows", workflows_1.default);
+app.use("/v1/workflows", workflowsRouter);
 // Legal
-app.use("/legal", legal_1.default);
-app.use("/auth", auth_1.default);
+app.use("/legal", legalRouter);
+app.use("/auth", authRouter);
 // ─── Frontend pages ───────────────────────────────────────────────────────────
-app.get("/signup", (_req, res) => res.type("text/html").send(signupHtml_1.SIGNUP_HTML));
-app.get("/login", (_req, res) => res.type("text/html").send(loginHtml_1.LOGIN_HTML));
+app.get("/signup", (_req, res) => res.type("text/html").send(SIGNUP_HTML));
+app.get("/login", (_req, res) => res.type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (req, res) => {
-    const { verifySession } = require("./routes/auth");
     const token = req.cookies?.arch_session;
     if (!token || !verifySession(token)) {
         return res.redirect(302, "/login?next=/dashboard");
     }
-    return res.type("text/html").send(dashboardHtml_1.DASHBOARD_HTML);
+    return res.type("text/html").send(DASHBOARD_HTML);
 });
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — referenced in Stripe cancel_url and nav links
@@ -194,11 +160,11 @@ app.get("/pricing", (_req, res) => res.redirect("/#pricing"));
 // /privacy and /legal — convenience redirects to canonical sub-paths
 app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
-app.get("/docs", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/docs.html')));
-app.get("/docs/:slug", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/docs.html')));
-app.get("/blog", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/blog.html')));
-app.get("/blog/:slug", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/blog.html')));
-app.get("/sdk", (_req, res) => res.sendFile(path_1.default.join(__dirname, '../public/sdk.html')));
+app.get("/docs", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
+app.get("/docs/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
+app.get("/blog", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
+app.get("/blog/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
+app.get("/sdk", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 // /success — Stripe post-checkout success page
 app.get("/success", (_req, res) => {
     res.type("text/html").send(`<!DOCTYPE html>
@@ -239,28 +205,28 @@ app.use((err, _req, res, _next) => {
     res.status(500).json({
         ok: false,
         error: "internal_error",
-        message: config_1.config.nodeEnv === "development" ? err.message : "Internal server error",
+        message: config.nodeEnv === "development" ? err.message : "Internal server error",
         request_id: crypto.randomUUID(),
     });
 });
 // ─── Start ────────────────────────────────────────────────────────────────────
 // Startup guard — fail fast if ADMIN_KEY is insecure
-if (config_1.config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.ADMIN_KEY === "changeme")) {
+if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.ADMIN_KEY === "changeme")) {
     console.error("FATAL: ADMIN_KEY must be set to a secure value in production. Exiting.");
     process.exit(1);
 }
-app.listen(config_1.config.port, () => {
-    console.log(`⚡ Arch Tools API v1.5.0 running on port ${config_1.config.port}`);
-    console.log(`   ENV: ${config_1.config.nodeEnv}`);
-    console.log(`   Site: ${config_1.config.publicSiteUrl}`);
+app.listen(config.port, () => {
+    console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
+    console.log(`   ENV: ${config.nodeEnv}`);
+    console.log(`   Site: ${config.publicSiteUrl}`);
 });
 // Daily cleanup of expired OAuth records
 setInterval(async () => {
     try {
-        const { cleanupExpiredOAuthRecords } = await Promise.resolve().then(() => __importStar(require("./lib/systemJobs")));
+        const { cleanupExpiredOAuthRecords } = await import("./lib/systemJobs");
         await cleanupExpiredOAuthRecords();
     }
     catch { /* non-fatal */ }
 }, 24 * 60 * 60 * 1000);
-exports.default = app;
+export default app;
 //# sourceMappingURL=index.js.map

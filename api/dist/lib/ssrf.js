@@ -1,11 +1,5 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUrl = validateUrl;
-const url_1 = require("url");
-const promises_1 = __importDefault(require("dns/promises"));
+import { URL } from "url";
+import dns from "dns/promises";
 const BLOCKED_PATTERNS = [
     /^localhost$/i,
     /^127\./,
@@ -24,10 +18,10 @@ const BLOCKED_HOSTS = [
     "169.254.169.254",
     "instance-data",
 ];
-async function validateUrl(rawUrl) {
+export async function validateUrl(rawUrl) {
     let parsed;
     try {
-        parsed = new url_1.URL(rawUrl);
+        parsed = new URL(rawUrl);
     }
     catch {
         throw new Error("Invalid URL");
@@ -46,7 +40,7 @@ async function validateUrl(rawUrl) {
     }
     // DNS resolution check
     try {
-        const addresses = await promises_1.default.lookup(hostname, { all: true });
+        const addresses = await dns.lookup(hostname, { all: true });
         for (const addr of addresses) {
             for (const pattern of BLOCKED_PATTERNS) {
                 if (pattern.test(addr.address)) {

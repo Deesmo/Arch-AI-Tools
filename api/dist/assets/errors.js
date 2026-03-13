@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ERROR_REGISTRY = void 0;
-exports.ERROR_REGISTRY = [
+export const ERROR_REGISTRY = [
     {
         code: "unauthorized",
         title: "Missing or invalid API key",
