@@ -1,42 +1,7 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const prisma_1 = require("../lib/prisma");
-const crypto_1 = __importStar(require("crypto"));
-const router = (0, express_1.Router)();
+import { Router } from "express";
+import { prisma } from "../lib/prisma";
+import crypto, { timingSafeEqual } from "crypto";
+const router = Router();
 // HTML escape to prevent XSS injection in consent page
 function esc(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
@@ -120,7 +85,7 @@ router.get("/authorize", async (req, res) => {
         res.status(400).json({ ok: false, error: "invalid_request", message: "client_id, redirect_uri, and response_type=code are required" });
         return;
     }
-    const client = await prisma_1.prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
+    const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
     if (!client) {
         res.status(400).json({ ok: false, error: "invalid_client", message: "Unknown client_id" });
         return;
@@ -134,22 +99,22 @@ router.get("/authorize", async (req, res) => {
 // ─── POST /oauth/authorize (consent form submit) ──────────────────────────────
 router.post("/authorize", async (req, res) => {
     const { client_id, redirect_uri, scope, state, email, apiKey } = req.body;
-    const client = await prisma_1.prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
+    const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
     if (!client || !client.redirectUris.includes(redirect_uri)) {
         res.status(400).json({ ok: false, error: "invalid_client" });
         return;
     }
     // Verify agent credentials
-    const agent = await prisma_1.prisma.agent.findFirst({ where: { email, apiKey } }).catch(() => null);
+    const agent = await prisma.agent.findFirst({ where: { email, apiKey } }).catch(() => null);
     if (!agent) {
         res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, "Invalid email or API key. Check your credentials at archtools.dev."));
         return;
     }
     // Generate auth code
-    const code = crypto_1.default.randomBytes(32).toString("base64url");
+    const code = crypto.randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-    await prisma_1.prisma.oAuthAuthCode.create({
-        data: { id: crypto_1.default.randomUUID(), code, clientId: client_id, agentId: agent.id, scope, redirectUri: redirect_uri, expiresAt },
+    await prisma.oAuthAuthCode.create({
+        data: { id: crypto.randomUUID(), code, clientId: client_id, agentId: agent.id, scope, redirectUri: redirect_uri, expiresAt },
     });
     const url = new URL(redirect_uri);
     url.searchParams.set("code", code);
@@ -160,9 +125,9 @@ router.post("/authorize", async (req, res) => {
 // ─── POST /oauth/token ────────────────────────────────────────────────────────
 router.post("/token", async (req, res) => {
     const { grant_type, code, client_id, client_secret, redirect_uri, refresh_token } = req.body;
-    const client = await prisma_1.prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
+    const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
     const secretsMatch = !!client && client.clientSecret.length === (client_secret ?? "").length &&
-        (0, crypto_1.timingSafeEqual)(Buffer.from(client.clientSecret), Buffer.from(client_secret ?? ""));
+        timingSafeEqual(Buffer.from(client.clientSecret), Buffer.from(client_secret ?? ""));
     if (!client || !secretsMatch) {
         res.status(401).json({ error: "invalid_client" });
         return;
@@ -173,18 +138,18 @@ router.post("/token", async (req, res) => {
             res.status(400).json({ error: "invalid_request" });
             return;
         }
-        const authCode = await prisma_1.prisma.oAuthAuthCode.findUnique({ where: { code } }).catch(() => null);
+        const authCode = await prisma.oAuthAuthCode.findUnique({ where: { code } }).catch(() => null);
         if (!authCode || authCode.used || authCode.expiresAt < new Date() || authCode.clientId !== client_id || authCode.redirectUri !== redirect_uri) {
             res.status(400).json({ error: "invalid_grant" });
             return;
         }
         // Mark code as used
-        await prisma_1.prisma.oAuthAuthCode.update({ where: { code }, data: { used: true } });
-        const accessToken = `at_oauth_${crypto_1.default.randomBytes(32).toString("base64url")}`;
-        const refreshTok = `rt_oauth_${crypto_1.default.randomBytes(32).toString("base64url")}`;
+        await prisma.oAuthAuthCode.update({ where: { code }, data: { used: true } });
+        const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
+        const refreshTok = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;
         const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
-        await prisma_1.prisma.oAuthToken.create({
-            data: { id: crypto_1.default.randomUUID(), accessToken, refreshToken: refreshTok, clientId: client_id, agentId: authCode.agentId, scope: authCode.scope, expiresAt },
+        await prisma.oAuthToken.create({
+            data: { id: crypto.randomUUID(), accessToken, refreshToken: refreshTok, clientId: client_id, agentId: authCode.agentId, scope: authCode.scope, expiresAt },
         });
         res.json({ access_token: accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: refreshTok, scope: authCode.scope });
         return;
@@ -195,23 +160,23 @@ router.post("/token", async (req, res) => {
             res.status(400).json({ error: "invalid_request" });
             return;
         }
-        const oldToken = await prisma_1.prisma.oAuthToken.findUnique({ where: { refreshToken: refresh_token } }).catch(() => null);
+        const oldToken = await prisma.oAuthToken.findUnique({ where: { refreshToken: refresh_token } }).catch(() => null);
         if (!oldToken || oldToken.clientId !== client_id || oldToken.expiresAt < new Date()) {
             res.status(400).json({ error: "invalid_grant" });
             return;
         }
         // Rotate tokens
-        const accessToken = `at_oauth_${crypto_1.default.randomBytes(32).toString("base64url")}`;
-        const newRefresh = `rt_oauth_${crypto_1.default.randomBytes(32).toString("base64url")}`;
+        const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
+        const newRefresh = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;
         const expiresAt = new Date(Date.now() + 3600 * 1000);
-        await prisma_1.prisma.oAuthToken.delete({ where: { id: oldToken.id } });
-        await prisma_1.prisma.oAuthToken.create({
-            data: { id: crypto_1.default.randomUUID(), accessToken, refreshToken: newRefresh, clientId: client_id, agentId: oldToken.agentId, scope: oldToken.scope, expiresAt },
+        await prisma.oAuthToken.delete({ where: { id: oldToken.id } });
+        await prisma.oAuthToken.create({
+            data: { id: crypto.randomUUID(), accessToken, refreshToken: newRefresh, clientId: client_id, agentId: oldToken.agentId, scope: oldToken.scope, expiresAt },
         });
         res.json({ access_token: accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: newRefresh, scope: oldToken.scope });
         return;
     }
     res.status(400).json({ error: "unsupported_grant_type" });
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=oauth.js.map

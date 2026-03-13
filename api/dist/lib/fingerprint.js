@@ -1,11 +1,8 @@
-"use strict";
 /**
  * Agent Fingerprinting
  * Identifies which AI platform or runtime is calling each tool.
  * This builds a proprietary dataset of agent behavior patterns — our moat.
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.fingerprintCaller = fingerprintCaller;
 const AI_AGENT_PATTERNS = [
     // MCP clients
     { pattern: /claude[\s\-_]?desktop/i, name: "claude-desktop" },
@@ -54,7 +51,7 @@ const AI_AGENT_NAMES = new Set([
     "pydantic-ai", "vercel-ai-sdk", "cohere", "perplexity", "arch-tools-sdk",
 ]);
 const BROWSER_NAMES = new Set(["chrome", "safari", "firefox"]);
-function fingerprintCaller(userAgent) {
+export function fingerprintCaller(userAgent) {
     if (!userAgent) {
         return { callerType: "unknown", callerName: "no-user-agent" };
     }

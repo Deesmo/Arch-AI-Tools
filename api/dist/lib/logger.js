@@ -1,6 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.logger = void 0;
 // Supports both:
 //   logger.info("message")
 //   logger.info({ key: "value" }, "message")   ← pino-style structured logging
@@ -28,7 +25,7 @@ function log(level, msgOrObj, ...rest) {
         console.log(`${prefix} ${msg}${metaStr}`);
     }
 }
-exports.logger = {
+export const logger = {
     info: (msgOrObj, ...args) => log("info", msgOrObj, ...args),
     warn: (msgOrObj, ...args) => log("warn", msgOrObj, ...args),
     error: (msgOrObj, ...args) => log("error", msgOrObj, ...args),

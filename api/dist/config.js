@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.config = void 0;
-exports.config = {
+export const config = {
     port: parseInt(process.env.PORT ?? "3000", 10),
     nodeEnv: process.env.NODE_ENV ?? "development",
     adminKey: process.env.ADMIN_KEY ?? "changeme",
@@ -30,6 +27,7 @@ exports.config = {
     coingecko: {
         apiKey: process.env.COINGECKO_API_KEY ?? "",
     },
+    redisUrl: process.env.REDIS_URL ?? "",
     x402: {
         // Only use wallet address if it looks like a real Ethereum/Base address (0x + 40 hex chars)
         walletAddress: /^0x[a-fA-F0-9]{40}$/.test(process.env.WALLET_ADDRESS ?? "") ? (process.env.WALLET_ADDRESS ?? "") : "",

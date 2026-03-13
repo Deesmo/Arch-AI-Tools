@@ -1,9 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const prisma_1 = require("../lib/prisma");
-const x402_1 = require("../middleware/x402");
-const router = (0, express_1.Router)();
+import { Router } from "express";
+import { prisma } from "../lib/prisma";
+import { X402_PRICES } from "../middleware/x402";
+const router = Router();
 const BASE_URL = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const API_BASE = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const NETWORK = process.env.X402_NETWORK ?? "base";
@@ -11,8 +9,8 @@ const NETWORK = process.env.X402_NETWORK ?? "base";
 router.get("/health", async (_req, res) => {
     try {
         const [toolCount, agentCount] = await Promise.all([
-            prisma_1.prisma.tool.count(),
-            prisma_1.prisma.agent.count(),
+            prisma.tool.count(),
+            prisma.agent.count(),
         ]);
         res.json({ ok: true, service: "arch-tools-api", version: "1.7.0", db: "connected", tools: toolCount || 45, agents: agentCount });
     }
@@ -57,7 +55,7 @@ router.get("/.well-known/x402", (_req, res) => {
             description: "USDC on Solana (fast, cheap)",
         });
     }
-    const endpoints = Object.entries(x402_1.X402_PRICES).map(([tool, price]) => ({
+    const endpoints = Object.entries(X402_PRICES).map(([tool, price]) => ({
         path: `/v1/tools/${tool}`,
         method: "POST",
         price: `$${price}`,
@@ -89,7 +87,7 @@ router.get("/v1/tools", async (_req, res) => {
     try {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore — `active` exists in prod schema; local client may be stale
-        const tools = await prisma_1.prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+        const tools = await prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
         res.json({ ok: true, tools });
     }
     catch {
@@ -274,5 +272,5 @@ const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description
     updatedAt: new Date(),
     tags: [],
 }));
-exports.default = router;
+export default router;
 //# sourceMappingURL=discovery.js.map

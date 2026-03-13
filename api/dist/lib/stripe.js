@@ -1,12 +1,6 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripe = void 0;
-const stripe_1 = __importDefault(require("stripe"));
-const config_1 = require("../config");
-exports.stripe = config_1.config.stripe.secretKey
-    ? new stripe_1.default(config_1.config.stripe.secretKey, { apiVersion: "2025-02-24.acacia" })
+import Stripe from "stripe";
+import { config } from "../config";
+export const stripe = config.stripe.secretKey
+    ? new Stripe(config.stripe.secretKey, { apiVersion: "2025-02-24.acacia" })
     : null;
 //# sourceMappingURL=stripe.js.map

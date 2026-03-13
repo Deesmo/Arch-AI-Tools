@@ -1,89 +1,14 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateData = validateData;
-exports.generateHash = generateHash;
-exports.qrCode = qrCode;
-exports.convertFormat = convertFormat;
-exports.transformText = transformText;
-exports.extractMetadata = extractMetadata;
-exports.webScrape = webScrape;
-exports.aiGenerate = aiGenerate;
-exports.ocrExtract = ocrExtract;
-exports.ipLookup = ipLookup;
-exports.emailVerify = emailVerify;
-exports.phoneValidate = phoneValidate;
-exports.currencyConvert = currencyConvert;
-exports.timezoneConvert = timezoneConvert;
-exports.sentimentAnalysis = sentimentAnalysis;
-exports.summarize = summarize;
-exports.extractEntities = extractEntities;
-exports.languageDetect = languageDetect;
-exports.piiDetect = piiDetect;
-exports.readabilityScore = readabilityScore;
-exports.rssParse = rssParse;
-exports.generateUuid = generateUuid;
-exports.regexGenerate = regexGenerate;
-exports.diffText = diffText;
-exports.webSearch = webSearch;
-exports.whoisLookup = whoisLookup;
-exports.searchWeb = searchWeb;
-exports.extractPage = extractPage;
-exports.extractPdf = extractPdf;
-exports.browserTask = browserTask;
-exports.screenshotCapture = screenshotCapture;
-exports.imageGenerate = imageGenerate;
-exports.htmlToMarkdown = htmlToMarkdown;
-exports.urlShorten = urlShorten;
-exports.webhookSend = webhookSend;
-exports.jsonpathQuery = jsonpathQuery;
-exports.barcodeGenerate = barcodeGenerate;
-const ajv_1 = __importDefault(require("ajv"));
-const crypto_1 = __importDefault(require("crypto"));
-const node_fetch_1 = __importDefault(require("node-fetch"));
-const qrcode_1 = __importDefault(require("qrcode"));
-const cheerio = __importStar(require("cheerio"));
-const js_yaml_1 = __importDefault(require("js-yaml"));
-const fast_xml_parser_1 = require("fast-xml-parser");
-const logger_js_1 = require("../lib/logger.js");
-const promises_1 = __importDefault(require("dns/promises"));
-const net_1 = __importDefault(require("net"));
-const ajv = new ajv_1.default({ allErrors: true, strict: false });
+import Ajv from "ajv";
+import crypto from "crypto";
+import fetch from "node-fetch";
+import QRCode from "qrcode";
+import * as cheerio from "cheerio";
+import yaml from "js-yaml";
+import { XMLParser, XMLBuilder } from "fast-xml-parser";
+import { logger } from "../lib/logger.js";
+import dns from "dns/promises";
+import net from "net";
+const ajv = new Ajv({ allErrors: true, strict: false });
 // ─── Constants ───
 const MAX_SCRAPE_BYTES = Number(process.env.SCRAPE_MAX_BYTES || 750_000);
 const MAX_SCRAPE_URL_LEN = Number(process.env.SCRAPE_MAX_URL_LEN || 2048);
@@ -97,7 +22,7 @@ const ALLOWED_AI_MODELS = (process.env.AI_ALLOWED_MODELS || "claude-sonnet-4-6,c
 // ─── SSRF protection ───
 const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal", "169.254.169.254"]);
 function isPrivateIp(ip) {
-    const family = net_1.default.isIP(ip);
+    const family = net.isIP(ip);
     if (family === 4) {
         const parts = ip.split(".").map((x) => Number(x));
         if (parts.length !== 4 || parts.some((n) => Number.isNaN(n)))
@@ -139,12 +64,12 @@ async function assertSafeUrl(urlStr) {
         throw new Error("invalid_hostname");
     if (BLOCKED_HOSTS.has(u.hostname))
         throw new Error("blocked_hostname");
-    if (net_1.default.isIP(u.hostname)) {
+    if (net.isIP(u.hostname)) {
         if (isPrivateIp(u.hostname))
             throw new Error("blocked_ip");
         return;
     }
-    const addrs = await promises_1.default.lookup(u.hostname, { all: true, verbatim: true });
+    const addrs = await dns.lookup(u.hostname, { all: true, verbatim: true });
     for (const a of addrs) {
         if (isPrivateIp(a.address))
             throw new Error("blocked_ip");
@@ -184,7 +109,7 @@ async function readBodyTextWithLimit(resp, limitBytes) {
     return { text: Buffer.concat(chunks).toString("utf8"), truncated };
 }
 // ─── validate-data ───
-function validateData(payload) {
+export function validateData(payload) {
     const { schema, data } = payload || {};
     if (!schema || typeof schema !== "object")
         return { ok: false, error: "missing_schema" };
@@ -193,16 +118,16 @@ function validateData(payload) {
     return { ok: !!valid, errors: validate.errors || [] };
 }
 // ─── generate-hash ───
-function generateHash(payload) {
+export function generateHash(payload) {
     const { algorithm = "sha256", input = "" } = payload || {};
     const allowed = new Set(["sha256", "sha512", "md5", "sha1"]);
     if (!allowed.has(algorithm))
         return { ok: false, error: "unsupported_algorithm", supported: [...allowed] };
-    const h = crypto_1.default.createHash(algorithm).update(String(input)).digest("hex");
+    const h = crypto.createHash(algorithm).update(String(input)).digest("hex");
     return { ok: true, algorithm, hash: h };
 }
 // ─── qr-code ───
-async function qrCode(payload) {
+export async function qrCode(payload) {
     const { text, format = "dataurl", width = 300, margin = 2 } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -215,10 +140,10 @@ async function qrCode(payload) {
             color: { dark: "#000000", light: "#ffffff" },
         };
         if (format === "svg") {
-            const svg = await qrcode_1.default.toString(text, { type: "svg", width: opts.width, margin: opts.margin });
+            const svg = await QRCode.toString(text, { type: "svg", width: opts.width, margin: opts.margin });
             return { ok: true, format: "svg", data: svg };
         }
-        const dataUrl = await qrcode_1.default.toDataURL(text, opts);
+        const dataUrl = await QRCode.toDataURL(text, opts);
         return { ok: true, format: "dataurl", data: dataUrl };
     }
     catch (e) {
@@ -278,9 +203,9 @@ function jsonToCsv(data) {
     }).join(","));
     return [header, ...rows].join("\n");
 }
-const xmlParser = new fast_xml_parser_1.XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
-const xmlBuilder = new fast_xml_parser_1.XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: "@_", format: true });
-async function convertFormat(payload) {
+const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
+const xmlBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: "@_", format: true });
+export async function convertFormat(payload) {
     const { from, to, data } = payload || {};
     const supported = ["json", "yaml", "csv", "xml"];
     if (!from || !to)
@@ -291,7 +216,7 @@ async function convertFormat(payload) {
             parsed = typeof data === "string" ? JSON.parse(data) : data;
         }
         else if (from === "yaml") {
-            parsed = js_yaml_1.default.load(String(data));
+            parsed = yaml.load(String(data));
         }
         else if (from === "csv") {
             parsed = csvToJson(String(data));
@@ -307,7 +232,7 @@ async function convertFormat(payload) {
             output = JSON.stringify(parsed, null, 2);
         }
         else if (to === "yaml") {
-            output = js_yaml_1.default.dump(parsed, { lineWidth: 120 });
+            output = yaml.dump(parsed, { lineWidth: 120 });
         }
         else if (to === "csv") {
             output = jsonToCsv(parsed);
@@ -326,7 +251,7 @@ async function convertFormat(payload) {
 }
 // ─── transform-text ───
 // NEW: word_count, char_count, sentence_count modes added
-async function transformText(payload) {
+export async function transformText(payload) {
     const { mode = "uppercase", text = "" } = payload || {};
     const s = String(text);
     const words = s.trim() ? s.trim().split(/\s+/) : [];
@@ -359,7 +284,7 @@ async function transformText(payload) {
 }
 // ─── extract-metadata ───
 // FIX: SSRF protection now applied to URL mode (was missing in v6)
-async function extractMetadata(payload) {
+export async function extractMetadata(payload) {
     const { text, url } = payload || {};
     if (url && typeof url === "string") {
         if (!isSafeUrl(url))
@@ -369,7 +294,7 @@ async function extractMetadata(payload) {
             await assertSafeUrl(url);
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 10_000);
-            const resp = await (0, node_fetch_1.default)(url, {
+            const resp = await fetch(url, {
                 headers: { "User-Agent": "ArchTools-Metadata/1.0" },
                 signal: controller.signal,
                 redirect: "follow",
@@ -413,7 +338,7 @@ async function extractMetadata(payload) {
     };
 }
 // ─── web-scrape ───
-async function webScrape(payload) {
+export async function webScrape(payload) {
     const { url, selector, format = "text" } = payload || {};
     if (selector && String(selector).length > MAX_SCRAPE_SELECTOR_LEN)
         return { ok: false, error: "selector_too_long", max: MAX_SCRAPE_SELECTOR_LEN };
@@ -427,7 +352,7 @@ async function webScrape(payload) {
         await assertSafeUrl(url);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), TOOL_TIMEOUT_MS);
-        const resp = await (0, node_fetch_1.default)(url, {
+        const resp = await fetch(url, {
             headers: {
                 "User-Agent": "ArchTools-WebScrape/1.0 (+https://archtools.dev)",
                 Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -476,7 +401,7 @@ async function claudeJson(systemPrompt, userPrompt, timeoutMs = 20_000) {
     try {
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), timeoutMs);
-        const resp = await (0, node_fetch_1.default)("https://api.anthropic.com/v1/messages", {
+        const resp = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
             body: JSON.stringify({
@@ -501,7 +426,7 @@ async function claudeJson(systemPrompt, userPrompt, timeoutMs = 20_000) {
     }
 }
 // ─── ai-generate ───
-async function aiGenerate(payload) {
+export async function aiGenerate(payload) {
     const { prompt, model = "claude-sonnet-4-6", max_tokens = 1000, system } = payload || {};
     if (!prompt || typeof prompt !== "string")
         return { ok: false, error: "missing_prompt" };
@@ -523,7 +448,7 @@ async function aiGenerate(payload) {
             body.system = String(system).slice(0, MAX_AI_SYSTEM_CHARS);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), Number(process.env.AI_TIMEOUT_MS || 20_000));
-        const resp = await (0, node_fetch_1.default)("https://api.anthropic.com/v1/messages", {
+        const resp = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
             body: JSON.stringify(body),
@@ -537,13 +462,13 @@ async function aiGenerate(payload) {
         return { ok: true, model: data.model, text, usage: data.usage };
     }
     catch (e) {
-        logger_js_1.logger.error(e, "ai-generate failed");
+        logger.error(e, "ai-generate failed");
         return { ok: false, error: "ai_generation_failed", detail: e.message };
     }
 }
 // ─── ocr-extract ───
 // Extracts text from images or PDFs using Claude vision.
-async function ocrExtract(payload) {
+export async function ocrExtract(payload) {
     const { image_url, image_base64, media_type = "image/jpeg", prompt: extraPrompt } = payload || {};
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey)
@@ -560,7 +485,7 @@ async function ocrExtract(payload) {
             await assertSafeUrl(image_url);
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 15_000);
-            const r = await (0, node_fetch_1.default)(image_url, { signal: ctrl.signal });
+            const r = await fetch(image_url, { signal: ctrl.signal });
             clearTimeout(t);
             if (!r.ok)
                 return { ok: false, error: "fetch_failed", status: r.status };
@@ -570,7 +495,7 @@ async function ocrExtract(payload) {
         }
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 30_000);
-        const resp = await (0, node_fetch_1.default)("https://api.anthropic.com/v1/messages", {
+        const resp = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
             body: JSON.stringify({
@@ -599,7 +524,7 @@ async function ocrExtract(payload) {
 }
 // ─── ip-lookup ───
 // IP geolocation using ip-api.com (free, no key, 1000 req/min).
-async function ipLookup(payload) {
+export async function ipLookup(payload) {
     const { ip } = payload || {};
     if (!ip || typeof ip !== "string")
         return { ok: false, error: "missing_ip" };
@@ -610,7 +535,7 @@ async function ipLookup(payload) {
     try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8_000);
-        const r = await (0, node_fetch_1.default)(`http://ip-api.com/json/${encodeURIComponent(cleaned)}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query`, { signal: ctrl.signal });
+        const r = await fetch(`http://ip-api.com/json/${encodeURIComponent(cleaned)}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query`, { signal: ctrl.signal });
         clearTimeout(t);
         const data = (await r.json());
         if (data.status === "fail")
@@ -642,7 +567,7 @@ async function ipLookup(payload) {
 // ─── email-verify ───
 // Deep email validation: syntax, MX records, disposable domain check.
 // Uses Node.js dns module — no external API key required.
-async function emailVerify(payload) {
+export async function emailVerify(payload) {
     const { email } = payload || {};
     if (!email || typeof email !== "string")
         return { ok: false, error: "missing_email" };
@@ -653,13 +578,13 @@ async function emailVerify(payload) {
         return { ok: true, valid: false, reason: "invalid_syntax", email: e };
     const [, domain] = e.split("@");
     // Disposable domain check (reuse existing list from lib)
-    const { isDisposable } = await Promise.resolve().then(() => __importStar(require("../lib/disposableEmails.js")));
+    const { isDisposable } = await import("../lib/disposableEmails.js");
     const disposable = isDisposable(domain);
     // MX record check
     let hasMx = false;
     let mxRecords = [];
     try {
-        const records = await promises_1.default.resolveMx(domain);
+        const records = await dns.resolveMx(domain);
         hasMx = records.length > 0;
         mxRecords = records.sort((a, b) => a.priority - b.priority).map((r) => r.exchange).slice(0, 3);
     }
@@ -682,12 +607,12 @@ async function emailVerify(payload) {
 }
 // ─── phone-validate ───
 // Parse and validate phone numbers in any format.
-async function phoneValidate(payload) {
+export async function phoneValidate(payload) {
     const { phone, country_code } = payload || {};
     if (!phone || typeof phone !== "string")
         return { ok: false, error: "missing_phone" };
     try {
-        const { parsePhoneNumber, isValidPhoneNumber, getNumberType } = await Promise.resolve().then(() => __importStar(require("libphonenumber-js")));
+        const { parsePhoneNumber, isValidPhoneNumber, getNumberType } = await import("libphonenumber-js");
         const parsed = parsePhoneNumber(String(phone), country_code);
         const valid = parsed.isValid();
         const typeMap = { "0": "FIXED_LINE", "1": "MOBILE", "2": "FIXED_LINE_OR_MOBILE", "3": "TOLL_FREE", "4": "PREMIUM_RATE", "5": "SHARED_COST", "6": "VOIP", "7": "PERSONAL_NUMBER", "8": "PAGER", "9": "UAN", "10": "VOICEMAIL" };
@@ -714,7 +639,7 @@ async function phoneValidate(payload) {
 // Real-time exchange rates via open.er-api.com (free, no key).
 const rateCache = new Map();
 const RATE_CACHE_TTL = 3_600_000; // 1 hour
-async function currencyConvert(payload) {
+export async function currencyConvert(payload) {
     const { amount, from, to } = payload || {};
     if (amount === undefined || amount === null)
         return { ok: false, error: "missing_amount" };
@@ -734,7 +659,7 @@ async function currencyConvert(payload) {
         else {
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 8_000);
-            const r = await (0, node_fetch_1.default)(`https://open.er-api.com/v6/latest/${fromUpper}`, { signal: ctrl.signal });
+            const r = await fetch(`https://open.er-api.com/v6/latest/${fromUpper}`, { signal: ctrl.signal });
             clearTimeout(t);
             const data = (await r.json());
             if (data.result !== "success")
@@ -762,7 +687,7 @@ async function currencyConvert(payload) {
 }
 // ─── timezone-convert ───
 // Convert datetimes between timezones using Node.js Intl API (no deps).
-async function timezoneConvert(payload) {
+export async function timezoneConvert(payload) {
     const { datetime, from_tz, to_tz, format = "iso" } = payload || {};
     try {
         // If no datetime provided, use now
@@ -811,7 +736,7 @@ async function timezoneConvert(payload) {
     }
 }
 // ─── sentiment-analysis ───
-async function sentimentAnalysis(payload) {
+export async function sentimentAnalysis(payload) {
     const { text } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -836,7 +761,7 @@ ${text.slice(0, 10_000)}`);
     return { ok: true, ...result.data, char_count: text.length };
 }
 // ─── summarize ───
-async function summarize(payload) {
+export async function summarize(payload) {
     const { text, style = "paragraph", max_length = 200 } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -863,7 +788,7 @@ ${text.slice(0, 50_000)}`);
     return { ok: true, style, input_length: text.length, ...result.data };
 }
 // ─── extract-entities ───
-async function extractEntities(payload) {
+export async function extractEntities(payload) {
     const { text, types } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -898,7 +823,7 @@ ${text.slice(0, 10_000)}`);
     return { ok: true, entities, total_count: totalCount, types_requested: requestedTypes };
 }
 // ─── language-detect ───
-async function languageDetect(payload) {
+export async function languageDetect(payload) {
     const { text } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -921,7 +846,7 @@ ${text.slice(0, 500)}`);
     return { ok: true, ...result.data };
 }
 // ─── pii-detect ───
-async function piiDetect(payload) {
+export async function piiDetect(payload) {
     const { text, redact = false, replacement = "[REDACTED]" } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -965,7 +890,7 @@ ${text.slice(0, 10_000)}`);
 }
 // ─── readability-score ───
 // Flesch-Kincaid grade level + reading ease + read time. Zero dependencies.
-async function readabilityScore(payload) {
+export async function readabilityScore(payload) {
     const { text } = payload || {};
     if (!text || typeof text !== "string")
         return { ok: false, error: "missing_text" };
@@ -1025,7 +950,7 @@ async function readabilityScore(payload) {
     };
 }
 // ─── rss-parse ───
-async function rssParse(payload) {
+export async function rssParse(payload) {
     const { url, limit = 20 } = payload || {};
     if (!url || typeof url !== "string")
         return { ok: false, error: "missing_url" };
@@ -1035,7 +960,7 @@ async function rssParse(payload) {
         await assertSafeUrl(url);
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 12_000);
-        const r = await (0, node_fetch_1.default)(url, {
+        const r = await fetch(url, {
             headers: { "User-Agent": "ArchTools-RSS/1.0", Accept: "application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.8" },
             signal: ctrl.signal,
         });
@@ -1043,7 +968,7 @@ async function rssParse(payload) {
         if (!r.ok)
             return { ok: false, error: "fetch_failed", status: r.status };
         const xml = await r.text();
-        const parser = new fast_xml_parser_1.XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_", cdataPropName: "__cdata", trimValues: true });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_", cdataPropName: "__cdata", trimValues: true });
         const parsed = parser.parse(xml);
         // Handle both RSS and Atom formats
         const channel = parsed?.rss?.channel || parsed?.feed;
@@ -1080,9 +1005,9 @@ async function rssParse(payload) {
     }
 }
 // ─── generate-uuid ───
-async function generateUuid(payload) {
+export async function generateUuid(payload) {
     const { type = "v4", count = 1, prefix = "" } = payload || {};
-    const { v4, v1 } = await Promise.resolve().then(() => __importStar(require("uuid")));
+    const { v4, v1 } = await import("uuid");
     const n = Math.min(Math.max(Number(count) || 1, 1), 100);
     const supported = ["v1", "v4"];
     if (!supported.includes(type))
@@ -1092,8 +1017,8 @@ async function generateUuid(payload) {
         return prefix ? `${prefix}${base}` : base;
     });
     // Also generate a secure random token for convenience
-    const token = crypto_1.default.randomBytes(32).toString("hex");
-    const apiKey = `at_${crypto_1.default.randomBytes(24).toString("base64url")}`;
+    const token = crypto.randomBytes(32).toString("hex");
+    const apiKey = `at_${crypto.randomBytes(24).toString("base64url")}`;
     return {
         ok: true,
         type,
@@ -1105,7 +1030,7 @@ async function generateUuid(payload) {
     };
 }
 // ─── regex-generate ───
-async function regexGenerate(payload) {
+export async function regexGenerate(payload) {
     const { description, test_strings, flags = "" } = payload || {};
     if (!description || typeof description !== "string")
         return { ok: false, error: "missing_description" };
@@ -1146,7 +1071,7 @@ Make the regex as precise and practical as possible.`);
     return { ok: true, ...result.data, verified, verify_error: verifyError };
 }
 // ─── diff-text ───
-async function diffText(payload) {
+export async function diffText(payload) {
     const { original, modified, format = "unified" } = payload || {};
     if (original === undefined || modified === undefined)
         return { ok: false, error: "missing_original_or_modified" };
@@ -1154,7 +1079,7 @@ async function diffText(payload) {
     if (!formats.includes(format))
         return { ok: false, error: "unsupported_format", supported: formats };
     try {
-        const { diffLines, diffWords, diffChars, createTwoFilesPatch } = await Promise.resolve().then(() => __importStar(require("diff")));
+        const { diffLines, diffWords, diffChars, createTwoFilesPatch } = await import("diff");
         if (format === "unified") {
             const patch = createTwoFilesPatch("original", "modified", String(original), String(modified));
             return { ok: true, format: "unified", diff: patch, has_changes: patch.includes("@@") };
@@ -1198,7 +1123,7 @@ async function diffText(payload) {
 }
 // ─── web-search ───
 // Real-time web search via Tavily API. Requires TAVILY_API_KEY env var.
-async function webSearch(payload) {
+export async function webSearch(payload) {
     const { query, max_results = 5, search_depth = "basic", include_answer = true } = payload || {};
     if (!query || typeof query !== "string")
         return { ok: false, error: "missing_query" };
@@ -1210,7 +1135,7 @@ async function webSearch(payload) {
     try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 15_000);
-        const r = await (0, node_fetch_1.default)("https://api.tavily.com/search", {
+        const r = await fetch("https://api.tavily.com/search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1251,7 +1176,7 @@ async function webSearch(payload) {
 }
 // ─── whois-lookup ───
 // Domain/IP WHOIS via RDAP (modern WHOIS standard, free, no key).
-async function whoisLookup(payload) {
+export async function whoisLookup(payload) {
     const { domain } = payload || {};
     if (!domain || typeof domain !== "string")
         return { ok: false, error: "missing_domain" };
@@ -1262,7 +1187,7 @@ async function whoisLookup(payload) {
         // Use rdap.org — a free RDAP bootstrap service
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 10_000);
-        const r = await (0, node_fetch_1.default)(`https://rdap.org/domain/${encodeURIComponent(cleaned)}`, {
+        const r = await fetch(`https://rdap.org/domain/${encodeURIComponent(cleaned)}`, {
             headers: { Accept: "application/json", "User-Agent": "ArchTools-WHOIS/1.0" },
             signal: ctrl.signal,
         });
@@ -1299,7 +1224,7 @@ async function whoisLookup(payload) {
 }
 // ─── search-web ───
 // Provider order: 1) Tavily  2) Serper  3) DuckDuckGo fallback
-async function searchWeb(payload) {
+export async function searchWeb(payload) {
     const { query, limit = 5 } = payload || {};
     const q = String(query || "").trim();
     const n = Math.min(Math.max(Number(limit) || 5, 1), 10);
@@ -1308,7 +1233,7 @@ async function searchWeb(payload) {
     // Tavily
     if (process.env.TAVILY_API_KEY) {
         try {
-            const resp = await (0, node_fetch_1.default)("https://api.tavily.com/search", {
+            const resp = await fetch("https://api.tavily.com/search", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: q, max_results: n, include_answer: false, include_raw_content: false }),
@@ -1328,7 +1253,7 @@ async function searchWeb(payload) {
     // Serper (Google)
     if (process.env.SERPER_API_KEY) {
         try {
-            const resp = await (0, node_fetch_1.default)("https://google.serper.dev/search", {
+            const resp = await fetch("https://google.serper.dev/search", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-API-KEY": process.env.SERPER_API_KEY },
                 body: JSON.stringify({ q, num: n }),
@@ -1348,7 +1273,7 @@ async function searchWeb(payload) {
     // DuckDuckGo HTML fallback
     try {
         const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
-        const resp = await (0, node_fetch_1.default)(url, {
+        const resp = await fetch(url, {
             headers: { "User-Agent": "ArchTools-Search/1.0 (+https://archtools.dev)", Accept: "text/html,application/xhtml+xml" },
         });
         if (!resp.ok)
@@ -1373,7 +1298,7 @@ async function searchWeb(payload) {
     }
 }
 // ─── extract-page ───
-async function extractPage(payload) {
+export async function extractPage(payload) {
     const { url } = payload || {};
     if (!url || typeof url !== "string")
         return { ok: false, error: "missing_url" };
@@ -1383,7 +1308,7 @@ async function extractPage(payload) {
         await assertSafeUrl(url);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), TOOL_TIMEOUT_MS);
-        const resp = await (0, node_fetch_1.default)(url, {
+        const resp = await fetch(url, {
             headers: { "User-Agent": "ArchTools-ExtractPage/1.0 (+https://archtools.dev)", Accept: "text/html,application/xhtml+xml" },
             signal: controller.signal,
             redirect: "follow",
@@ -1423,7 +1348,7 @@ async function extractPage(payload) {
 }
 // ─── extract-pdf ───
 // Proxies to PDF_EXTRACTOR_URL if set; otherwise stubs gracefully.
-async function extractPdf(payload) {
+export async function extractPdf(payload) {
     const { url } = payload || {};
     if (!url || typeof url !== "string")
         return { ok: false, error: "missing_url" };
@@ -1433,7 +1358,7 @@ async function extractPdf(payload) {
     }
     try {
         await assertSafeUrl(url);
-        const resp = await (0, node_fetch_1.default)(proxy, {
+        const resp = await fetch(proxy, {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }),
         });
         const data = await resp.json().catch(() => ({}));
@@ -1447,7 +1372,7 @@ async function extractPdf(payload) {
 }
 // ─── browser-task ───
 // Headless Playwright automation. Requires playwright to be installed.
-async function browserTask(payload) {
+export async function browserTask(payload) {
     const url = String(payload?.url || "").trim();
     const action = String(payload?.action || "extract").trim().toLowerCase();
     const selector = payload?.selector != null ? String(payload.selector).trim() : "";
@@ -1458,7 +1383,7 @@ async function browserTask(payload) {
         throw new Error("url_too_long");
     await assertSafeUrl(url);
     // @ts-ignore — playwright is an optional runtime dependency
-    const { chromium } = await Promise.resolve(`${"playwright"}`).then(s => __importStar(require(s)));
+    const { chromium } = await import("playwright");
     const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage({ userAgent: "ArchToolsBrowserTask/1.0 (+https://archtools.dev)" });
     try {
@@ -1489,7 +1414,7 @@ async function browserTask(payload) {
 }
 // ─── screenshot-capture ───
 // Full-page or viewport screenshot using Playwright. Returns base64 PNG.
-async function screenshotCapture(payload) {
+export async function screenshotCapture(payload) {
     const url = String(payload?.url || "").trim();
     const fullPage = payload?.full_page !== false; // default true
     const width = Math.min(Math.max(Number(payload?.width) || 1280, 320), 2560);
@@ -1500,7 +1425,7 @@ async function screenshotCapture(payload) {
         return { ok: false, error: "url_too_long", max: MAX_SCRAPE_URL_LEN };
     await assertSafeUrl(url);
     // @ts-ignore — playwright is an optional runtime dependency
-    const { chromium } = await Promise.resolve(`${"playwright"}`).then(s => __importStar(require(s)));
+    const { chromium } = await import("playwright");
     const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage({
         userAgent: "ArchTools-Screenshot/1.0 (+https://archtools.dev)",
@@ -1530,7 +1455,7 @@ async function screenshotCapture(payload) {
 // ─── image-generate ───
 // AI image generation via DALL-E 3 (OPENAI_API_KEY) or Stability AI (STABILITY_API_KEY).
 // Falls back gracefully if neither key is configured.
-async function imageGenerate(payload) {
+export async function imageGenerate(payload) {
     const { prompt, width = 1024, height = 1024, model = "dall-e-3", style = "vivid", quality = "standard" } = payload || {};
     if (!prompt || typeof prompt !== "string")
         return { ok: false, error: "missing_prompt" };
@@ -1543,7 +1468,7 @@ async function imageGenerate(payload) {
         try {
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 60_000);
-            const resp = await (0, node_fetch_1.default)("https://api.openai.com/v1/images/generations", {
+            const resp = await fetch("https://api.openai.com/v1/images/generations", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
                 body: JSON.stringify({
@@ -1586,7 +1511,7 @@ async function imageGenerate(payload) {
             form.append("output_format", "png");
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 60_000);
-            const resp = await (0, node_fetch_1.default)("https://api.stability.ai/v2beta/stable-image/generate/core", {
+            const resp = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${stabilityKey}`, Accept: "image/*" },
                 body: form,
@@ -1613,7 +1538,7 @@ async function imageGenerate(payload) {
 }
 // ─── html-to-markdown ───
 // Convert HTML (string or URL) to clean Markdown. Perfect for piping web-scrape output into agent context windows.
-async function htmlToMarkdown(payload) {
+export async function htmlToMarkdown(payload) {
     const { html, url } = payload || {};
     let raw = html;
     if (!raw && url) {
@@ -1622,7 +1547,7 @@ async function htmlToMarkdown(payload) {
         await assertSafeUrl(url);
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), TOOL_TIMEOUT_MS);
-        const resp = await (0, node_fetch_1.default)(url, {
+        const resp = await fetch(url, {
             headers: { "User-Agent": "ArchTools-HTMLtoMD/1.0 (+https://archtools.dev)" },
             signal: ctrl.signal,
         });
@@ -1705,7 +1630,7 @@ async function htmlToMarkdown(payload) {
 }
 // ─── url-shorten ───
 // Shorten a URL via is.gd (free, no key required).
-async function urlShorten(payload) {
+export async function urlShorten(payload) {
     const { url } = payload || {};
     if (!url || typeof url !== "string")
         return { ok: false, error: "missing_url" };
@@ -1715,7 +1640,7 @@ async function urlShorten(payload) {
         await assertSafeUrl(url);
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8_000);
-        const r = await (0, node_fetch_1.default)(`https://is.gd/create.php?format=json&url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+        const r = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
         clearTimeout(t);
         const data = (await r.json());
         if (data.errorcode)
@@ -1728,7 +1653,7 @@ async function urlShorten(payload) {
 }
 // ─── webhook-send ───
 // POST a JSON payload to any external URL. Useful for triggering Zapier, n8n, Slack webhooks, etc.
-async function webhookSend(payload) {
+export async function webhookSend(payload) {
     const { url, body: webhookBody, method = "POST", headers: extraHeaders } = payload || {};
     if (!url || typeof url !== "string")
         return { ok: false, error: "missing_url" };
@@ -1754,7 +1679,7 @@ async function webhookSend(payload) {
                 }
             }
         }
-        const resp = await (0, node_fetch_1.default)(url, {
+        const resp = await fetch(url, {
             method: m,
             headers: reqHeaders,
             body: JSON.stringify(webhookBody ?? {}),
@@ -1782,7 +1707,7 @@ async function webhookSend(payload) {
 }
 // ─── jsonpath-query ───
 // Extract values from JSON using JSONPath expressions. Zero dependencies — custom recursive implementation.
-async function jsonpathQuery(payload) {
+export async function jsonpathQuery(payload) {
     const { json, path } = payload || {};
     if (!path || typeof path !== "string")
         return { ok: false, error: "missing_path" };
@@ -1915,7 +1840,7 @@ function query(node, tokens) {
 }
 // ─── barcode-generate ───
 // Generate barcodes: EAN-13, UPC-A, Code128, Code39 as SVG (no deps — pure SVG generation).
-async function barcodeGenerate(payload) {
+export async function barcodeGenerate(payload) {
     const { value, format = "code128", width = 300, height = 80, include_text = true } = payload || {};
     if (!value || typeof value !== "string")
         return { ok: false, error: "missing_value" };

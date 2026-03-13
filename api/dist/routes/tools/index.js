@@ -1,55 +1,17 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const auth_1 = require("../../middleware/auth");
-const x402_1 = require("../../middleware/x402");
-const credits_1 = require("../../utils/credits");
-const config_1 = require("../../config");
-const ssrf_1 = require("../../lib/ssrf");
-const crypto_1 = __importDefault(require("crypto"));
-const uuid_1 = require("uuid");
-const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
-const axios_1 = __importDefault(require("axios"));
-const router = (0, express_1.Router)();
+import { Router } from "express";
+import { requireAuth } from "../../middleware/auth";
+import { x402Middleware } from "../../middleware/x402";
+import { deductCredits, reqId, safeErr } from "../../utils/credits";
+import { config } from "../../config";
+import { validateUrl } from "../../lib/ssrf";
+import crypto from "crypto";
+import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
+import Anthropic from "@anthropic-ai/sdk";
+import axios from "axios";
+const router = Router();
 const _anthropicKey = process.env.ANTHROPIC_API_KEY;
 const anthropic = (_anthropicKey && !_anthropicKey.startsWith("ENTER"))
-    ? new sdk_1.default({ apiKey: _anthropicKey })
+    ? new Anthropic({ apiKey: _anthropicKey })
     : null;
 // ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
 const requestCounts = new Map();
@@ -65,9 +27,9 @@ function tierRateLimiter(req, res, next) {
     const agent = req.agent;
     const key = agent?.apiKey?.slice(0, 20) ?? req.ip ?? "anon";
     const tier = agent?.tier ?? "free";
-    const limit = tier === "business" ? config_1.config.rateLimits.business
-        : tier === "pro" ? config_1.config.rateLimits.pro
-            : config_1.config.rateLimits.free;
+    const limit = tier === "business" ? config.rateLimits.business
+        : tier === "pro" ? config.rateLimits.pro
+            : config.rateLimits.free;
     const now = Date.now();
     const record = requestCounts.get(key);
     if (!record || now > record.resetAt) {
@@ -84,7 +46,7 @@ function tierRateLimiter(req, res, next) {
             ok: false,
             error: "rate_limited",
             message: `Rate limit of ${limit} req/min exceeded for ${tier} tier. Upgrade at archtools.dev.`,
-            request_id: (0, credits_1.reqId)(),
+            request_id: reqId(),
         });
         return;
     }
@@ -94,7 +56,7 @@ function tierRateLimiter(req, res, next) {
 }
 // ─── Helper: combined x402 + auth + rate limit middleware ────────────────────
 function toolMiddleware(toolName) {
-    return [(0, x402_1.x402Middleware)(toolName), auth_1.requireAuth, tierRateLimiter];
+    return [x402Middleware(toolName), requireAuth, tierRateLimiter];
 }
 function isX402Paid(req) {
     return !!req.x402Paid;
@@ -103,13 +65,13 @@ function isX402Paid(req) {
 router.post("/validate-data", ...toolMiddleware("validate-data"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "validate-data", 1);
+        const ok = await deductCredits(req, res, "validate-data", 1);
         if (!ok)
             return;
     }
     const { data, schema } = req.body;
     if (data === undefined || !schema) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "data and schema are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "data and schema are required", request_id: reqId() });
         return;
     }
     try {
@@ -154,93 +116,93 @@ router.post("/validate-data", ...toolMiddleware("validate-data"), async (req, re
             }
         }
         validate(data, schema, "$");
-        res.json({ ok: true, valid: errors.length === 0, errors, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, valid: errors.length === 0, errors, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "validation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "validation_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 2. GENERATE-HASH ────────────────────────────────────────────────────────
 router.post("/generate-hash", ...toolMiddleware("generate-hash"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "generate-hash", 1);
+        const ok = await deductCredits(req, res, "generate-hash", 1);
         if (!ok)
             return;
     }
     const { text, algorithm = "sha256", encoding = "hex" } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     const algos = ["sha256", "sha512", "sha1", "md5", "sha384"];
     if (!algos.includes(algorithm)) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: `algorithm must be one of: ${algos.join(", ")}`, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: `algorithm must be one of: ${algos.join(", ")}`, request_id: reqId() });
         return;
     }
     const enc = (encoding === "base64" ? "base64" : "hex");
-    const hash = crypto_1.default.createHash(algorithm).update(text, "utf8").digest(enc);
-    res.json({ ok: true, hash, algorithm, encoding: enc, length: hash.length, input_length: text.length, request_id: (0, credits_1.reqId)() });
+    const hash = crypto.createHash(algorithm).update(text, "utf8").digest(enc);
+    res.json({ ok: true, hash, algorithm, encoding: enc, length: hash.length, input_length: text.length, request_id: reqId() });
 });
 // ─── 3. QR-CODE ──────────────────────────────────────────────────────────────
 router.post("/qr-code", ...toolMiddleware("qr-code"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "qr-code", 2);
+        const ok = await deductCredits(req, res, "qr-code", 2);
         if (!ok)
             return;
     }
     const { text, format = "png", size = 256, error_correction = "M" } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     try {
-        const QRCode = await Promise.resolve().then(() => __importStar(require("qrcode")));
+        const QRCode = await import("qrcode");
         const ecl = (["L", "M", "Q", "H"].includes(error_correction ?? "M") ? error_correction : "M");
         if (format === "svg") {
             const svg = await QRCode.toString(text, { type: "svg", errorCorrectionLevel: ecl });
-            res.json({ ok: true, format: "svg", data: svg, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, format: "svg", data: svg, request_id: reqId() });
         }
         else {
             const dataUrl = await QRCode.toDataURL(text, { errorCorrectionLevel: ecl, width: Math.min(Math.max(size, 64), 1024) });
-            res.json({ ok: true, format: "png", data: dataUrl, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, format: "png", data: dataUrl, request_id: reqId() });
         }
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "qr_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "qr_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 4. CONVERT-FORMAT ───────────────────────────────────────────────────────
 router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "convert-format", 2);
+        const ok = await deductCredits(req, res, "convert-format", 2);
         if (!ok)
             return;
     }
     const { input, from, to } = req.body;
     if (!input || !from || !to) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "input, from, and to are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "input, from, and to are required", request_id: reqId() });
         return;
     }
     try {
-        const yaml = await Promise.resolve().then(() => __importStar(require("js-yaml")));
+        const yaml = await import("js-yaml");
         let parsed;
         if (from === "json")
             parsed = JSON.parse(input);
         else if (from === "yaml")
             parsed = yaml.load(input);
         else if (from === "csv") {
-            const { parse } = await Promise.resolve().then(() => __importStar(require("csv-parse/sync")));
+            const { parse } = await import("csv-parse/sync");
             parsed = parse(input, { columns: true, skip_empty_lines: true });
         }
         else if (from === "xml") {
-            const xml2js = await Promise.resolve().then(() => __importStar(require("xml2js")));
+            const xml2js = await import("xml2js");
             parsed = await xml2js.parseStringPromise(input);
         }
         else {
-            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}`, request_id: (0, credits_1.reqId)() });
+            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}`, request_id: reqId() });
             return;
         }
         let output;
@@ -250,39 +212,39 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, 
             output = yaml.dump(parsed);
         else if (to === "csv") {
             const rows = Array.isArray(parsed) ? parsed : [parsed];
-            const { stringify } = await Promise.resolve().then(() => __importStar(require("csv-stringify/sync")));
+            const { stringify } = await import("csv-stringify/sync");
             output = stringify(rows, { header: true });
         }
         else if (to === "xml") {
-            const { create } = await Promise.resolve().then(() => __importStar(require("xmlbuilder2")));
+            const { create } = await import("xmlbuilder2");
             output = create({ root: parsed }).end({ prettyPrint: true });
         }
         else {
-            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}`, request_id: (0, credits_1.reqId)() });
+            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}`, request_id: reqId() });
             return;
         }
-        res.json({ ok: true, output, from, to, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, output, from, to, request_id: reqId() });
     }
     catch (e) {
-        res.status(422).json({ ok: false, error: "conversion_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(422).json({ ok: false, error: "conversion_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 5. TRANSFORM-TEXT ───────────────────────────────────────────────────────
 router.post("/transform-text", ...toolMiddleware("transform-text"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "transform-text", 3);
+        const ok = await deductCredits(req, res, "transform-text", 3);
         if (!ok)
             return;
     }
     const { text, mode } = req.body;
     if (!text || !mode) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode are required", request_id: reqId() });
         return;
     }
     const modes = ["uppercase", "lowercase", "titlecase", "slug", "camel", "snake", "kebab", "base64_encode", "base64_decode", "reverse", "trim", "word_count"];
     if (!modes.includes(mode)) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: `mode must be one of: ${modes.join(", ")}`, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: `mode must be one of: ${modes.join(", ")}`, request_id: reqId() });
         return;
     }
     let result;
@@ -326,34 +288,34 @@ router.post("/transform-text", ...toolMiddleware("transform-text"), async (req, 
             break;
         default: result = text;
     }
-    res.json({ ok: true, result, mode, input_length: text.length, request_id: (0, credits_1.reqId)() });
+    res.json({ ok: true, result, mode, input_length: text.length, request_id: reqId() });
 });
 // ─── 6. EXTRACT-METADATA ─────────────────────────────────────────────────────
 router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "extract-metadata", 3);
+        const ok = await deductCredits(req, res, "extract-metadata", 3);
         if (!ok)
             return;
     }
     const { text, url } = req.body;
     if (!text && !url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text or url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text or url is required", request_id: reqId() });
         return;
     }
     try {
-        const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
+        const cheerio = await import("cheerio");
         let html = text ?? "";
         let fetchedUrl = url ?? "";
         if (url && !text) {
             try {
-                await (0, ssrf_1.validateUrl)(url);
+                await validateUrl(url);
             }
             catch (err) {
-                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
                 return;
             }
-            const resp = await axios_1.default.get(url, { timeout: 10000, headers: { "User-Agent": "ArchTools/1.5 Metadata Extractor" } });
+            const resp = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "ArchTools/1.5 Metadata Extractor" } });
             html = resp.data;
         }
         const $ = cheerio.load(html);
@@ -368,35 +330,35 @@ router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (r
         const links = [];
         $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http"))
             links.push(h); });
-        res.json({ ok: true, url: fetchedUrl, title: $("title").text() || og["title"] || "", description: meta["description"] || og["description"] || "", og, meta, word_count: wordCount, link_count: links.length, links: links.slice(0, 20), request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, url: fetchedUrl, title: $("title").text() || og["title"] || "", description: meta["description"] || og["description"] || "", og, meta, word_count: wordCount, link_count: links.length, links: links.slice(0, 20), request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "metadata_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "metadata_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 7. WEB-SCRAPE ───────────────────────────────────────────────────────────
 router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "web-scrape", 5);
+        const ok = await deductCredits(req, res, "web-scrape", 5);
         if (!ok)
             return;
     }
     const { url, selector } = req.body;
     if (!url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
     }
     try {
-        await (0, ssrf_1.validateUrl)(url);
+        await validateUrl(url);
     }
     catch (err) {
-        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5 Web Scraper (https://archtools.dev)" } });
-        const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
+        const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5 Web Scraper (https://archtools.dev)" } });
+        const cheerio = await import("cheerio");
         const $ = cheerio.load(resp.data);
         $("script, style, noscript, nav, footer, header, iframe").remove();
         let content;
@@ -409,7 +371,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req, res) => 
         const links = [];
         $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http"))
             links.push({ text: $(el).text().trim().slice(0, 100), href: h }); });
-        res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
     }
     catch (_axiosErr) {
         // Fallback: Firecrawl (handles JS-heavy / bot-protected sites)
@@ -423,39 +385,39 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req, res) => 
                 if (fc.ok) {
                     const fd = await fc.json();
                     const text = fd.data?.markdown ?? "";
-                    res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", request_id: (0, credits_1.reqId)() });
+                    res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", request_id: reqId() });
                     return;
                 }
             }
             catch (_) { /* fall through to error */ }
         }
-        const status = axios_1.default.isAxiosError(_axiosErr) ? (_axiosErr.response?.status ?? 502) : 500;
-        res.status(status).json({ ok: false, error: "scrape_error", message: (0, credits_1.safeErr)(_axiosErr), request_id: (0, credits_1.reqId)() });
+        const status = axios.isAxiosError(_axiosErr) ? (_axiosErr.response?.status ?? 502) : 500;
+        res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), request_id: reqId() });
     }
 });
 // ─── 8. EXTRACT-PAGE ─────────────────────────────────────────────────────────
 router.post("/extract-page", ...toolMiddleware("extract-page"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "extract-page", 5);
+        const ok = await deductCredits(req, res, "extract-page", 5);
         if (!ok)
             return;
     }
     const { url } = req.body;
     if (!url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
     }
     try {
-        await (0, ssrf_1.validateUrl)(url);
+        await validateUrl(url);
     }
     catch (err) {
-        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5" } });
-        const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
+        const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5" } });
+        const cheerio = await import("cheerio");
         const $ = cheerio.load(resp.data);
         $("script, style, noscript, nav, footer, header, aside").remove();
         const title = $("title").text();
@@ -467,23 +429,23 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req, res)
         const links = [];
         $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http"))
             links.push(h); });
-        res.json({ ok: true, url, title, description, text, images: images.slice(0, 20), links: links.slice(0, 30), word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, url, title, description, text, images: images.slice(0, 20), links: links.slice(0, 30), word_count: text.split(/\s+/).length, request_id: reqId() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "extract_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "extract_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 9. SEARCH-WEB ───────────────────────────────────────────────────────────
 router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "search-web", 5);
+        const ok = await deductCredits(req, res, "search-web", 5);
         if (!ok)
             return;
     }
     const { query, num_results = 5 } = req.body;
     if (!query) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
         return;
     }
     try {
@@ -497,7 +459,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                     const data = await resp.json();
                     const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
                     if (results.length > 0) {
-                        res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: (0, credits_1.reqId)() });
+                        res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: reqId() });
                         return;
                     }
                 }
@@ -516,7 +478,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                     const data = await resp.json();
                     const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.content ?? "" }));
                     if (results.length > 0) {
-                        res.json({ ok: true, query, results, count: results.length, source: "tavily", request_id: (0, credits_1.reqId)() });
+                        res.json({ ok: true, query, results, count: results.length, source: "tavily", request_id: reqId() });
                         return;
                     }
                 }
@@ -535,34 +497,34 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                     const data = await resp.json();
                     const results = (data.organic ?? []).map(r => ({ title: r.title ?? "", url: r.link ?? "", snippet: r.snippet ?? "" }));
                     if (results.length > 0) {
-                        res.json({ ok: true, query, results, count: results.length, source: "serper", request_id: (0, credits_1.reqId)() });
+                        res.json({ ok: true, query, results, count: results.length, source: "serper", request_id: reqId() });
                         return;
                     }
                 }
             }
             catch (_) { /* fall through */ }
         }
-        res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable.", request_id: reqId() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "search_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 10. WEB-SEARCH (AI-synthesized) ─────────────────────────────────────────
 router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "web-search", 10);
+        const ok = await deductCredits(req, res, "web-search", 10);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { query } = req.body;
     if (!query) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
         return;
     }
     try {
@@ -598,7 +560,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
             catch (_) { /* fall through */ }
         }
         if (!context) {
-            res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable.", request_id: (0, credits_1.reqId)() });
+            res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable.", request_id: reqId() });
             return;
         }
         // Synthesize with Claude
@@ -608,39 +570,39 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
             messages: [{ role: "user", content: `Answer this query based on the following search context. Be concise and factual.\n\nQuery: ${query}\n\nContext:\n${context}\n\nAnswer:` }],
         });
         const answer = msg.content.find(b => b.type === "text")?.text ?? "";
-        res.json({ ok: true, query, answer, sources, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, query, answer, sources, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "search_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 11. RSS-PARSE ───────────────────────────────────────────────────────────
 router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "rss-parse", 4);
+        const ok = await deductCredits(req, res, "rss-parse", 4);
         if (!ok)
             return;
     }
     const { url, limit = 20 } = req.body;
     if (!url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
     }
     try {
-        await (0, ssrf_1.validateUrl)(url);
+        await validateUrl(url);
     }
     catch (err) {
-        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(url, { timeout: 10000, headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
-        const xml2js = await Promise.resolve().then(() => __importStar(require("xml2js")));
+        const resp = await axios.get(url, { timeout: 10000, headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
+        const xml2js = await import("xml2js");
         const parsed = await xml2js.parseStringPromise(resp.data, { explicitArray: false, mergeAttrs: true });
         const channel = parsed?.rss?.channel ?? parsed?.feed;
         if (!channel) {
-            res.status(422).json({ ok: false, error: "parse_error", message: "Could not parse RSS/Atom feed", request_id: (0, credits_1.reqId)() });
+            res.status(422).json({ ok: false, error: "parse_error", message: "Could not parse RSS/Atom feed", request_id: reqId() });
             return;
         }
         const items = (channel.item ?? channel.entry ?? []);
@@ -650,49 +612,49 @@ router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req, res) => {
             description: typeof item.description === "string" ? item.description?.slice(0, 500) : "",
             pubDate: item.pubDate ?? item.published ?? item.updated ?? "",
         }));
-        res.json({ ok: true, url, feed_title: typeof channel.title === "string" ? channel.title : "", items: entries, count: entries.length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, url, feed_title: typeof channel.title === "string" ? channel.title : "", items: entries, count: entries.length, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "rss_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "rss_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 12. IP-LOOKUP ───────────────────────────────────────────────────────────
 router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "ip-lookup", 2);
+        const ok = await deductCredits(req, res, "ip-lookup", 2);
         if (!ok)
             return;
     }
     const { ip } = req.body;
     if (!ip) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
+        const resp = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
         const data = resp.data;
         if (data.status === "fail") {
-            res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: (0, credits_1.reqId)() });
+            res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: reqId() });
             return;
         }
-        res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: reqId() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "lookup_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "lookup_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 13. WHOIS-LOOKUP ────────────────────────────────────────────────────────
 router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "whois-lookup", 3);
+        const ok = await deductCredits(req, res, "whois-lookup", 3);
         if (!ok)
             return;
     }
     const { domain } = req.body;
     if (!domain) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() });
         return;
     }
     const clean = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
@@ -703,7 +665,7 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req, res)
         const created = events.find(e => e.eventAction === "registration")?.eventDate ?? null;
         const expires = events.find(e => e.eventAction === "expiration")?.eventDate ?? null;
         const updated = events.find(e => e.eventAction === "last changed")?.eventDate ?? null;
-        return { ok: true, domain: clean, status: data.status, registered: created, expires, last_updated: updated, nameservers, registrar: data.entities?.[0]?.handle ?? null, request_id: (0, credits_1.reqId)() };
+        return { ok: true, domain: clean, status: data.status, registered: created, expires, last_updated: updated, nameservers, registrar: data.entities?.[0]?.handle ?? null, request_id: reqId() };
     };
     // Exponential backoff retry against rdap.org (3 attempts: 500ms, 1s, 2s)
     const delays = [500, 1000, 2000];
@@ -712,7 +674,7 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req, res)
         try {
             if (attempt > 0)
                 await new Promise(r => setTimeout(r, delays[attempt - 1]));
-            const resp = await axios_1.default.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
+            const resp = await axios.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
             res.json(parseRdap(resp.data));
             return;
         }
@@ -722,25 +684,25 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req, res)
     }
     // Fallback: IANA RDAP
     try {
-        const resp = await axios_1.default.get(`https://rdap.iana.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
+        const resp = await axios.get(`https://rdap.iana.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
         res.json({ ...parseRdap(resp.data), source: "iana_fallback" });
         return;
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "whois_error", message: (0, credits_1.safeErr)(lastError ?? e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "whois_error", message: safeErr(lastError ?? e), request_id: reqId() });
     }
 });
 // ─── 14. EMAIL-VERIFY ────────────────────────────────────────────────────────
 router.post("/email-verify", ...toolMiddleware("email-verify"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "email-verify", 3);
+        const ok = await deductCredits(req, res, "email-verify", 3);
         if (!ok)
             return;
     }
     const { email } = req.body;
     if (!email) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
         return;
     }
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -751,7 +713,7 @@ router.post("/email-verify", ...toolMiddleware("email-verify"), async (req, res)
     let mx_valid = false;
     if (valid_format && !is_disposable) {
         try {
-            const resp = await axios_1.default.get(`https://dns.google/resolve?name=${domain}&type=MX`, { timeout: 5000 });
+            const resp = await axios.get(`https://dns.google/resolve?name=${domain}&type=MX`, { timeout: 5000 });
             const data = resp.data;
             mx_valid = data.Status === 0 && (data.Answer?.length ?? 0) > 0;
         }
@@ -759,97 +721,97 @@ router.post("/email-verify", ...toolMiddleware("email-verify"), async (req, res)
             mx_valid = false;
         }
     }
-    res.json({ ok: true, email, valid_format, is_disposable, mx_valid, deliverable: valid_format && !is_disposable && mx_valid, domain, request_id: (0, credits_1.reqId)() });
+    res.json({ ok: true, email, valid_format, is_disposable, mx_valid, deliverable: valid_format && !is_disposable && mx_valid, domain, request_id: reqId() });
 });
 // ─── 15. PHONE-VALIDATE ──────────────────────────────────────────────────────
 router.post("/phone-validate", ...toolMiddleware("phone-validate"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "phone-validate", 2);
+        const ok = await deductCredits(req, res, "phone-validate", 2);
         if (!ok)
             return;
     }
     const { phone, country = "US" } = req.body;
     if (!phone) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "phone is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "phone is required", request_id: reqId() });
         return;
     }
     try {
-        const { parsePhoneNumberFromString } = await Promise.resolve().then(() => __importStar(require("libphonenumber-js")));
+        const { parsePhoneNumberFromString } = await import("libphonenumber-js");
         const parsed = parsePhoneNumberFromString(phone, country);
         if (!parsed) {
-            res.json({ ok: true, valid: false, phone, message: "Could not parse phone number", request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, valid: false, phone, message: "Could not parse phone number", request_id: reqId() });
             return;
         }
-        res.json({ ok: true, valid: parsed.isValid(), phone, e164: parsed.format("E.164"), national: parsed.formatNational(), international: parsed.formatInternational(), country_code: parsed.country, country_calling_code: `+${parsed.countryCallingCode}`, type: parsed.getType() ?? "unknown", request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, valid: parsed.isValid(), phone, e164: parsed.format("E.164"), national: parsed.formatNational(), international: parsed.formatInternational(), country_code: parsed.country, country_calling_code: `+${parsed.countryCallingCode}`, type: parsed.getType() ?? "unknown", request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "phone_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "phone_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 16. CURRENCY-CONVERT ────────────────────────────────────────────────────
 router.post("/currency-convert", ...toolMiddleware("currency-convert"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "currency-convert", 2);
+        const ok = await deductCredits(req, res, "currency-convert", 2);
         if (!ok)
             return;
     }
     const { amount, from, to } = req.body;
     if (!amount || !from || !to) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "amount, from, and to are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "amount, from, and to are required", request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(`https://open.er-api.com/v6/latest/${from.toUpperCase()}`, { timeout: 8000 });
+        const resp = await axios.get(`https://open.er-api.com/v6/latest/${from.toUpperCase()}`, { timeout: 8000 });
         const data = resp.data;
         if (data.result !== "success" || !data.rates) {
-            res.status(502).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() });
             return;
         }
         const rate = data.rates[to.toUpperCase()];
         if (!rate) {
-            res.status(422).json({ ok: false, error: "invalid_currency", message: `Currency ${to} not found`, request_id: (0, credits_1.reqId)() });
+            res.status(422).json({ ok: false, error: "invalid_currency", message: `Currency ${to} not found`, request_id: reqId() });
             return;
         }
         const converted = Math.round(amount * rate * 100) / 100;
-        res.json({ ok: true, from: from.toUpperCase(), to: to.toUpperCase(), amount, rate, converted, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, from: from.toUpperCase(), to: to.toUpperCase(), amount, rate, converted, request_id: reqId() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "convert_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "convert_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 17. TIMEZONE-CONVERT ────────────────────────────────────────────────────
 router.post("/timezone-convert", ...toolMiddleware("timezone-convert"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "timezone-convert", 1);
+        const ok = await deductCredits(req, res, "timezone-convert", 1);
         if (!ok)
             return;
     }
     const { datetime, from_tz, to_tz } = req.body;
     if (!datetime || !from_tz || !to_tz) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "datetime, from_tz, and to_tz are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "datetime, from_tz, and to_tz are required", request_id: reqId() });
         return;
     }
     try {
         const fromDate = new Date(datetime);
         if (isNaN(fromDate.getTime())) {
-            res.status(422).json({ ok: false, error: "invalid_datetime", message: "Could not parse datetime", request_id: (0, credits_1.reqId)() });
+            res.status(422).json({ ok: false, error: "invalid_datetime", message: "Could not parse datetime", request_id: reqId() });
             return;
         }
         const toFormatted = new Intl.DateTimeFormat("en-US", { timeZone: to_tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(fromDate);
-        res.json({ ok: true, input: datetime, from_tz, to_tz, result: toFormatted, iso: fromDate.toISOString(), request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, input: datetime, from_tz, to_tz, result: toFormatted, iso: fromDate.toISOString(), request_id: reqId() });
     }
     catch (e) {
-        res.status(422).json({ ok: false, error: "tz_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(422).json({ ok: false, error: "tz_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 18. GENERATE-UUID ───────────────────────────────────────────────────────
 router.post("/generate-uuid", ...toolMiddleware("generate-uuid"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "generate-uuid", 1);
+        const ok = await deductCredits(req, res, "generate-uuid", 1);
         if (!ok)
             return;
     }
@@ -858,31 +820,31 @@ router.post("/generate-uuid", ...toolMiddleware("generate-uuid"), async (req, re
     const results = [];
     for (let i = 0; i < n; i++) {
         if (version === "v1")
-            results.push((0, uuid_1.v1)());
+            results.push(uuidv1());
         else if (format === "api_key")
-            results.push(`arch_${(0, uuid_1.v4)().replace(/-/g, "")}`);
+            results.push(`arch_${uuidv4().replace(/-/g, "")}`);
         else if (format === "token")
-            results.push(crypto_1.default.randomBytes(32).toString("hex"));
+            results.push(crypto.randomBytes(32).toString("hex"));
         else
-            results.push((0, uuid_1.v4)());
+            results.push(uuidv4());
     }
-    res.json({ ok: true, version, format, values: results, count: n, request_id: (0, credits_1.reqId)() });
+    res.json({ ok: true, version, format, values: results, count: n, request_id: reqId() });
 });
 // ─── 19. DIFF-TEXT ───────────────────────────────────────────────────────────
 router.post("/diff-text", ...toolMiddleware("diff-text"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "diff-text", 2);
+        const ok = await deductCredits(req, res, "diff-text", 2);
         if (!ok)
             return;
     }
     const { text1, text2, mode = "words" } = req.body;
     if (!text1 || !text2) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: reqId() });
         return;
     }
     try {
-        const diff = await Promise.resolve().then(() => __importStar(require("diff")));
+        const diff = await import("diff");
         let changes;
         if (mode === "chars")
             changes = diff.diffChars(text1, text2);
@@ -892,23 +854,23 @@ router.post("/diff-text", ...toolMiddleware("diff-text"), async (req, res) => {
             changes = diff.diffWords(text1, text2);
         const added = changes.filter(c => c.added).reduce((s, c) => s + (c.count ?? 0), 0);
         const removed = changes.filter(c => c.removed).reduce((s, c) => s + (c.count ?? 0), 0);
-        res.json({ ok: true, mode, changes, added, removed, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, mode, changes, added, removed, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "diff_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "diff_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 20. READABILITY-SCORE ───────────────────────────────────────────────────
 router.post("/readability-score", ...toolMiddleware("readability-score"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "readability-score", 2);
+        const ok = await deductCredits(req, res, "readability-score", 2);
         if (!ok)
             return;
     }
     const { text } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     const sentences = (text.match(/[^.!?]+[.!?]+/g) ?? []).length || 1;
@@ -922,19 +884,19 @@ router.post("/readability-score", ...toolMiddleware("readability-score"), async 
     const fk_ease = 206.835 - 1.015 * asl - 84.6 * asw;
     const fk_grade = 0.39 * asl + 11.8 * asw - 15.59;
     const gradeLabel = fk_grade <= 6 ? "Elementary" : fk_grade <= 9 ? "Middle School" : fk_grade <= 12 ? "High School" : "College+";
-    res.json({ ok: true, flesch_kincaid_ease: Math.round(fk_ease * 10) / 10, flesch_kincaid_grade: Math.round(fk_grade * 10) / 10, grade_label: gradeLabel, word_count: words.length, sentence_count: sentences, avg_words_per_sentence: Math.round(asl * 10) / 10, avg_syllables_per_word: Math.round(asw * 10) / 10, request_id: (0, credits_1.reqId)() });
+    res.json({ ok: true, flesch_kincaid_ease: Math.round(fk_ease * 10) / 10, flesch_kincaid_grade: Math.round(fk_grade * 10) / 10, grade_label: gradeLabel, word_count: words.length, sentence_count: sentences, avg_words_per_sentence: Math.round(asl * 10) / 10, avg_syllables_per_word: Math.round(asw * 10) / 10, request_id: reqId() });
 });
 // ─── 21. LANGUAGE-DETECT ─────────────────────────────────────────────────────
 router.post("/language-detect", ...toolMiddleware("language-detect"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "language-detect", 3);
+        const ok = await deductCredits(req, res, "language-detect", 3);
         if (!ok)
             return;
     }
     const { text } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     try {
@@ -947,34 +909,34 @@ router.post("/language-detect", ...toolMiddleware("language-detect"), async (req
             });
             const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
             const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-            res.json({ ok: true, language: parsed.language ?? "Unknown", code: parsed.code ?? "und", confidence: parsed.confidence ?? 0, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, language: parsed.language ?? "Unknown", code: parsed.code ?? "und", confidence: parsed.confidence ?? 0, request_id: reqId() });
         }
         else {
             // Fallback: franc library
-            const { franc } = await Promise.resolve().then(() => __importStar(require("franc")));
+            const { franc } = await import("franc");
             const code = franc(text);
-            res.json({ ok: true, language: code, code, confidence: 0.7, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, language: code, code, confidence: 0.7, request_id: reqId() });
         }
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "detect_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "detect_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 22. SENTIMENT-ANALYSIS ──────────────────────────────────────────────────
 router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "sentiment-analysis", 8);
+        const ok = await deductCredits(req, res, "sentiment-analysis", 8);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { text } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     try {
@@ -985,27 +947,27 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
         const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-        res.json({ ok: true, sentiment: parsed.sentiment ?? "neutral", score: parsed.score ?? 0.5, emotions: parsed.emotions ?? {}, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, sentiment: parsed.sentiment ?? "neutral", score: parsed.score ?? 0.5, emotions: parsed.emotions ?? {}, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "sentiment_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "sentiment_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 23. SUMMARIZE ───────────────────────────────────────────────────────────
 router.post("/summarize", ...toolMiddleware("summarize"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "summarize", 10);
+        const ok = await deductCredits(req, res, "summarize", 10);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { text, style = "paragraph" } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     const stylePrompts = {
@@ -1023,27 +985,27 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req, res) => {
             messages: [{ role: "user", content: `${prompt}\n\nText to summarize:\n${text.slice(0, 8000)}` }],
         });
         const summary = msg.content.find(b => b.type === "text")?.text ?? "";
-        res.json({ ok: true, summary, style, original_word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, summary, style, original_word_count: text.split(/\s+/).length, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "summarize_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "summarize_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 24. EXTRACT-ENTITIES ────────────────────────────────────────────────────
 router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "extract-entities", 8);
+        const ok = await deductCredits(req, res, "extract-entities", 8);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { text } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     try {
@@ -1055,27 +1017,27 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
         const entities = JSON.parse(raw.replace(/```json|```/g, "").trim());
         const total = Object.values(entities).reduce((s, a) => s + a.length, 0);
-        res.json({ ok: true, entities, total_found: total, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, entities, total_found: total, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "entity_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "entity_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 25. REGEX-GENERATE ──────────────────────────────────────────────────────
 router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "regex-generate", 8);
+        const ok = await deductCredits(req, res, "regex-generate", 8);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { description, examples } = req.body;
     if (!description) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "description is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "description is required", request_id: reqId() });
         return;
     }
     try {
@@ -1089,27 +1051,27 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
         // Extract JSON object from response even if Claude adds surrounding text
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
         const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
-        res.json({ ok: true, pattern: parsed.pattern ?? "", flags: parsed.flags ?? "", regex: `/${parsed.pattern ?? ""}/${parsed.flags ?? ""}`, explanation: parsed.explanation ?? "", test_examples: parsed.test_examples ?? [], request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, pattern: parsed.pattern ?? "", flags: parsed.flags ?? "", regex: `/${parsed.pattern ?? ""}/${parsed.flags ?? ""}`, explanation: parsed.explanation ?? "", test_examples: parsed.test_examples ?? [], request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "regex_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "regex_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 26. PII-DETECT ──────────────────────────────────────────────────────────
 router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "pii-detect", 10);
+        const ok = await deductCredits(req, res, "pii-detect", 10);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { text, redact = false } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     try {
@@ -1120,28 +1082,28 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req, res) => 
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
         const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-        res.json({ ok: true, has_pii: parsed.has_pii ?? false, found: parsed.found ?? [], count: (parsed.found ?? []).length, ...(redact ? { redacted: parsed.redacted ?? text } : {}), request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, has_pii: parsed.has_pii ?? false, found: parsed.found ?? [], count: (parsed.found ?? []).length, ...(redact ? { redacted: parsed.redacted ?? text } : {}), request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "pii_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "pii_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 27. AI-GENERATE ─────────────────────────────────────────────────────────
 router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "ai-generate", 20);
+        const ok = await deductCredits(req, res, "ai-generate", 20);
         if (!ok)
             return;
     }
     const { prompt, system, model = "claude-sonnet-4-6", max_tokens = 1000 } = req.body;
     if (!prompt) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
     }
     const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
     if (prompt.length > MAX_PROMPT) {
-        res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() });
         return;
     }
     const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
@@ -1154,7 +1116,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         if (GPT_MODELS.includes(model)) {
             const openaiKey = process.env.OPENAI_API_KEY;
             if (!openaiKey) {
-                res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set", request_id: (0, credits_1.reqId)() });
+                res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set", request_id: reqId() });
                 return;
             }
             const resp = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1164,14 +1126,14 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
             });
             const data = await resp.json();
             const text = data.choices?.[0]?.message?.content ?? "";
-            res.json({ ok: true, text, model, provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, text, model, provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
             return;
         }
         // ── Google Gemini ──
         if (GEMINI_MODELS.includes(model)) {
             const googleKey = process.env.GOOGLE_API_KEY;
             if (!googleKey || googleKey.startsWith("ENTER")) {
-                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires a Google API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires a Google API key that has not been configured.", request_id: reqId() });
                 return;
             }
             const fullPrompt = system ? `${system}\n\n${prompt}` : prompt;
@@ -1182,14 +1144,14 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
             });
             const data = await resp.json();
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-            res.json({ ok: true, text, model, provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, text, model, provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: reqId() });
             return;
         }
         // ── xAI Grok ──
         if (GROK_MODELS.includes(model)) {
             const xaiKey = process.env.XAI_API_KEY;
             if (!xaiKey || xaiKey.startsWith("ENTER")) {
-                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an xAI API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an xAI API key that has not been configured.", request_id: reqId() });
                 return;
             }
             const resp = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -1199,46 +1161,46 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
             });
             const data = await resp.json();
             const text = data.choices?.[0]?.message?.content ?? "";
-            res.json({ ok: true, text, model, provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, text, model, provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
             return;
         }
         // Validate model
         const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
         if (!allModels.includes(model)) {
-            res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: (0, credits_1.reqId)() });
+            res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: reqId() });
             return;
         }
         // ── Claude ──
         if (CLAUDE_MODELS.includes(model)) {
             if (!anthropic) {
-                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+                res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
                 return;
             }
             const msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
             const text = msg.content.find(b => b.type === "text")?.text ?? "";
-            res.json({ ok: true, text, model, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, text, model, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
             return;
         }
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "generation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "generation_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 28. OCR-EXTRACT ─────────────────────────────────────────────────────────
 router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "ocr-extract", 10);
+        const ok = await deductCredits(req, res, "ocr-extract", 10);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { image_url, image_base64, media_type = "image/jpeg" } = req.body;
     if (!image_url && !image_base64) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() });
         return;
     }
     try {
@@ -1246,13 +1208,13 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
         let imgMediaType = media_type;
         if (image_url && !image_base64) {
             try {
-                await (0, ssrf_1.validateUrl)(image_url);
+                await validateUrl(image_url);
             }
             catch (err) {
-                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
                 return;
             }
-            const imgResp = await axios_1.default.get(image_url, { responseType: "arraybuffer", timeout: 15000 });
+            const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 15000 });
             imgBase64 = Buffer.from(imgResp.data).toString("base64");
             imgMediaType = (imgResp.headers["content-type"] || "image/jpeg").split(";")[0];
         }
@@ -1263,81 +1225,81 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
             messages: [{ role: "user", content: [imageContent, { type: "text", text: "Extract all text from this image. Return the text exactly as it appears, preserving formatting and structure." }] }],
         });
         const text = msg.content.find(b => b.type === "text")?.text ?? "";
-        res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
     }
     catch (e) {
         console.error("[ocr-extract] error:", e);
-        res.status(500).json({ ok: false, error: "ocr_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "ocr_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 29. BROWSER-TASK ────────────────────────────────────────────────────────
 router.post("/browser-task", ...toolMiddleware("browser-task"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "browser-task", 10);
+        const ok = await deductCredits(req, res, "browser-task", 10);
         if (!ok)
             return;
     }
     const { url, action = "extract", selector, text: inputText } = req.body;
     if (!url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
     }
     try {
-        await (0, ssrf_1.validateUrl)(url);
+        await validateUrl(url);
     }
     catch (err) {
-        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
     // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
     try {
-        const resp = await axios_1.default.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
-        const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
+        const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
+        const cheerio = await import("cheerio");
         const $ = cheerio.load(resp.data);
         if (action === "extract" || action === "html") {
             const content = selector ? (action === "html" ? $(selector).html() : $(selector).text()) : $("body").text().replace(/\s+/g, " ").trim();
-            res.json({ ok: true, url, action, result: (content ?? "").slice(0, 5000), request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, url, action, result: (content ?? "").slice(0, 5000), request_id: reqId() });
         }
         else {
-            res.json({ ok: true, url, action, result: `Simulated ${action} on ${selector ?? "page"}${inputText ? ` with text: ${inputText}` : ""}`, note: "Full Playwright automation requires dedicated infrastructure", request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, url, action, result: `Simulated ${action} on ${selector ?? "page"}${inputText ? ` with text: ${inputText}` : ""}`, note: "Full Playwright automation requires dedicated infrastructure", request_id: reqId() });
         }
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "browser_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "browser_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 30. EXTRACT-PDF ─────────────────────────────────────────────────────────
 router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "extract-pdf", 6);
+        const ok = await deductCredits(req, res, "extract-pdf", 6);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { pdf_url, pdf_base64 } = req.body;
     if (!pdf_url && !pdf_base64) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url or pdf_base64 is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url or pdf_base64 is required", request_id: reqId() });
         return;
     }
     try {
         let base64Data = pdf_base64;
         if (pdf_url && !pdf_base64) {
             try {
-                await (0, ssrf_1.validateUrl)(pdf_url);
+                await validateUrl(pdf_url);
             }
             catch (err) {
-                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
                 return;
             }
-            const resp = await axios_1.default.get(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
+            const resp = await axios.get(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
             const buffer = Buffer.from(resp.data);
             if (buffer.length > 5 * 1024 * 1024) {
-                res.status(400).json({ ok: false, error: "file_too_large", message: "PDF must be under 5MB", request_id: (0, credits_1.reqId)() });
+                res.status(400).json({ ok: false, error: "file_too_large", message: "PDF must be under 5MB", request_id: reqId() });
                 return;
             }
             base64Data = buffer.toString("base64");
@@ -1349,40 +1311,40 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
                 messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
             });
             const text = msg.content.find(b => b.type === "text")?.text ?? "";
-            res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
         }
         catch (anthropicErr) {
             console.error("[extract-pdf] Anthropic error:", anthropicErr);
-            res.status(500).json({ ok: false, error: "pdf_error", message: (0, credits_1.safeErr)(anthropicErr), request_id: (0, credits_1.reqId)() });
+            res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(anthropicErr), request_id: reqId() });
         }
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "pdf_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 31. SCREENSHOT-CAPTURE ──────────────────────────────────────────────────
 router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "screenshot-capture", 10);
+        const ok = await deductCredits(req, res, "screenshot-capture", 10);
         if (!ok)
             return;
     }
     const { url } = req.body;
     if (!url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
     }
     try {
-        await (0, ssrf_1.validateUrl)(url);
+        await validateUrl(url);
     }
     catch (err) {
-        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Screenshot" } });
-        const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
+        const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Screenshot" } });
+        const cheerio = await import("cheerio");
         const $ = cheerio.load(resp.data);
         const title = $("title").text() || "";
         const description = $('meta[name="description"]').attr("content") || $('meta[property="og:description"]').attr("content") || "";
@@ -1395,40 +1357,40 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
             page_meta: { title, description, og_image: ogImage, h1 },
             page_text_preview: bodyText,
             note: "Full screenshot capture requires a dedicated screenshot service. This endpoint returns page metadata and OG image.",
-            request_id: (0, credits_1.reqId)(),
+            request_id: reqId(),
         });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "screenshot_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "screenshot_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 32. HTML-TO-MARKDOWN ────────────────────────────────────────────────────
 router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "html-to-markdown", 3);
+        const ok = await deductCredits(req, res, "html-to-markdown", 3);
         if (!ok)
             return;
     }
     const { html, url } = req.body;
     if (!html && !url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "html or url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "html or url is required", request_id: reqId() });
         return;
     }
     try {
         let rawHtml = html ?? "";
         if (url && !html) {
             try {
-                await (0, ssrf_1.validateUrl)(url);
+                await validateUrl(url);
             }
             catch (err) {
-                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
                 return;
             }
-            const resp = await axios_1.default.get(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0 ArchTools" } });
+            const resp = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0 ArchTools" } });
             rawHtml = resp.data;
         }
-        const cheerio = await Promise.resolve().then(() => __importStar(require("cheerio")));
+        const cheerio = await import("cheerio");
         const $ = cheerio.load(rawHtml);
         // Remove nav, footer, script, style
         $("script, style, nav, footer, iframe, noscript").remove();
@@ -1498,65 +1460,65 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
             return md;
         }
         const markdown = (title ? `# ${title}\n\n` : "") + toMd($("body")).replace(/\n{3,}/g, "\n\n").trim();
-        res.json({ ok: true, markdown, word_count: markdown.split(/\s+/).length, char_count: markdown.length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, markdown, word_count: markdown.split(/\s+/).length, char_count: markdown.length, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "markdown_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "markdown_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 33. URL-SHORTEN ─────────────────────────────────────────────────────────
 router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "url-shorten", 1);
+        const ok = await deductCredits(req, res, "url-shorten", 1);
         if (!ok)
             return;
     }
     const { url } = req.body;
     if (!url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
     }
     try {
-        const resp = await axios_1.default.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { timeout: 8000 });
+        const resp = await axios.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { timeout: 8000 });
         const short = resp.data;
         if (!short.startsWith("http"))
             throw new Error("TinyURL service unavailable");
-        res.json({ ok: true, original_url: url, short_url: short, service: "tinyurl", request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, original_url: url, short_url: short, service: "tinyurl", request_id: reqId() });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "shorten_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "shorten_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 34. WEBHOOK-SEND ────────────────────────────────────────────────────────
 router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "webhook-send", 2);
+        const ok = await deductCredits(req, res, "webhook-send", 2);
         if (!ok)
             return;
     }
     const { webhook_url, payload, headers: customHeaders = {}, method = "POST" } = req.body;
     if (!webhook_url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url is required", request_id: reqId() });
         return;
     }
     if (!webhook_url.startsWith("http")) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() });
         return;
     }
     try {
-        await (0, ssrf_1.validateUrl)(webhook_url);
+        await validateUrl(webhook_url);
     }
     catch (err) {
-        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
     const allowedMethods = ["POST", "PUT", "PATCH"];
     const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
     try {
         const start = Date.now();
-        const resp = await (0, axios_1.default)({
+        const resp = await axios({
             method: httpMethod,
             url: webhook_url,
             data: payload ?? {},
@@ -1571,24 +1533,24 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
             status_code: resp.status,
             response_ms: Date.now() - start,
             response_body: String(resp.data).slice(0, 500),
-            request_id: (0, credits_1.reqId)(),
+            request_id: reqId(),
         });
     }
     catch (e) {
-        res.status(502).json({ ok: false, error: "webhook_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "webhook_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 35. JSONPATH-QUERY ──────────────────────────────────────────────────────
 router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "jsonpath-query", 1);
+        const ok = await deductCredits(req, res, "jsonpath-query", 1);
         if (!ok)
             return;
     }
     const { data, path: jsonPath } = req.body;
     if (!data || !jsonPath) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "data and path are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "data and path are required", request_id: reqId() });
         return;
     }
     try {
@@ -1639,27 +1601,27 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req, 
             return descend(obj, tokens);
         }
         const results = evalPath(data, jsonPath);
-        res.json({ ok: true, path: jsonPath, results, count: results.length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, path: jsonPath, results, count: results.length, request_id: reqId() });
     }
     catch (e) {
-        res.status(400).json({ ok: false, error: "jsonpath_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "jsonpath_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 36. IMAGE-GENERATE (SVG via Claude) ────────────────────────────────────
 router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "image-generate", 15);
+        const ok = await deductCredits(req, res, "image-generate", 15);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { prompt, style = "svg", width = 400, height = 300 } = req.body;
     if (!prompt) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
     }
     try {
@@ -1674,28 +1636,28 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, 
         const svg = msg.content.find(b => b.type === "text")?.text ?? "";
         const base64 = Buffer.from(svg).toString("base64");
         const dataUrl = `data:image/svg+xml;base64,${base64}`;
-        res.json({ ok: true, prompt, style: "svg", width, height, data_url: dataUrl, svg, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, prompt, style: "svg", width, height, data_url: dataUrl, svg, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "generation_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "generation_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 37. BARCODE-GENERATE ────────────────────────────────────────────────────
 router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "barcode-generate", 2);
+        const ok = await deductCredits(req, res, "barcode-generate", 2);
         if (!ok)
             return;
     }
     const { data: barcodeData, type = "code128", width = 250, height = 100 } = req.body;
     if (!barcodeData) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: reqId() });
         return;
     }
     const validTypes = ["code128", "qr"];
     if (!validTypes.includes(type)) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() });
         return;
     }
     try {
@@ -1727,27 +1689,27 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
   <text x="${svgWidth / 2}" y="${height - 2}" text-anchor="middle" font-family="monospace" font-size="10" fill="#000">${chars}</text>
 </svg>`;
         const base64 = Buffer.from(svg).toString("base64");
-        res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, note: "SVG barcode generated. For production use verify scanning with a barcode reader. Full Code128 encoding via bwip-js recommended for high-fidelity output.", request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, note: "SVG barcode generated. For production use verify scanning with a barcode reader. Full Code128 encoding via bwip-js recommended for high-fidelity output.", request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "barcode_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "barcode_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 38. WORKFLOW-AGENT (multi-step pipeline) ─────────────────────────────────
 router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "workflow-agent", 25);
+        const ok = await deductCredits(req, res, "workflow-agent", 25);
         if (!ok)
             return;
     }
     if (!anthropic) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
     const { goal, context, steps } = req.body;
     if (!goal) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "goal is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "goal is required", request_id: reqId() });
         return;
     }
     try {
@@ -1761,17 +1723,17 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req, 
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
         const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-        res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "workflow_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "workflow_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
 // Helper: returns CoinGecko headers, including API key when configured
 const cgHeaders = () => {
     const h = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
-    const key = config_1.config.coingecko?.apiKey;
+    const key = config.coingecko?.apiKey;
     if (key && key.length > 10 && !key.startsWith("REPLACE"))
         h["x-cg-pro-api-key"] = key;
     return h;
@@ -1780,67 +1742,67 @@ const cgHeaders = () => {
 router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "crypto-price", 1);
+        const ok = await deductCredits(req, res, "crypto-price", 1);
         if (!ok)
             return;
     }
     const { symbol, currency = "usd" } = req.body;
     if (!symbol) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: reqId() });
         return;
     }
     try {
         const id = symbol.toLowerCase().trim();
         const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
         if (!r.ok) {
-            res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
             return;
         }
         const data = await r.json();
         if (!data || !data[id]) {
-            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found or CoinGecko rate limit hit. Try again in a moment or use a Pro API key.`, request_id: (0, credits_1.reqId)() });
+            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found or CoinGecko rate limit hit. Try again in a moment or use a Pro API key.`, request_id: reqId() });
             return;
         }
         const d = data[id];
-        res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── crypto-ohlcv ────────────────────────────────────────────────────────────
 router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "crypto-ohlcv", 2);
+        const ok = await deductCredits(req, res, "crypto-ohlcv", 2);
         if (!ok)
             return;
     }
     const { symbol, days = 7, currency = "usd" } = req.body;
     if (!symbol) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() });
         return;
     }
     try {
         const id = symbol.toLowerCase().trim();
         const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
         if (!r.ok) {
-            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: (0, credits_1.reqId)() });
+            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() });
             return;
         }
         const raw = await r.json();
         const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
-        res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── crypto-market-cap ───────────────────────────────────────────────────────
 router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "crypto-market-cap", 1);
+        const ok = await deductCredits(req, res, "crypto-market-cap", 1);
         if (!ok)
             return;
     }
@@ -1870,7 +1832,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
         }
         if (cgData && Array.isArray(cgData) && cgData.length > 0) {
             const coins = cgData.map((c) => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
-            res.json({ ok: true, currency, coins, source: "coingecko", request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, currency, coins, source: "coingecko", request_id: reqId() });
             return;
         }
         // Fallback: CoinCap API (no rate limit on cloud IPs)
@@ -1885,20 +1847,20 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
                 volume_24h: parseFloat(c.volumeUsd24Hr) || 0,
                 change_24h: parseFloat(c.changePercent24Hr) || 0,
             }));
-            res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", request_id: reqId() });
             return;
         }
-        res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: (0, credits_1.reqId)() });
+        res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── crypto-fear-greed ───────────────────────────────────────────────────────
 router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "crypto-fear-greed", 1);
+        const ok = await deductCredits(req, res, "crypto-fear-greed", 1);
         if (!ok)
             return;
     }
@@ -1909,30 +1871,30 @@ router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async 
         const data = await r.json();
         const history = data.data.map(d => ({ value: Number(d.value), classification: d.value_classification, date: new Date(Number(d.timestamp) * 1000).toISOString().split("T")[0] }));
         const latest = history[0];
-        res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── crypto-sentiment ────────────────────────────────────────────────────────
 router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "crypto-sentiment", 2);
+        const ok = await deductCredits(req, res, "crypto-sentiment", 2);
         if (!ok)
             return;
     }
     const { symbol } = req.body;
     if (!symbol) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() });
         return;
     }
     try {
         const id = symbol.toLowerCase().trim();
         const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false`, { headers: cgHeaders() });
         if (!r.ok) {
-            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: (0, credits_1.reqId)() });
+            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() });
             return;
         }
         const data = await r.json();
@@ -1941,18 +1903,18 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
             sentiment: { votes_up_pct: data.sentiment_votes_up_percentage ?? null, votes_down_pct: data.sentiment_votes_down_percentage ?? null, overall: (data.sentiment_votes_up_percentage ?? 50) > 60 ? "bullish" : (data.sentiment_votes_up_percentage ?? 50) < 40 ? "bearish" : "neutral" },
             community: { twitter_followers: data.community_data?.twitter_followers ?? null, reddit_subscribers: data.community_data?.reddit_subscribers ?? null, reddit_active: data.community_data?.reddit_active_accounts ?? null },
             price_momentum: { change_24h: data.market_data?.price_change_percentage_24h ?? null, change_7d: data.market_data?.price_change_percentage_7d ?? null },
-            request_id: (0, credits_1.reqId)()
+            request_id: reqId()
         });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── crypto-news ─────────────────────────────────────────────────────────────
 router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "crypto-news", 2);
+        const ok = await deductCredits(req, res, "crypto-news", 2);
         if (!ok)
             return;
     }
@@ -2010,60 +1972,60 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req, res) =
             }
             articles = articles.slice(0, n);
         }
-        res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── token-lookup ─────────────────────────────────────────────────────────────
 router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "token-lookup", 1);
+        const ok = await deductCredits(req, res, "token-lookup", 1);
         if (!ok)
             return;
     }
     const { query } = req.body;
     if (!query) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
         return;
     }
     try {
         const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
         if (!r.ok) {
-            res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
             return;
         }
         const data = await r.json();
         const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
-        res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
-exports.default = router;
+export default router;
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "text-to-speech", 5);
+        const ok = await deductCredits(req, res, "text-to-speech", 5);
         if (!ok)
             return;
     }
     const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body;
     if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
         return;
     }
     if (text.length > 5000) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() });
         return;
     }
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() });
         return;
     }
     try {
@@ -2075,41 +2037,41 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, 
         if (!r.ok) {
             const err = await r.text();
             console.error("[text-to-speech] ElevenLabs error:", r.status, err);
-            res.status(502).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: reqId() });
             return;
         }
         const buf = await r.arrayBuffer();
         const b64 = Buffer.from(buf).toString("base64");
-        res.json({ ok: true, audio_base64: b64, mime_type: "audio/mpeg", voice_id, model_id, char_count: text.length, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, audio_base64: b64, mime_type: "audio/mpeg", voice_id, model_id, char_count: text.length, request_id: reqId() });
     }
     catch (e) {
         console.error("[text-to-speech]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── transcribe-audio ─────────────────────────────────────────────────────────
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "transcribe-audio", 8);
+        const ok = await deductCredits(req, res, "transcribe-audio", 8);
         if (!ok)
             return;
     }
     const { audio_url, language, prompt: whisperPrompt } = req.body;
     if (!audio_url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() });
         return;
     }
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: reqId() });
         return;
     }
     try {
         // Fetch audio file
         const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(30000) });
         if (!audioResp.ok) {
-            res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: (0, credits_1.reqId)() });
+            res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() });
             return;
         }
         const audioBuffer = await audioResp.arrayBuffer();
@@ -2131,37 +2093,37 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
         if (!r.ok) {
             const err = await r.text();
             console.error("[transcribe-audio] OpenAI error:", r.status, err);
-            res.status(502).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: reqId() });
             return;
         }
         const data = await r.json();
-        res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: reqId() });
     }
     catch (e) {
         console.error("[transcribe-audio]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── email-send ───────────────────────────────────────────────────────────────
 router.post("/email-send", ...toolMiddleware("email-send"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "email-send", 3);
+        const ok = await deductCredits(req, res, "email-send", 3);
         if (!ok)
             return;
     }
     const { to, subject, body, from, html } = req.body;
     if (!to || !subject || (!body && !html)) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() });
         return;
     }
     if (!to.includes("@")) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() });
         return;
     }
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() });
         return;
     }
     try {
@@ -2176,35 +2138,35 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req, res) => 
         if (!r.ok) {
             const err = await r.json().catch(() => ({}));
             console.error("[email-send] Resend error:", r.status, err);
-            res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() });
             return;
         }
         const data = await r.json();
-        res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });
     }
     catch (e) {
         console.error("[email-send]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── design-create ────────────────────────────────────────────────────────────
 router.post("/design-create", ...toolMiddleware("design-create"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "design-create", 15);
+        const ok = await deductCredits(req, res, "design-create", 15);
         if (!ok)
             return;
     }
     const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body;
     if (!prompt) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
     }
     const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
     const safeSize = validSizes.includes(size) ? size : "1024x1024";
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: reqId() });
         return;
     }
     try {
@@ -2227,36 +2189,36 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req, re
                     if (sr.ok) {
                         const sd = await sr.json();
                         if (sd.image) {
-                            res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality, style, source: "stability", request_id: (0, credits_1.reqId)() });
+                            res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality, style, source: "stability", request_id: reqId() });
                             return;
                         }
                     }
                 }
                 catch (_) { /* fall through */ }
             }
-            res.status(502).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() });
             return;
         }
         const data = await r.json();
         const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
-        res.json({ ok: true, images, count: images.length, size: safeSize, quality, style, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, images, count: images.length, size: safeSize, quality, style, request_id: reqId() });
     }
     catch (e) {
         console.error("[design-create]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── domain-check ─────────────────────────────────────────────────────────────
 router.post("/domain-check", ...toolMiddleware("domain-check"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "domain-check", 2);
+        const ok = await deductCredits(req, res, "domain-check", 2);
         if (!ok)
             return;
     }
     const { domain } = req.body;
     if (!domain) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() });
         return;
     }
     const clean = domain.toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
@@ -2275,18 +2237,18 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req, res)
         const base = rdapBase[tld] ?? `https://rdap.org/domain/`;
         const r = await fetch(`${base}${clean}`, { signal: AbortSignal.timeout(8000), headers: { "Accept": "application/json" } });
         if (r.status === 404) {
-            res.json({ ok: true, domain: clean, available: true, registered: false, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, domain: clean, available: true, registered: false, request_id: reqId() });
             return;
         }
         if (!r.ok) {
             // Try fallback RDAP
             const r2 = await fetch(`https://rdap.org/domain/${clean}`, { signal: AbortSignal.timeout(8000) });
             if (r2.status === 404) {
-                res.json({ ok: true, domain: clean, available: true, registered: false, request_id: (0, credits_1.reqId)() });
+                res.json({ ok: true, domain: clean, available: true, registered: false, request_id: reqId() });
                 return;
             }
             if (!r2.ok) {
-                res.json({ ok: true, domain: clean, available: null, registered: null, note: "RDAP lookup failed — domain may or may not be available", request_id: (0, credits_1.reqId)() });
+                res.json({ ok: true, domain: clean, available: null, registered: null, note: "RDAP lookup failed — domain may or may not be available", request_id: reqId() });
                 return;
             }
         }
@@ -2302,12 +2264,12 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req, res)
             ok: true, domain: clean, available: false, registered: true,
             status, registration_date: registrationDate, expiration_date: expirationDate, updated_date: updatedDate,
             nameservers, has_registrant: !!registrantEntity,
-            request_id: (0, credits_1.reqId)()
+            request_id: reqId()
         });
     }
     catch (e) {
         console.error("[domain-check]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── Route aliases (DB name → actual route) ──────────────────────────────────
@@ -2316,45 +2278,45 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req, r
     req.url = "/design-create";
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "design-create", 15);
+        const ok = await deductCredits(req, res, "design-create", 15);
         if (!ok)
             return;
     }
     const { prompt, size = "1024x1024", quality = "standard" } = req.body;
     if (!prompt) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
     }
     const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
     if (!OPENAI_KEY) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: (0, credits_1.reqId)() });
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: reqId() });
         return;
     }
     try {
-        const r = await axios_1.default.post("https://api.openai.com/v1/images/generations", { model: "dall-e-3", prompt, n: 1, size, quality }, { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 });
+        const r = await axios.post("https://api.openai.com/v1/images/generations", { model: "dall-e-3", prompt, n: 1, size, quality }, { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 });
         const img = r.data.data[0];
-        res.json({ ok: true, image_url: img.url, revised_prompt: img.revised_prompt, size, quality, credits_used: 15, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, image_url: img.url, revised_prompt: img.revised_prompt, size, quality, credits_used: 15, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "generation_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() });
     }
 });
 // DB has "check-domain" but route is /domain-check
 router.post("/check-domain", ...toolMiddleware("domain-check"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await (0, credits_1.deductCredits)(req, res, "domain-check", 2);
+        const ok = await deductCredits(req, res, "domain-check", 2);
         if (!ok)
             return;
     }
     const { domain } = req.body;
     if (!domain) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() });
         return;
     }
     const clean = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
     try {
-        const r = await axios_1.default.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { Accept: "application/json" } });
+        const r = await axios.get(`https://rdap.org/domain/${clean}`, { timeout: 10000, headers: { Accept: "application/json" } });
         const d = r.data;
         const events = d.events ?? [];
         const registrar = (d.entities ?? []).find(e => (e.roles ?? []).includes("registrar"));
@@ -2362,24 +2324,24 @@ router.post("/check-domain", ...toolMiddleware("domain-check"), async (req, res)
             ok: true, domain: clean, available: false,
             registrar: (() => { const vcard = registrar?.vcardArray?.[1]; const fn = vcard?.find((v) => Array.isArray(v) && v[0] === "fn"); return fn ? fn[3] ?? null : null; })(),
             expiry_date: events.find(e => e.eventAction === "expiration")?.eventDate ?? null,
-            status: d.status ?? [], credits_used: 2, request_id: (0, credits_1.reqId)()
+            status: d.status ?? [], credits_used: 2, request_id: reqId()
         });
     }
     catch (e) {
         const status = e?.response?.status;
         if (status === 404) {
-            res.json({ ok: true, domain: clean, available: true, registrar: null, expiry_date: null, status: ["available"], credits_used: 2, request_id: (0, credits_1.reqId)() });
+            res.json({ ok: true, domain: clean, available: true, registrar: null, expiry_date: null, status: ["available"], credits_used: 2, request_id: reqId() });
         }
         else {
-            res.status(502).json({ ok: false, error: "lookup_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+            res.status(502).json({ ok: false, error: "lookup_failed", message: safeErr(e), request_id: reqId() });
         }
     }
 });
 // ─── 51. NEWS-SEARCH ──────────────────────────────────────────────────────────
-router.get("/news-search", auth_1.requireAuth, async (req, res) => {
+router.get("/news-search", requireAuth, async (req, res) => {
     const query = String(req.query.query ?? "").trim();
     const limit = Math.min(Number(req.query.limit ?? 5), 10);
-    const _ok1 = await (0, credits_1.deductCredits)(req, res, "news-search", 3);
+    const _ok1 = await deductCredits(req, res, "news-search", 3);
     if (!_ok1)
         return;
     if (!query)
@@ -2390,7 +2352,7 @@ router.get("/news-search", auth_1.requireAuth, async (req, res) => {
     const serperKey = process.env.SERPER_API_KEY;
     if (braveKey) {
         try {
-            const r = await axios_1.default.get("https://api.search.brave.com/res/v1/news/search", {
+            const r = await axios.get("https://api.search.brave.com/res/v1/news/search", {
                 params: { q: query, count: limit, safesearch: "off" },
                 headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
                 timeout: 10000
@@ -2398,43 +2360,43 @@ router.get("/news-search", auth_1.requireAuth, async (req, res) => {
             const results = (r.data.results ?? []).slice(0, limit).map(a => ({
                 title: a.title, url: a.url, description: a.description ?? "", published: a.age ?? null, source: a.source?.name ?? null
             }));
-            return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, request_id: (0, credits_1.reqId)() });
+            return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, request_id: reqId() });
         }
         catch (_) { /* fall through to Tavily */ }
     }
     if (tavilyKey) {
         try {
-            const r = await axios_1.default.post("https://api.tavily.com/search", {
+            const r = await axios.post("https://api.tavily.com/search", {
                 api_key: tavilyKey, query, topic: "news", max_results: limit, include_answer: false
             }, { timeout: 10000 });
             const results = (r.data.results ?? []).slice(0, limit).map(a => ({
                 title: a.title, url: a.url, description: a.content ?? "", published: a.published_date ?? null, source: a.source ?? null
             }));
-            return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, request_id: (0, credits_1.reqId)() });
+            return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, request_id: reqId() });
         }
         catch (_) { /* fall through to Serper */ }
     }
     if (serperKey) {
         try {
-            const r = await axios_1.default.post("https://google.serper.dev/news", { q: query, num: limit }, {
+            const r = await axios.post("https://google.serper.dev/news", { q: query, num: limit }, {
                 headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" }, timeout: 10000
             });
             const results = (r.data.news ?? []).slice(0, limit).map(a => ({
                 title: a.title, url: a.link, description: a.snippet ?? "", published: a.date ?? null, source: a.source ?? null
             }));
-            return void res.json({ ok: true, query, results, source: "serper", credits_used: 3, request_id: (0, credits_1.reqId)() });
+            return void res.json({ ok: true, query, results, source: "serper", credits_used: 3, request_id: reqId() });
         }
         catch (e) {
-            return void res.status(502).json({ ok: false, error: "search_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+            return void res.status(502).json({ ok: false, error: "search_failed", message: safeErr(e), request_id: reqId() });
         }
     }
-    return void res.status(503).json({ ok: false, error: "no_provider", message: "No news search provider configured", request_id: (0, credits_1.reqId)() });
+    return void res.status(503).json({ ok: false, error: "no_provider", message: "No news search provider configured", request_id: reqId() });
 });
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
-router.get("/research-report", auth_1.requireAuth, async (req, res) => {
+router.get("/research-report", requireAuth, async (req, res) => {
     const query = String(req.query.query ?? "").trim();
     const depth = String(req.query.depth ?? "standard").toLowerCase();
-    const _ok2 = await (0, credits_1.deductCredits)(req, res, "research-report", 15);
+    const _ok2 = await deductCredits(req, res, "research-report", 15);
     if (!_ok2)
         return;
     if (!query)
@@ -2447,7 +2409,7 @@ router.get("/research-report", auth_1.requireAuth, async (req, res) => {
     let searchResults = [];
     if (tavilyKey) {
         try {
-            const r = await axios_1.default.post("https://api.tavily.com/search", {
+            const r = await axios.post("https://api.tavily.com/search", {
                 api_key: tavilyKey, query, max_results: numResults, include_answer: true, search_depth: depth === "deep" ? "advanced" : "basic"
             }, { timeout: 15000 });
             searchResults = (r.data.results ?? []).map(a => ({
@@ -2458,7 +2420,7 @@ router.get("/research-report", auth_1.requireAuth, async (req, res) => {
     }
     if (searchResults.length === 0 && braveKey) {
         try {
-            const r = await axios_1.default.get("https://api.search.brave.com/res/v1/web/search", {
+            const r = await axios.get("https://api.search.brave.com/res/v1/web/search", {
                 params: { q: query, count: numResults, safesearch: "off" },
                 headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
                 timeout: 10000
@@ -2470,17 +2432,17 @@ router.get("/research-report", auth_1.requireAuth, async (req, res) => {
         catch (_) { /* fall through */ }
     }
     if (searchResults.length === 0) {
-        return void res.status(502).json({ ok: false, error: "search_failed", message: "No search results available", request_id: (0, credits_1.reqId)() });
+        return void res.status(502).json({ ok: false, error: "search_failed", message: "No search results available", request_id: reqId() });
     }
     // Step 2: Synthesize with Claude
     if (!anthropicKey) {
-        return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured", credits_used: 15, request_id: (0, credits_1.reqId)() });
+        return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured", credits_used: 15, request_id: reqId() });
     }
     const sourcesText = searchResults.map((s, i) => `[${i + 1}] ${s.title}\n${s.url}\n${s.description}`).join("\n\n");
     const systemPrompt = `You are a research analyst. Write a concise, well-structured research report based on the provided sources. Include: an executive summary, key findings, and a conclusion. Cite sources using [N] notation. Be factual and objective.`;
     const userPrompt = `Research query: "${query}"\n\nSources:\n${sourcesText}\n\nWrite a ${depth === "deep" ? "comprehensive" : "concise"} research report.`;
     try {
-        const claude = await axios_1.default.post("https://api.anthropic.com/v1/messages", {
+        const claude = await axios.post("https://api.anthropic.com/v1/messages", {
             model: "claude-haiku-4-5", max_tokens: depth === "deep" ? 2000 : 1000,
             system: systemPrompt,
             messages: [{ role: "user", content: userPrompt }]
@@ -2489,16 +2451,16 @@ router.get("/research-report", auth_1.requireAuth, async (req, res) => {
             timeout: 30000
         });
         const report = (claude.data.content?.[0]?.text ?? "").trim();
-        return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, request_id: (0, credits_1.reqId)() });
+        return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, request_id: reqId() });
     }
     catch (e) {
-        return void res.status(502).json({ ok: false, error: "synthesis_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        return void res.status(502).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── 53. FACT-CHECK ───────────────────────────────────────────────────────────
-router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
+router.get("/fact-check", requireAuth, async (req, res) => {
     const claim = String(req.query.claim ?? "").trim();
-    const _ok3 = await (0, credits_1.deductCredits)(req, res, "fact-check", 10);
+    const _ok3 = await deductCredits(req, res, "fact-check", 10);
     if (!_ok3)
         return;
     if (!claim)
@@ -2510,7 +2472,7 @@ router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
     let evidence = [];
     if (tavilyKey) {
         try {
-            const r = await axios_1.default.post("https://api.tavily.com/search", {
+            const r = await axios.post("https://api.tavily.com/search", {
                 api_key: tavilyKey, query: `fact check: ${claim}`, max_results: 8, include_answer: false, search_depth: "advanced"
             }, { timeout: 12000 });
             evidence = (r.data.results ?? []).map(a => ({
@@ -2521,7 +2483,7 @@ router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
     }
     if (evidence.length === 0 && braveKey) {
         try {
-            const r = await axios_1.default.get("https://api.search.brave.com/res/v1/web/search", {
+            const r = await axios.get("https://api.search.brave.com/res/v1/web/search", {
                 params: { q: `fact check "${claim}"`, count: 8, safesearch: "off" },
                 headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
                 timeout: 10000
@@ -2533,7 +2495,7 @@ router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
         catch (_) { /* fall through */ }
     }
     if (!anthropicKey) {
-        return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured", credits_used: 10, request_id: (0, credits_1.reqId)() });
+        return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured", credits_used: 10, request_id: reqId() });
     }
     // Step 2: Analyze with Claude
     const evidenceText = evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.description}`).join("\n\n");
@@ -2545,7 +2507,7 @@ router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
 - contradicting_evidence: array of quote strings that contradict the claim
 - caveats: any important nuances or context`;
     try {
-        const claude = await axios_1.default.post("https://api.anthropic.com/v1/messages", {
+        const claude = await axios.post("https://api.anthropic.com/v1/messages", {
             model: "claude-haiku-4-5", max_tokens: 1000,
             system: systemPrompt,
             messages: [{ role: "user", content: `Claim to fact-check: "${claim}"\n\nEvidence:\n${evidenceText}\n\nRespond with valid JSON only.` }]
@@ -2572,11 +2534,11 @@ router.get("/fact-check", auth_1.requireAuth, async (req, res) => {
             contradicting_evidence: analysis.contradicting_evidence ?? [],
             caveats: analysis.caveats ?? null,
             sources: evidence,
-            credits_used: 10, request_id: (0, credits_1.reqId)()
+            credits_used: 10, request_id: reqId()
         });
     }
     catch (e) {
-        return void res.status(502).json({ ok: false, error: "analysis_failed", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        return void res.status(502).json({ ok: false, error: "analysis_failed", message: safeErr(e), request_id: reqId() });
     }
 });
 //# sourceMappingURL=index.js.map

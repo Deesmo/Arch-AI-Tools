@@ -13,6 +13,8 @@ datasource db {
 model Agent {
   id           String       @id @default(cuid())
   apiKey       String       @unique @map("api_key")
+  apiKeyPrefix String?      @map("api_key_prefix") @db.VarChar(12)  // first 12 chars — lookup index
+  apiKeyHash   String?      @map("api_key_hash")                     // bcrypt hash for secure comparison
   email        String       @unique
   name         String?
   passwordHash      String?      @map("password_hash")

@@ -1,14 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.LOW_CREDIT_THRESHOLD = void 0;
-exports.sendVerificationEmail = sendVerificationEmail;
-exports.sendWelcomeEmail = sendWelcomeEmail;
-exports.sendLowCreditAlert = sendLowCreditAlert;
-exports.sendPurchaseConfirmation = sendPurchaseConfirmation;
-exports.sendAdminAlert = sendAdminAlert;
-exports.sendMonthlyRefreshEmail = sendMonthlyRefreshEmail;
-exports.sendPasswordResetEmail = sendPasswordResetEmail;
-const logger_1 = require("../lib/logger");
+import { logger } from "../lib/logger";
 /**
  * Arch Tools — Email Service
  *
@@ -23,11 +13,11 @@ const logger_1 = require("../lib/logger");
 const FROM = process.env.EMAIL_FROM || "Arch Tools <no-reply@archtools.dev>";
 const SITE = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\/$/, "");
 // Low credit alert threshold
-exports.LOW_CREDIT_THRESHOLD = Number(process.env.LOW_CREDIT_THRESHOLD || 20);
+export const LOW_CREDIT_THRESHOLD = Number(process.env.LOW_CREDIT_THRESHOLD || 20);
 // ─── Core send helper ───
 async function sendEmail(to, subject, html, text) {
     if (!to || !to.includes("@")) {
-        logger_1.logger.debug({ to }, "Email skipped — invalid address");
+        logger.debug({ to }, "Email skipped — invalid address");
         return false;
     }
     // Resend
@@ -40,14 +30,14 @@ async function sendEmail(to, subject, html, text) {
             });
             if (!r.ok) {
                 const detail = await r.text().catch(() => "");
-                logger_1.logger.error({ to, status: r.status, detail }, "Resend email failed");
+                logger.error({ to, status: r.status, detail }, "Resend email failed");
                 return false;
             }
-            logger_1.logger.info({ to, subject }, "Email sent (Resend)");
+            logger.info({ to, subject }, "Email sent (Resend)");
             return true;
         }
         catch (e) {
-            logger_1.logger.error({ to, error: e.message }, "Resend email error");
+            logger.error({ to, error: e.message }, "Resend email error");
             return false;
         }
     }
@@ -61,19 +51,19 @@ async function sendEmail(to, subject, html, text) {
             });
             if (!r.ok) {
                 const detail = await r.text().catch(() => "");
-                logger_1.logger.error({ to, status: r.status, detail }, "Postmark email failed");
+                logger.error({ to, status: r.status, detail }, "Postmark email failed");
                 return false;
             }
-            logger_1.logger.info({ to, subject }, "Email sent (Postmark)");
+            logger.info({ to, subject }, "Email sent (Postmark)");
             return true;
         }
         catch (e) {
-            logger_1.logger.error({ to, error: e.message }, "Postmark email error");
+            logger.error({ to, error: e.message }, "Postmark email error");
             return false;
         }
     }
     // Dev fallback
-    logger_1.logger.warn({ to, subject }, "Email provider not configured — email skipped (set RESEND_API_KEY)");
+    logger.warn({ to, subject }, "Email provider not configured — email skipped (set RESEND_API_KEY)");
     return false;
 }
 // ─── Shared HTML layout ───
@@ -173,7 +163,7 @@ function layout(title, body, accentColor = "#FF9010") {
 </html>`;
 }
 // ─── 1. Email Verification (magic link) ───
-async function sendVerificationEmail(args) {
+export async function sendVerificationEmail(args) {
     const { to, verifyUrl } = args;
     const subject = "Verify your email for Arch Tools";
     const text = `Verify your email to activate your Arch Tools account.\n\nClick this link (valid for 30 minutes):\n${verifyUrl}\n\nIf you did not request this, you can ignore this email.`;
@@ -185,10 +175,10 @@ async function sendVerificationEmail(args) {
     <p style="font-size:12px;color:#4A4570;margin-top:12px;word-break:break-all;">Or copy this link:<br>${verifyUrl}</p>
   `);
     await sendEmail(to, subject, html, text);
-    logger_1.logger.info({ to }, "Verification email sent");
+    logger.info({ to }, "Verification email sent");
 }
 // ─── 2. Welcome Email ───
-async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted) {
+export async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted) {
     const subject = "Welcome to Arch Tools — Your API key is ready";
     const html = layout(subject, `
     <p>You're in. Here's your API key — <strong>copy it now and store it somewhere safe. It cannot be retrieved again.</strong></p>
@@ -209,7 +199,7 @@ async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted) {
     await sendEmail(to, subject, html, text);
 }
 // ─── 3. Low Credit Alert ───
-async function sendLowCreditAlert(to, creditsRemaining, agentId) {
+export async function sendLowCreditAlert(to, creditsRemaining, agentId) {
     const subject = `⚠️ Low credits — ${creditsRemaining} remaining on Arch Tools`;
     const html = layout(subject, `
     <div class="alert-warn"><strong>⚠️ Running low:</strong> You have <strong>${creditsRemaining} credits</strong> remaining. Top up now to keep your pipelines running without interruption.</div>
@@ -226,7 +216,7 @@ async function sendLowCreditAlert(to, creditsRemaining, agentId) {
     await sendEmail(to, subject, html);
 }
 // ─── 4. Purchase Confirmation ───
-async function sendPurchaseConfirmation(to, credits, label, newBalance) {
+export async function sendPurchaseConfirmation(to, credits, label, newBalance) {
     const subject = `✅ ${credits.toLocaleString()} credits added to your Arch Tools account`;
     const html = layout(subject, `
     <div class="alert-success">✅ Payment received — <strong>${credits.toLocaleString()} credits</strong> have been added to your account instantly.</div>
@@ -242,7 +232,7 @@ async function sendPurchaseConfirmation(to, credits, label, newBalance) {
     await sendEmail(to, subject, html);
 }
 // ─── 5. Admin Alert (new payment / new signup) ───
-async function sendAdminAlert(subject, body) {
+export async function sendAdminAlert(subject, body) {
     const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
     if (!adminEmail)
         return;
@@ -266,7 +256,7 @@ async function sendAdminAlert(subject, body) {
     await sendEmail(adminEmail, subject, html);
 }
 // ─── 6. Monthly Refresh ───
-async function sendMonthlyRefreshEmail(to, credits, newBalance) {
+export async function sendMonthlyRefreshEmail(to, credits, newBalance) {
     const month = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
     const subject = `🔄 Your ${credits} free Arch Tools credits are refreshed for ${month}`;
     const html = layout(subject, `
@@ -282,7 +272,7 @@ async function sendMonthlyRefreshEmail(to, credits, newBalance) {
     await sendEmail(to, subject, html);
 }
 // ─── 7. Password Reset ───
-async function sendPasswordResetEmail(to, resetUrl) {
+export async function sendPasswordResetEmail(to, resetUrl) {
     const subject = "Reset your Arch Tools password";
     const html = layout(subject, `
     <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;color:#F0EEFF;">Reset your password</h2>

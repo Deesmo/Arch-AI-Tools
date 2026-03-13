@@ -1,33 +1,33 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.signSession = signSession;
-exports.verifySession = verifySession;
-const express_1 = require("express");
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const prisma_1 = require("../lib/prisma");
-const logger_1 = require("../lib/logger");
-const email_1 = require("../services/email");
-const router = (0, express_1.Router)();
-// C-1 FIX: Fail hard at startup if JWT_SECRET is not set — no fallback
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
-    throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start.");
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import rateLimit from "express-rate-limit";
+import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
+import { sendPasswordResetEmail } from "../services/email";
+const router = Router();
+// Security: fail hard at startup if JWT_SECRET is not set — never use a hardcoded fallback.
+// This applies in ALL environments; a missing secret is always a configuration error.
+if (!process.env.JWT_SECRET) {
+    throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start. Set a strong random secret.");
 }
-const JWT_SECRET = process.env.JWT_SECRET || "arch-tools-dev-secret-local-only";
+const JWT_SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = "arch_session";
+// Security: JWT expiry and cookie maxAge are intentionally set to the SAME value (7 days).
+// Mismatched expiry (e.g. 30d JWT + 72h cookie) allows stolen tokens to remain valid
+// long after the user's browser session has expired.
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const SESSION_TTL_JWT = "7d"; // must match SESSION_TTL_MS
 const COOKIE_OPTS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict", // H-1 FIX: strict prevents CSRF on mutating routes
-    maxAge: 72 * 60 * 60 * 1000, // H-3 FIX: 72h instead of 30 days
+    sameSite: "strict",
+    maxAge: SESSION_TTL_MS,
     path: "/",
 };
 // C-2 FIX: Rate limit login attempts — 5 per 15 min per IP
-const loginLimiter = (0, express_rate_limit_1.default)({
+const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
     skipSuccessfulRequests: true,
@@ -36,19 +36,19 @@ const loginLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
 });
 // Also rate-limit forgot-password — 3 requests per email per 5 min (handled per IP here)
-const forgotLimiter = (0, express_rate_limit_1.default)({
+const forgotLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 3,
     message: { ok: false, error: "too_many_requests", message: "Too many reset requests. Try again in 5 minutes." },
     standardHeaders: true,
     legacyHeaders: false,
 });
-function signSession(agentId) {
-    return jsonwebtoken_1.default.sign({ sub: agentId }, JWT_SECRET, { expiresIn: "30d" });
+export function signSession(agentId) {
+    return jwt.sign({ sub: agentId }, JWT_SECRET, { expiresIn: SESSION_TTL_JWT });
 }
-function verifySession(token) {
+export function verifySession(token) {
     try {
-        return jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        return jwt.verify(token, JWT_SECRET);
     }
     catch {
         return null;
@@ -61,10 +61,10 @@ router.post("/login", loginLimiter, async (req, res) => {
         res.status(400).json({ ok: false, error: "email_and_password_required" });
         return;
     }
-    const agent = await prisma_1.prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const agent = await prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (!agent) {
         // Timing-safe: still do a bcrypt compare to prevent user enumeration
-        await bcryptjs_1.default.compare(password, "$2b$10$invalid.hash.that.never.matches.xxxxxxxxxxx");
+        await bcrypt.compare(password, "$2b$10$invalid.hash.that.never.matches.xxxxxxxxxxx");
         res.status(401).json({ ok: false, error: "invalid_credentials" });
         return;
     }
@@ -77,14 +77,14 @@ router.post("/login", loginLimiter, async (req, res) => {
         });
         return;
     }
-    const valid = await bcryptjs_1.default.compare(password, agent.passwordHash);
+    const valid = await bcrypt.compare(password, agent.passwordHash);
     if (!valid) {
         res.status(401).json({ ok: false, error: "invalid_credentials" });
         return;
     }
     const token = signSession(agent.id);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
-    logger_1.logger.info({ agentId: agent.id }, "Agent logged in");
+    logger.info({ agentId: agent.id }, "Agent logged in");
     res.json({ ok: true, redirect: "/dashboard" });
 });
 // ─── POST /auth/set-password ───────────────────────────────────────────────────
@@ -99,17 +99,17 @@ router.post("/set-password", async (req, res) => {
         res.status(400).json({ ok: false, error: "password_too_short", message: "Password must be at least 8 characters." });
         return;
     }
-    const agent = await prisma_1.prisma.agent.findUnique({ where: { apiKey: api_key } });
+    const agent = await prisma.agent.findUnique({ where: { apiKey: api_key } });
     if (!agent) {
         res.status(404).json({ ok: false, error: "not_found" });
         return;
     }
-    const hash = await bcryptjs_1.default.hash(password, 10);
-    await prisma_1.prisma.agent.update({ where: { id: agent.id }, data: { passwordHash: hash } });
+    const hash = await bcrypt.hash(password, 10);
+    await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash: hash } });
     // Set session cookie immediately
     const token = signSession(agent.id);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
-    logger_1.logger.info({ agentId: agent.id }, "Agent set password + logged in");
+    logger.info({ agentId: agent.id }, "Agent set password + logged in");
     res.json({ ok: true, redirect: "/dashboard" });
 });
 // ─── GET /auth/logout ──────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ router.get("/me", async (req, res) => {
         res.status(401).json({ ok: false, error: "session_expired" });
         return;
     }
-    const agent = await prisma_1.prisma.agent.findUnique({ where: { id: payload.sub } });
+    const agent = await prisma.agent.findUnique({ where: { id: payload.sub } });
     if (!agent) {
         res.clearCookie(COOKIE_NAME, { path: "/" });
         res.status(401).json({ ok: false, error: "agent_not_found" });
@@ -160,7 +160,7 @@ router.get("/api-key", async (req, res) => {
         res.status(401).json({ ok: false, error: "session_expired" });
         return;
     }
-    const agent = await prisma_1.prisma.agent.findUnique({ where: { id: payload.sub } });
+    const agent = await prisma.agent.findUnique({ where: { id: payload.sub } });
     if (!agent) {
         res.status(401).json({ ok: false, error: "agent_not_found" });
         return;
@@ -169,7 +169,7 @@ router.get("/api-key", async (req, res) => {
     const masked = agent.apiKey.substring(0, 8) + "●".repeat(agent.apiKey.length - 12) + agent.apiKey.slice(-4);
     res.json({ ok: true, api_key_masked: masked, api_key: agent.apiKey });
 });
-exports.default = router;
+export default router;
 // ─── POST /auth/forgot-password ───────────────────────────────────────────────
 router.post("/forgot-password", forgotLimiter, async (req, res) => {
     const { email } = req.body ?? {};
@@ -178,16 +178,16 @@ router.post("/forgot-password", forgotLimiter, async (req, res) => {
         return;
     }
     // Always return 200 to prevent user enumeration
-    const agent = await prisma_1.prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const agent = await prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (agent) {
-        const token = require("crypto").randomBytes(32).toString("hex");
+        const token = crypto.randomBytes(32).toString("hex");
         const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-        await prisma_1.prisma.agent.update({
+        await prisma.agent.update({
             where: { id: agent.id },
             data: { resetToken: token, resetTokenExpiry: expiry },
         });
         const resetUrl = `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/auth/reset-password?token=${token}`;
-        await (0, email_1.sendPasswordResetEmail)(agent.email, resetUrl);
+        await sendPasswordResetEmail(agent.email, resetUrl);
     }
     res.json({ ok: true, message: "If an account exists with that email, a reset link has been sent." });
 });
@@ -251,22 +251,22 @@ router.post("/reset-password", async (req, res) => {
         res.status(400).json({ ok: false, error: "password_too_short", message: "Password must be at least 8 characters." });
         return;
     }
-    const agent = await prisma_1.prisma.agent.findFirst({
+    const agent = await prisma.agent.findFirst({
         where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
     });
     if (!agent) {
         res.status(400).json({ ok: false, error: "invalid_or_expired_token", message: "This reset link has expired or is invalid. Please request a new one." });
         return;
     }
-    const hash = await bcryptjs_1.default.hash(password, 10);
-    await prisma_1.prisma.agent.update({
+    const hash = await bcrypt.hash(password, 10);
+    await prisma.agent.update({
         where: { id: agent.id },
         data: { passwordHash: hash, resetToken: null, resetTokenExpiry: null },
     });
     // Log the user in
     const sessionToken = signSession(agent.id);
     res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
-    logger_1.logger.info({ agentId: agent.id }, "Agent reset password + logged in");
+    logger.info({ agentId: agent.id }, "Agent reset password + logged in");
     res.json({ ok: true, redirect: "/dashboard" });
 });
 //# sourceMappingURL=auth.js.map

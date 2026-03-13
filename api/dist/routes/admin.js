@@ -1,45 +1,43 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const prisma_1 = require("../lib/prisma");
-const client_1 = require("@prisma/client");
-const auth_1 = require("../middleware/auth");
-const credits_1 = require("../utils/credits");
-const router = (0, express_1.Router)();
-router.get("/stats", auth_1.requireAdmin, async (_req, res) => {
+import { Router } from "express";
+import { prisma } from "../lib/prisma";
+import { Prisma } from "@prisma/client";
+import { requireAdmin } from "../middleware/auth";
+import { reqId, safeErr } from "../utils/credits";
+const router = Router();
+router.get("/stats", requireAdmin, async (_req, res) => {
     try {
         const today = new Date().toISOString().slice(0, 10);
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const [totalAgents, totalRequests, requestsToday, requestsLast30Days, topTools, recentPurchases, x402Payments,] = await Promise.all([
-            prisma_1.prisma.agent.count(),
-            prisma_1.prisma.apiRequest.count(),
-            prisma_1.prisma.apiRequest.count({ where: { createdAt: { gte: new Date(today) } } }),
-            prisma_1.prisma.apiRequest.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+            prisma.agent.count(),
+            prisma.apiRequest.count(),
+            prisma.apiRequest.count({ where: { createdAt: { gte: new Date(today) } } }),
+            prisma.apiRequest.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
             // Prisma v5 groupBy with correct _count orderBy syntax
-            prisma_1.prisma.apiRequest.groupBy({
+            prisma.apiRequest.groupBy({
                 by: ["toolName"],
                 _count: { toolName: true },
                 orderBy: { _count: { toolName: "desc" } },
                 take: 10,
             }),
-            prisma_1.prisma.purchase.findMany({
+            prisma.purchase.findMany({
                 where: { status: "completed" },
                 orderBy: { createdAt: "desc" },
                 take: 10,
                 select: { credits: true, amountCents: true, createdAt: true, agentId: true },
             }),
-            prisma_1.prisma.x402Payment.count(),
+            prisma.x402Payment.count(),
         ]);
         const totalRevenueCents = recentPurchases.reduce((s, p) => s + p.amountCents, 0);
         // Agent fingerprinting breakdown
         const [callerBreakdown, callerTypeBreakdown] = await Promise.all([
-            prisma_1.prisma.apiRequest.groupBy({
+            prisma.apiRequest.groupBy({
                 by: ["callerName"],
                 _count: { callerName: true },
                 orderBy: { _count: { callerName: "desc" } },
                 take: 20,
             }),
-            prisma_1.prisma.apiRequest.groupBy({
+            prisma.apiRequest.groupBy({
                 by: ["callerType"],
                 _count: { callerType: true },
                 orderBy: { _count: { callerType: "desc" } },
@@ -59,35 +57,35 @@ router.get("/stats", auth_1.requireAdmin, async (_req, res) => {
             caller_breakdown: callerBreakdown.map(c => ({ caller: c.callerName ?? "unknown", calls: c._count.callerName })),
             caller_types: callerTypeBreakdown.map(c => ({ type: c.callerType ?? "unknown", calls: c._count.callerType })),
             recent_purchases: recentPurchases,
-            request_id: (0, credits_1.reqId)(),
+            request_id: reqId(),
         });
     }
     catch (e) {
         console.error("Admin stats error:", e);
-        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
-router.get("/lookup", auth_1.requireAdmin, async (req, res) => {
+router.get("/lookup", requireAdmin, async (req, res) => {
     const { email } = req.query;
     if (!email) {
-        res.status(400).json({ ok: false, error: "email_required", request_id: (0, credits_1.reqId)() });
+        res.status(400).json({ ok: false, error: "email_required", request_id: reqId() });
         return;
     }
     try {
-        const agent = await prisma_1.prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
+        const agent = await prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
         if (!agent) {
-            res.status(404).json({ ok: false, error: "not_found", request_id: (0, credits_1.reqId)() });
+            res.status(404).json({ ok: false, error: "not_found", request_id: reqId() });
             return;
         }
-        res.json({ ok: true, agent, request_id: (0, credits_1.reqId)() });
+        res.json({ ok: true, agent, request_id: reqId() });
     }
     catch (e) {
-        res.status(500).json({ ok: false, error: "internal_error", message: (0, credits_1.safeErr)(e), request_id: (0, credits_1.reqId)() });
+        res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // POST /v1/admin/seed-tools — one-shot seed for missing tools
-router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
+router.post("/seed-tools", requireAdmin, async (_req, res) => {
     const tools = [
         { name: "barcode-generate", description: "Generate Code128 barcodes as SVG", category: "media", credits: 2 },
         { name: "html-to-markdown", description: "Convert HTML or any URL to clean Markdown", category: "text", credits: 3 },
@@ -109,7 +107,7 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
     // First, diagnose the actual Tool table structure
     let columns = [];
     try {
-        columns = await prisma_1.prisma.$queryRaw(client_1.Prisma.sql `
+        columns = await prisma.$queryRaw(Prisma.sql `
       SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns
       WHERE table_name = 'Tool'
@@ -122,7 +120,7 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
     const results = [];
     for (const t of tools) {
         try {
-            const existing = await prisma_1.prisma.tool.findUnique({ where: { name: t.name } });
+            const existing = await prisma.tool.findUnique({ where: { name: t.name } });
             if (existing) {
                 results.push({ name: t.name, status: "already_exists" });
             }
@@ -131,7 +129,7 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
                 const id = Math.random().toString(36).slice(2, 27);
                 const endpoint = `/v1/tools/${t.name}`;
                 const now = new Date().toISOString();
-                await prisma_1.prisma.$executeRaw(client_1.Prisma.sql `
+                await prisma.$executeRaw(Prisma.sql `
           INSERT INTO "Tool" (id, name, description, endpoint, method, credits, category, active, enabled, "createdAt", "updatedAt", version)
           VALUES (${id}, ${t.name}, ${t.description}, ${endpoint}, 'POST', ${t.credits}, ${t.category}, true, true, ${now}::timestamp, ${now}::timestamp, '1.0.0')
         `);
@@ -142,8 +140,8 @@ router.post("/seed-tools", auth_1.requireAdmin, async (_req, res) => {
             results.push({ name: t.name, status: `error: ${String(e).slice(0, 300)}` });
         }
     }
-    const total = await prisma_1.prisma.tool.count();
-    res.json({ ok: true, columns, results, total, request_id: (0, credits_1.reqId)() });
+    const total = await prisma.tool.count();
+    res.json({ ok: true, columns, results, total, request_id: reqId() });
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=admin.js.map

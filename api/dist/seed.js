@@ -1,7 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
 const TOOLS = [
     { name: "validate-data", description: "Validate JSON against a JSON Schema", category: "data", credits: 1 },
     { name: "generate-hash", description: "Generate cryptographic hashes (sha256/sha512/md5)", category: "security", credits: 1 },

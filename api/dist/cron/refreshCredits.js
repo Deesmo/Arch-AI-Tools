@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-nocheck
 /**
  * Monthly Free Credit Refresh
@@ -9,8 +7,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
  *
  * Safe to run multiple times — uses updatedAt guard to prevent double-grants in same month.
  */
-require("dotenv/config");
-const prisma_1 = require("../lib/prisma");
+import "dotenv/config";
+import { prisma } from "../lib/prisma";
 async function main() {
     const credits = Number(process.env.FREE_MONTHLY_CREDITS || 100);
     if (credits <= 0) {
@@ -21,7 +19,7 @@ async function main() {
     const startOfMonth = new Date();
     startOfMonth.setUTCDate(1);
     startOfMonth.setUTCHours(0, 0, 0, 0);
-    const agents = await prisma_1.prisma.agent.findMany({
+    const agents = await prisma.agent.findMany({
         where: { tier: "free" },
         select: { id: true, updatedAt: true },
     });
@@ -33,7 +31,7 @@ async function main() {
             skipped++;
             continue;
         }
-        await prisma_1.prisma.agent.update({
+        await prisma.agent.update({
             where: { id: agent.id },
             data: { credits: credits },
         });
@@ -42,10 +40,10 @@ async function main() {
     console.log(`Credit refresh complete: ${granted} granted, ${skipped} already refreshed this month.`);
 }
 main()
-    .then(() => prisma_1.prisma.$disconnect())
+    .then(() => prisma.$disconnect())
     .catch(async (e) => {
     console.error("Credit refresh failed:", e);
-    await prisma_1.prisma.$disconnect();
+    await prisma.$disconnect();
     process.exit(1);
 });
 //# sourceMappingURL=refreshCredits.js.map

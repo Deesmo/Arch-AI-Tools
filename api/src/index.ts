@@ -6,7 +6,13 @@ import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import { config } from "./config";
+
+// ESM-compatible __dirname (safe in both CommonJS and ESM builds)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Init Sentry before anything else
 if (process.env.SENTRY_DSN) {
@@ -23,7 +29,7 @@ import workflowsRouter from "./routes/workflows";
 import seoRouter from "./routes/seo";
 import legalRouter from "./routes/legal";
 import oauthRouter from "./routes/oauth";
-import authRouter from "./routes/auth";
+import authRouter, { verifySession } from "./routes/auth";
 import { SIGNUP_HTML } from "./assets/signupHtml";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml";
 import { LOGIN_HTML } from "./assets/loginHtml";
@@ -169,7 +175,6 @@ app.use("/auth", authRouter);
 app.get("/signup", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
 app.get("/login", (_req: Request, res: Response) => res.type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (req: Request, res: Response) => {
-  const { verifySession } = require("./routes/auth");
   const token = req.cookies?.arch_session;
   if (!token || !verifySession(token)) {
     return res.redirect(302, "/login?next=/dashboard");

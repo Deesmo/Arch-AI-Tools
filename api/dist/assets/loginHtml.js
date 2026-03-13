@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.LOGIN_HTML = void 0;
-exports.LOGIN_HTML = `<!DOCTYPE html>
+export const LOGIN_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />

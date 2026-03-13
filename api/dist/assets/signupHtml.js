@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SIGNUP_HTML = void 0;
-exports.SIGNUP_HTML = `<!DOCTYPE html>
+export const SIGNUP_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -22,6 +19,7 @@ exports.SIGNUP_HTML = `<!DOCTYPE html>
       --text: rgba(255,255,255,0.92);
       --muted: rgba(255,255,255,0.55);
       --accent: #22d3ee;
+      --green: #34d399;
       --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
     }
     body {
