@@ -1,17 +1,21 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Deesmo/arch-tools-mcp",
-  "description": "61 AI agent tools under one key. Web, AI, voice, data, crypto & more. Stripe + x402 USDC payments.",
+  "description": "53 production-ready AI agent tools under one key. Web scraping, AI generation, OCR, crypto data, email & more. Stripe + x402 USDC payments.",
   "repository": {
     "url": "https://github.com/Deesmo/Arch-AI-Tools",
     "source": "github",
     "subfolder": "mcp"
   },
-  "version": "1.0.0",
+  "version": "1.8.0",
   "remotes": [
     {
       "type": "sse",
       "url": "https://arch-tools-mcp.onrender.com/sse"
+    },
+    {
+      "type": "streamable-http",
+      "url": "https://arch-tools-mcp.onrender.com/mcp"
     }
   ]
 }

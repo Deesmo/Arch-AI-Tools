@@ -277,9 +277,9 @@ async function main() {
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
       res.setHeader("Access-Control-Allow-Origin", "*");
-      // Send endpoint event so the client knows where to POST
+      // Send endpoint event so the client knows where to POST, then close
       res.write(`event: endpoint\ndata: /mcp\n\n`);
-      req.on("close", () => res.end());
+      res.end();
     });
 
     // POST /mcp — Streamable HTTP endpoint; handles initialize / tools/list / tools/call
@@ -298,7 +298,7 @@ async function main() {
     app.get("/.well-known/mcp/server-card.json", (_req, res) => {
       res.json({
         name: "Arch Tools",
-        description: "50 production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.",
+        description: "53 production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.",
         version: "1.8.0",
         homepage: "https://archtools.dev",
         repository: "https://github.com/Deesmo/Arch-AI-Tools",
@@ -309,7 +309,7 @@ async function main() {
           headerName: "x-api-key",
           signupUrl: "https://archtools.dev/signup"
         },
-        tools_count: 50,
+        tools_count: 53,
         transport: "sse+streamable",
         endpoints: {
           sse: "/sse",
