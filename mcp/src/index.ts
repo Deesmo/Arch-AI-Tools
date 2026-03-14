@@ -6,6 +6,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { TOOL_SCHEMAS } from "./schemas.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
@@ -294,29 +297,42 @@ async function main() {
 
     // ─── Discovery / meta endpoints ──────────────────────────────────────────
 
-    // Smithery server-card — allows scan-free listing
-    app.get("/.well-known/mcp/server-card.json", (_req, res) => {
-      res.json({
-        name: "Arch Tools",
-        description: "53 production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.",
-        version: "1.8.0",
-        homepage: "https://archtools.dev",
-        repository: "https://github.com/Deesmo/Arch-AI-Tools",
-        auth: {
-          type: "api_key",
-          paramName: "ARCH_API_KEY",
-          in: "header",
-          headerName: "x-api-key",
-          signupUrl: "https://archtools.dev/signup"
-        },
-        tools_count: 53,
-        transport: "sse+streamable",
-        endpoints: {
-          sse: "/sse",
-          messages: "/messages",
-          mcp: "/mcp"
-        }
-      });
+    // Smithery server-card — allows scan-free listing (uses MCP-spec format)
+    app.get("/.well-known/mcp/server-card.json", async (_req, res) => {
+      try {
+        // Dynamically build the card with live tools list for accuracy
+        const tools = await getTools();
+        res.json({
+          serverInfo: {
+            name: "arch-tools-mcp",
+            version: "1.8.0",
+            description: `${tools.length} production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.`
+          },
+          authentication: { required: false },
+          tools: tools.map((t: any) => ({
+            name: t.name,
+            description: t.description,
+            inputSchema: TOOL_SCHEMAS[t.name] ?? t.inputSchema ?? { type: "object", properties: {}, additionalProperties: true },
+            annotations: {
+              readOnlyHint: !["send-email","generate-image","text-to-speech","browser-task","transcribe-audio","image-generate","webhook-send"].includes(t.name),
+              destructiveHint: false,
+              idempotentHint: true,
+              openWorldHint: ["web-scrape","web-search","search-web","rss-parse","crypto-price","crypto-news","crypto-market-cap","crypto-fear-greed","crypto-ohlcv","crypto-sentiment","whois-lookup","check-domain","extract-metadata","extract-page"].includes(t.name)
+            }
+          })),
+          resources: [
+            { uri: "arch://tools/catalog", name: "Arch AI Tools Catalog", description: `Complete catalog of all ${tools.length} available Arch AI Tools`, mimeType: "application/json" },
+            { uri: "arch://docs/quickstart", name: "Quick Start Guide", description: "Getting started guide for the Arch AI Tools MCP server", mimeType: "text/markdown" }
+          ],
+          prompts: [
+            { name: "research-topic", description: "Deep research on any topic with citations", arguments: [{ name: "topic", required: true }, { name: "depth", required: false }] },
+            { name: "fact-check-claim", description: "Verify a claim with confidence score and evidence", arguments: [{ name: "claim", required: true }] },
+            { name: "analyze-url", description: "Comprehensive URL analysis — content, metadata, screenshot", arguments: [{ name: "url", required: true }] }
+          ]
+        });
+      } catch (err: any) {
+        res.status(500).json({ error: err?.message || "Failed to generate server card" });
+      }
     });
 
     // Rich health check — includes session count and transport info
