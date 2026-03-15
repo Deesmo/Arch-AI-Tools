@@ -217,8 +217,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
     async function loadDashboard() {
       var raw = (document.getElementById("key-input").value || "").trim();
+      console.log("[dash] loadDashboard called, raw length=" + raw.length);
       var token = raw.replace(/^authorization:\\s*/i, "").replace(/^bearer /i, "").trim();
-      if (!token) { setStatus("Enter your API key", ""); return; }
+      if (!token) { console.log("[dash] no token, returning"); setStatus("Enter your API key", ""); return; }
       
       var btn = document.getElementById("load-btn");
       btn.disabled = true; btn.textContent = "Loading\u2026";
@@ -294,9 +295,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
     // Auto-load: try session cookie first, then URL param, then localStorage
     (async function() {
+      console.log("[dash] auto-load start");
       var params = new URLSearchParams(window.location.search);
       var qKey = params.get("key");
       if (qKey && qKey.startsWith("arch_")) {
+        console.log("[dash] URL key found");
         document.getElementById("key-input").value = qKey;
         localStorage.setItem("arch_api_key", qKey);
         history.replaceState({}, "", "/dashboard");
@@ -306,17 +309,23 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       // Try session cookie via /auth/api-key (me endpoint no longer returns key — security fix)
       try {
         var meResp = await fetch("/auth/me", { credentials: "include" });
+        console.log("[dash] /auth/me status=" + meResp.status);
         if (meResp.ok) {
           var me = await meResp.json();
+          console.log("[dash] me.ok=" + me.ok);
           if (me.ok) {
             // Session valid — fetch key explicitly
             var keyResp = await fetch("/auth/api-key", { credentials: "include" });
+            console.log("[dash] /auth/api-key status=" + keyResp.status);
             if (keyResp.ok) {
               var kd = await keyResp.json();
+              console.log("[dash] kd.ok=" + kd.ok + " has_key=" + !!kd.api_key);
               if (kd.ok && kd.api_key) {
                 document.getElementById("key-input").value = kd.api_key;
                 localStorage.setItem("arch_api_key", kd.api_key);
+                console.log("[dash] calling loadDashboard from session path");
                 await loadDashboard();
+                console.log("[dash] loadDashboard returned");
                 var navLinks = document.querySelector(".at-nav-links");
                 if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
                 return;
@@ -324,13 +333,17 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             }
           }
         }
-      } catch(_) {}
+      } catch(e) { console.error("[dash] session path error:", e); }
       // Fall back to localStorage
       var saved = localStorage.getItem("arch_api_key");
+      console.log("[dash] localStorage key=" + (saved ? saved.substring(0,12) + "..." : "null"));
       if (saved) {
         document.getElementById("key-input").value = saved;
+        console.log("[dash] calling loadDashboard from localStorage path");
         await loadDashboard();
+        console.log("[dash] loadDashboard returned from localStorage path");
       } else {
+        console.log("[dash] no key, redirecting to login");
         var sub = document.querySelector(".page-sub");
         // No session, no saved key — redirect to login
         window.location.href = '/login?next=/dashboard';
