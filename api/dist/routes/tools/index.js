@@ -371,7 +371,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req, res) => 
         const links = [];
         $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http"))
             links.push({ text: $(el).text().trim().slice(0, 100), href: h }); });
-        res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
+        res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), content: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
     }
     catch (_axiosErr) {
         // Fallback: Firecrawl (handles JS-heavy / bot-protected sites)
@@ -2230,8 +2230,8 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req, res)
             net: "https://rdap.verisign.com/net/v1/domain/",
             org: "https://rdap.publicinterestregistry.org/rdap/domain/",
             io: "https://rdap.nic.io/domain/",
-            dev: "https://rdap.nic.google/v1/domain/",
-            app: "https://rdap.nic.google/v1/domain/",
+            dev: "https://pubapi.registry.google/rdap/domain/",
+            app: "https://pubapi.registry.google/rdap/domain/",
             ai: "https://rdap.nic.ai/v1/domain/",
         };
         const base = rdapBase[tld] ?? `https://rdap.org/domain/`;
