@@ -103,24 +103,29 @@ model DailyUsage {
 }
 
 model OAuthClient {
-  id           String   @id @default(cuid())
-  clientId     String   @unique
-  clientSecret String
-  name         String
-  redirectUris String[]
-  createdAt    DateTime @default(now())
+  id                      String   @id @default(cuid())
+  clientId                String   @unique
+  clientSecret            String?
+  name                    String
+  redirectUris            String[]
+  grantTypes              String[] @default(["authorization_code", "refresh_token"])
+  tokenEndpointAuthMethod String   @default("none") @map("token_endpoint_auth_method")
+  isPublic                Boolean  @default(true)
+  createdAt               DateTime @default(now())
 }
 
 model OAuthAuthCode {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  clientId    String
-  agentId     String
-  scope       String
-  redirectUri String
-  expiresAt   DateTime
-  used        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id                  String   @id @default(cuid())
+  code                String   @unique
+  clientId            String
+  agentId             String
+  scope               String
+  redirectUri         String
+  codeChallenge       String?  @map("code_challenge")
+  codeChallengeMethod String?  @map("code_challenge_method")
+  expiresAt           DateTime
+  used                Boolean  @default(false)
+  createdAt           DateTime @default(now())
 
   @@index([code])
   @@index([expiresAt])
