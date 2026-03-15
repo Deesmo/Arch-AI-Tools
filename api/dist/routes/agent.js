@@ -8,7 +8,8 @@ import bcrypt from "bcryptjs";
 const router = Router();
 // POST /v1/agent/register
 router.post("/register", async (req, res) => {
-    const { name, email } = req.body;
+    const { name, email: rawEmail, plan } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
     if (!email) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
         return;
@@ -53,7 +54,7 @@ router.post("/register", async (req, res) => {
                 email,
                 name: name ?? "",
                 credits: freeCredits,
-                tier: "free",
+                tier: (["free", "starter", "pro", "business"].includes(plan?.replace(/-(?:monthly|annual)$/, "") ?? "") ? plan.replace(/-(?:monthly|annual)$/, "") : "free"),
             },
         });
         res.status(201).json({

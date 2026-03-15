@@ -6,8 +6,9 @@ const router = Router();
 function esc(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 }
-const CONSENT_PAGE = (clientName, scope, clientId, redirectUri, state, error) => {
+const CONSENT_PAGE = (clientName, scope, clientId, redirectUri, state, codeChallenge, codeChallengeMethod, error) => {
     const safeClient = esc(clientName), safeScope = esc(scope), safeClientId = esc(clientId), safeRedirect = esc(redirectUri), safeState = esc(state);
+    const safeCodeChallenge = esc(codeChallenge), safeCodeChallengeMethod = esc(codeChallengeMethod);
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -62,6 +63,8 @@ const CONSENT_PAGE = (clientName, scope, clientId, redirectUri, state, error) =>
       <input type="hidden" name="redirect_uri" value="${safeRedirect}">
       <input type="hidden" name="scope" value="${safeScope}">
       <input type="hidden" name="state" value="${safeState}">
+      <input type="hidden" name="code_challenge" value="${safeCodeChallenge}">
+      <input type="hidden" name="code_challenge_method" value="${safeCodeChallengeMethod}">
       <label for="email">Your Arch Tools email</label>
       <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
       <label for="apiKey">Your API key</label>
@@ -80,9 +83,14 @@ const CONSENT_PAGE = (clientName, scope, clientId, redirectUri, state, error) =>
 };
 // ─── GET /oauth/authorize ─────────────────────────────────────────────────────
 router.get("/authorize", async (req, res) => {
-    const { client_id, redirect_uri, response_type, scope = "tools:read tools:execute", state = "" } = req.query;
+    const { client_id, redirect_uri, response_type, scope = "tools:read tools:execute", state = "", code_challenge = "", code_challenge_method = "", } = req.query;
     if (!client_id || !redirect_uri || response_type !== "code") {
         res.status(400).json({ ok: false, error: "invalid_request", message: "client_id, redirect_uri, and response_type=code are required" });
+        return;
+    }
+    // Validate PKCE params if provided
+    if (code_challenge && code_challenge_method !== "S256") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "code_challenge_method must be S256" });
         return;
     }
     const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
@@ -94,11 +102,11 @@ router.get("/authorize", async (req, res) => {
         res.status(400).json({ ok: false, error: "invalid_redirect_uri", message: "redirect_uri not registered for this client" });
         return;
     }
-    res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state));
+    res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method));
 });
 // ─── POST /oauth/authorize (consent form submit) ──────────────────────────────
 router.post("/authorize", async (req, res) => {
-    const { client_id, redirect_uri, scope, state, email, apiKey } = req.body;
+    const { client_id, redirect_uri, scope, state, email, apiKey, code_challenge = "", code_challenge_method = "", } = req.body;
     const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
     if (!client || !client.redirectUris.includes(redirect_uri)) {
         res.status(400).json({ ok: false, error: "invalid_client" });
@@ -107,14 +115,24 @@ router.post("/authorize", async (req, res) => {
     // Verify agent credentials
     const agent = await prisma.agent.findFirst({ where: { email, apiKey } }).catch(() => null);
     if (!agent) {
-        res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, "Invalid email or API key. Check your credentials at archtools.dev."));
+        res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method, "Invalid email or API key. Check your credentials at archtools.dev."));
         return;
     }
     // Generate auth code
     const code = crypto.randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
     await prisma.oAuthAuthCode.create({
-        data: { id: crypto.randomUUID(), code, clientId: client_id, agentId: agent.id, scope, redirectUri: redirect_uri, expiresAt },
+        data: {
+            id: crypto.randomUUID(),
+            code,
+            clientId: client_id,
+            agentId: agent.id,
+            scope,
+            redirectUri: redirect_uri,
+            expiresAt,
+            // Store PKCE challenge if provided
+            ...(code_challenge ? { codeChallenge: code_challenge, codeChallengeMethod: code_challenge_method || "S256" } : {}),
+        },
     });
     const url = new URL(redirect_uri);
     url.searchParams.set("code", code);
@@ -124,13 +142,26 @@ router.post("/authorize", async (req, res) => {
 });
 // ─── POST /oauth/token ────────────────────────────────────────────────────────
 router.post("/token", async (req, res) => {
-    const { grant_type, code, client_id, client_secret, redirect_uri, refresh_token } = req.body;
+    const { grant_type, code, client_id, client_secret, redirect_uri, refresh_token, code_verifier, } = req.body;
     const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
-    const secretsMatch = !!client && client.clientSecret.length === (client_secret ?? "").length &&
-        timingSafeEqual(Buffer.from(client.clientSecret), Buffer.from(client_secret ?? ""));
-    if (!client || !secretsMatch) {
+    if (!client) {
         res.status(401).json({ error: "invalid_client" });
         return;
+    }
+    // Client authentication: public clients (PKCE) skip secret check; confidential clients must match
+    const isPublicClient = client.isPublic || client.tokenEndpointAuthMethod === "none" || !client.clientSecret;
+    if (!isPublicClient) {
+        // Confidential client — require and validate client_secret
+        if (!client_secret || !client.clientSecret) {
+            res.status(401).json({ error: "invalid_client", error_description: "client_secret required for confidential clients" });
+            return;
+        }
+        const secretBuf = Buffer.from(client.clientSecret);
+        const providedBuf = Buffer.from(client_secret);
+        if (secretBuf.length !== providedBuf.length || !timingSafeEqual(secretBuf, providedBuf)) {
+            res.status(401).json({ error: "invalid_client" });
+            return;
+        }
     }
     // ── Authorization Code flow ──
     if (grant_type === "authorization_code") {
@@ -141,6 +172,24 @@ router.post("/token", async (req, res) => {
         const authCode = await prisma.oAuthAuthCode.findUnique({ where: { code } }).catch(() => null);
         if (!authCode || authCode.used || authCode.expiresAt < new Date() || authCode.clientId !== client_id || authCode.redirectUri !== redirect_uri) {
             res.status(400).json({ error: "invalid_grant" });
+            return;
+        }
+        // PKCE verification
+        if (authCode.codeChallenge) {
+            // Code challenge was stored — code_verifier is REQUIRED
+            if (!code_verifier) {
+                res.status(400).json({ error: "invalid_grant", error_description: "code_verifier is required when PKCE was used" });
+                return;
+            }
+            const expectedChallenge = crypto.createHash("sha256").update(code_verifier).digest("base64url");
+            if (expectedChallenge !== authCode.codeChallenge) {
+                res.status(400).json({ error: "invalid_grant", error_description: "PKCE verification failed" });
+                return;
+            }
+        }
+        else if (isPublicClient) {
+            // Public client WITHOUT PKCE — reject (OAuth 2.1 requires PKCE for public clients)
+            res.status(400).json({ error: "invalid_grant", error_description: "PKCE is required for public clients" });
             return;
         }
         // Mark code as used
@@ -177,6 +226,73 @@ router.post("/token", async (req, res) => {
         return;
     }
     res.status(400).json({ error: "unsupported_grant_type" });
+});
+// ─── POST /oauth/register — Dynamic Client Registration (RFC 7591) ────────────
+router.post("/register", async (req, res) => {
+    const { client_name, redirect_uris, grant_types, token_endpoint_auth_method, response_types, } = req.body;
+    // Validate required fields
+    if (!client_name || !redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
+        res.status(400).json({ error: "invalid_client_metadata", error_description: "client_name and redirect_uris are required" });
+        return;
+    }
+    // Validate redirect URIs — must be https or localhost
+    for (const uri of redirect_uris) {
+        let parsed;
+        try {
+            parsed = new URL(uri);
+        }
+        catch {
+            res.status(400).json({ error: "invalid_redirect_uri", error_description: `Invalid URI: ${uri}` });
+            return;
+        }
+        if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+            res.status(400).json({ error: "invalid_redirect_uri", error_description: "redirect_uris must use https (or localhost for development)" });
+            return;
+        }
+    }
+    // Validate grant_types if provided
+    const allowedGrantTypes = ["authorization_code", "refresh_token"];
+    const requestedGrantTypes = grant_types ?? ["authorization_code", "refresh_token"];
+    for (const gt of requestedGrantTypes) {
+        if (!allowedGrantTypes.includes(gt)) {
+            res.status(400).json({ error: "invalid_client_metadata", error_description: `Unsupported grant_type: ${gt}` });
+            return;
+        }
+    }
+    // Validate token_endpoint_auth_method
+    const authMethod = token_endpoint_auth_method ?? "none";
+    if (!["none", "client_secret_post"].includes(authMethod)) {
+        res.status(400).json({ error: "invalid_client_metadata", error_description: "token_endpoint_auth_method must be 'none' or 'client_secret_post'" });
+        return;
+    }
+    const clientId = `arch_${crypto.randomBytes(16).toString("hex")}`;
+    const isPublic = authMethod === "none";
+    const clientSecret = isPublic ? null : crypto.randomBytes(32).toString("base64url");
+    await prisma.oAuthClient.create({
+        data: {
+            id: crypto.randomUUID(),
+            clientId,
+            clientSecret: clientSecret ?? null,
+            name: client_name,
+            redirectUris: redirect_uris,
+            grantTypes: requestedGrantTypes,
+            tokenEndpointAuthMethod: authMethod,
+            isPublic,
+        },
+    });
+    const responseBody = {
+        client_id: clientId,
+        client_name,
+        redirect_uris,
+        grant_types: requestedGrantTypes,
+        response_types: response_types ?? ["code"],
+        token_endpoint_auth_method: authMethod,
+    };
+    // Only include client_secret for confidential clients
+    if (clientSecret) {
+        responseBody.client_secret = clientSecret;
+    }
+    res.status(201).json(responseBody);
 });
 export default router;
 //# sourceMappingURL=oauth.js.map

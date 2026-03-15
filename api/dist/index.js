@@ -113,11 +113,11 @@ app.use(express.static(path.join(__dirname, "../public"), {
         }
     }
 }));
-// ─── og-image.png — serve SVG as image/svg+xml at /og-image.png ──────────────
+// ─── og-image.png — serve actual PNG from public directory ──────────────
 app.get("/og-image.png", (_req, res) => {
-    res.setHeader("Content-Type", "image/svg+xml");
+    res.setHeader("Content-Type", "image/png");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    res.sendFile(path.join(__dirname, "../public/og-image.svg"));
+    res.sendFile(path.join(__dirname, "../public/og-image.png"));
 });
 // ─── Routes ───────────────────────────────────────────────────────────────────
 // Discovery & health (no auth)

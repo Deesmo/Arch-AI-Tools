@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<style>html,body{margin:0;padding:0;overflow-x:auto;}</style>
+</head><body>
+<iframe src="/index.html" style="width:1440px;height:100vh;border:none;transform-origin:0 0;" id="frame"></iframe>
+<script>
+// Scale to fit screen width
+const scale = Math.min(1, window.innerWidth / 1440);
+document.getElementById('frame').style.transform = 'scale(' + scale + ')';
+document.getElementById('frame').style.height = (100/scale) + 'vh';
+</script>
+</body></html>

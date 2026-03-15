@@ -5,6 +5,30 @@ const router = Router();
 const BASE_URL = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const API_BASE = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const NETWORK = process.env.X402_NETWORK ?? "base";
+// ─── OAuth 2.1 Authorization Server Metadata (RFC 8414) ──────────────────────
+router.get("/.well-known/oauth-authorization-server", (_req, res) => {
+    res.json({
+        issuer: BASE_URL,
+        authorization_endpoint: `${BASE_URL}/oauth/authorize`,
+        token_endpoint: `${BASE_URL}/oauth/token`,
+        registration_endpoint: `${BASE_URL}/oauth/register`,
+        scopes_supported: ["tools:read", "tools:execute"],
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code", "refresh_token"],
+        token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
+        code_challenge_methods_supported: ["S256"],
+        service_documentation: `${BASE_URL}/docs`,
+    });
+});
+// ─── OAuth Protected Resource Metadata (RFC 9728) ────────────────────────────
+router.get("/.well-known/oauth-protected-resource", (_req, res) => {
+    res.json({
+        resource: BASE_URL,
+        authorization_servers: [BASE_URL],
+        scopes_supported: ["tools:read", "tools:execute"],
+        bearer_methods_supported: ["header"],
+    });
+});
 // GET /health
 router.get("/health", async (_req, res) => {
     try {
