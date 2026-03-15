@@ -300,7 +300,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById("key-input").value = qKey;
         localStorage.setItem("arch_api_key", qKey);
         history.replaceState({}, "", "/dashboard");
-        document.getElementById("load-btn").click();
+        await loadDashboard();
         return;
       }
       // Try session cookie via /auth/api-key (me endpoint no longer returns key — security fix)
@@ -316,7 +316,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
               if (kd.ok && kd.api_key) {
                 document.getElementById("key-input").value = kd.api_key;
                 localStorage.setItem("arch_api_key", kd.api_key);
-                document.getElementById("load-btn").click();
+                await loadDashboard();
                 var navLinks = document.querySelector(".at-nav-links");
                 if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
                 return;
@@ -329,7 +329,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       var saved = localStorage.getItem("arch_api_key");
       if (saved) {
         document.getElementById("key-input").value = saved;
-        document.getElementById("load-btn").click();
+        await loadDashboard();
       } else {
         var sub = document.querySelector(".page-sub");
         // No session, no saved key — redirect to login
