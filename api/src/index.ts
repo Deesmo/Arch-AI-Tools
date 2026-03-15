@@ -172,8 +172,8 @@ app.use("/legal", legalRouter);
 app.use("/auth", authRouter);
 
 // ─── Frontend pages ───────────────────────────────────────────────────────────
-app.get("/signup", (_req: Request, res: Response) => res.type("text/html").send(SIGNUP_HTML));
-app.get("/login", (_req: Request, res: Response) => res.type("text/html").send(LOGIN_HTML));
+app.get("/signup", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML));
+app.get("/login", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (req: Request, res: Response) => {
   const token = req.cookies?.arch_session;
   if (!token || !verifySession(token)) {
