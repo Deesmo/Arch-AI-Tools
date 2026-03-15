@@ -184,6 +184,20 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     var fullKey = "";
     var keyVisible = false;
 
+    (async function autoInit() {
+      if (!localStorage.getItem('arch_api_key')) {
+        try {
+          var r = await fetch('/auth/api-key', {credentials:'include'});
+          var d = await r.json();
+          if (d.ok && d.api_key) {
+            localStorage.setItem('arch_api_key', d.api_key);
+            window.fullKey = d.api_key;
+            if (typeof loadDashboard === 'function') loadDashboard(d.api_key);
+          }
+        } catch(e) {}
+      }
+    })();
+
     function maskKey(k) {
       if (!k || k.length < 12) return k;
       return k.slice(0, 7) + "\u2022".repeat(Math.min(32, k.length - 11)) + k.slice(-6);
