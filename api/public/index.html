@@ -2560,5 +2560,14 @@ window.addEventListener("load", function() {
   }
 });
 </script>
+<script>
+// ── PRICING BUTTON WIRING ──────────────────
+document.querySelectorAll('[data-pack]').forEach(function(btn){
+  btn.onclick=function(){window.location.href='/signup?plan='+btn.dataset.pack+'&billing=onetime'};
+});
+document.querySelectorAll('[data-sub]').forEach(function(btn){
+  btn.onclick=function(){window.location.href='/signup?plan='+btn.dataset.sub};
+});
+</script>
 </body>
 </html>
