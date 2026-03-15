@@ -309,8 +309,8 @@
     .plan-features li{font-size:13px;color:var(--muted);padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:8px;}
     .plan-features li::before{content:'→';color:var(--purple);font-family:var(--mono);font-size:11px;}
     .plan-cta{display:block;text-align:center;padding:13px;border-radius:10px;font-family:var(--mono);font-size:13px;text-decoration:none;transition:all 0.2s;cursor:pointer;border:none;}
-    .plan-cta-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);}
-    .plan-cta-ghost:hover{border-color:var(--purple);color:var(--text);}
+    .plan-cta-ghost{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;border:1px solid transparent;cursor:pointer;}
+    .plan-cta-ghost:hover{opacity:0.88;}
     .plan-cta-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;}
     .plan-cta-primary:hover{opacity:0.88;}
 
@@ -2320,16 +2320,15 @@ function setPricingMode(mode) {
 }
 
 // Get API key helper (global scope for inline onclick access)
-async function getApiKey() {
+async function getApiKey(planName) {
   var apiKey = localStorage.getItem('arch_api_key') || '';
-  if (!apiKey) apiKey = window.prompt('Enter your Arch Tools API key (or go to archtools.dev/signup to get one):') || '';
-  if (!apiKey.trim()) { window.location.href = '/signup'; return null; }
+  if (!apiKey) { window.location.href = '/signup?plan=' + encodeURIComponent(planName || 'free'); return null; }
   return apiKey.trim();
 }
 
 // Stripe checkout for one-time packs (global scope for inline onclick access)
 async function buyPack(packName) {
-  var apiKey = await getApiKey(); if (!apiKey) return;
+  var apiKey = await getApiKey(packName); if (!apiKey) return;
   try {
     var res = await fetch('/v1/billing/checkout', {
       method: 'POST',
@@ -2344,7 +2343,7 @@ async function buyPack(packName) {
 
 // Stripe checkout for subscriptions (global scope for inline onclick access)
 async function buySubscription(planId) {
-  var apiKey = await getApiKey(); if (!apiKey) return;
+  var apiKey = await getApiKey(planId); if (!apiKey) return;
   try {
     var res = await fetch('/v1/billing/subscribe', {
       method: 'POST',
