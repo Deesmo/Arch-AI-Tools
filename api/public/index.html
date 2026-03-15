@@ -2300,19 +2300,7 @@ function applyToolFilters() {
   });
 }
 
-// Safari-safe: wrap all DOM-dependent code in DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function() {
-// Category filter (legacy - kept for marquee scroll-to behavior)
-function filterTools(cat, btn) {
-  var matchBtn = btn || [...document.querySelectorAll('#tool-cat-filters .cat-pill')].find(function(p){ return p.dataset.filter === cat; });
-  filterToolCat(cat, matchBtn);
-}
-function goToCategory(cat) {
-  filterTools(cat, null);
-  document.getElementById('tools').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// Pricing toggle
+// Pricing toggle (global scope for inline onclick access)
 function setPricingMode(mode) {
   var modes = ['onetime', 'monthly', 'annual'];
   modes.forEach(function(m) {
@@ -2331,7 +2319,7 @@ function setPricingMode(mode) {
   if (mode === 'annual' && h) { h.textContent = 'Annual billing. 25% off. Best deal.'; if (s) s.textContent = 'Pay once a year and save 25% vs monthly. Same auto-refill, better rate.'; }
 }
 
-// Get API key helper
+// Get API key helper (global scope for inline onclick access)
 async function getApiKey() {
   var apiKey = localStorage.getItem('arch_api_key') || '';
   if (!apiKey) apiKey = window.prompt('Enter your Arch Tools API key (or go to archtools.dev/signup to get one):') || '';
@@ -2339,7 +2327,7 @@ async function getApiKey() {
   return apiKey.trim();
 }
 
-// Stripe checkout for one-time packs
+// Stripe checkout for one-time packs (global scope for inline onclick access)
 async function buyPack(packName) {
   var apiKey = await getApiKey(); if (!apiKey) return;
   try {
@@ -2354,7 +2342,7 @@ async function buyPack(packName) {
   } catch(e) { alert('Something went wrong. Please try again.'); }
 }
 
-// Stripe checkout for subscriptions
+// Stripe checkout for subscriptions (global scope for inline onclick access)
 async function buySubscription(planId) {
   var apiKey = await getApiKey(); if (!apiKey) return;
   try {
@@ -2367,6 +2355,18 @@ async function buySubscription(planId) {
     if (data.url) { window.location.href = data.url; }
     else { alert('Error: ' + (data.message || 'Could not create subscription session. Check your API key.')); }
   } catch(e) { alert('Something went wrong. Please try again.'); }
+}
+
+// Safari-safe: wrap all DOM-dependent code in DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+// Category filter (legacy - kept for marquee scroll-to behavior)
+function filterTools(cat, btn) {
+  var matchBtn = btn || [...document.querySelectorAll('#tool-cat-filters .cat-pill')].find(function(p){ return p.dataset.filter === cat; });
+  filterToolCat(cat, matchBtn);
+}
+function goToCategory(cat) {
+  filterTools(cat, null);
+  document.getElementById('tools').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Event delegation: cat-filter buttons (handled via inline onclick on pills above)
