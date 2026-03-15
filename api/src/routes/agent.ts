@@ -10,7 +10,8 @@ const router = Router();
 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
-  const { name, email } = req.body as { name?: string; email?: string };
+  const { name, email: rawEmail, plan } = req.body as { name?: string; email?: string; plan?: string };
+  const email = rawEmail?.toLowerCase().trim();
   if (!email) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
     return;
@@ -57,7 +58,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         email,
         name: name ?? "",
         credits: freeCredits,
-        tier: "free",
+        tier: (["free","starter","pro","business"].includes(plan?.replace(/-(?:monthly|annual)$/,"") ?? "") ? plan!.replace(/-(?:monthly|annual)$/,"") : "free") as any,
       },
     });
 
