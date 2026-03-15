@@ -79,11 +79,9 @@ export const LOGIN_HTML = `<!DOCTYPE html>
 <body>
 <nav>
   <a href="/" class="logo">
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-      <rect width="32" height="32" rx="8" fill="#07061A"/>
-      <path d="M16 5L27 26H5L16 5Z" fill="none" stroke="url(#lg)" stroke-width="2.2" stroke-linejoin="round"/>
-      <defs><linearGradient id="lg" x1="5" y1="5" x2="27" y2="26"><stop stop-color="#FF9010"/><stop offset="1" stop-color="#FF2896"/></linearGradient></defs>
-    </svg>
+    <div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;">
+      <svg width="18" height="18" viewBox="0 0 180 180" fill="none"><defs><linearGradient id="ng" x1="90" y1="20" x2="90" y2="160" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFB030"/><stop offset="42%" stop-color="#FF1888"/><stop offset="100%" stop-color="#5522FF"/></linearGradient></defs><path d="M90 22 L154 150 H128 L90 78 L52 150 H26 Z" fill="url(#ng)"/><rect x="62" y="118" width="56" height="20" rx="4" fill="url(#ng)" opacity="0.6"/></svg>
+    </div>
     Arch Tools
   </a>
   <div class="nav-links">

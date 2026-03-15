@@ -208,7 +208,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         const res = await fetch('/v1/agent/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, plan: 'free' })
+          body: JSON.stringify({ email, plan: new URLSearchParams(window.location.search).get('plan') || 'free' })
         });
         let data;
         try { data = await res.json(); } catch(_) { data = {}; }
