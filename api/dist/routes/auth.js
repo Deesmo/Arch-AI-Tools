@@ -54,6 +54,24 @@ export function verifySession(token) {
         return null;
     }
 }
+// ─── POST /auth/login-key ───────────────────────────────────────────────────────
+// API Key login: validate key, set session cookie, redirect to dashboard. No password needed.
+router.post("/login-key", loginLimiter, async (req, res) => {
+    const { api_key } = req.body ?? {};
+    if (!api_key || typeof api_key !== "string" || !api_key.startsWith("arch_")) {
+        res.status(400).json({ ok: false, error: "invalid_api_key", message: "A valid API key starting with arch_ is required." });
+        return;
+    }
+    const agent = await prisma.agent.findUnique({ where: { apiKey: api_key } });
+    if (!agent) {
+        res.status(401).json({ ok: false, error: "invalid_api_key", message: "Invalid API key." });
+        return;
+    }
+    const token = signSession(agent.id);
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+    logger.info({ agentId: agent.id }, "Agent logged in via API key");
+    res.json({ ok: true, redirect: "/dashboard" });
+});
 // ─── POST /auth/login ──────────────────────────────────────────────────────────
 router.post("/login", loginLimiter, async (req, res) => {
     const { email, password } = req.body ?? {};

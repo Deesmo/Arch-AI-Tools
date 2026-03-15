@@ -186,11 +186,30 @@ export const LOGIN_HTML = `<!DOCTYPE html>
     }
   }
 
-  function doKeyLogin() {
+  async function doKeyLogin() {
     var key = document.getElementById('api-key-input').value.trim();
     if (!key.startsWith('arch_')) { setStatus('status-key', 'API keys start with arch_', true); return; }
-    localStorage.setItem('arch_api_key', key);
-    window.location.href = '/dashboard';
+    setStatus('status-key', '', false);
+    try {
+      var r = await fetch('/auth/login-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ api_key: key })
+      });
+      var d = await r.json();
+      if (d.ok) {
+        localStorage.setItem('arch_api_key', key);
+        setStatus('status-key', '✓ Key validated — redirecting…', false);
+        var params = new URLSearchParams(window.location.search);
+        var next = params.get('next') || '/dashboard';
+        setTimeout(function() { window.location.href = next; }, 500);
+      } else {
+        setStatus('status-key', d.message || 'Invalid API key.', true);
+      }
+    } catch(_) {
+      setStatus('status-key', 'Connection error. Try again.', true);
+    }
   }
 
   // Handle Enter key
