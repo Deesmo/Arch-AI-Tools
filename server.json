@@ -1,39 +1,19 @@
 {
-  "$schema": "https://modelcontextprotocol.io/schemas/server.json",
-  "name": "io.github.deesmo/arch-tools-mcp",
-  "version": "1.7.0",
-  "description": "45 production-ready AI tools for developers and agents. Web scraping, AI generation, crypto data, utilities, and more. Dual payment: Stripe credits or USDC via x402 on Base — agents pay autonomously with no human card required.",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Deesmo/arch-tools-mcp",
+  "version": "1.8.0",
+  "description": "53 AI tools for agents: web, crypto, AI generation, OCR, and more. Pay with Stripe or USDC.",
   "homepage": "https://archtools.dev",
   "license": "MIT",
   "repository": {
-    "type": "git",
-    "url": "https://github.com/Deesmo/Arch-AI-Tools"
+    "url": "https://github.com/Deesmo/Arch-AI-Tools",
+    "source": "github"
   },
-  "server": {
-    "transport": [
-      {
-        "type": "http",
-        "url": "https://arch-tools-mcp.onrender.com/mcp"
-      },
-      {
-        "type": "sse",
-        "url": "https://arch-tools-mcp.onrender.com/sse"
-      }
-    ]
-  },
-  "packages": [
-    {
-      "registry": "npm",
-      "name": "@deesmo/arch-tools-mcp",
-      "version": "1.7.0",
-      "runtime": "node",
-      "args": []
-    }
-  ],
+  "packages": [],
   "capabilities": {
     "tools": true,
-    "resources": false,
-    "prompts": false
+    "resources": true,
+    "prompts": true
   },
   "categories": [
     "web-scraping",
@@ -57,5 +37,11 @@
     "name": "Arch Tools",
     "url": "https://archtools.dev",
     "email": "support@archtools.dev"
-  }
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://arch-tools-mcp.onrender.com/mcp"
+    }
+  ]
 }
