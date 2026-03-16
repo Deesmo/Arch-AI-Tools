@@ -2200,3 +2200,170 @@ router.get("/fact-check", requireAuth, async (req: Request, res: Response) => {
     return void res.status(502).json({ ok: false, error: "analysis_failed", message: safeErr(e), request_id: reqId() });
   }
 });
+
+// ─── SESSION-CREATE ───────────────────────────────────────────────────────────
+// Creates a conversation session with optional system prompt and model.
+// Sessions are stored in memory (Map) — no DB required yet.
+
+interface SessionData {
+  session_id: string;
+  namespace: string;
+  system_prompt: string | null;
+  model: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  created_at: string;
+}
+
+const sessionStore = new Map<string, SessionData>();
+
+// Clean up old sessions every 30 minutes (sessions older than 4 hours)
+setInterval(() => {
+  const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+  for (const [id, session] of sessionStore.entries()) {
+    if (new Date(session.created_at).getTime() < cutoff) sessionStore.delete(id);
+  }
+}, 30 * 60 * 1000);
+
+router.post("/session-create", ...toolMiddleware("session-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const ok = await deductCredits(req, res, "session-create", 5);
+    if (!ok) return;
+  }
+  const { namespace, system_prompt, model } = req.body as { namespace?: string; system_prompt?: string; model?: string };
+  if (!namespace || typeof namespace !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
+    return;
+  }
+
+  const AI_MODE_PRESETS: Record<string, string> = {
+    fast: "claude-haiku-4-5-20251001",
+    smart: "claude-sonnet-4-6",
+    deep: "claude-opus-4-6",
+  };
+  const resolvedModel = model ?? "claude-sonnet-4-6";
+  const ALLOWED = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"];
+  if (!ALLOWED.includes(resolvedModel)) {
+    res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: ${ALLOWED.join(", ")}`, request_id: reqId() });
+    return;
+  }
+
+  const session_id = `sess_${crypto.randomUUID().replace(/-/g, "")}`;
+  const created_at = new Date().toISOString();
+
+  const session: SessionData = {
+    session_id,
+    namespace: namespace.slice(0, 100),
+    system_prompt: system_prompt ? String(system_prompt).slice(0, 4000) : null,
+    model: resolvedModel,
+    messages: [],
+    created_at,
+  };
+
+  sessionStore.set(session_id, session);
+
+  res.json({
+    ok: true,
+    session_id,
+    namespace: session.namespace,
+    model: resolvedModel,
+    created_at,
+    credits_used: 5,
+    request_id: reqId(),
+  });
+});
+
+// ─── SESSION-MESSAGE ──────────────────────────────────────────────────────────
+// Sends a message in an existing session, maintaining conversation history.
+
+router.post("/session-message", ...toolMiddleware("session-message"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const ok = await deductCredits(req, res, "session-message", 20);
+    if (!ok) return;
+  }
+  const { session_id, message } = req.body as { session_id?: string; message?: string };
+
+  if (!session_id || typeof session_id !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "session_id is required", request_id: reqId() });
+    return;
+  }
+  if (!message || typeof message !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "message is required", request_id: reqId() });
+    return;
+  }
+  if (message.length > 10000) {
+    res.status(400).json({ ok: false, error: "message_too_long", message: "message must be 10000 chars or less", request_id: reqId() });
+    return;
+  }
+
+  const session = sessionStore.get(session_id);
+  if (!session) {
+    res.status(404).json({ ok: false, error: "session_not_found", message: `Session '${session_id}' not found or expired`, request_id: reqId() });
+    return;
+  }
+
+  // Add user message to history
+  session.messages.push({ role: "user", content: message });
+
+  // Keep conversation history bounded (last 50 messages)
+  if (session.messages.length > 50) {
+    session.messages = session.messages.slice(-50);
+  }
+
+  const model = session.model;
+  const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
+  const GPT_MODELS = ["gpt-4o", "gpt-4o-mini"];
+
+  try {
+    let responseText = "";
+
+    if (CLAUDE_MODELS.includes(model)) {
+      if (!anthropic) {
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
+        return;
+      }
+      const msg = await anthropic.messages.create({
+        model,
+        max_tokens: 2048,
+        ...(session.system_prompt ? { system: session.system_prompt } : {}),
+        messages: session.messages.map((m) => ({ role: m.role, content: m.content })),
+      });
+      responseText = msg.content.find((b) => b.type === "text")?.text ?? "";
+    } else if (GPT_MODELS.includes(model)) {
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (!openaiKey) {
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "OpenAI API key not configured", request_id: reqId() });
+        return;
+      }
+      const messages: Array<{ role: string; content: string }> = [];
+      if (session.system_prompt) messages.push({ role: "system", content: session.system_prompt });
+      messages.push(...session.messages.map((m) => ({ role: m.role, content: m.content })));
+
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        body: JSON.stringify({ model, max_tokens: 2048, messages }),
+      });
+      const data = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      responseText = data.choices?.[0]?.message?.content ?? "";
+    }
+
+    // Add assistant response to history
+    session.messages.push({ role: "assistant", content: responseText });
+
+    res.json({
+      ok: true,
+      response: responseText,
+      session_id,
+      message_count: session.messages.length,
+      model_used: model,
+      credits_used: 20,
+      request_id: reqId(),
+    });
+  } catch (e) {
+    // Remove the user message we just added since the call failed
+    session.messages.pop();
+    res.status(500).json({ ok: false, error: "session_message_failed", message: safeErr(e), request_id: reqId() });
+  }
+});

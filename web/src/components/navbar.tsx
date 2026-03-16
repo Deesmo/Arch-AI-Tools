@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 
 const NAV_LINKS = [
+  { href: '/docs/getting-started', label: 'Getting Started' },
   { href: '/docs', label: 'Docs' },
   { href: '/playground', label: 'Playground' },
   { href: '/pricing', label: 'Pricing' },
