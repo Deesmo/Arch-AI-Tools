@@ -887,16 +887,31 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req: AuthedRe
 
 // ─── 27. AI-GENERATE ─────────────────────────────────────────────────────────
 
+// AI mode presets: maps a mode name to a default model
+const AI_MODE_PRESETS: Record<string, string> = {
+  fast:  "claude-haiku-4-5-20251001",  // cheapest/fastest
+  smart: "claude-sonnet-4-6",           // balanced (default)
+  deep:  "claude-opus-4-6",             // most capable
+};
+
 router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
     const ok = await deductCredits(req, res, "ai-generate", 20);
     if (!ok) return;
   }
-  const { prompt, system, model = "claude-sonnet-4-6", max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; max_tokens?: number };
+  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
   if (prompt.length > MAX_PROMPT) { res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() }); return; }
+
+  // Resolve model: explicit model > mode preset > default "smart"
+  const validModes = Object.keys(AI_MODE_PRESETS);
+  if (mode && !validModes.includes(mode)) {
+    res.status(400).json({ ok: false, error: "invalid_mode", message: `mode must be one of: ${validModes.join(", ")}. Or provide an explicit model instead.`, request_id: reqId() }); return;
+  }
+  const model = explicitModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
+  const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
 
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
   const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
@@ -917,7 +932,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
-      res.json({ ok: true, text, model, provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
       return;
     }
 
@@ -933,7 +948,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      res.json({ ok: true, text, model, provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: reqId() });
       return;
     }
 
@@ -948,7 +963,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
-      res.json({ ok: true, text, model, provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
       return;
     }
 
@@ -964,7 +979,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
       const msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
       const text = msg.content.find(b => b.type === "text")?.text ?? "";
-      res.json({ ok: true, text, model, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
       return;
     }
   } catch (e) {
@@ -1403,6 +1418,130 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
   } catch (e) {
     res.status(500).json({ ok: false, error: "workflow_error", message: safeErr(e), request_id: reqId() });
   }
+});
+
+// ─── 39. AI-ORACLE (premium reasoning endpoint) ──────────────────────────────
+
+router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const ok = await deductCredits(req, res, "ai-oracle", 25);
+    if (!ok) return;
+  }
+  const { question, context: oracleContext, reasoning_depth = "standard" } = req.body as {
+    question?: string;
+    context?: string;
+    reasoning_depth?: "standard" | "deep";
+  };
+  if (!question || typeof question !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "question is required", request_id: reqId() });
+    return;
+  }
+  if (question.length > 10000) {
+    res.status(400).json({ ok: false, error: "question_too_long", message: "question must be 10000 chars or less", request_id: reqId() });
+    return;
+  }
+  const validDepths = ["standard", "deep"];
+  if (!validDepths.includes(reasoning_depth)) {
+    res.status(400).json({ ok: false, error: "invalid_reasoning_depth", message: `reasoning_depth must be one of: ${validDepths.join(", ")}`, request_id: reqId() });
+    return;
+  }
+
+  const systemPrompt = "You are an expert analyst. Think step by step. Provide structured analysis with confidence levels. Always respond with valid JSON only, no markdown fences. Use this exact structure: {\"analysis\": \"<detailed analysis>\", \"confidence\": \"high\" | \"medium\" | \"low\"}";
+  const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
+
+  // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
+  const providers: Array<{ name: string; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
+
+  if (anthropic) {
+    const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
+    providers.push({
+      name: "anthropic",
+      fn: async () => {
+        const userContent = oracleContext
+          ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
+          : question;
+        const msg = await anthropic!.messages.create({
+          model: oracleModel,
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+        });
+        const text = msg.content.find(b => b.type === "text")?.text ?? "";
+        return { text, model: oracleModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens } };
+      },
+    });
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    providers.push({
+      name: "openai",
+      fn: async () => {
+        const userContent = oracleContext
+          ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
+          : question;
+        const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            max_tokens: maxTokens,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userContent },
+            ],
+          }),
+        });
+        const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+        const text = data.choices?.[0]?.message?.content ?? "";
+        return { text, model: "gpt-4o", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 } };
+      },
+    });
+  }
+
+  if (providers.length === 0) {
+    res.status(503).json({ ok: false, error: "service_unavailable", message: "AI Oracle requires ANTHROPIC_API_KEY or OPENAI_API_KEY to be configured.", request_id: reqId() });
+    return;
+  }
+
+  let lastError: string = "";
+  for (const provider of providers) {
+    try {
+      const result = await provider.fn();
+      // Parse the JSON response from the model
+      let analysis = result.text;
+      let confidence: "high" | "medium" | "low" = "medium";
+      try {
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]) as { analysis?: string; confidence?: string };
+          analysis = parsed.analysis ?? result.text;
+          if (parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low") {
+            confidence = parsed.confidence;
+          }
+        }
+      } catch {
+        // If JSON parsing fails, use the raw text as analysis
+      }
+
+      res.json({
+        ok: true,
+        analysis,
+        confidence,
+        model_used: result.model,
+        reasoning_depth,
+        reasoning_tokens: result.usage?.output_tokens ?? undefined,
+        credits_used: 25,
+        request_id: reqId(),
+      });
+      return;
+    } catch (e: any) {
+      lastError = e.message ?? String(e);
+      continue; // Try next provider
+    }
+  }
+
+  res.status(502).json({ ok: false, error: "oracle_failed", message: `All providers failed. Last error: ${lastError}`, request_id: reqId() });
 });
 
 // ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
