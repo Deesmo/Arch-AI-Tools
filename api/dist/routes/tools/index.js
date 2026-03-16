@@ -2010,7 +2010,9 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
         if (!ok)
             return;
     }
-    const { limit = 10, currency = "usd" } = req.body;
+    const body = (req.body && typeof req.body === "object") ? req.body : {};
+    const limit = parseInt(body.limit) || 10;
+    const currency = (typeof body.currency === "string" && body.currency.trim()) ? body.currency.trim().toLowerCase() : "usd";
     try {
         const n = Math.min(Math.max(1, limit), 100);
         // Try CoinGecko with exponential backoff (Render IPs get rate-limited)

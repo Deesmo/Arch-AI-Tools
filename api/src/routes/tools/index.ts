@@ -1661,7 +1661,9 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
 router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-market-cap", 1); if (!ok) return; }
-  const { limit = 10, currency = "usd" } = req.body as { limit?: number; currency?: string };
+  const body = (req.body && typeof req.body === "object") ? req.body : {};
+  const limit = parseInt(body.limit) || 10;
+  const currency = (typeof body.currency === "string" && body.currency.trim()) ? body.currency.trim().toLowerCase() : "usd";
   try {
     const n = Math.min(Math.max(1, limit), 100);
 

@@ -141,6 +141,28 @@ app.get("/og-image.png", (_req: Request, res: Response): void => {
 // Discovery & health (no auth)
 app.use("/", discoveryRouter);
 
+// /api/discovery — alias for /v1/tools (agent-friendly discovery endpoint)
+app.get("/api/discovery", async (_req: Request, res: Response): Promise<void> => {
+  try {
+    // Forward internally to the /v1/tools handler via fetch-self
+    const { prisma } = await import("./lib/prisma.js");
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore — `active` exists in prod schema
+    const tools = await prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+    const mapped = tools.map((t: { name: string; description: string | null; credits: number | null; category: string | null }) => ({
+      name: t.name,
+      description: t.description ?? "",
+      endpoint: `/v1/tools/${t.name}`,
+      method: "POST",
+      credits: t.credits ?? 5,
+      category: t.category ?? "utility",
+    }));
+    res.json({ ok: true, tools: mapped });
+  } catch {
+    res.json({ ok: true, tools: [] });
+  }
+});
+
 // SEO free tool pages + no-auth API endpoints
 app.use("/tools", seoRouter);
 app.use("/v1/tools", seoRouter);  // Free endpoint proxies
@@ -185,6 +207,10 @@ app.get("/dashboard", (req: Request, res: Response) => {
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — referenced in Stripe cancel_url and nav links
 app.get("/pricing", (_req: Request, res: Response) => res.redirect("/#pricing"));
+// /getting-started — convenience redirect to docs sub-path
+app.get("/getting-started", (_req: Request, res: Response) => res.redirect(301, "/docs/getting-started"));
+// /terms — convenience redirect to static terms page
+app.get("/terms", (_req: Request, res: Response) => res.redirect(301, "/terms.html"));
 // /privacy and /legal — convenience redirects to canonical sub-paths
 app.get("/privacy", (_req: Request, res: Response) => res.redirect(301, "/legal/privacy"));
 
