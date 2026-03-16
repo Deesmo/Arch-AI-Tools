@@ -235,7 +235,7 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Arch Tools — Reset Password</title>
-  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}

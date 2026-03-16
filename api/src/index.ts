@@ -113,7 +113,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
-  if (err) res.redirect(301, '/arch-icon.svg');
+  if (err) res.redirect(301, '/arch-icon.svg?v=2');
 }));
 
 // ─── Static files (landing page) ─────────────────────────────────────────────

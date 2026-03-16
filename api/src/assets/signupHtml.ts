@@ -6,7 +6,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
   <title>Arch Tools — Get your API key</title>
   <meta name="description" content="Create your Arch Tools account. Get your API key instantly — no email verification required. 100 free credits included." />
   <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
-  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">

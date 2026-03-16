@@ -98,7 +98,7 @@ app.use((req, _res, next) => {
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
     if (err)
-        res.redirect(301, '/arch-icon.svg');
+        res.redirect(301, '/arch-icon.svg?v=2');
 }));
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
