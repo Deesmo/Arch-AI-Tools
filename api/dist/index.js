@@ -162,6 +162,7 @@ app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
 app.get("/changelog", (_req, res) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
 app.get("/docs", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
+app.get("/docs/getting-started", (_req, res) => res.sendFile(path.join(__dirname, '../public/getting-started.html')));
 app.get("/docs/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/blog", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/blog/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));

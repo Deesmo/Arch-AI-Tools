@@ -97,9 +97,10 @@ export const LOGIN_HTML = `<!DOCTYPE html>
   </a>
   <div class="nav-links">
     <a href="/">Home</a>
-    <a href="/docs.html">Docs</a>
+    <a href="/docs">Docs</a>
     <a href="/changelog">Changelog</a>
-    <a href="/signup">Sign Up</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/signup">Get API Key</a>
   </div>
   <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
     <svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -108,7 +109,9 @@ export const LOGIN_HTML = `<!DOCTYPE html>
 <div id="mobile-menu" class="mobile-menu">
   <a href="/">Home</a>
   <a href="/docs">Docs</a>
-  <a href="/signup">Sign Up</a>
+  <a href="/changelog">Changelog</a>
+  <a href="/#pricing">Pricing</a>
+  <a href="/signup">Get API Key</a>
   <a href="/login">Sign In</a>
 </div>
 

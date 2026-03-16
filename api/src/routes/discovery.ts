@@ -41,7 +41,7 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
       prisma.tool.count(),
       prisma.agent.count(),
     ]);
-    res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "connected", tools: toolCount || 45, agents: agentCount });
+    res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "connected", tools: toolCount || 52, agents: agentCount });
   } catch {
     res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "error" });
   }
@@ -95,7 +95,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   res.json({
     name: "Arch Tools",
-    description: "The first API platform built for autonomous agent payments. 45 production tools, USDC on Base via x402 or Stripe.",
+    description: "The first API platform built for autonomous agent payments. 52 production tools, USDC on Base via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
     version: "1",
@@ -175,11 +175,17 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   "design-create": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
   "domain-check": "Check if a domain is available or registered via RDAP (no key needed)",
   "extract-pdf": "Extract text from a PDF (URL or base64)",
+  "ai-oracle": "Premium reasoning with structured analysis and confidence levels",
+  "session-create": "Create a managed conversation session",
+  "session-message": "Send a message in an existing conversation session",
+  "news-search": "Search real-time news articles by keyword",
+  "research-report": "Generate a structured research report on any topic",
+  "fact-check": "Verify claims against real-time web sources",
 };
 
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 45 production-ready tools. One key. USDC on Base via x402 or Stripe.
+> 52 production-ready tools. One key. USDC on Base via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -204,7 +210,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:        60,000 credits — $49   ($0.00082/credit)
   Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (45 total)
+## All Tools (52 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -217,6 +223,10 @@ POST /v1/tools/regex-generate       (8 credits)  — Natural language → valida
 POST /v1/tools/pii-detect           (10 credits) — Detect and optionally redact PII
 POST /v1/tools/image-generate       (15 credits) — Generate SVG images from text prompts
 POST /v1/tools/workflow-agent       (25 credits) — Multi-step autonomous AI agent pipeline
+POST /v1/tools/ai-oracle            (25 credits) — Premium reasoning with structured analysis and confidence levels
+POST /v1/tools/session-message      (20 credits) — Send a message in an existing conversation session
+POST /v1/tools/research-report      (15 credits) — Generate a structured research report on any topic
+POST /v1/tools/fact-check           (10 credits) — Verify claims against real-time web sources
 
 ### Web
 POST /v1/tools/web-scrape           (5 credits)  — Scrape any public URL with optional CSS selector
@@ -230,6 +240,7 @@ POST /v1/tools/screenshot-capture   (10 credits) — Screenshot any URL
 POST /v1/tools/html-to-markdown     (2 credits)  — Convert HTML to clean Markdown
 POST /v1/tools/url-shorten          (1 credit)   — Shorten any URL
 POST /v1/tools/webhook-send         (2 credits)  — Send HTTP webhooks with payload
+POST /v1/tools/news-search          (3 credits)  — Search real-time news articles by keyword
 
 ### Crypto (read-only, no key required — uses CoinGecko + Alternative.me)
 POST /v1/tools/crypto-price         (1 credit)   — Real-time price, 24h change, market cap, volume
@@ -270,6 +281,7 @@ POST /v1/tools/currency-convert     (2 credits)  — 170+ currencies with live r
 ### Utilities
 POST /v1/tools/timezone-convert     (1 credit)   — Any IANA timezone pair
 POST /v1/tools/generate-uuid        (1 credit)   — v1/v4, random tokens, API-key format
+POST /v1/tools/session-create       (5 credits)  — Create a managed conversation session
 
 ## Workflows
 POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps)
@@ -293,7 +305,7 @@ Privacy: ${BASE_URL}/privacy.html
 
 const OPENAPI_STUB = {
   openapi: "3.0.3",
-  info: { title: "Arch Tools API", version: "1.9.0", description: "45 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
+  info: { title: "Arch Tools API", version: "1.9.0", description: "52 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
   servers: [{ url: API_BASE }],
   tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
   components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
@@ -302,8 +314,8 @@ const OPENAPI_STUB = {
 const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
   name,
   description,
-  credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 5, "transcribe-audio": 8, "email-send": 3, "design-create": 15, "domain-check": 2 }).find(([k]) => k === name)?.[1] ?? 5,
-  category: ["ai-generate","ocr-extract","sentiment-analysis","summarize","extract-entities","regex-generate","pii-detect","web-search","language-detect"].includes(name) ? "ai" : ["web-scrape","search-web","extract-page","browser-task","rss-parse"].includes(name) ? "web" : "utility",
+  credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 5, "transcribe-audio": 8, "email-send": 3, "design-create": 15, "domain-check": 2, "ai-oracle": 25, "session-create": 5, "session-message": 20, "news-search": 3, "research-report": 15, "fact-check": 10 }).find(([k]) => k === name)?.[1] ?? 5,
+  category: ["ai-generate","ocr-extract","sentiment-analysis","summarize","extract-entities","regex-generate","pii-detect","web-search","language-detect","ai-oracle","session-message","research-report","fact-check"].includes(name) ? "ai" : ["web-scrape","search-web","extract-page","browser-task","rss-parse","news-search"].includes(name) ? "web" : "utility",
   active: true,
   endpoint: `/v1/tools/${name}`,
   method: "POST",

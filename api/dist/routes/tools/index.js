@@ -181,9 +181,10 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, 
         if (!ok)
             return;
     }
-    const { input, from, to } = req.body;
+    const input = req.body.data ?? req.body.input;
+    const { from, to } = req.body;
     if (!input || !from || !to) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "input, from, and to are required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data), from, and to are required", request_id: reqId() });
         return;
     }
     try {
@@ -861,9 +862,11 @@ router.post("/diff-text", ...toolMiddleware("diff-text"), async (req, res) => {
         if (!ok)
             return;
     }
-    const { text1, text2, mode = "words" } = req.body;
+    const text1 = req.body.original ?? req.body.text1;
+    const text2 = req.body.modified ?? req.body.text2;
+    const mode = req.body.mode ?? "words";
     if (!text1 || !text2) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text1/original and text2/modified are required", request_id: reqId() });
         return;
     }
     try {
@@ -1568,9 +1571,10 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
         if (!ok)
             return;
     }
-    const { webhook_url, payload, headers: customHeaders = {}, method = "POST" } = req.body;
+    const webhook_url = req.body.url ?? req.body.webhook_url;
+    const { payload, headers: customHeaders = {}, method = "POST" } = req.body;
     if (!webhook_url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url is required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() });
         return;
     }
     if (!webhook_url.startsWith("http")) {
@@ -1618,9 +1622,10 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req, 
         if (!ok)
             return;
     }
-    const { data, path: jsonPath } = req.body;
+    const data = req.body.json ?? req.body.data;
+    const jsonPath = req.body.path;
     if (!data || !jsonPath) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "data and path are required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path are required", request_id: reqId() });
         return;
     }
     try {
@@ -1720,9 +1725,10 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
         if (!ok)
             return;
     }
-    const { data: barcodeData, type = "code128", width = 250, height = 100 } = req.body;
+    const barcodeData = (req.body.value ?? req.body.data);
+    const { type = "code128", width = 250, height = 100 } = req.body;
     if (!barcodeData) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() });
         return;
     }
     const validTypes = ["code128", "qr"];
@@ -1852,7 +1858,8 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
             },
         });
     }
-    if (process.env.OPENAI_API_KEY) {
+    const openaiKey = oraclByokOpenaiKey || process.env.OPENAI_API_KEY;
+    if (openaiKey) {
         providers.push({
             name: "openai",
             fn: async () => {
@@ -1861,7 +1868,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
                     : question;
                 const resp = await fetch("https://api.openai.com/v1/chat/completions", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
                     body: JSON.stringify({
                         model: "gpt-4o",
                         max_tokens: maxTokens,

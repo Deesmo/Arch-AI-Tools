@@ -105,10 +105,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     </a>
     <div class="at-nav-links">
       <a href="/">Home</a>
-      <a href="/dashboard" style="color:var(--text)!important">Dashboard</a>
       <a href="/docs">Docs</a>
       <a href="/changelog">Changelog</a>
-      <a href="/signup" class="at-nav-cta">Get API Key →</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/signup" class="at-nav-cta">Get API Key</a>
       <a href="#" id="nav-signout" onclick="doSignOut();return false;" style="color:#f87171;font-size:13px;">Sign Out</a>
     </div>
     <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
@@ -117,8 +117,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   </nav>
   <div id="mobile-menu" class="mobile-menu">
     <a href="/">Home</a>
-    <a href="/dashboard">Dashboard</a>
     <a href="/docs">Docs</a>
+    <a href="/changelog">Changelog</a>
+    <a href="/#pricing">Pricing</a>
     <a href="/signup">Get API Key</a>
     <a href="#" onclick="doSignOut();return false;" style="color:#f87171;">Sign Out</a>
   </div>

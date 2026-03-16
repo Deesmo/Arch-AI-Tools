@@ -171,8 +171,9 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     const ok = await deductCredits(req, res, "convert-format", 2);
     if (!ok) return;
   }
-  const { input, from, to } = req.body as { input?: string; from?: string; to?: string };
-  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input, from, and to are required", request_id: reqId() }); return; }
+  const input = req.body.data ?? req.body.input;
+  const { from, to } = req.body as { from?: string; to?: string };
+  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data), from, and to are required", request_id: reqId() }); return; }
   try {
     const yaml = await import("js-yaml");
     let parsed: unknown;
@@ -695,8 +696,10 @@ router.post("/diff-text", ...toolMiddleware("diff-text"), async (req: AuthedRequ
     const ok = await deductCredits(req, res, "diff-text", 2);
     if (!ok) return;
   }
-  const { text1, text2, mode = "words" } = req.body as { text1?: string; text2?: string; mode?: string };
-  if (!text1 || !text2) { res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: reqId() }); return; }
+  const text1 = req.body.original ?? req.body.text1;
+  const text2 = req.body.modified ?? req.body.text2;
+  const mode = req.body.mode ?? "words";
+  if (!text1 || !text2) { res.status(400).json({ ok: false, error: "invalid_request", message: "text1/original and text2/modified are required", request_id: reqId() }); return; }
   try {
     const diff = await import("diff");
     let changes: unknown[];
@@ -1274,13 +1277,13 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
     const ok = await deductCredits(req, res, "webhook-send", 2);
     if (!ok) return;
   }
-  const { webhook_url, payload, headers: customHeaders = {}, method = "POST" } = req.body as {
-    webhook_url?: string;
+  const webhook_url = req.body.url ?? req.body.webhook_url;
+  const { payload, headers: customHeaders = {}, method = "POST" } = req.body as {
     payload?: unknown;
     headers?: Record<string, string>;
     method?: string;
   };
-  if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url is required", request_id: reqId() }); return; }
+  if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
   try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   const allowedMethods = ["POST", "PUT", "PATCH"];
@@ -1317,8 +1320,9 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
     const ok = await deductCredits(req, res, "jsonpath-query", 1);
     if (!ok) return;
   }
-  const { data, path: jsonPath } = req.body as { data?: unknown; path?: string };
-  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data and path are required", request_id: reqId() }); return; }
+  const data = req.body.json ?? req.body.data;
+  const jsonPath = req.body.path as string | undefined;
+  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path are required", request_id: reqId() }); return; }
   try {
     // Simple JSONPath evaluator: supports $, .key, ['key'], [index], [*], ..key
     function evalPath(obj: unknown, expr: string): unknown[] {
@@ -1402,8 +1406,9 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const ok = await deductCredits(req, res, "barcode-generate", 2);
     if (!ok) return;
   }
-  const { data: barcodeData, type = "code128", width = 250, height = 100 } = req.body as { data?: string; type?: string; width?: number; height?: number };
-  if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: reqId() }); return; }
+  const barcodeData = (req.body.value ?? req.body.data) as string | undefined;
+  const { type = "code128", width = 250, height = 100 } = req.body as { type?: string; width?: number; height?: number };
+  if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() }); return; }
   const validTypes = ["code128", "qr"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
   try {
@@ -1529,7 +1534,8 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
     });
   }
 
-  if (process.env.OPENAI_API_KEY) {
+  const openaiKey = oraclByokOpenaiKey || process.env.OPENAI_API_KEY;
+  if (openaiKey) {
     providers.push({
       name: "openai",
       fn: async () => {
@@ -1538,7 +1544,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
           : question;
         const resp = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
           body: JSON.stringify({
             model: "gpt-4o",
             max_tokens: maxTokens,
