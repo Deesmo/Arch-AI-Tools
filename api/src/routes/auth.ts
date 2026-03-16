@@ -151,8 +151,8 @@ router.post("/set-password", async (req: Request, res: Response): Promise<void> 
 
 // ─── GET /auth/logout ──────────────────────────────────────────────────────────
 router.get("/logout", (_req: Request, res: Response): void => {
-  res.clearCookie(COOKIE_NAME, { path: "/" });
-  res.redirect("/");
+  res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
+  res.redirect("/login");
 });
 
 // ─── GET /auth/me ─────────────────────────────────────────────────────────────

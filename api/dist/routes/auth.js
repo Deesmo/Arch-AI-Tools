@@ -132,8 +132,8 @@ router.post("/set-password", async (req, res) => {
 });
 // ─── GET /auth/logout ──────────────────────────────────────────────────────────
 router.get("/logout", (_req, res) => {
-    res.clearCookie(COOKIE_NAME, { path: "/" });
-    res.redirect("/");
+    res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
+    res.redirect("/login");
 });
 // ─── GET /auth/me ─────────────────────────────────────────────────────────────
 // Returns current session agent info (used by dashboard JS)
