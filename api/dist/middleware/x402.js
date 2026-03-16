@@ -88,6 +88,9 @@ export const X402_PRICES = {
     "crypto-sentiment": "0.002",
     "crypto-news": "0.002",
     "token-lookup": "0.001",
+    "ai-oracle": "0.025",
+    "session-create": "0.005",
+    "session-message": "0.020",
 };
 function buildPaymentRequired(toolName, price) {
     const network = config.x402.network;
