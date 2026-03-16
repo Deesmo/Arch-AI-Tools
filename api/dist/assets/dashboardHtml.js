@@ -88,7 +88,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <nav class="at-nav">
     <a class="at-nav-logo" href="/">
       <div class="at-logo-mark">
-        <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav-db" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-db"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-db)" filter="url(#arch-neon-nav-db)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+        <svg viewBox="0 10 100 90" overflow="visible" width="28" height="28"><defs><linearGradient id="arch-grad-nav-db" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-db"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-db)" filter="url(#arch-neon-nav-db)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
       </div>
       <span class="at-logo-name">Arch Tools</span>
     </a>
