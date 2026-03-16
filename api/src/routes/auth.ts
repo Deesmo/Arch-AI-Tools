@@ -151,7 +151,10 @@ router.post("/set-password", async (req: Request, res: Response): Promise<void> 
 
 // ─── GET /auth/logout ──────────────────────────────────────────────────────────
 router.get("/logout", (_req: Request, res: Response): void => {
+  // Clear with exact same options as COOKIE_OPTS to ensure browser removes it
   res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
+  // Belt-and-suspenders: also set to empty with maxAge 0
+  res.cookie(COOKIE_NAME, "", { ...COOKIE_OPTS, maxAge: 0 });
   res.redirect("/login");
 });
 
