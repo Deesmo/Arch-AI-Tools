@@ -25,7 +25,7 @@ const SESSION_TTL_JWT = "7d"; // must match SESSION_TTL_MS
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  sameSite: "lax" as const,
   maxAge: SESSION_TTL_MS,
   path: "/",
 };

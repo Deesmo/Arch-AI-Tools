@@ -82,6 +82,17 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       .at-nav-links .at-nav-cta { display:none; }
     }
     @media (max-width:400px) { .stats-grid { grid-template-columns:1fr; } }
+    /* HAMBURGER */
+    .hamburger { display:none; background:none; border:none; cursor:pointer; padding:6px; }
+    .hamburger svg { width:24px; height:24px; stroke:var(--text); stroke-width:2; stroke-linecap:round; }
+    .mobile-menu { display:none; flex-direction:column; gap:6px; padding:12px 24px 16px; border-bottom:1px solid var(--border); background:rgba(7,6,26,0.95); }
+    .mobile-menu a { color:var(--muted); text-decoration:none; font-size:14px; padding:8px 0; }
+    .mobile-menu a:hover { color:var(--text); }
+    .mobile-menu.open { display:flex; }
+    @media (max-width:768px) {
+      .at-nav-links { display:none; }
+      .hamburger { display:block; }
+    }
   </style>
 </head>
 <body>
@@ -97,8 +108,19 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <a href="/dashboard" style="color:var(--text)!important">Dashboard</a>
       <a href="/docs">Docs</a>
       <a href="/signup" class="at-nav-cta">Get API Key →</a>
+      <a href="#" id="nav-signout" onclick="doSignOut();return false;" style="color:#f87171;font-size:13px;">Sign Out</a>
     </div>
+    <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </nav>
+  <div id="mobile-menu" class="mobile-menu">
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/docs">Docs</a>
+    <a href="/signup">Get API Key</a>
+    <a href="#" onclick="doSignOut();return false;" style="color:#f87171;">Sign Out</a>
+  </div>
 
   <div class="page">
     <div class="page-title">Dashboard</div>
@@ -181,6 +203,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   </div>
 
   <script>
+    function doSignOut() {
+      document.cookie = "arch_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      localStorage.clear();
+      window.location.href = "/login";
+    }
+
     var fullKey = "";
     var keyVisible = false;
 
@@ -315,8 +343,6 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById("key-input").value = kd.api_key;
                 localStorage.setItem("arch_api_key", kd.api_key);
                 await loadDashboard();
-                var navLinks = document.querySelector(".at-nav-links");
-                if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
                 return;
               }
             }

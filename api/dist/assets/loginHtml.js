@@ -31,6 +31,17 @@ export const LOGIN_HTML = `<!DOCTYPE html>
     .nav-links { display:flex; gap:20px; font-size:13px; }
     .nav-links a { color:var(--muted); text-decoration:none; }
     .nav-links a:hover { color:var(--text); }
+    /* HAMBURGER */
+    .hamburger { display:none; background:none; border:none; cursor:pointer; padding:6px; }
+    .hamburger svg { width:24px; height:24px; stroke:var(--text); stroke-width:2; stroke-linecap:round; }
+    .mobile-menu { display:none; flex-direction:column; gap:6px; padding:12px 24px 16px; border-bottom:1px solid var(--border); background:rgba(7,6,26,0.95); }
+    .mobile-menu a { color:var(--muted); text-decoration:none; font-size:14px; padding:8px 0; }
+    .mobile-menu a:hover { color:var(--text); }
+    .mobile-menu.open { display:flex; }
+    @media (max-width:768px) {
+      .nav-links { display:none; }
+      .hamburger { display:block; }
+    }
     /* PAGE */
     .page { flex:1; display:flex; align-items:center; justify-content:center; padding:40px 16px; }
     .card {
@@ -89,7 +100,16 @@ export const LOGIN_HTML = `<!DOCTYPE html>
     <a href="/docs.html">Docs</a>
     <a href="/signup">Sign Up</a>
   </div>
+  <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
 </nav>
+<div id="mobile-menu" class="mobile-menu">
+  <a href="/">Home</a>
+  <a href="/docs">Docs</a>
+  <a href="/signup">Sign Up</a>
+  <a href="/login">Sign In</a>
+</div>
 
 <div class="page">
   <div class="card">

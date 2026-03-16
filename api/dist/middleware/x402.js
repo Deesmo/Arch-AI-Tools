@@ -91,6 +91,14 @@ export const X402_PRICES = {
     "ai-oracle": "0.025",
     "session-create": "0.005",
     "session-message": "0.020",
+    "text-to-speech": "0.005",
+    "transcribe-audio": "0.008",
+    "email-send": "0.003",
+    "design-create": "0.015",
+    "domain-check": "0.002",
+    "news-search": "0.003",
+    "research-report": "0.015",
+    "fact-check": "0.010",
 };
 function buildPaymentRequired(toolName, price) {
     const network = config.x402.network;

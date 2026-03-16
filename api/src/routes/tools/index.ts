@@ -297,22 +297,26 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
     res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), content: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
   } catch (_axiosErr) {
     // Fallback: Firecrawl (handles JS-heavy / bot-protected sites)
-    if (process.env.FIRECRAWL_API_KEY) {
+    // BYOK: check for user-provided Firecrawl key first, fall back to platform key
+    const fcKey = (req.headers["x-firecrawl-key"] as string | undefined) || process.env.FIRECRAWL_API_KEY;
+    if (fcKey) {
+      const byokFc = !!(req.headers["x-firecrawl-key"] as string | undefined);
+      if (byokFc) console.log(`[BYOK] web-scrape using user-provided firecrawl key`);
       try {
         const fc = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${fcKey}` },
           body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
         });
         if (fc.ok) {
           const fd = await fc.json() as { data?: { markdown?: string; metadata?: { title?: string; description?: string } } };
           const text = fd.data?.markdown ?? "";
-          res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", request_id: reqId() }); return;
+          res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", ...(byokFc ? { byok: true, byok_provider: "firecrawl" } : {}), request_id: reqId() }); return;
         }
       } catch (_) { /* fall through to error */ }
     }
     const status = axios.isAxiosError(_axiosErr) ? (_axiosErr.response?.status ?? 502) : 500;
-    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), request_id: reqId() });
+    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), hint: "For JS-heavy sites, provide your Firecrawl key via x-firecrawl-key header (BYOK).", request_id: reqId() });
   }
 });
 
@@ -355,35 +359,42 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
   }
   const { query, num_results = 5 } = req.body as { query?: string; num_results?: number };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  // BYOK: check for user-provided search keys
+  const byokBraveKeySearch = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeySearch = req.headers["x-tavily-key"] as string | undefined;
   try {
-    // Primary: Brave Search
-    if (process.env.BRAVE_SEARCH_API_KEY) {
+    // Primary: Brave Search (BYOK first, then platform key)
+    const braveKey = byokBraveKeySearch || process.env.BRAVE_SEARCH_API_KEY;
+    if (braveKey) {
+      if (byokBraveKeySearch) console.log(`[BYOK] search-web using user-provided brave key`);
       try {
         const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
-          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY },
+          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
         });
         if (resp.ok) {
           const data = await resp.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
           const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
           if (results.length > 0) {
-            res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: reqId() }); return;
+            res.json({ ok: true, query, results, count: results.length, source: "brave", ...(byokBraveKeySearch ? { byok: true, byok_provider: "brave" } : {}), request_id: reqId() }); return;
           }
         }
       } catch (_) { /* fall through to Tavily */ }
     }
-    // Fallback: Tavily
-    if (process.env.TAVILY_API_KEY) {
+    // Fallback: Tavily (BYOK first, then platform key)
+    const tavilyKey = byokTavilyKeySearch || process.env.TAVILY_API_KEY;
+    if (tavilyKey) {
+      if (byokTavilyKeySearch) console.log(`[BYOK] search-web using user-provided tavily key`);
       try {
         const resp = await fetch("https://api.tavily.com/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: Math.min(num_results, 10) }),
+          body: JSON.stringify({ api_key: tavilyKey, query, max_results: Math.min(num_results, 10) }),
         });
         if (resp.ok) {
           const data = await resp.json() as { results?: Array<{ title?: string; url?: string; content?: string }> };
           const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.content ?? "" }));
           if (results.length > 0) {
-            res.json({ ok: true, query, results, count: results.length, source: "tavily", request_id: reqId() }); return;
+            res.json({ ok: true, query, results, count: results.length, source: "tavily", ...(byokTavilyKeySearch ? { byok: true, byok_provider: "tavily" } : {}), request_id: reqId() }); return;
           }
         }
       } catch (_) { /* fall through */ }
@@ -405,7 +416,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
         }
       } catch (_) { /* fall through */ }
     }
-    res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable.", request_id: reqId() });
+    res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable. Pass x-brave-key or x-tavily-key header for BYOK.", request_id: reqId() });
   } catch (e) {
     res.status(502).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
   }
@@ -422,16 +433,21 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
   if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { query } = req.body as { query?: string };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  // BYOK: check for user-provided search keys
+  const byokBraveKeyWS = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeyWS = req.headers["x-tavily-key"] as string | undefined;
   try {
     // Get search context — Tavily primary, Brave fallback
     let context = "";
     let sources: Array<{ title: string; url: string }> = [];
-    if (process.env.TAVILY_API_KEY) {
+    const tavilyKeyWS = byokTavilyKeyWS || process.env.TAVILY_API_KEY;
+    if (tavilyKeyWS) {
+      if (byokTavilyKeyWS) console.log(`[BYOK] web-search using user-provided tavily key`);
       try {
         const r = await fetch("https://api.tavily.com/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: 5, include_raw_content: false }),
+          body: JSON.stringify({ api_key: tavilyKeyWS, query, max_results: 5, include_raw_content: false }),
         });
         if (r.ok) {
           const d = await r.json() as { results?: Array<{ title?: string; url?: string; content?: string }> };
@@ -440,10 +456,12 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
         }
       } catch (_) { /* fall through */ }
     }
-    if (!context && process.env.BRAVE_SEARCH_API_KEY) {
+    const braveKeyWS = byokBraveKeyWS || process.env.BRAVE_SEARCH_API_KEY;
+    if (!context && braveKeyWS) {
+      if (byokBraveKeyWS) console.log(`[BYOK] web-search using user-provided brave key`);
       try {
         const r = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: "5" }), {
-          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY },
+          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKeyWS },
         });
         if (r.ok) {
           const d = await r.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
@@ -452,7 +470,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
         }
       } catch (_) { /* fall through */ }
     }
-    if (!context) { res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable.", request_id: reqId() }); return; }
+    if (!context) { res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable. Pass x-tavily-key or x-brave-key header for BYOK.", request_id: reqId() }); return; }
     // Synthesize with Claude
     const msg = await anthropic!.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -900,7 +918,11 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   const byokOpenaiKey = req.headers["x-openai-key"] as string | undefined;
   const byokXaiKey = req.headers["x-xai-key"] as string | undefined;
   const byokGoogleKey = req.headers["x-google-key"] as string | undefined;
-  const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey);
+  const byokFirecrawlKey = req.headers["x-firecrawl-key"] as string | undefined;
+  const byokBraveKey = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKey = req.headers["x-tavily-key"] as string | undefined;
+  const byokExaKey = req.headers["x-exa-key"] as string | undefined;
+  const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey || byokBraveKey || byokTavilyKey || byokExaKey || byokFirecrawlKey);
 
   const paid = isX402Paid(req);
   if (!paid && !hasByok) {
@@ -1789,8 +1811,6 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
-export default router;
-
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
@@ -2030,10 +2050,11 @@ router.post("/check-domain", ...toolMiddleware("domain-check"), async (req: Auth
 });
 
 // ─── 51. NEWS-SEARCH ──────────────────────────────────────────────────────────
-router.get("/news-search", requireAuth, async (req: Request, res: Response) => {
-  const query = String(req.query.query ?? "").trim();
-  const limit = Math.min(Number(req.query.limit ?? 5), 10);
-  const _ok1 = await deductCredits(req, res, "news-search", 3); if (!_ok1) return;
+router.post("/news-search", ...toolMiddleware("news-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "news-search", 3); if (!ok) return; }
+  const query = String(req.body.query ?? req.query.query ?? "").trim();
+  const limit = Math.min(Number(req.body.limit ?? req.query.limit ?? 5), 10);
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
   // Try Brave News first
@@ -2085,10 +2106,11 @@ router.get("/news-search", requireAuth, async (req: Request, res: Response) => {
 });
 
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
-router.get("/research-report", requireAuth, async (req: Request, res: Response) => {
-  const query = String(req.query.query ?? "").trim();
-  const depth = String(req.query.depth ?? "standard").toLowerCase();
-  const _ok2 = await deductCredits(req, res, "research-report", 15); if (!_ok2) return;
+router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", 15); if (!ok) return; }
+  const query = String(req.body.query ?? req.query.query ?? "").trim();
+  const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
   const braveKey = process.env.BRAVE_SEARCH_API_KEY;
@@ -2153,9 +2175,10 @@ router.get("/research-report", requireAuth, async (req: Request, res: Response) 
 });
 
 // ─── 53. FACT-CHECK ───────────────────────────────────────────────────────────
-router.get("/fact-check", requireAuth, async (req: Request, res: Response) => {
-  const claim = String(req.query.claim ?? "").trim();
-  const _ok3 = await deductCredits(req, res, "fact-check", 10); if (!_ok3) return;
+router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "fact-check", 10); if (!ok) return; }
+  const claim = String(req.body.claim ?? req.query.claim ?? "").trim();
   if (!claim) return void res.status(400).json({ ok: false, error: "missing_param", message: "claim is required" });
 
   const braveKey = process.env.BRAVE_SEARCH_API_KEY;
@@ -2403,3 +2426,5 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     res.status(500).json({ ok: false, error: "session_message_failed", message: safeErr(e), request_id: reqId() });
   }
 });
+
+export default router;

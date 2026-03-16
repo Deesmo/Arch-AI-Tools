@@ -70,7 +70,14 @@
     .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
     .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
     .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
-    @media(max-width:640px){.nav-links{display:none;}} /* nav-links hidden on mobile - CTA still visible */
+    /* HAMBURGER */
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;flex-shrink:0;}
+    .hamburger svg{width:24px;height:24px;stroke:var(--text);stroke-width:2;stroke-linecap:round;}
+    .mobile-menu{display:none;flex-direction:column;gap:6px;padding:12px 24px 16px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.97);}
+    .mobile-menu a{color:var(--muted);text-decoration:none;font-size:14px;font-family:var(--mono);padding:8px 0;}
+    .mobile-menu a:hover{color:var(--text);}
+    .mobile-menu.open{display:flex;}
+    @media(max-width:768px){.nav-links{display:none!important;}.hamburger{display:block;}}
 
     /* HERO */
     .hero{padding:40px 0 64px;display:grid;grid-template-columns:60fr 40fr;gap:32px;align-items:center;}
@@ -624,10 +631,24 @@
         </ul>
         <a href="/login" style="font-family:var(--mono);font-size:12px;color:rgba(255,255,255,0.85);text-decoration:none;white-space:nowrap;padding:7px 16px;border:1px solid rgba(255,255,255,0.25);border-radius:8px;background:transparent;letter-spacing:0.02em;transition:background 0.2s,border-color 0.2s,color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.borderColor='rgba(255,255,255,0.5)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(255,255,255,0.25)';this.style.color='rgba(255,255,255,0.85)'">sign in</a>
         <a href="/signup" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
+        <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
       </div>
     </div>
   </div>
 </nav>
+<div id="mobile-menu" class="mobile-menu" style="position:sticky;top:60px;z-index:99;">
+  <a href="#tools">Tools</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#compare">vs Others</a>
+  <a href="#crypto">Crypto</a>
+  <a href="/docs">API Docs</a>
+  <a href="/sdk.html">SDK & CLI</a>
+  <a href="/dashboard">Dashboard</a>
+  <a href="/login">Sign In</a>
+  <a href="/signup">Get API Key</a>
+</div>
 
 <!-- HERO -->
 <section style="padding:0;">
