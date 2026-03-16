@@ -1374,7 +1374,7 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
 router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
-    const ok = await deductCredits(req, res, "image-generate", 15);
+    const ok = await deductCredits(req, res, "image-generate", 30);
     if (!ok) return;
   }
   if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
@@ -1844,7 +1844,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 5); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 10); if (!ok) return; }
   const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body as { text?: string; voice_id?: string; model_id?: string; stability?: number; similarity_boost?: number };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 5000) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() }); return; }
@@ -1870,7 +1870,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
 // ─── transcribe-audio ─────────────────────────────────────────────────────────
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 8); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 12); if (!ok) return; }
   const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -1943,7 +1943,7 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
 // ─── design-create ────────────────────────────────────────────────────────────
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "design-create", 15); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
   const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; style?: string; n?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
@@ -2043,7 +2043,7 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req: Auth
 router.post("/generate-image", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   req.url = "/design-create";
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "design-create", 15); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
   const { prompt, size = "1024x1024", quality = "standard" } = req.body as { prompt?: string; size?: string; quality?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";

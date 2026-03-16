@@ -1686,7 +1686,7 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req, 
 router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "image-generate", 15);
+        const ok = await deductCredits(req, res, "image-generate", 30);
         if (!ok)
             return;
     }
@@ -2234,7 +2234,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req, res)
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "text-to-speech", 5);
+        const ok = await deductCredits(req, res, "text-to-speech", 10);
         if (!ok)
             return;
     }
@@ -2277,7 +2277,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, 
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "transcribe-audio", 8);
+        const ok = await deductCredits(req, res, "transcribe-audio", 12);
         if (!ok)
             return;
     }
@@ -2382,7 +2382,7 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req, res) => 
 router.post("/design-create", ...toolMiddleware("design-create"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "design-create", 15);
+        const ok = await deductCredits(req, res, "design-create", 30);
         if (!ok)
             return;
     }
@@ -2507,7 +2507,7 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req, r
     req.url = "/design-create";
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "design-create", 15);
+        const ok = await deductCredits(req, res, "design-create", 30);
         if (!ok)
             return;
     }
