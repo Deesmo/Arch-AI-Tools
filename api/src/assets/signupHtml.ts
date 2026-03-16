@@ -121,6 +121,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
       <a href="/dashboard">Dashboard</a>
       <a href="/login">Sign In</a>
       <a href="/docs">Docs</a>
+      <a href="/changelog">Changelog</a>
       <a href="/signup" class="at-nav-cta">Get API Key →</a>
     </div>
     <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">

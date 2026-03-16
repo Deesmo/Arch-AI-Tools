@@ -107,6 +107,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <a href="/">Home</a>
       <a href="/dashboard" style="color:var(--text)!important">Dashboard</a>
       <a href="/docs">Docs</a>
+      <a href="/changelog">Changelog</a>
       <a href="/signup" class="at-nav-cta">Get API Key →</a>
       <a href="#" id="nav-signout" onclick="doSignOut();return false;" style="color:#f87171;font-size:13px;">Sign Out</a>
     </div>

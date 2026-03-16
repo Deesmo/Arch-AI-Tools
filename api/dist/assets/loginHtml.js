@@ -98,6 +98,7 @@ export const LOGIN_HTML = `<!DOCTYPE html>
   <div class="nav-links">
     <a href="/">Home</a>
     <a href="/docs.html">Docs</a>
+    <a href="/changelog">Changelog</a>
     <a href="/signup">Sign Up</a>
   </div>
   <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">

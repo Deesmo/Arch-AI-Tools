@@ -1279,9 +1279,14 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
                 res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
                 return;
             }
-            const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 15000 });
+            const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024 });
             imgBase64 = Buffer.from(imgResp.data).toString("base64");
-            imgMediaType = (imgResp.headers["content-type"] || "image/jpeg").split(";")[0];
+            imgMediaType = (imgResp.headers["content-type"] || "image/jpeg").split(";")[0].trim();
+        }
+        // Anthropic vision API only accepts these media types
+        const VALID_MEDIA_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        if (!VALID_MEDIA_TYPES.includes(imgMediaType)) {
+            imgMediaType = "image/jpeg"; // safe default
         }
         const imageContent = { type: "image", source: { type: "base64", media_type: imgMediaType, data: imgBase64 } };
         const msg = await anthropic.messages.create({
@@ -2260,8 +2265,8 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
         return;
     }
     try {
-        // Fetch audio file
-        const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(30000) });
+        // Fetch audio file (60s timeout for large files)
+        const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(60000) });
         if (!audioResp.ok) {
             res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() });
             return;
@@ -2293,7 +2298,12 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     }
     catch (e) {
         console.error("[transcribe-audio]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+        if (e?.name === "TimeoutError" || e?.name === "AbortError" || String(e?.message).includes("timeout")) {
+            res.status(504).json({ ok: false, error: "timeout", message: "Audio file fetch or transcription timed out. Try a smaller file or a faster URL.", request_id: reqId() });
+        }
+        else {
+            res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+        }
     }
 });
 // ─── email-send ───────────────────────────────────────────────────────────────

@@ -1046,9 +1046,14 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     let imgMediaType: string = media_type;
     if (image_url && !image_base64) {
       try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 15000 });
+      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024 });
       imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
-      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0];
+      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim();
+    }
+    // Anthropic vision API only accepts these media types
+    const VALID_MEDIA_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!VALID_MEDIA_TYPES.includes(imgMediaType)) {
+      imgMediaType = "image/jpeg"; // safe default
     }
     const imageContent = { type: "image" as const, source: { type: "base64" as const, media_type: imgMediaType as "image/jpeg", data: imgBase64! } };
     const msg = await anthropic.messages.create({
@@ -1846,8 +1851,8 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: reqId() }); return; }
   try {
-    // Fetch audio file
-    const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(30000) });
+    // Fetch audio file (60s timeout for large files)
+    const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(60000) });
     if (!audioResp.ok) { res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() }); return; }
     const audioBuffer = await audioResp.arrayBuffer();
     const contentType = audioResp.headers.get("content-type") ?? "audio/mpeg";
@@ -1872,7 +1877,14 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     }
     const data = await r.json() as { text: string; language?: string; duration?: number; segments?: unknown[] };
     res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: reqId() });
-  } catch (e) { console.error("[transcribe-audio]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+  } catch (e: any) {
+    console.error("[transcribe-audio]", e);
+    if (e?.name === "TimeoutError" || e?.name === "AbortError" || String(e?.message).includes("timeout")) {
+      res.status(504).json({ ok: false, error: "timeout", message: "Audio file fetch or transcription timed out. Try a smaller file or a faster URL.", request_id: reqId() });
+    } else {
+      res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+  }
 });
 
 // ─── email-send ───────────────────────────────────────────────────────────────
