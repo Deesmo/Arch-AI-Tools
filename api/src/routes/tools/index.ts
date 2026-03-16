@@ -895,8 +895,15 @@ const AI_MODE_PRESETS: Record<string, string> = {
 };
 
 router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  // ── BYOK: check for user-provided API keys ──
+  const byokAnthropicKey = req.headers["x-anthropic-key"] as string | undefined;
+  const byokOpenaiKey = req.headers["x-openai-key"] as string | undefined;
+  const byokXaiKey = req.headers["x-xai-key"] as string | undefined;
+  const byokGoogleKey = req.headers["x-google-key"] as string | undefined;
+  const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey);
+
   const paid = isX402Paid(req);
-  if (!paid) {
+  if (!paid && !hasByok) {
     const ok = await deductCredits(req, res, "ai-generate", 20);
     if (!ok) return;
   }
@@ -923,8 +930,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   try {
     // ── OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) — check before Claude to avoid default fallthrough ──
     if (GPT_MODELS.includes(model)) {
-      const openaiKey = process.env.OPENAI_API_KEY;
-      if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set", request_id: reqId() }); return; }
+      const openaiKey = byokOpenaiKey || process.env.OPENAI_API_KEY;
+      if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set. Pass x-openai-key header for BYOK.", request_id: reqId() }); return; }
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
@@ -932,14 +939,15 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
+      const _u = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: _u, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_u.input_tokens * 0.000003 + _u.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "openai" } : {}), request_id: reqId() });
       return;
     }
 
     // ── Google Gemini ──
     if (GEMINI_MODELS.includes(model)) {
-      const googleKey = process.env.GOOGLE_API_KEY;
-      if (!googleKey || googleKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires a Google API key that has not been configured.", request_id: reqId() }); return; }
+      const googleKey = byokGoogleKey || process.env.GOOGLE_API_KEY;
+      if (!googleKey || googleKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Google API key not configured. Pass x-google-key header for BYOK.", request_id: reqId() }); return; }
       const fullPrompt = system ? `${system}\n\n${prompt}` : prompt;
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${googleKey}`, {
         method: "POST",
@@ -948,14 +956,15 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: reqId() });
+      const _ug = { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.000001 + _ug.output_tokens * 0.000004).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
       return;
     }
 
     // ── xAI Grok ──
     if (GROK_MODELS.includes(model)) {
-      const xaiKey = process.env.XAI_API_KEY;
-      if (!xaiKey || xaiKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an xAI API key that has not been configured.", request_id: reqId() }); return; }
+      const xaiKey = byokXaiKey || process.env.XAI_API_KEY;
+      if (!xaiKey || xaiKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "xAI key not configured. Pass x-xai-key header for BYOK.", request_id: reqId() }); return; }
       const resp = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${xaiKey}` },
@@ -963,7 +972,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
+      const _ux = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.000005 + _ux.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
       return;
     }
 
@@ -976,10 +986,21 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
 
     // ── Claude ──
     if (CLAUDE_MODELS.includes(model)) {
-      if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-      const msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
-      const text = msg.content.find(b => b.type === "text")?.text ?? "";
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
+      const anthKey = byokAnthropicKey || process.env.ANTHROPIC_API_KEY;
+      if (!anthKey && !anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() }); return; }
+      // BYOK: use fetch directly with user's key; otherwise use SDK client
+      let msg: any;
+      if (byokAnthropicKey) {
+        const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": byokAnthropicKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] }) });
+        msg = await r.json() as any;
+        if (!r.ok) { res.status(r.status).json({ ok: false, error: "byok_api_error", message: msg?.error?.message || "BYOK Anthropic call failed", request_id: reqId() }); return; }
+        msg = { content: msg.content, usage: msg.usage, model: msg.model };
+      } else {
+        msg = await anthropic!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+      }
+      const text = msg.content.find((b: any) => b.type === "text")?.text ?? "";
+      const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: _ua, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ua.input_tokens * 0.000003 + _ua.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "anthropic" } : {}), request_id: reqId() });
       return;
     }
   } catch (e) {
@@ -1569,7 +1590,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
       return;
     }
     const d = data[id];
-    res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: reqId() });
+    res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1585,7 +1606,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const raw = await r.json() as number[][];
     const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
-    res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: reqId() });
+    res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1615,7 +1636,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
 
     if (cgData && Array.isArray(cgData) && cgData.length > 0) {
       const coins = cgData.map((c: CgCoin) => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
-      res.json({ ok: true, currency, coins, source: "coingecko", request_id: reqId() }); return;
+      res.json({ ok: true, currency, coins, source: "coingecko", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
     // Fallback: CoinCap API (no rate limit on cloud IPs)
@@ -1630,7 +1651,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
         volume_24h: parseFloat(c.volumeUsd24Hr) || 0,
         change_24h: parseFloat(c.changePercent24Hr) || 0,
       }));
-      res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", request_id: reqId() }); return;
+      res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
     res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: reqId() });
@@ -1648,7 +1669,7 @@ router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async 
     const data = await r.json() as { data: { value: string; value_classification: string; timestamp: string }[] };
     const history = data.data.map(d => ({ value: Number(d.value), classification: d.value_classification, date: new Date(Number(d.timestamp) * 1000).toISOString().split("T")[0] }));
     const latest = history[0];
-    res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: reqId() });
+    res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1668,6 +1689,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
       sentiment: { votes_up_pct: data.sentiment_votes_up_percentage ?? null, votes_down_pct: data.sentiment_votes_down_percentage ?? null, overall: (data.sentiment_votes_up_percentage ?? 50) > 60 ? "bullish" : (data.sentiment_votes_up_percentage ?? 50) < 40 ? "bearish" : "neutral" },
       community: { twitter_followers: data.community_data?.twitter_followers ?? null, reddit_subscribers: data.community_data?.reddit_subscribers ?? null, reddit_active: data.community_data?.reddit_active_accounts ?? null },
       price_momentum: { change_24h: data.market_data?.price_change_percentage_24h ?? null, change_7d: data.market_data?.price_change_percentage_7d ?? null },
+      data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms",
       request_id: reqId()
     });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
@@ -1732,7 +1754,7 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
       articles = articles.slice(0, n);
     }
 
-    res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() });
+    res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
   }
@@ -1749,7 +1771,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
-    res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: reqId() });
+    res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
