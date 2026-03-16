@@ -63,7 +63,7 @@
     /* iOS Safari: backdrop-filter on sticky nav causes scroll blanking - disable on mobile */
     @media(max-width:768px){nav{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(7,6,26,0.97);}}
     /* Desktop: solid bg instead of expensive backdrop-filter (Windows Chrome scroll jank) */
-    @media(min-width:769px){nav{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(7,6,26,0.95);}.glass-dashboard{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(12,11,34,0.92);}}
+    @media(min-width:769px){nav{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(7,6,26,0.95);}.glass-dashboard{-webkit-backdrop-filter:none !important;backdrop-filter:none !important;background:rgba(12,11,34,0.92) !important;}.code-overlay{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}}
     .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
     .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
     .logo-mark{width:32px;height:32px;flex-shrink:0;}
@@ -2284,19 +2284,19 @@ function showLangTab(lang) {
     <div class="section-tag">What Developers Say</div>
     <h2 class="section-title" style="margin-bottom:48px;">Trusted by builders shipping fast</h2>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;backdrop-filter:blur(12px);">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;">
         <p style="color:rgba(255,255,255,0.8);font-size:15px;line-height:1.7;margin-bottom:20px;font-style:italic;">"One API key replaced four separate accounts. My agent calls 12 tools and I manage zero infrastructure."</p>
         <p style="color:var(--amber);font-size:13px;font-weight:600;">— Senior AI Engineer</p>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;backdrop-filter:blur(12px);">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;">
         <p style="color:rgba(255,255,255,0.8);font-size:15px;line-height:1.7;margin-bottom:20px;font-style:italic;">"We went from 3 weeks of API integrations to one afternoon. 53 tools, one POST each."</p>
         <p style="color:var(--amber);font-size:13px;font-weight:600;">— Startup CTO</p>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;backdrop-filter:blur(12px);">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;">
         <p style="color:rgba(255,255,255,0.8);font-size:15px;line-height:1.7;margin-bottom:20px;font-style:italic;">"The x402 payment flow is genius. Our agents buy their own compute. No invoices, no procurement."</p>
         <p style="color:var(--amber);font-size:13px;font-weight:600;">— Web3 Developer</p>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;backdrop-filter:blur(12px);">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;">
         <p style="color:rgba(255,255,255,0.8);font-size:15px;line-height:1.7;margin-bottom:20px;font-style:italic;">"I was building a RAG pipeline and needed scraping, summarization, and vector storage. Three API calls. Done."</p>
         <p style="color:var(--amber);font-size:13px;font-weight:600;">— ML Engineer</p>
       </div>
