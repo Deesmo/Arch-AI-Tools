@@ -241,12 +241,12 @@
     @media(max-width:640px){.stats-inner{flex-wrap:wrap;}.stat-item{min-width:50%;border-bottom:1px solid var(--border);}}
 
     /* MARQUEE */
-    .marquee-section{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;transform:translateZ(0);contain:layout style paint;}
+    .marquee-section{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;transform:translateZ(0);contain:layout style paint;-webkit-mask-image:linear-gradient(to right,transparent 0%,#000 5%,#000 95%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,#000 5%,#000 95%,transparent 100%);}
     .mq-track{display:flex;flex-direction:column;gap:10px;}
     /* Marquee: CSS animation removed - RAF JS drives it (no jank on Windows Chrome) */
     @keyframes marquee-left { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
     @keyframes marquee-right { from { transform: translate3d(-50%,0,0); } to { transform: translate3d(0,0,0); } }
-    .mq-row{display:flex;gap:10px;white-space:nowrap;will-change:transform;animation:marquee-left 25s linear infinite;contain:layout style;}
+    .mq-row{display:flex;gap:10px;white-space:nowrap;will-change:transform;animation:marquee-left 25s linear infinite;contain:layout style;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0);}
     .mq-row.rev{margin-top:10px;animation:marquee-right 25s linear infinite;}
     .tool-card:nth-child(n+13) { content-visibility: auto; contain-intrinsic-size: 0 180px; }
     @media (prefers-reduced-motion: reduce) { .sparkle-dot, .mq-row { animation: none !important; } }
