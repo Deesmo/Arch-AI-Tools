@@ -41,49 +41,222 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
       prisma.tool.count(),
       prisma.agent.count(),
     ]);
-    res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "connected", tools: toolCount || 57, agents: agentCount });
+    res.json({ ok: true, service: "arch-tools-api", version: "1.10.0", db: "connected", tools: toolCount || 58, agents: agentCount });
   } catch {
-    res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "error" });
+    res.json({ ok: true, service: "arch-tools-api", version: "1.10.0", db: "error" });
   }
 });
 
-// GET /.well-known/x402 — x402 discovery (no duplicates)
+// GET /.well-known/x402 — x402 discovery (all supported chains)
 router.get("/.well-known/x402", (_req: Request, res: Response): void => {
   const evmWallet = process.env.WALLET_ADDRESS ?? "";
   const solanaWallet = process.env.SOLANA_WALLET_ADDRESS ?? "";
-  const chainId = NETWORK === "base" ? "eip155:8453" : "eip155:84532";
-  const usdcBase = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-  const usdcSolana = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  const nobleWallet = process.env.NOBLE_WALLET_ADDRESS ?? "";
+  const algorandWallet = process.env.ALGORAND_WALLET_ADDRESS ?? "";
+  const stellarWallet = process.env.STELLAR_WALLET_ADDRESS ?? "";
+  const stellarMemo = process.env.STELLAR_WALLET_MEMO ?? "";
+  const suiWallet = process.env.SUI_WALLET_ADDRESS ?? "";
+  const polkadotWallet = process.env.POLKADOT_WALLET_ADDRESS ?? "";
+  const aptosWallet = process.env.APTOS_WALLET_ADDRESS ?? "";
+  const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS ?? "";
+  const ethWallet = process.env.ETH_WALLET_ADDRESS ?? "";
+  const bnbWallet = process.env.BNB_WALLET_ADDRESS ?? "";
+  const nearWallet = process.env.NEAR_WALLET_ADDRESS ?? "";
+  const solNativeWallet = process.env.SOL_NATIVE_WALLET_ADDRESS ?? "";
+  const taoWallet = process.env.TAO_WALLET_ADDRESS ?? "";
+  const uniWallet = process.env.UNI_WALLET_ADDRESS ?? "";
+
+  const USDC_CONTRACTS: Record<string, string> = {
+    base:      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    ethereum:  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    arbitrum:  "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    polygon:   "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+    optimism:  "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    avalanche: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+    unichain:  "0x078D782b760474a361dDA0AF3839290b0EF57AD6",
+    monad:     "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+  };
+  const USDT_CONTRACTS: Record<string, string> = {
+    ethereum:  "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    arbitrum:  "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+    polygon:   "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+    optimism:  "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    avalanche: "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
+    base:      "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+  };
 
   // Build accepts array from live wallet config
   const accepts: object[] = [];
+  const activeNetworks: string[] = [];
+
+  // USDC on EVM chains (Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad)
   if (evmWallet) {
-    accepts.push({
-      scheme: "exact",
-      network: chainId,
-      asset: usdcBase,
-      payTo: evmWallet,
-      token: "USDC",
-      description: "USDC on Coinbase Base (fast, ~$0.01 gas)",
-    });
-    accepts.push({
-      scheme: "exact",
-      network: "eip155:1",
-      asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      payTo: evmWallet,
-      token: "USDC",
-      description: "USDC on Ethereum mainnet",
-    });
+    const evmUsdcChains: Array<{ network: string; chain: string; description: string }> = [
+      { network: "eip155:8453",  chain: "base",      description: "USDC on Coinbase Base (fast, ~$0.01 gas)" },
+      { network: "eip155:1",     chain: "ethereum",  description: "USDC on Ethereum mainnet" },
+      { network: "eip155:42161", chain: "arbitrum",  description: "USDC on Arbitrum (fast L2)" },
+      { network: "eip155:137",   chain: "polygon",   description: "USDC on Polygon" },
+      { network: "eip155:10",    chain: "optimism",  description: "USDC on Optimism (fast L2)" },
+      { network: "eip155:43114", chain: "avalanche", description: "USDC on Avalanche C-Chain" },
+      { network: "eip155:130",   chain: "unichain",  description: "USDC on Unichain (Uniswap L2)" },
+      { network: "eip155:143",   chain: "monad",     description: "USDC on Monad (high-perf L1)" },
+    ];
+    for (const { network, chain, description } of evmUsdcChains) {
+      accepts.push({ scheme: "exact", network, asset: USDC_CONTRACTS[chain], payTo: evmWallet, token: "USDC", description });
+      activeNetworks.push(network);
+    }
   }
+
+  // USDC on Solana
   if (solanaWallet) {
     accepts.push({
       scheme: "exact",
       network: "solana:mainnet",
-      asset: usdcSolana,
+      asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       payTo: solanaWallet,
       token: "USDC",
       description: "USDC on Solana (fast, cheap)",
     });
+    activeNetworks.push("solana:mainnet");
+  }
+
+  // USDC on Noble/Cosmos
+  if (nobleWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "cosmos:noble-1",
+      asset: "uusdc",
+      payTo: nobleWallet,
+      token: "USDC",
+      description: "USDC on Noble/Cosmos (IBC to 50+ Cosmos chains)",
+    });
+    activeNetworks.push("cosmos:noble-1");
+  }
+
+  // USDC on Algorand
+  if (algorandWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "algorand:mainnet",
+      asset: "31566704",
+      payTo: algorandWallet,
+      token: "USDC",
+      description: "USDC on Algorand (ASA #31566704)",
+    });
+    activeNetworks.push("algorand:mainnet");
+  }
+
+  // USDC on Stellar
+  if (stellarWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "stellar:pubnet",
+      asset: "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      payTo: stellarWallet,
+      token: "USDC",
+      description: "USDC on Stellar (17-sec settlement)",
+      memo: stellarMemo || undefined,
+    });
+    activeNetworks.push("stellar:pubnet");
+  }
+
+  // USDC on Sui
+  if (suiWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "sui:mainnet",
+      asset: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      payTo: suiWallet,
+      token: "USDC",
+      description: "USDC on Sui (Move L1, Circle CCTP)",
+    });
+    activeNetworks.push("sui:mainnet");
+  }
+
+  // USDC on Polkadot Asset Hub
+  if (polkadotWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "polkadot:asset-hub",
+      asset: "1337",
+      payTo: polkadotWallet,
+      token: "USDC",
+      description: "USDC on Polkadot Asset Hub (XCM to all parachains)",
+    });
+    activeNetworks.push("polkadot:asset-hub");
+  }
+
+  // USDC on Aptos
+  if (aptosWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "aptos:mainnet",
+      asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+      payTo: aptosWallet,
+      token: "USDC",
+      description: "USDC on Aptos (Move L1, native Circle)",
+    });
+    activeNetworks.push("aptos:mainnet");
+  }
+
+  // USDT on EVM chains
+  if (usdtWallet) {
+    const usdtChains: Array<{ network: string; chain: string }> = [
+      { network: "eip155:1",     chain: "ethereum" },
+      { network: "eip155:42161", chain: "arbitrum" },
+      { network: "eip155:137",   chain: "polygon" },
+      { network: "eip155:10",    chain: "optimism" },
+      { network: "eip155:43114", chain: "avalanche" },
+      { network: "eip155:8453",  chain: "base" },
+    ];
+    for (const { network, chain } of usdtChains) {
+      if (USDT_CONTRACTS[chain]) {
+        accepts.push({
+          scheme: "exact",
+          network,
+          asset: USDT_CONTRACTS[chain],
+          payTo: usdtWallet,
+          token: "USDT",
+          description: `USDT on ${chain.charAt(0).toUpperCase() + chain.slice(1)}`,
+        });
+      }
+    }
+  }
+
+  // Native ETH (Ethereum + Base)
+  if (ethWallet) {
+    accepts.push(
+      { scheme: "exact", network: "eip155:1",    asset: "0x0000000000000000000000000000000000000000", payTo: ethWallet, token: "ETH", description: "Native ETH on Ethereum" },
+      { scheme: "exact", network: "eip155:8453", asset: "0x0000000000000000000000000000000000000000", payTo: ethWallet, token: "ETH", description: "Native ETH on Base (fast, cheap)" },
+    );
+  }
+
+  // Native BNB
+  if (bnbWallet) {
+    accepts.push({ scheme: "exact", network: "eip155:56", asset: "0x0000000000000000000000000000000000000000", payTo: bnbWallet, token: "BNB", description: "Native BNB on BNB Chain" });
+    activeNetworks.push("eip155:56");
+  }
+
+  // Native NEAR
+  if (nearWallet) {
+    accepts.push({ scheme: "exact", network: "near:mainnet", asset: "near", payTo: nearWallet, token: "NEAR", description: "Native NEAR on NEAR Protocol" });
+    activeNetworks.push("near:mainnet");
+  }
+
+  // Native SOL
+  if (solNativeWallet) {
+    accepts.push({ scheme: "exact", network: "solana:mainnet", asset: "native", payTo: solNativeWallet, token: "SOL", description: "Native SOL on Solana" });
+  }
+
+  // TAO (Bittensor)
+  if (taoWallet) {
+    accepts.push({ scheme: "exact", network: "bittensor:finney", asset: "TAO", payTo: taoWallet, token: "TAO", description: "TAO on Bittensor (AI-native blockchain)" });
+    activeNetworks.push("bittensor:finney");
+  }
+
+  // UNI (Uniswap)
+  if (uniWallet) {
+    accepts.push({ scheme: "exact", network: "eip155:1", asset: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", payTo: uniWallet, token: "UNI", description: "UNI governance token on Ethereum" });
   }
 
   const endpoints = Object.entries(X402_PRICES).map(([tool, price]) => ({
@@ -95,7 +268,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   res.json({
     name: "Arch Tools",
-    description: "The first API platform built for autonomous agent payments. 57 production tools, USDC on Base via x402 or Stripe.",
+    description: "The first API platform built for autonomous agent payments. 58 production tools, USDC on 15+ chains via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
     version: "1",
@@ -103,7 +276,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     endpoints,
     payment: {
       stripe: { url: `${BASE_URL}/pricing` },
-      x402: { status: "active", networks: [NETWORK, "eip155:1", "solana:mainnet"], token: "USDC" },
+      x402: { status: "active", networks: [...new Set(activeNetworks)], token: "USDC/USDT/ETH/BNB/NEAR/SOL/TAO/UNI" },
     },
     mcp: {
       server: "arch-tools-mcp",
@@ -169,6 +342,21 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   "ai-generate": "AI text generation via Claude",
   "ocr-extract": "Extract text from images (URL or base64)",
   "browser-task": "Headless browser automation (click/type/extract) via Playwright",
+  "screenshot-capture": "Capture a screenshot of any URL as a PNG image",
+  "html-to-markdown": "Convert HTML content to clean Markdown",
+  "url-shorten": "Shorten any URL to a compact link",
+  "webhook-send": "Send HTTP webhooks with custom payload and headers",
+  "jsonpath-query": "Execute JSONPath queries on any JSON payload",
+  "barcode-generate": "Generate Code128 barcodes as SVG",
+  "image-generate": "Generate SVG images from text prompts via AI",
+  "workflow-agent": "Execute multi-step autonomous AI agent pipeline",
+  "crypto-price": "Real-time crypto price, 24h change, market cap, and volume",
+  "crypto-ohlcv": "OHLCV candlestick data for technical analysis",
+  "crypto-market-cap": "Top N coins by market cap",
+  "crypto-fear-greed": "Crypto Fear & Greed Index with historical data",
+  "crypto-sentiment": "Community sentiment and social stats for any coin",
+  "crypto-news": "Latest crypto news headlines, filterable by symbol",
+  "token-lookup": "Search any crypto token by name or ticker",
   "text-to-speech": "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)",
   "transcribe-audio": "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)",
   "email-send": "Send transactional emails via Resend — plain text or HTML",
@@ -190,7 +378,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 57 production-ready tools. One key. USDC on Base via x402 or Stripe.
+> 58 production-ready tools. One key. USDC on 15+ chains via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -215,7 +403,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:        60,000 credits — $49   ($0.00082/credit)
   Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (57 total)
+## All Tools (58 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -319,7 +507,7 @@ Privacy: ${BASE_URL}/privacy.html
 
 const OPENAPI_STUB = {
   openapi: "3.0.3",
-  info: { title: "Arch Tools API", version: "1.9.0", description: "57 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
+  info: { title: "Arch Tools API", version: "1.10.0", description: "58 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on 15+ chains.", contact: { name: "Arch Tools", url: BASE_URL } },
   servers: [{ url: API_BASE }],
   tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
   components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
