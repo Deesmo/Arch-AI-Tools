@@ -160,6 +160,7 @@ app.get("/pricing", (_req, res) => res.redirect("/#pricing"));
 // /privacy and /legal — convenience redirects to canonical sub-paths
 app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
+app.get("/changelog", (_req, res) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
 app.get("/docs", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/docs/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/blog", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
