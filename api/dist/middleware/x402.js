@@ -99,6 +99,11 @@ export const X402_PRICES = {
     "news-search": "0.003",
     "research-report": "0.015",
     "fact-check": "0.010",
+    "video-generate": "0.100",
+    "image-remove-bg": "0.010",
+    "email-find": "0.005",
+    "semantic-search": "0.008",
+    "social-post": "0.005",
 };
 function buildPaymentRequired(toolName, price) {
     const network = config.x402.network;

@@ -36,7 +36,7 @@ router.get("/health", async (_req, res) => {
             prisma.tool.count(),
             prisma.agent.count(),
         ]);
-        res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "connected", tools: toolCount || 52, agents: agentCount });
+        res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "connected", tools: toolCount || 57, agents: agentCount });
     }
     catch {
         res.json({ ok: true, service: "arch-tools-api", version: "1.9.0", db: "error" });
@@ -87,7 +87,7 @@ router.get("/.well-known/x402", (_req, res) => {
     }));
     res.json({
         name: "Arch Tools",
-        description: "The first API platform built for autonomous agent payments. 52 production tools, USDC on Base via x402 or Stripe.",
+        description: "The first API platform built for autonomous agent payments. 57 production tools, USDC on Base via x402 or Stripe.",
         url: BASE_URL,
         api_base: API_BASE,
         version: "1",
@@ -169,10 +169,15 @@ const TOOL_DESCRIPTIONS = {
     "news-search": "Search real-time news articles by keyword",
     "research-report": "Generate a structured research report on any topic",
     "fact-check": "Verify claims against real-time web sources",
+    "video-generate": "AI video generation from text prompts via Runway Gen-3",
+    "image-remove-bg": "Remove background from any image via RemoveBG",
+    "email-find": "Find email address for a person at a company via Hunter.io",
+    "semantic-search": "Neural/semantic web search via Exa AI",
+    "social-post": "Post a tweet to X/Twitter via API v2",
 };
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 52 production-ready tools. One key. USDC on Base via x402 or Stripe.
+> 57 production-ready tools. One key. USDC on Base via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -197,7 +202,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:        60,000 credits — $49   ($0.00082/credit)
   Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (52 total)
+## All Tools (57 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -214,6 +219,14 @@ POST /v1/tools/ai-oracle            (25 credits) — Premium reasoning with stru
 POST /v1/tools/session-message      (20 credits) — Send a message in an existing conversation session
 POST /v1/tools/research-report      (15 credits) — Generate a structured research report on any topic
 POST /v1/tools/fact-check           (10 credits) — Verify claims against real-time web sources
+POST /v1/tools/semantic-search      (8 credits)  — Neural/semantic web search via Exa AI
+
+### Media
+POST /v1/tools/video-generate       (50 credits) — AI video generation from text prompts via Runway Gen-3
+POST /v1/tools/image-remove-bg      (10 credits) — Remove background from any image via RemoveBG
+
+### Social
+POST /v1/tools/social-post          (5 credits)  — Post a tweet to X/Twitter
 
 ### Web
 POST /v1/tools/web-scrape           (5 credits)  — Scrape any public URL with optional CSS selector
@@ -257,6 +270,7 @@ POST /v1/tools/whois-lookup         (3 credits)  — Domain registration and exp
 
 ### Validation
 POST /v1/tools/email-verify         (3 credits)  — MX check + disposable domain detection
+POST /v1/tools/email-find           (5 credits)  — Find email address for a person at a company via Hunter.io
 POST /v1/tools/phone-validate       (2 credits)  — E.164 format, type, country code
 
 ### Security
@@ -291,7 +305,7 @@ Privacy: ${BASE_URL}/privacy.html
 `;
 const OPENAPI_STUB = {
     openapi: "3.0.3",
-    info: { title: "Arch Tools API", version: "1.9.0", description: "52 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
+    info: { title: "Arch Tools API", version: "1.9.0", description: "57 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on Base.", contact: { name: "Arch Tools", url: BASE_URL } },
     servers: [{ url: API_BASE }],
     tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
     components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },

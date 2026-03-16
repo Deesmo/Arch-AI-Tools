@@ -2954,5 +2954,283 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
         res.status(500).json({ ok: false, error: "session_message_failed", message: safeErr(e), request_id: reqId() });
     }
 });
+// ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
+router.post("/video-generate", ...toolMiddleware("video-generate"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "video-generate", 50);
+        if (!ok)
+            return;
+    }
+    const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body;
+    if (!prompt) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
+        return;
+    }
+    const validDurations = [5, 10];
+    if (!validDurations.includes(duration)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() });
+        return;
+    }
+    const runwayKey = process.env.RUNWAY_API_KEY;
+    if (!runwayKey) {
+        res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() });
+        return;
+    }
+    try {
+        // Start video generation task
+        const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+            body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: aspect_ratio, watermark: false }),
+        });
+        if (!startResp.ok) {
+            const err = await startResp.text();
+            console.error("[video-generate] Runway start error:", startResp.status, err);
+            res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${startResp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+            return;
+        }
+        const startData = await startResp.json();
+        const taskId = startData.id;
+        if (!taskId) {
+            res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() });
+            return;
+        }
+        // Poll for completion (max 120s)
+        let videoUrl = null;
+        for (let i = 0; i < 24; i++) {
+            await new Promise(r => setTimeout(r, 5000));
+            const pollResp = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+                headers: { "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+            });
+            if (!pollResp.ok)
+                continue;
+            const pollData = await pollResp.json();
+            if (pollData.status === "SUCCEEDED" && pollData.output?.length) {
+                videoUrl = pollData.output[0];
+                break;
+            }
+            if (pollData.status === "FAILED") {
+                res.status(502).json({ ok: false, error: "generation_failed", message: pollData.failure ?? pollData.failureCode ?? "Video generation failed", request_id: reqId() });
+                return;
+            }
+        }
+        if (!videoUrl) {
+            res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() });
+            return;
+        }
+        res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio, task_id: taskId, credits_used: 50, request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[video-generate]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── 55. IMAGE-REMOVE-BG (RemoveBG) ──────────────────────────────────────────
+router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "image-remove-bg", 10);
+        if (!ok)
+            return;
+    }
+    const { image_url, size = "auto" } = req.body;
+    if (!image_url) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "image_url is required", request_id: reqId() });
+        return;
+    }
+    const validSizes = ["auto", "preview", "hd"];
+    if (!validSizes.includes(size)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `size must be one of: ${validSizes.join(", ")}`, request_id: reqId() });
+        return;
+    }
+    const removebgKey = process.env.REMOVEBG_API_KEY;
+    if (!removebgKey) {
+        res.status(503).json({ ok: false, error: "not_configured", message: "REMOVEBG_API_KEY not configured", request_id: reqId() });
+        return;
+    }
+    try {
+        const resp = await fetch("https://api.remove.bg/v1.0/removebg", {
+            method: "POST",
+            headers: { "X-Api-Key": removebgKey, "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ image_url, size, format: "png", type: "auto" }),
+        });
+        if (!resp.ok) {
+            const err = await resp.text();
+            console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
+            res.status(502).json({ ok: false, error: "removebg_error", message: `RemoveBG returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+            return;
+        }
+        const data = await resp.json();
+        const imageBase64 = data.data?.result_b64 ?? "";
+        if (!imageBase64) {
+            res.status(502).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() });
+            return;
+        }
+        res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 10, request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[image-remove-bg]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── 56. EMAIL-FIND (Hunter.io) ──────────────────────────────────────────────
+router.post("/email-find", ...toolMiddleware("email-find"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "email-find", 5);
+        if (!ok)
+            return;
+    }
+    const { domain, first_name, last_name } = req.body;
+    if (!domain) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() });
+        return;
+    }
+    const hunterKey = process.env.HUNTER_API_KEY;
+    if (!hunterKey) {
+        res.status(503).json({ ok: false, error: "not_configured", message: "HUNTER_API_KEY not configured", request_id: reqId() });
+        return;
+    }
+    try {
+        const params = new URLSearchParams({ domain, api_key: hunterKey });
+        if (first_name)
+            params.set("first_name", first_name);
+        if (last_name)
+            params.set("last_name", last_name);
+        const resp = await fetch(`https://api.hunter.io/v2/email-finder?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
+        if (!resp.ok) {
+            const err = await resp.text();
+            console.error("[email-find] Hunter error:", resp.status, err);
+            res.status(502).json({ ok: false, error: "hunter_error", message: `Hunter.io returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+            return;
+        }
+        const data = await resp.json();
+        const result = data.data;
+        if (!result?.email) {
+            res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() });
+            return;
+        }
+        res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, credits_used: 5, request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[email-find]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── 57. SEMANTIC-SEARCH (Exa) ───────────────────────────────────────────────
+router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "semantic-search", 8);
+        if (!ok)
+            return;
+    }
+    const { query, num_results = 5, type = "neural" } = req.body;
+    if (!query) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
+        return;
+    }
+    const validTypes = ["neural", "keyword"];
+    if (!validTypes.includes(type)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() });
+        return;
+    }
+    const exaKey = process.env.EXA_API_KEY;
+    if (!exaKey) {
+        res.status(503).json({ ok: false, error: "not_configured", message: "EXA_API_KEY not configured", request_id: reqId() });
+        return;
+    }
+    try {
+        const n = Math.min(Math.max(1, num_results), 20);
+        const resp = await fetch("https://api.exa.ai/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${exaKey}` },
+            body: JSON.stringify({ query, numResults: n, type, contents: { text: { maxCharacters: 1000 } } }),
+        });
+        if (!resp.ok) {
+            const err = await resp.text();
+            console.error("[semantic-search] Exa error:", resp.status, err);
+            res.status(502).json({ ok: false, error: "exa_error", message: `Exa returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+            return;
+        }
+        const data = await resp.json();
+        const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", text: (r.text ?? "").slice(0, 1000), score: r.score ?? 0, published_date: r.publishedDate ?? null, author: r.author ?? null }));
+        res.json({ ok: true, query, type, results, count: results.length, credits_used: 8, request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[semantic-search]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── 58. SOCIAL-POST (X/Twitter) ─────────────────────────────────────────────
+router.post("/social-post", ...toolMiddleware("social-post"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "social-post", 5);
+        if (!ok)
+            return;
+    }
+    const { text, reply_to } = req.body;
+    if (!text) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
+        return;
+    }
+    if (text.length > 280) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 280 characters or less", request_id: reqId() });
+        return;
+    }
+    const apiKey = process.env.X_API_KEY;
+    const apiSecret = process.env.X_API_SECRET;
+    const accessToken = process.env.X_ACCESS_TOKEN;
+    const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
+    if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
+        res.status(503).json({ ok: false, error: "not_configured", message: "X/Twitter API credentials not configured", request_id: reqId() });
+        return;
+    }
+    try {
+        // OAuth 1.0a signature generation
+        const method = "POST";
+        const url = "https://api.twitter.com/2/tweets";
+        const timestamp = Math.floor(Date.now() / 1000).toString();
+        const nonce = crypto.randomBytes(16).toString("hex");
+        const oauthParams = {
+            oauth_consumer_key: apiKey,
+            oauth_nonce: nonce,
+            oauth_signature_method: "HMAC-SHA1",
+            oauth_timestamp: timestamp,
+            oauth_token: accessToken,
+            oauth_version: "1.0",
+        };
+        // Create signature base string
+        const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
+        const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+        const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+        const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
+        const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
+        const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
+        const body = { text };
+        if (reply_to)
+            body.reply = { in_reply_to_tweet_id: reply_to };
+        const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": authHeader },
+            body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+            const err = await resp.text();
+            console.error("[social-post] Twitter error:", resp.status, err);
+            res.status(502).json({ ok: false, error: "twitter_error", message: `Twitter API returned ${resp.status}: ${err.slice(0, 300)}`, request_id: reqId() });
+            return;
+        }
+        const data = await resp.json();
+        const tweetId = data.data?.id ?? "";
+        res.json({ ok: true, tweet_id: tweetId, url: tweetId ? `https://x.com/i/web/status/${tweetId}` : "", text: data.data?.text ?? text, credits_used: 5, request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[social-post]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
 export default router;
 //# sourceMappingURL=index.js.map
