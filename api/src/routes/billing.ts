@@ -9,9 +9,9 @@ const router = Router();
 
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
-  { credits: 10000,  amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { credits: 60000,  amount: 4900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
-  { credits: 250000, amount: 19900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
+  { credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
+  { credits: 25000,  amount: 3900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { credits: 100000, amount: 14900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
@@ -20,7 +20,7 @@ const SUBSCRIPTION_PLANS = [
     id: "starter-monthly",
     label: "Starter",
     billing: "monthly",
-    credits_per_month: 600,
+    credits_per_month: 10000,
     amount: 900,     // $9/mo
     // Security: price IDs must be set via environment variables — no hardcoded fallbacks.
     // Set STRIPE_PRICE_SUB_STARTER_MONTHLY in your environment. See .env.example.
@@ -30,7 +30,7 @@ const SUBSCRIPTION_PLANS = [
     id: "pro-monthly",
     label: "Pro",
     billing: "monthly",
-    credits_per_month: 3000,
+    credits_per_month: 40000,
     amount: 2900,    // $29/mo
     priceId: process.env.STRIPE_PRICE_SUB_PRO_MONTHLY ?? "",
   },
@@ -38,7 +38,7 @@ const SUBSCRIPTION_PLANS = [
     id: "business-monthly",
     label: "Business",
     billing: "monthly",
-    credits_per_month: 12000,
+    credits_per_month: 150000,
     amount: 8900,    // $89/mo
     priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY ?? "",
   },
@@ -46,8 +46,8 @@ const SUBSCRIPTION_PLANS = [
     id: "starter-annual",
     label: "Starter",
     billing: "annual",
-    credits_per_month: 600,
-    credits_per_year: 7200,
+    credits_per_month: 10000,
+    credits_per_year: 120000,
     amount: 8100,    // $81/yr = $6.75/mo (25% off)
     amount_monthly_equiv: 675,
     priceId: process.env.STRIPE_PRICE_SUB_STARTER_ANNUAL ?? "",
@@ -56,8 +56,8 @@ const SUBSCRIPTION_PLANS = [
     id: "pro-annual",
     label: "Pro",
     billing: "annual",
-    credits_per_month: 3000,
-    credits_per_year: 36000,
+    credits_per_month: 40000,
+    credits_per_year: 480000,
     amount: 26100,   // $261/yr = $21.75/mo (25% off)
     amount_monthly_equiv: 2175,
     priceId: process.env.STRIPE_PRICE_SUB_PRO_ANNUAL ?? "",
@@ -66,8 +66,8 @@ const SUBSCRIPTION_PLANS = [
     id: "business-annual",
     label: "Business",
     billing: "annual",
-    credits_per_month: 12000,
-    credits_per_year: 144000,
+    credits_per_month: 150000,
+    credits_per_year: 1800000,
     amount: 80100,   // $801/yr = $66.75/mo (25% off)
     amount_monthly_equiv: 6675,
     priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_ANNUAL ?? "",
