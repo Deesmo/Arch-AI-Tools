@@ -1769,8 +1769,12 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req, 
 });
 // ─── 39. AI-ORACLE (premium reasoning endpoint) ──────────────────────────────
 router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
+    // ── BYOK: check for user-provided API keys ──
+    const oraclByokAnthropicKey = req.headers["x-anthropic-key"];
+    const oraclByokOpenaiKey = req.headers["x-openai-key"];
+    const oracleHasByok = !!(oraclByokAnthropicKey || oraclByokOpenaiKey);
     const paid = isX402Paid(req);
-    if (!paid) {
+    if (!paid && !oracleHasByok) {
         const ok = await deductCredits(req, res, "ai-oracle", 25);
         if (!ok)
             return;
@@ -1793,7 +1797,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
     const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
     // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
     const providers = [];
-    if (anthropic) {
+    if (anthropic || oraclByokAnthropicKey) {
         const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
         providers.push({
             name: "anthropic",
@@ -1801,13 +1805,17 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
                 const userContent = oracleContext
                     ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
                     : question;
-                const msg = await anthropic.messages.create({
-                    model: oracleModel,
-                    max_tokens: maxTokens,
-                    system: systemPrompt,
-                    messages: [{ role: "user", content: userContent }],
-                });
-                const text = msg.content.find(b => b.type === "text")?.text ?? "";
+                const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY;
+                if (oraclByokAnthropicKey) {
+                    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anthKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] }) });
+                    const d = await r.json();
+                    if (!r.ok)
+                        throw new Error(d?.error?.message || `Anthropic BYOK error ${r.status}`);
+                    const text = (d.content || []).find((b) => b.type === "text")?.text ?? "";
+                    return { text, model: oracleModel, usage: { input_tokens: d.usage?.input_tokens ?? 0, output_tokens: d.usage?.output_tokens ?? 0 } };
+                }
+                const msg = await anthropic.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
+                const text = msg.content.filter(b => b.type === "text").map(b => b.text).join("") ?? "";
                 return { text, model: oracleModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens } };
             },
         });
@@ -1843,6 +1851,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
     }
     let lastError = "";
     for (const provider of providers) {
+        const providerName = provider.name;
         try {
             const result = await provider.fn();
             // Parse the JSON response from the model
@@ -1868,7 +1877,12 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
                 model_used: result.model,
                 reasoning_depth,
                 reasoning_tokens: result.usage?.output_tokens ?? undefined,
-                credits_used: 25,
+                word_count: analysis.split(/\s+/).filter(Boolean).length,
+                char_count: analysis.length,
+                processed_at: new Date().toISOString(),
+                arch_tools_version: "1.9.0",
+                ...(oracleHasByok ? { byok: true, byok_provider: providerName } : {}),
+                credits_used: oracleHasByok ? 0 : 25,
                 request_id: reqId(),
             });
             return;
