@@ -57,7 +57,7 @@
     <div class="legal-body">
       <a class="back" href="/">← Back to Arch Tools</a>
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated: March 2025</p>
+      <p class="updated">Last updated: March 16, 2026</p>
 
       <p>This Privacy Policy applies to Arch Tools, operated by <strong>MCMetaverse LLC</strong>, a South Carolina limited liability company.</p>
 
@@ -67,14 +67,16 @@
         <li><strong>Email address</strong> — required for registration and account communication</li>
         <li><strong>API usage data</strong> — request counts, tool usage, credit consumption (no request payloads stored)</li>
         <li><strong>IP address</strong> — logged for rate limiting and security purposes</li>
+        <li><strong>Session context</strong> — if you use the Session API (session-create, session-message), conversation context is stored in-memory for the duration of the session. Session data is <strong>not persisted to disk</strong> and is cleared when the session expires or the server restarts.</li>
+        <li><strong>Newsletter email</strong> — if you sign up for our newsletter, we collect your email address for marketing communications. You may unsubscribe at any time.</li>
       </ul>
 
       <h2>2. What We Do Not Collect</h2>
       <ul>
-        <li>We do not store the content of your API requests or responses</li>
+        <li>We do not store the content of your API requests or responses (except in-memory Session API context as described above)</li>
         <li>We do not collect payment card details (handled by Stripe)</li>
         <li>We do not track you across other websites</li>
-        <li>We do not use advertising cookies or third-party trackers</li>
+        <li>We do not use advertising cookies</li>
       </ul>
 
       <h2>3. How We Use Your Data</h2>
@@ -91,6 +93,9 @@
         <li><strong>Stripe</strong> — for payment processing</li>
         <li><strong>Resend</strong> — for transactional email delivery</li>
         <li><strong>Render</strong> — for hosting (subject to their privacy policy)</li>
+        <li><strong>Cloudflare</strong> — for CDN, edge caching, and Brotli compression. All requests to Arch Tools are processed through Cloudflare's network.</li>
+        <li><strong>Sentry</strong> — for frontend error monitoring. The Sentry SDK collects Web Vitals performance metrics and JavaScript errors to help us improve service reliability. No API request payloads are sent to Sentry.</li>
+        <li><strong>Analytics providers</strong> — we may use visitor intelligence services such as Apollo to understand aggregate traffic patterns. No personally identifiable data is shared without your consent.</li>
       </ul>
 
       <h2>5. Data Retention</h2>

@@ -198,7 +198,7 @@
 
     <div class="content">
       <h1>API Reference</h1>
-      <p>50 production tools. One API key. Every request is authenticated, credit-deducted, and logged.</p>
+      <p>53 production tools. One API key. Every request is authenticated, credit-deducted, and logged.</p>
 
       <div class="alert alert-info">
         <strong>Base URL:</strong> <span class="inline-code">https://arch-ai-tools.onrender.com</span> &nbsp;·&nbsp;
@@ -236,14 +236,16 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
 
       <!-- CREDITS -->
       <h2 id="credits">Credits &amp; Rate Limits</h2>
-      <p>Every account gets <strong>100 free credits per month</strong> (auto-refreshed on the 1st). Most tools cost 1 credit per call. AI tools cost 2–5 credits.</p>
+      <p>Every new account gets <strong>250 free credits</strong> on signup. Most tools cost 1 credit per call. AI tools cost 2–30 credits (image-generate/design-create = 30, text-to-speech = 10, transcribe-audio = 12, ai-oracle = 25). Subscription plans refresh credits monthly. Annual billing saves 17% off monthly rates.</p>
       <table class="params-table" style="margin-bottom:16px">
-        <tr><th>Tier</th><th>Rate Limit</th><th>Daily Limit</th></tr>
-        <tr><td>Free</td><td>30 req/min</td><td>500 req/day</td></tr>
-        <tr><td>Starter ($9)</td><td>60 req/min</td><td>5,000 req/day</td></tr>
-        <tr><td>Pro ($49)</td><td>120 req/min</td><td>20,000 req/day</td></tr>
-        <tr><td>Business ($199)</td><td>300 req/min</td><td>100,000 req/day</td></tr>
+        <tr><th>Tier</th><th>Price</th><th>Rate Limit</th><th>Daily Limit</th></tr>
+        <tr><td>Free</td><td>$0</td><td>30 req/min</td><td>500 req/day</td></tr>
+        <tr><td>Developer</td><td>$19/mo</td><td>60 req/min</td><td>5,000 req/day</td></tr>
+        <tr><td>Pro</td><td>$49/mo</td><td>120 req/min</td><td>20,000 req/day</td></tr>
+        <tr><td>Business</td><td>$149/mo</td><td>300 req/min</td><td>100,000 req/day</td></tr>
+        <tr><td>Enterprise</td><td><a href="mailto:support@archtools.dev" style="color:var(--accent)">Contact Us</a></td><td>Custom</td><td>Custom</td></tr>
       </table>
+      <p>One-time credit packs: <strong>$9</strong> / 5K credits · <strong>$49</strong> / 30K credits · <strong>$199</strong> / 200K credits. Overage beyond subscription credits is billed at one-time pack rates.</p>
       <p>Check your usage: <span class="inline-code">GET /v1/agent/usage</span> with your key.</p>
 
       <!-- ERRORS -->
@@ -671,7 +673,7 @@ print(res.json())</code></pre>
       </div>
 
       <div class="tool-doc" id="image-generate">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/image-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">5 credits</span></div>
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/image-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">30 credits</span></div>
         <div class="tool-doc-desc">Generate an image from a text prompt using AI.</div>
         <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
           <tr><td>prompt</td><td>string</td><td><span class="req">required</span></td></tr>
@@ -797,7 +799,7 @@ print(res.json())</code></pre>
 
       <!-- text-to-speech -->
       <div class="tool-doc" id="text-to-speech">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/text-to-speech</span><span class="badge badge-post">POST</span><span class="badge badge-free">5 credits</span></div>
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/text-to-speech</span><span class="badge badge-post">POST</span><span class="badge badge-free">10 credits</span></div>
         <div class="tool-doc-desc">Convert text to natural-sounding speech via ElevenLabs. Returns base64-encoded MP3 audio. 50+ voices available.</div>
         <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
           <tr><td>text</td><td>string</td><td>✓</td><td>Text to convert. Max 5,000 characters.</td></tr>
@@ -813,7 +815,7 @@ print(res.json())</code></pre>
 
       <!-- transcribe-audio -->
       <div class="tool-doc" id="transcribe-audio">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/transcribe-audio</span><span class="badge badge-post">POST</span><span class="badge badge-free">8 credits</span></div>
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/transcribe-audio</span><span class="badge badge-post">POST</span><span class="badge badge-free">12 credits</span></div>
         <div class="tool-doc-desc">Transcribe audio files to text via OpenAI Whisper. Pass a public audio URL. Supports 100+ languages.</div>
         <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
           <tr><td>audio_url</td><td>string</td><td>✓</td><td>Public URL of the audio file (MP3, WAV, M4A, OGG, WEBM)</td></tr>
@@ -844,7 +846,7 @@ print(res.json())</code></pre>
 
       <!-- design-create -->
       <div class="tool-doc" id="design-create">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/design-create</span><span class="badge badge-post">POST</span><span class="badge badge-free">15 credits</span></div>
+        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/design-create</span><span class="badge badge-post">POST</span><span class="badge badge-free">30 credits</span></div>
         <div class="tool-doc-desc">Generate images from text prompts via DALL-E 3. Returns an image URL. Three sizes, vivid or natural style.</div>
         <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
           <tr><td>prompt</td><td>string</td><td>✓</td><td>Image description / prompt</td></tr>
