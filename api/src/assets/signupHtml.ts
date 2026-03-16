@@ -105,17 +105,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
   <nav class="at-nav">
     <a class="at-nav-logo" href="/">
       <div class="at-logo-mark">
-        <svg width="18" height="18" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="ng" x1="90" y1="20" x2="90" y2="160" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#FFB030"/>
-              <stop offset="42%" stop-color="#FF1888"/>
-              <stop offset="100%" stop-color="#5522FF"/>
-            </linearGradient>
-          </defs>
-          <path d="M90 22 L154 150 H128 L90 78 L52 150 H26 Z" fill="url(#ng)"/>
-          <rect x="62" y="118" width="56" height="20" rx="4" fill="url(#ng)" opacity="0.6"/>
-        </svg>
+        <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav-su" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-su"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-su)" filter="url(#arch-neon-nav-su)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
       </div>
       <span class="at-logo-name">Arch Tools</span>
     </a>
