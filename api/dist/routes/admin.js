@@ -143,5 +143,23 @@ router.post("/seed-tools", requireAdmin, async (_req, res) => {
     const total = await prisma.tool.count();
     res.json({ ok: true, columns, results, total, request_id: reqId() });
 });
+// ─── Grant credits to an agent (admin only) ─────────────────────────────────
+router.post("/grant-credits", requireAdmin, async (req, res) => {
+    const { agent_id, credits } = req.body;
+    if (!agent_id || !credits || credits < 1 || credits > 1_000_000) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "agent_id and credits (1-1000000) required", request_id: reqId() });
+        return;
+    }
+    try {
+        const agent = await prisma.agent.update({
+            where: { id: agent_id },
+            data: { credits: { increment: credits } },
+        });
+        res.json({ ok: true, agent_id, credits_added: credits, new_balance: agent.credits, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(404).json({ ok: false, error: "agent_not_found", detail: safeErr(e), request_id: reqId() });
+    }
+});
 export default router;
 //# sourceMappingURL=admin.js.map
