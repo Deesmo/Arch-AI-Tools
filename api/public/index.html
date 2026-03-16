@@ -13,6 +13,19 @@
   <meta name="apple-mobile-web-app-title" content="Arch Tools">
   <meta name="theme-color" content="#07061A">
   <script>if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(regs=>{regs.forEach(r=>r.unregister())});}</script>
+  <!-- Facebook Pixel -->
+  <script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '4558073161094474');
+  fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=4558073161094474&ev=PageView&noscript=1"/></noscript>
+  <!-- TODO: Sentry Frontend SDK — replace YOUR_DSN with actual Sentry DSN -->
+  <!-- <script src="https://js.sentry-cdn.com/YOUR_DSN.min.js" crossorigin="anonymous"></script> -->
   <title>Arch Tools - The First API Platform AI Agents Can Pay Autonomously</title>
   <meta name="description" content="53 AI-powered tools in a single API. Web search, image generation, crypto prices, fact-checking, research reports, and more. Pay per use - no subscriptions.">
   <meta property="og:title" content="Arch Tools - 53 Tools, One API Key">
@@ -2332,6 +2345,20 @@ function showLangTab(lang) {
   </div>
 </section>
 
+<!-- NEWSLETTER SIGNUP -->
+<!-- TODO: Replace MAILCHIMP_USER_ID in the form action URL with the actual Mailchimp user ID from Brad's Mailchimp dashboard -->
+<section style="padding:48px 0;border-top:1px solid rgba(255,255,255,0.06);">
+  <div class="wrap" style="text-align:center;max-width:480px;">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Stay Updated</div>
+    <h2 style="font-family:var(--display);font-size:24px;font-weight:800;margin-bottom:8px;">New tools. No spam.</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Get notified when we ship new tools and features. One email, once a month.</p>
+    <form action="https://drinkforbidden.us8.list-manage.com/subscribe/post?u=MAILCHIMP_USER_ID&amp;id=b5da746b36" method="post" style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
+      <input type="email" name="EMAIL" placeholder="developer@example.com" required style="flex:1;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#fff;font-family:var(--mono);font-size:13px;">
+      <button type="submit" style="padding:10px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Subscribe</button>
+    </form>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer>
   <div class="wrap">
@@ -2607,5 +2634,10 @@ window.addEventListener("load", function() {
 });
 </script>
 
+<!-- Apollo.io Visitor Intelligence -->
+<!-- TODO: Verify the appId below matches Brad's actual Apollo dashboard tracking script -->
+<script>
+(function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];g.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+new Date().getTime();g.async=true;g.defer=true;s.parentNode.insertBefore(g,s);g.onload=function(){window.trackingFunctions&&window.trackingFunctions.onLoad&&window.trackingFunctions.onLoad({appId:"66542e3e78decd003fd9ccb2"})}})(document,"script");
+</script>
 </body>
 </html>
