@@ -2576,11 +2576,16 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req, res) =
     const limit = Math.min(Number(req.body.limit ?? req.query.limit ?? 5), 10);
     if (!query)
         return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
-    // Try Brave News first
-    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-    const tavilyKey = process.env.TAVILY_API_KEY;
+    // BYOK: check for user-provided search keys
+    const byokBraveKeyNews = req.headers["x-brave-key"];
+    const byokTavilyKeyNews = req.headers["x-tavily-key"];
+    // Try Brave News first (BYOK first, then platform key)
+    const braveKey = byokBraveKeyNews || process.env.BRAVE_SEARCH_API_KEY;
+    const tavilyKey = byokTavilyKeyNews || process.env.TAVILY_API_KEY;
     const serperKey = process.env.SERPER_API_KEY;
     if (braveKey) {
+        if (byokBraveKeyNews)
+            console.log(`[BYOK] news-search using user-provided brave key`);
         try {
             const r = await axios.get("https://api.search.brave.com/res/v1/news/search", {
                 params: { q: query, count: limit, safesearch: "off" },
@@ -2590,11 +2595,13 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req, res) =
             const results = (r.data.results ?? []).slice(0, limit).map(a => ({
                 title: a.title, url: a.url, description: a.description ?? "", published: a.age ?? null, source: a.source?.name ?? null
             }));
-            return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, request_id: reqId() });
+            return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, ...(byokBraveKeyNews ? { byok: true, byok_provider: "brave" } : {}), request_id: reqId() });
         }
         catch (_) { /* fall through to Tavily */ }
     }
     if (tavilyKey) {
+        if (byokTavilyKeyNews)
+            console.log(`[BYOK] news-search using user-provided tavily key`);
         try {
             const r = await axios.post("https://api.tavily.com/search", {
                 api_key: tavilyKey, query, topic: "news", max_results: limit, include_answer: false
@@ -2602,7 +2609,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req, res) =
             const results = (r.data.results ?? []).slice(0, limit).map(a => ({
                 title: a.title, url: a.url, description: a.content ?? "", published: a.published_date ?? null, source: a.source ?? null
             }));
-            return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, request_id: reqId() });
+            return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, ...(byokTavilyKeyNews ? { byok: true, byok_provider: "tavily" } : {}), request_id: reqId() });
         }
         catch (_) { /* fall through to Serper */ }
     }
@@ -2634,13 +2641,21 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
     const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
     if (!query)
         return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
-    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-    const tavilyKey = process.env.TAVILY_API_KEY;
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    // BYOK: check for user-provided search keys
+    const byokBraveKeyRR = req.headers["x-brave-key"];
+    const byokTavilyKeyRR = req.headers["x-tavily-key"];
+    const byokAnthropicKeyRR = req.headers["x-anthropic-key"];
+    const braveKey = byokBraveKeyRR || process.env.BRAVE_SEARCH_API_KEY;
+    const tavilyKey = byokTavilyKeyRR || process.env.TAVILY_API_KEY;
+    const anthropicKey = byokAnthropicKeyRR || process.env.ANTHROPIC_API_KEY;
     const numResults = depth === "deep" ? 10 : 5;
+    const rrHasByok = !!(byokBraveKeyRR || byokTavilyKeyRR || byokAnthropicKeyRR);
     // Step 1: Gather search results
     let searchResults = [];
+    let rrSearchProvider = "";
     if (tavilyKey) {
+        if (byokTavilyKeyRR)
+            console.log(`[BYOK] research-report using user-provided tavily key`);
         try {
             const r = await axios.post("https://api.tavily.com/search", {
                 api_key: tavilyKey, query, max_results: numResults, include_answer: true, search_depth: depth === "deep" ? "advanced" : "basic"
@@ -2648,10 +2663,14 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
             searchResults = (r.data.results ?? []).map(a => ({
                 title: a.title, url: a.url, description: a.content ?? ""
             }));
+            if (searchResults.length > 0)
+                rrSearchProvider = "tavily";
         }
         catch (_) { /* try Brave */ }
     }
     if (searchResults.length === 0 && braveKey) {
+        if (byokBraveKeyRR)
+            console.log(`[BYOK] research-report using user-provided brave key`);
         try {
             const r = await axios.get("https://api.search.brave.com/res/v1/web/search", {
                 params: { q: query, count: numResults, safesearch: "off" },
@@ -2661,6 +2680,8 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
             searchResults = (r.data.web?.results ?? []).map(a => ({
                 title: a.title, url: a.url, description: a.description ?? ""
             }));
+            if (searchResults.length > 0)
+                rrSearchProvider = "brave";
         }
         catch (_) { /* fall through */ }
     }
@@ -2669,7 +2690,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
     }
     // Step 2: Synthesize with Claude
     if (!anthropicKey) {
-        return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured", credits_used: 15, request_id: reqId() });
+        return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 15, ...(rrHasByok ? { byok: true, byok_provider: rrSearchProvider || "unknown" } : {}), request_id: reqId() });
     }
     const sourcesText = searchResults.map((s, i) => `[${i + 1}] ${s.title}\n${s.url}\n${s.description}`).join("\n\n");
     const systemPrompt = `You are a research analyst. Write a concise, well-structured research report based on the provided sources. Include: an executive summary, key findings, and a conclusion. Cite sources using [N] notation. Be factual and objective.`;
@@ -2684,7 +2705,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
             timeout: 30000
         });
         const report = (claude.data.content?.[0]?.text ?? "").trim();
-        return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, request_id: reqId() });
+        return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, ...(rrHasByok ? { byok: true, byok_provider: byokAnthropicKeyRR ? "anthropic" : rrSearchProvider } : {}), request_id: reqId() });
     }
     catch (e) {
         return void res.status(502).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
@@ -2701,12 +2722,20 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req, res) => 
     const claim = String(req.body.claim ?? req.query.claim ?? "").trim();
     if (!claim)
         return void res.status(400).json({ ok: false, error: "missing_param", message: "claim is required" });
-    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-    const tavilyKey = process.env.TAVILY_API_KEY;
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    // BYOK: check for user-provided search keys
+    const byokBraveKeyFC = req.headers["x-brave-key"];
+    const byokTavilyKeyFC = req.headers["x-tavily-key"];
+    const byokAnthropicKeyFC = req.headers["x-anthropic-key"];
+    const braveKey = byokBraveKeyFC || process.env.BRAVE_SEARCH_API_KEY;
+    const tavilyKey = byokTavilyKeyFC || process.env.TAVILY_API_KEY;
+    const anthropicKey = byokAnthropicKeyFC || process.env.ANTHROPIC_API_KEY;
+    const fcHasByok = !!(byokBraveKeyFC || byokTavilyKeyFC || byokAnthropicKeyFC);
+    let fcSearchProvider = "";
     // Step 1: Search for evidence
     let evidence = [];
     if (tavilyKey) {
+        if (byokTavilyKeyFC)
+            console.log(`[BYOK] fact-check using user-provided tavily key`);
         try {
             const r = await axios.post("https://api.tavily.com/search", {
                 api_key: tavilyKey, query: `fact check: ${claim}`, max_results: 8, include_answer: false, search_depth: "advanced"
@@ -2714,10 +2743,14 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req, res) => 
             evidence = (r.data.results ?? []).map(a => ({
                 title: a.title, url: a.url, description: a.content ?? ""
             }));
+            if (evidence.length > 0)
+                fcSearchProvider = "tavily";
         }
         catch (_) { /* try Brave */ }
     }
     if (evidence.length === 0 && braveKey) {
+        if (byokBraveKeyFC)
+            console.log(`[BYOK] fact-check using user-provided brave key`);
         try {
             const r = await axios.get("https://api.search.brave.com/res/v1/web/search", {
                 params: { q: `fact check "${claim}"`, count: 8, safesearch: "off" },
@@ -2727,11 +2760,13 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req, res) => 
             evidence = (r.data.web?.results ?? []).map(a => ({
                 title: a.title, url: a.url, description: a.description ?? ""
             }));
+            if (evidence.length > 0)
+                fcSearchProvider = "brave";
         }
         catch (_) { /* fall through */ }
     }
     if (!anthropicKey) {
-        return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured", credits_used: 10, request_id: reqId() });
+        return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 10, ...(fcHasByok ? { byok: true, byok_provider: fcSearchProvider || "unknown" } : {}), request_id: reqId() });
     }
     // Step 2: Analyze with Claude
     const evidenceText = evidence.map((e, i) => `[${i + 1}] ${e.title}\n${e.url}\n${e.description}`).join("\n\n");
@@ -2770,7 +2805,7 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req, res) => 
             contradicting_evidence: analysis.contradicting_evidence ?? [],
             caveats: analysis.caveats ?? null,
             sources: evidence,
-            credits_used: 10, request_id: reqId()
+            credits_used: 10, ...(fcHasByok ? { byok: true, byok_provider: byokAnthropicKeyFC ? "anthropic" : fcSearchProvider } : {}), request_id: reqId()
         });
     }
     catch (e) {
