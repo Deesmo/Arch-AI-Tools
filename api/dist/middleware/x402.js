@@ -129,8 +129,8 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "USD Coin", version: "2" },
         });
     }
-    // Option 2: USDC on Ethereum mainnet (same EVM wallet address)
-    if (evmWallet) {
+    // Option 2: DISABLED — Brad's wallet is Base-only. Do NOT send to other networks.
+    if (false && evmWallet) { // DISABLED — Base only
         accepts.push({
             scheme: "exact",
             network: "eip155:1",
@@ -145,7 +145,7 @@ function buildPaymentRequired(toolName, price) {
         });
     }
     // Option 3: USDC on Arbitrum (same EVM wallet, fast + cheap L2)
-    if (evmWallet) {
+    if (false && evmWallet) { // DISABLED — Base only
         accepts.push({
             scheme: "exact",
             network: "eip155:42161",
@@ -160,7 +160,7 @@ function buildPaymentRequired(toolName, price) {
         });
     }
     // Option 4: USDC on Polygon (same EVM wallet)
-    if (evmWallet) {
+    if (false && evmWallet) { // DISABLED — Base only
         accepts.push({
             scheme: "exact",
             network: "eip155:137",
@@ -175,7 +175,7 @@ function buildPaymentRequired(toolName, price) {
         });
     }
     // Option 5: USDC on Optimism (same EVM wallet)
-    if (evmWallet) {
+    if (false && evmWallet) { // DISABLED — Base only
         accepts.push({
             scheme: "exact",
             network: "eip155:10",
@@ -190,7 +190,7 @@ function buildPaymentRequired(toolName, price) {
         });
     }
     // Option 6: USDC on Avalanche C-Chain (same EVM wallet)
-    if (evmWallet) {
+    if (false && evmWallet) { // DISABLED — Base only
         accepts.push({
             scheme: "exact",
             network: "eip155:43114",
