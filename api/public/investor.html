@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arch Tools — Investor One-Pager</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #07061A;
+    --bg-card: #0E0D24;
+    --text: #E8E6F0;
+    --text-muted: #9B97B0;
+    --grad-start: #FF9010;
+    --grad-mid: #FF2896;
+    --grad-end: #8844FF;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 40px;
+  }
+
+  /* Gradient divider */
+  .divider {
+    height: 2px;
+    background: linear-gradient(90deg, var(--grad-start), var(--grad-mid), var(--grad-end));
+    border: none;
+    margin: 32px 0;
+    border-radius: 1px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding-bottom: 8px;
+  }
+  .hero svg { width: 72px; height: auto; margin-bottom: 16px; }
+  .hero h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .hero .tagline {
+    font-size: 16px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* ── SECTIONS ── */
+  section { margin-bottom: 4px; }
+  section h2 {
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    background: linear-gradient(90deg, var(--grad-start), var(--grad-mid), var(--grad-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+  section p, section li {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ── STEPS ── */
+  .steps {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .step {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .step-num {
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--grad-start), var(--grad-mid));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .step h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .step p { font-size: 12px; color: var(--text-muted); }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 12px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .code-block .comment { color: #5C5980; }
+  .code-block .key { color: #FF9010; }
+  .code-block .str { color: #FF2896; }
+
+  /* ── FEATURE CARDS (MCP + x402) ── */
+  .features {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .feature-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .feature-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .feature-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .badge-mcp {
+    background: rgba(255,144,16,0.15);
+    color: var(--grad-start);
+  }
+  .badge-x402 {
+    background: rgba(136,68,255,0.15);
+    color: var(--grad-end);
+  }
+
+  /* ── CATEGORIES ── */
+  .categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .cat {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .cat span {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  /* ── TRACTION ── */
+  .traction-grid {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .traction-item {
+    flex: 1;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 16px 12px;
+  }
+  .traction-item .num {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--grad-start), var(--grad-mid));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .traction-item .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding-top: 8px;
+    padding-bottom: 16px;
+  }
+  .footer .company {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .footer .contact {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .footer a {
+    color: var(--grad-mid);
+    text-decoration: none;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    body {
+      background: #fff !important;
+      color: #1a1a2e !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page {
+      padding: 24px 32px;
+      max-width: 100%;
+    }
+    .divider {
+      height: 1.5px;
+      margin: 20px 0;
+    }
+    section h2 {
+      -webkit-text-fill-color: #1a1a2e;
+      color: #1a1a2e;
+      border-bottom: 2px solid var(--grad-mid);
+      padding-bottom: 2px;
+      background: none;
+    }
+    section p, section li, .step p, .feature-card p, .footer .contact {
+      color: #333 !important;
+    }
+    .step, .feature-card, .traction-item, .cat, .code-block {
+      background: #f5f5fa !important;
+      border-color: #ddd !important;
+    }
+    .hero h1, .step h3, .feature-card h3, .traction-item .num, .footer .company {
+      color: #1a1a2e !important;
+      -webkit-text-fill-color: #1a1a2e !important;
+      background: none !important;
+    }
+    .traction-item .num {
+      color: #c0399f !important;
+      -webkit-text-fill-color: #c0399f !important;
+    }
+    .badge { border: 1px solid #ccc; }
+    .code-block { color: #555 !important; }
+    .code-block .comment { color: #999 !important; }
+    .code-block .key { color: #b35c00 !important; }
+    .code-block .str { color: #a0206a !important; }
+    .hero svg path { fill: #1a1a2e !important; }
+    @page {
+      size: letter;
+      margin: 0.5in;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <svg viewBox="0 10 100 90" overflow="visible">
+      <defs>
+        <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FF9010"/>
+          <stop offset="60%" stop-color="#FF2896"/>
+          <stop offset="100%" stop-color="#8844FF"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#arch-grad)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/>
+    </svg>
+    <h1>Arch Tools</h1>
+    <div class="tagline">The API Platform for AI Agents</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- THE PROBLEM -->
+  <section>
+    <h2>The Problem</h2>
+    <p>AI agents need tools — web search, image generation, crypto data, voice synthesis — but every API requires separate signup, separate keys, and separate billing. For an agent that needs 20 tools, that's 20 accounts, 20 API keys, and 20 invoices. <strong>This doesn't scale.</strong></p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- THE SOLUTION -->
+  <section>
+    <h2>The Solution</h2>
+    <p><strong>One API key. 53 tools. Any AI agent can call them instantly.</strong> Arch Tools is a unified API gateway that gives AI agents instant access to a curated library of production-ready tools through a single authentication point.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- HOW IT WORKS -->
+  <section>
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Register</h3>
+        <p>Create an account at archtools.dev</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Get Key</h3>
+        <p>Receive your API key instantly</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Call Any Tool</h3>
+        <p>One key unlocks all 53 tools</p>
+      </div>
+    </div>
+    <div class="code-block"><span class="comment"># That's it. One call, any tool.</span>
+curl https://archtools.dev/api/tools/web-search \
+  -H <span class="str">"Authorization: Bearer arch_your_key"</span> \
+  -d <span class="str">'{"query": "latest AI funding rounds"}'</span></div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- MCP + x402 -->
+  <section>
+    <h2>Key Differentiators</h2>
+    <div class="features">
+      <div class="feature-card">
+        <span class="badge badge-mcp">MCP Native</span>
+        <h3>Model Context Protocol</h3>
+        <p>Native MCP server integration — the industry standard for AI tool discovery. Claude Desktop, Cursor, Windsurf, and any MCP-compatible client get access to all 53 tools with 6 lines of config. Tools appear natively in the agent's environment. Zero custom code.</p>
+      </div>
+      <div class="feature-card">
+        <span class="badge badge-x402">x402 Protocol</span>
+        <h3>Autonomous Agent Payments</h3>
+        <p>AI agents pay with USDC across 15 blockchain networks. No human credit card required. The first API platform where agents can buy their own compute autonomously. Built on Coinbase Base — production-ready for the agentic economy.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- TOOL CATEGORIES -->
+  <section>
+    <h2>Tool Categories</h2>
+    <div class="categories">
+      <div class="cat">🔍 Web &amp; Search <span>12 tools</span></div>
+      <div class="cat">🤖 AI Generation <span>14 tools</span></div>
+      <div class="cat">💰 Crypto &amp; Finance <span>10 tools</span></div>
+      <div class="cat">🎙 Voice &amp; Media <span>8 tools</span></div>
+      <div class="cat">⚙️ Utility &amp; Validation <span>9 tools</span></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- TRACTION -->
+  <section>
+    <h2>Traction</h2>
+    <div class="traction-grid">
+      <div class="traction-item">
+        <div class="num">53</div>
+        <div class="label">Production Tools</div>
+      </div>
+      <div class="traction-item">
+        <div class="num">Live</div>
+        <div class="label">at archtools.dev</div>
+      </div>
+      <div class="traction-item">
+        <div class="num">MCP</div>
+        <div class="label">Server Published</div>
+      </div>
+      <div class="traction-item">
+        <div class="num">x402</div>
+        <div class="label">Protocol Integrated</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="company">MCMetaverse LLC · Columbia, SC</div>
+    <div class="contact">
+      <a href="mailto:support@archtools.dev">support@archtools.dev</a> &nbsp;|&nbsp; <a href="https://archtools.dev">archtools.dev</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
