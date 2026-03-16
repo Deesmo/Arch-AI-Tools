@@ -270,6 +270,9 @@ export const LOGIN_HTML = `<!DOCTYPE html>
     if (d.ok) window.location.href = '/dashboard';
   }).catch(() => {});
 </script>
+  <footer style="border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:48px;">
+    © 2026 MCMetaverse LLC · <a href="/terms.html" style="color:rgba(255,255,255,0.45);text-decoration:none;">Terms</a> · <a href="/privacy.html" style="color:rgba(255,255,255,0.45);text-decoration:none;">Privacy</a> · <a href="/docs" style="color:rgba(255,255,255,0.45);text-decoration:none;">Docs</a>
+  </footer>
 </body>
 </html>`;
 //# sourceMappingURL=loginHtml.js.map

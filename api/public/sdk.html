@@ -146,16 +146,14 @@
   <div class="wrap">
     <div class="nav-inner">
       <a href="/" class="logo">
-        <svg class="logo-mark" viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" fill="#07061A"/>
-          <path class="logo-arch-path" d="M16 5L27 26H5L16 5Z" fill="none" stroke="url(#ng)" stroke-width="2.2" stroke-linejoin="round"/>
-          <defs><linearGradient id="ng" x1="5" y1="5" x2="27" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9010"/><stop offset="1" stop-color="#FF2896"/></linearGradient></defs>
-        </svg>
+        <div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;">
+          <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav-sdk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-sdk"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-sdk)" filter="url(#arch-neon-nav-sdk)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+        </div>
         Arch Tools
       </a>
       <ul class="nav-links">
         <li><a href="/">Home</a></li>
-        <li><a href="/docs.html">Docs</a></li>
+        <li><a href="/docs">Docs</a></li>
         <li><a href="/sdk.html" style="color:var(--text)">SDK & CLI</a></li>
         <li><a href="/#pricing">Pricing</a></li>
         <li><a href="https://archtools.dev/v1/agent/register" class="nav-cta">Get API Key</a></li>
@@ -397,7 +395,7 @@ resp, _ := http.DefaultClient.Do(req)</pre>
     <div class="footer-inner">
       <div class="footer-links">
         <a href="/">Home</a>
-        <a href="/docs.html">Docs</a>
+        <a href="/docs">Docs</a>
         <a href="/openapi.json">OpenAPI</a>
         <a href="https://github.com/Deesmo/Arch-AI-Tools" target="_blank">GitHub</a>
       </div>
