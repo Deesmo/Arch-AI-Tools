@@ -30,6 +30,7 @@ import seoRouter from "./routes/seo.js";
 import legalRouter from "./routes/legal.js";
 import oauthRouter from "./routes/oauth.js";
 import authRouter, { verifySession } from "./routes/auth.js";
+import chatRouter from "./routes/chat.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -192,6 +193,9 @@ app.use("/v1/workflows", workflowsRouter);
 // Legal
 app.use("/legal", legalRouter);
 app.use("/auth", authRouter);
+
+// Chat widget (public, rate-limited server-side proxy)
+app.use("/api/chat", chatRouter);
 
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML));
