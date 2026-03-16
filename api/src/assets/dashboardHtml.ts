@@ -292,48 +292,46 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
 
     // Auto-load: deferred to ensure page is fully ready
-    window.addEventListener("DOMContentLoaded", function() {
-      setTimeout(async function() {
-        var params = new URLSearchParams(window.location.search);
-        var qKey = params.get("key");
-        if (qKey && qKey.startsWith("arch_")) {
-          document.getElementById("key-input").value = qKey;
-          localStorage.setItem("arch_api_key", qKey);
-          history.replaceState({}, "", "/dashboard");
-          await loadDashboard();
-          return;
-        }
-        // Try session cookie via /auth/api-key
-        try {
-          var meResp = await fetch("/auth/me", { credentials: "include" });
-          if (meResp.ok) {
-            var me = await meResp.json();
-            if (me.ok) {
-              var keyResp = await fetch("/auth/api-key", { credentials: "include" });
-              if (keyResp.ok) {
-                var kd = await keyResp.json();
-                if (kd.ok && kd.api_key) {
-                  document.getElementById("key-input").value = kd.api_key;
-                  localStorage.setItem("arch_api_key", kd.api_key);
-                  await loadDashboard();
-                  var navLinks = document.querySelector(".at-nav-links");
-                  if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
-                  return;
-                }
+    setTimeout(async function() {
+      var params = new URLSearchParams(window.location.search);
+      var qKey = params.get("key");
+      if (qKey && qKey.startsWith("arch_")) {
+        document.getElementById("key-input").value = qKey;
+        localStorage.setItem("arch_api_key", qKey);
+        history.replaceState({}, "", "/dashboard");
+        await loadDashboard();
+        return;
+      }
+      // Try session cookie via /auth/api-key
+      try {
+        var meResp = await fetch("/auth/me", { credentials: "include" });
+        if (meResp.ok) {
+          var me = await meResp.json();
+          if (me.ok) {
+            var keyResp = await fetch("/auth/api-key", { credentials: "include" });
+            if (keyResp.ok) {
+              var kd = await keyResp.json();
+              if (kd.ok && kd.api_key) {
+                document.getElementById("key-input").value = kd.api_key;
+                localStorage.setItem("arch_api_key", kd.api_key);
+                await loadDashboard();
+                var navLinks = document.querySelector(".at-nav-links");
+                if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
+                return;
               }
             }
           }
-        } catch(_) {}
-        // Fall back to localStorage
-        var saved = localStorage.getItem("arch_api_key");
-        if (saved) {
-          document.getElementById("key-input").value = saved;
-          await loadDashboard();
-        } else {
-          window.location.href = '/login?next=/dashboard';
         }
-      }, 0);
-    });
+      } catch(_) {}
+      // Fall back to localStorage
+      var saved = localStorage.getItem("arch_api_key");
+      if (saved) {
+        document.getElementById("key-input").value = saved;
+        await loadDashboard();
+      } else {
+        window.location.href = '/login?next=/dashboard';
+      }
+    }, 0);
 
     async function setPassword() {
       var pw = (document.getElementById("new-password").value || "").trim();
