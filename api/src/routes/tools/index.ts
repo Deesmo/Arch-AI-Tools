@@ -1695,7 +1695,24 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
       res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
-    res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: reqId() });
+    // Fallback 3: CryptoCompare (free, no key, different IP reputation)
+    try {
+      const ccmpUrl = `https://min-api.cryptocompare.com/data/top/mktcapfull?limit=${n}&tsym=USD`;
+      const ccmpResp = await fetch(ccmpUrl, { signal: AbortSignal.timeout(8000) });
+      if (ccmpResp.ok) {
+        const ccmpJson = await ccmpResp.json() as { Data: any[] };
+        const coins = (ccmpJson.Data || []).map((c: any, i: number) => ({
+          rank: i + 1, id: (c.CoinInfo?.Name || "").toLowerCase(), symbol: (c.CoinInfo?.Name || "").toLowerCase(), name: c.CoinInfo?.FullName || "",
+          price: c.RAW?.USD?.PRICE || 0,
+          market_cap: c.RAW?.USD?.MKTCAP || 0,
+          volume_24h: c.RAW?.USD?.TOTALVOLUME24HTO || 0,
+          change_24h: c.RAW?.USD?.CHANGEPCT24HOUR || 0,
+        }));
+        res.json({ ok: true, currency: "usd", coins, source: "cryptocompare_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
+      }
+    } catch { /* fall through */ }
+
+    res.status(502).json({ ok: false, error: "fetch_error", message: "All crypto data sources unavailable (CoinGecko, CoinCap, CryptoCompare). Try again shortly.", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
