@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@coinbase/agentkit": "^0.10.4",
     "@coinbase/cdp-sdk": "^1.45.0",
     "@mendable/firecrawl-js": "^4.15.4",
     "@prisma/client": "^5.22.0",
