@@ -24,7 +24,7 @@ const walletStore = new Map<string, WalletRecord>();
 
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
 // Creates a new CDP wallet for an authenticated agent.
-// Requires: @coinbase/agentkit + @coinbase/cdp-sdk (not yet installed)
+// @coinbase/cdp-sdk v1.45 installed. @coinbase/agentkit requires separate install.
 router.post(
   "/provision",
   requireAuth,
@@ -67,20 +67,20 @@ router.post(
 
     try {
       // Dynamic import so the server doesn't crash if @coinbase/agentkit isn't installed yet
-      // @ts-ignore — package not yet installed
+      // @ts-ignore — @coinbase/agentkit not yet installed
       const { CdpEvmWalletProvider } = await import("@coinbase/agentkit");
 
       const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
         apiKeyId: config.cdp.apiKeyId,
         apiKeySecret: config.cdp.apiKeySecret,
-        networkId: "base-mainnet",
+        networkId: "base" as any,
       });
 
       const address = walletProvider.getAddress();
 
       const walletRecord: WalletRecord = {
         address,
-        network: "base-mainnet",
+        network: "base" as any,
         label,
         createdAt: new Date().toISOString(),
       };
@@ -88,13 +88,13 @@ router.post(
       // Store wallet association
       walletStore.set(agentId, walletRecord);
 
-      logger.info({ agentId, address, network: "base-mainnet" }, "Wallet provisioned for agent");
+      logger.info({ agentId, address, network: "base" as any }, "Wallet provisioned for agent");
 
       res.status(201).json({
         ok: true,
         wallet: {
           address,
-          network: "base-mainnet",
+          network: "base" as any,
           label,
         },
       });
@@ -145,7 +145,6 @@ router.get(
 
     try {
       // Try to fetch on-chain USDC balance via CDP SDK
-      // @ts-ignore — package not yet installed
       const { CdpClient } = await import("@coinbase/cdp-sdk");
 
       const cdp = new CdpClient({
@@ -160,11 +159,11 @@ router.get(
       // fall back to returning wallet info without balance
       let usdcBalance = "unknown";
       try {
-        const balance = await cdp.evm.getTokenBalance({
+        const balance = await cdp.evm.listTokenBalances({
           address: wallet.address as `0x${string}`,
           token: USDC_BASE,
-          network: "base-mainnet",
-        });
+          network: "base" as any,
+        } as any);
         usdcBalance = balance?.toString() ?? "0";
       } catch {
         // Balance lookup not available or failed — return what we have

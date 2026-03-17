@@ -1,7 +1,7 @@
 {
   "name": "arch-ai-tools",
   "version": "1.6.0",
-  "description": "Arch Tools \u2014 30 production-ready API tools for developers and AI agents",
+  "description": "Arch Tools — 30 production-ready API tools for developers and AI agents",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@coinbase/cdp-sdk": "^1.45.0",
     "@mendable/firecrawl-js": "^4.15.4",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^10.42.0",
