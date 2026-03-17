@@ -37,7 +37,6 @@ import facilitatorRouter from "./routes/facilitator.js";
 import agentsRouter from "./routes/agents.js";
 import webhooksRouter from "./routes/webhooks.js";
 import mcpMarketplaceRouter from "./routes/mcp-marketplace.js";
-import referralRouter from "./routes/referral.js";
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
@@ -100,7 +99,7 @@ const registerLimiter = rateLimit({
 });
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
-    origin: true,
+    origin: config.corsOrigin,
     credentials: true,
     exposedHeaders: [
         "Payment-Required",
@@ -222,8 +221,6 @@ app.use("/api/v1/x402/playground", playgroundRouter);
 app.use("/api/v1/x402", x402PaymentsRouter);
 // Facilitator-as-a-Service — let other API providers use Arch Tools as their x402 facilitator
 app.use("/api/v1/facilitator", facilitatorRouter);
-// Referral system
-app.use("/api/v1/referral", referralRouter);
 // Agent Identity (KYA — Know Your Agent)
 app.use("/api/v1/agents", agentsRouter);
 // Webhooks — event notification system
