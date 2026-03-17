@@ -105,6 +105,7 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
+    dotfiles: 'allow',
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
@@ -112,8 +113,21 @@ app.use(express.static(path.join(__dirname, "../public"), {
         else if (filePath.match(/\.(png|jpg|svg|ico|webp)$/)) {
             res.setHeader('Cache-Control', 'public, max-age=86400');
         }
+        else if (filePath.endsWith('.json') && filePath.includes('.well-known')) {
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Content-Type', 'application/json');
+        }
     }
 }));
+// ─── .well-known/glama.json — Glama ownership verification ──────────────
+app.get("/.well-known/glama.json", (_req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.json({
+        "$schema": "https://glama.ai/mcp/schemas/server.json",
+        "maintainers": ["Deesmo"]
+    });
+});
 // ─── og-image.png — serve actual PNG from public directory ──────────────
 app.get("/og-image.png", (_req, res) => {
     res.setHeader("Content-Type", "image/png");
