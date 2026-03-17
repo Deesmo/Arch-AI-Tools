@@ -1,748 +1,261 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Arch Tools API (GPT Actions)",
-    "version": "1.8.0",
-    "description": "Top 30 tools from Arch Tools \u2014 web scraping, AI generation, crypto data, NLP, research, and more. Full API at https://archtools.dev"
+    "title": "Arch Tools API",
+    "version": "1.11.0",
+    "description": "64 AI-powered tools in a single API — web scraping, AI generation, crypto data, NLP, research, image generation, and more. Pay per use with API key or x402 USDC micropayments. Full platform at https://archtools.dev",
+    "contact": {
+      "name": "Arch Tools Support",
+      "url": "https://archtools.dev/developers",
+      "email": "support@archtools.dev"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://archtools.dev/terms"
+    }
   },
   "servers": [
     {
-      "url": "https://archtools.dev"
+      "url": "https://archtools.dev",
+      "description": "Production"
     }
+  ],
+  "tags": [
+    { "name": "Web", "description": "Web scraping, search, and extraction tools" },
+    { "name": "AI", "description": "AI text generation, analysis, and reasoning" },
+    { "name": "Image", "description": "Image generation and processing" },
+    { "name": "Crypto", "description": "Cryptocurrency data and market intelligence" },
+    { "name": "NLP", "description": "Natural language processing and text analysis" },
+    { "name": "Utility", "description": "General-purpose utility tools" },
+    { "name": "Media", "description": "Audio, video, and media processing" },
+    { "name": "Communication", "description": "Email and messaging tools" },
+    { "name": "Agent", "description": "Agent registration and management" },
+    { "name": "Agents Directory", "description": "Public agent directory and leaderboard" },
+    { "name": "Facilitator", "description": "x402 payment facilitation service" },
+    { "name": "Directory", "description": "x402 service directory" },
+    { "name": "Analytics", "description": "Usage analytics and reporting (admin)" },
+    { "name": "Billing", "description": "Subscription and payment management" },
+    { "name": "Auth", "description": "Authentication and account management" },
+    { "name": "OAuth", "description": "OAuth 2.1 with PKCE" },
+    { "name": "Webhooks", "description": "Webhook tools and Stripe webhooks" },
+    { "name": "Workflows", "description": "Multi-step workflow execution" },
+    { "name": "Wallet", "description": "Wallet management for x402 payments" }
   ],
   "paths": {
     "/v1/tools/web-scrape": {
       "post": {
         "operationId": "webScrape",
         "summary": "Scrape any public URL with optional CSS selector",
-        "tags": [
-          "Web"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
-                  "url": {
-                    "type": "string",
-                    "description": "URL to scrape"
-                  },
-                  "format": {
-                    "type": "string",
-                    "enum": [
-                      "markdown",
-                      "html",
-                      "text"
-                    ],
-                    "default": "markdown"
-                  },
-                  "selector": {
-                    "type": "string",
-                    "description": "CSS selector to extract specific element"
-                  }
+                  "url": { "type": "string", "description": "URL to scrape" },
+                  "format": { "type": "string", "enum": ["markdown", "html", "text"], "default": "markdown" },
+                  "selector": { "type": "string", "description": "CSS selector to extract specific element" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Scraped content"
-          }
-        }
+        "responses": { "200": { "description": "Scraped content" }, "402": { "description": "Payment required (x402)" }, "429": { "description": "Rate limit exceeded" } }
       }
     },
     "/v1/tools/extract-page": {
       "post": {
         "operationId": "extractPage",
         "summary": "Clean text, links, and metadata from any webpage",
-        "tags": [
-          "Web"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
-                  "url": {
-                    "type": "string",
-                    "description": "URL of the webpage to extract"
-                  },
-                  "include_links": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Include extracted links"
-                  }
+                  "url": { "type": "string", "description": "URL of the webpage to extract" },
+                  "include_links": { "type": "boolean", "default": true }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Clean text, links, and metadata from the page"
-          }
-        }
+        "responses": { "200": { "description": "Clean text, links, and metadata" } }
       }
     },
     "/v1/tools/web-search": {
       "post": {
         "operationId": "webSearch",
         "summary": "Real-time web search with AI-synthesized answer",
-        "tags": [
-          "Web"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "query"
-                ],
+                "required": ["query"],
                 "properties": {
-                  "query": {
-                    "type": "string",
-                    "description": "Search query"
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "default": 5,
-                    "description": "Number of source results"
-                  }
+                  "query": { "type": "string", "description": "Search query" },
+                  "limit": { "type": "integer", "default": 5, "description": "Number of source results" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "AI-synthesized answer with source citations"
-          }
-        }
+        "responses": { "200": { "description": "AI-synthesized answer with source citations" } }
       }
     },
     "/v1/tools/search-web": {
       "post": {
         "operationId": "searchWeb",
         "summary": "Web search with structured results (DuckDuckGo)",
-        "tags": [
-          "Web"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "query"
-                ],
+                "required": ["query"],
                 "properties": {
-                  "query": {
-                    "type": "string",
-                    "description": "Search query"
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "default": 10,
-                    "maximum": 20
-                  }
+                  "query": { "type": "string" },
+                  "limit": { "type": "integer", "default": 10, "maximum": 20 }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Search results"
-          }
-        }
+        "responses": { "200": { "description": "Search results" } }
       }
     },
-    "/v1/tools/ai-generate": {
+    "/v1/tools/rss-parse": {
       "post": {
-        "operationId": "aiGenerate",
-        "summary": "AI text generation via Claude",
-        "tags": [
-          "AI"
-        ],
+        "operationId": "rssParse",
+        "summary": "Parse and extract entries from any RSS/Atom feed",
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "prompt"
-                ],
+                "required": ["url"],
                 "properties": {
-                  "prompt": {
-                    "type": "string",
-                    "description": "The prompt or question"
-                  },
-                  "model": {
-                    "type": "string",
-                    "enum": [
-                      "claude",
-                      "gpt4",
-                      "grok",
-                      "gemini"
-                    ],
-                    "default": "claude",
-                    "description": "AI model to use"
-                  },
-                  "system": {
-                    "type": "string",
-                    "description": "System prompt / persona"
-                  },
-                  "max_tokens": {
-                    "type": "integer",
-                    "default": 1024
-                  }
+                  "url": { "type": "string", "description": "RSS or Atom feed URL" },
+                  "limit": { "type": "integer", "default": 10 }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Generated text"
-          }
-        }
-      }
-    },
-    "/v1/tools/ai-oracle": {
-      "post": {
-        "operationId": "aiOracle",
-        "summary": "Premium reasoning with structured analysis and confidence levels",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "question"
-                ],
-                "properties": {
-                  "question": {
-                    "type": "string",
-                    "description": "Question or topic to analyze"
-                  },
-                  "context": {
-                    "type": "string",
-                    "description": "Additional context for the analysis"
-                  },
-                  "depth": {
-                    "type": "string",
-                    "enum": [
-                      "quick",
-                      "standard",
-                      "deep"
-                    ],
-                    "default": "standard",
-                    "description": "Analysis depth level"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Structured analysis with confidence levels and reasoning"
-          }
-        }
-      }
-    },
-    "/v1/tools/image-generate": {
-      "post": {
-        "operationId": "imageGenerate",
-        "summary": "Generate images from text prompts",
-        "tags": [
-          "Image"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "prompt"
-                ],
-                "properties": {
-                  "prompt": {
-                    "type": "string",
-                    "description": "Image description / prompt"
-                  },
-                  "size": {
-                    "type": "string",
-                    "enum": [
-                      "1024x1024",
-                      "1792x1024",
-                      "1024x1792"
-                    ],
-                    "default": "1024x1024"
-                  },
-                  "style": {
-                    "type": "string",
-                    "enum": [
-                      "vivid",
-                      "natural"
-                    ],
-                    "default": "vivid"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Generated image URL"
-          }
-        }
-      }
-    },
-    "/v1/tools/summarize": {
-      "post": {
-        "operationId": "summarize",
-        "summary": "Summarize in 5 styles (bullets, tldr, executive\u2026)",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text to summarize"
-                  },
-                  "style": {
-                    "type": "string",
-                    "enum": [
-                      "bullets",
-                      "tldr",
-                      "executive",
-                      "paragraph",
-                      "headline"
-                    ],
-                    "default": "bullets",
-                    "description": "Summary style"
-                  },
-                  "max_length": {
-                    "type": "integer",
-                    "description": "Maximum summary length in words"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Summarized text in the requested style"
-          }
-        }
-      }
-    },
-    "/v1/tools/sentiment-analysis": {
-      "post": {
-        "operationId": "sentimentAnalysis",
-        "summary": "Sentiment + emotion detection (joy, anger, fear\u2026)",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text to analyze"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Sentiment score and detected emotions"
-          }
-        }
-      }
-    },
-    "/v1/tools/extract-entities": {
-      "post": {
-        "operationId": "extractEntities",
-        "summary": "NER: people, orgs, locations, dates, money",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text to extract entities from"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted entities categorized by type"
-          }
-        }
-      }
-    },
-    "/v1/tools/language-detect": {
-      "post": {
-        "operationId": "languageDetect",
-        "summary": "Detect language with confidence score (100+ languages)",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text to detect the language of"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Detected language with confidence score"
-          }
-        }
-      }
-    },
-    "/v1/tools/pii-detect": {
-      "post": {
-        "operationId": "piiDetect",
-        "summary": "Detect and optionally redact PII",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text to scan for PII"
-                  },
-                  "redact": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Whether to return redacted version of the text"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Detected PII items with optional redacted text"
-          }
-        }
-      }
-    },
-    "/v1/tools/ocr-extract": {
-      "post": {
-        "operationId": "ocrExtract",
-        "summary": "Extract text from images (URL or base64)",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "image_url": {
-                    "type": "string",
-                    "description": "Public URL of the image"
-                  },
-                  "image_base64": {
-                    "type": "string",
-                    "description": "Base64-encoded image (alternative to image_url)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted text from image"
-          }
-        }
-      }
-    },
-    "/v1/tools/extract-pdf": {
-      "post": {
-        "operationId": "extractPdf",
-        "summary": "Extract text from a PDF (URL or base64)",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "pdf_url": {
-                    "type": "string",
-                    "description": "Public URL of the PDF"
-                  },
-                  "pdf_base64": {
-                    "type": "string",
-                    "description": "Base64-encoded PDF (alternative to pdf_url)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted PDF content"
-          }
-        }
+        "responses": { "200": { "description": "Parsed feed entries" } }
       }
     },
     "/v1/tools/screenshot-capture": {
       "post": {
         "operationId": "screenshotCapture",
         "summary": "Capture a screenshot of any webpage",
-        "tags": [
-          "Web"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
-                  "url": {
-                    "type": "string",
-                    "description": "URL to screenshot"
-                  },
-                  "width": {
-                    "type": "integer",
-                    "default": 1280,
-                    "description": "Viewport width in pixels"
-                  },
-                  "height": {
-                    "type": "integer",
-                    "default": 800,
-                    "description": "Viewport height in pixels"
-                  },
-                  "full_page": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Capture full scrollable page"
-                  },
-                  "format": {
-                    "type": "string",
-                    "enum": [
-                      "png",
-                      "jpeg"
-                    ],
-                    "default": "png"
-                  }
+                  "url": { "type": "string" },
+                  "width": { "type": "integer", "default": 1280 },
+                  "height": { "type": "integer", "default": 800 },
+                  "full_page": { "type": "boolean", "default": false },
+                  "format": { "type": "string", "enum": ["png", "jpeg"], "default": "png" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Base64 encoded screenshot image"
-          }
-        }
+        "responses": { "200": { "description": "Base64 encoded screenshot" } }
       }
     },
     "/v1/tools/html-to-markdown": {
       "post": {
         "operationId": "htmlToMarkdown",
         "summary": "Convert HTML content to clean Markdown",
-        "tags": [
-          "Utility"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "html"
-                ],
                 "properties": {
-                  "html": {
-                    "type": "string",
-                    "description": "HTML content to convert"
-                  },
-                  "url": {
-                    "type": "string",
-                    "description": "URL to fetch and convert (alternative to html)"
-                  }
+                  "html": { "type": "string", "description": "HTML content to convert" },
+                  "url": { "type": "string", "description": "URL to fetch and convert" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Converted Markdown text"
-          }
-        }
+        "responses": { "200": { "description": "Converted Markdown text" } }
       }
     },
-    "/v1/tools/crypto-price": {
+    "/v1/tools/browser-task": {
       "post": {
-        "operationId": "cryptoPrice",
-        "summary": "Get current cryptocurrency price and market data",
-        "tags": [
-          "Crypto"
-        ],
+        "operationId": "browserTask",
+        "summary": "Automate browser interactions via Playwright",
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "symbol"
-                ],
+                "required": ["url", "task"],
                 "properties": {
-                  "symbol": {
-                    "type": "string",
-                    "description": "CoinGecko coin ID (e.g. bitcoin, ethereum, solana)"
-                  }
+                  "url": { "type": "string", "description": "Starting URL" },
+                  "task": { "type": "string", "description": "Task description for the browser agent" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Current price and market data (powered by CoinGecko)"
-          }
-        }
+        "responses": { "200": { "description": "Task result and extracted data" } }
       }
     },
-    "/v1/tools/crypto-market-cap": {
+    "/v1/tools/url-shorten": {
       "post": {
-        "operationId": "cryptoMarketCap",
-        "summary": "Get top cryptocurrencies by market cap",
-        "tags": [
-          "Crypto"
-        ],
+        "operationId": "urlShorten",
+        "summary": "Shorten a URL",
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["url"],
                 "properties": {
-                  "limit": {
-                    "type": "integer",
-                    "default": 10,
-                    "description": "Number of top coins to return"
-                  },
-                  "currency": {
-                    "type": "string",
-                    "default": "usd",
-                    "description": "Fiat currency for prices"
-                  }
+                  "url": { "type": "string" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Top cryptocurrencies ranked by market cap (powered by CoinGecko)"
-          }
-        }
+        "responses": { "200": { "description": "Shortened URL" } }
       }
     },
-    "/v1/tools/crypto-fear-greed": {
+    "/v1/tools/ip-lookup": {
       "post": {
-        "operationId": "cryptoFearGreed",
-        "summary": "Get the crypto Fear & Greed Index",
-        "tags": [
-          "Crypto"
-        ],
+        "operationId": "ipLookup",
+        "summary": "Geo, ISP, VPN/proxy detection for any IP",
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
@@ -750,438 +263,1518 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "limit": {
-                    "type": "integer",
-                    "default": 1,
-                    "description": "Number of historical entries (1 = current)"
-                  }
+                  "ip": { "type": "string", "description": "IP address (uses caller's IP if omitted)" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Fear & Greed Index value and classification"
-          }
-        }
-      }
-    },
-    "/v1/tools/crypto-news": {
-      "post": {
-        "operationId": "cryptoNews",
-        "summary": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine",
-        "tags": [
-          "Crypto"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "symbol": {
-                    "type": "string",
-                    "description": "Filter by coin symbol (e.g. BTC, ETH)"
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "default": 10,
-                    "maximum": 20
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Latest crypto news articles"
-          }
-        }
-      }
-    },
-    "/v1/tools/token-lookup": {
-      "post": {
-        "operationId": "tokenLookup",
-        "summary": "Search CoinGecko for a token by name or ticker symbol",
-        "tags": [
-          "Crypto"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "query"
-                ],
-                "properties": {
-                  "query": {
-                    "type": "string",
-                    "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Token metadata including CoinGecko ID (powered by CoinGecko)"
-          }
-        }
-      }
-    },
-    "/v1/tools/currency-convert": {
-      "post": {
-        "operationId": "currencyConvert",
-        "summary": "170+ currencies with live rates",
-        "tags": [
-          "Utility"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "amount",
-                  "from",
-                  "to"
-                ],
-                "properties": {
-                  "amount": {
-                    "type": "number",
-                    "description": "Amount to convert"
-                  },
-                  "from": {
-                    "type": "string",
-                    "description": "Source currency code (e.g. USD, EUR, GBP)"
-                  },
-                  "to": {
-                    "type": "string",
-                    "description": "Target currency code (e.g. EUR, JPY, BTC)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Converted amount with exchange rate"
-          }
-        }
-      }
-    },
-    "/v1/tools/email-verify": {
-      "post": {
-        "operationId": "emailVerify",
-        "summary": "MX check + disposable domain detection",
-        "tags": [
-          "Utility"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "description": "Email address to verify"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verification result with MX status and disposable flag"
-          }
-        }
+        "responses": { "200": { "description": "Geolocation and ISP data" } }
       }
     },
     "/v1/tools/whois-lookup": {
       "post": {
         "operationId": "whoisLookup",
         "summary": "Domain registration, expiry, nameservers via RDAP",
-        "tags": [
-          "Web"
-        ],
+        "tags": ["Web"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "domain"
-                ],
+                "required": ["domain"],
                 "properties": {
-                  "domain": {
-                    "type": "string",
-                    "description": "Domain name to look up (e.g. example.com)"
-                  }
+                  "domain": { "type": "string" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Domain registration details, expiry, and nameservers"
-          }
-        }
+        "responses": { "200": { "description": "Domain registration details" } }
       }
     },
-    "/v1/tools/ip-lookup": {
+    "/v1/tools/ai-generate": {
       "post": {
-        "operationId": "ipLookup",
-        "summary": "Geo, ISP, VPN/proxy detection",
-        "tags": [
-          "Web"
-        ],
+        "operationId": "aiGenerate",
+        "summary": "AI text generation (Claude, GPT-4, Grok, Gemini)",
+        "tags": ["AI"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["prompt"],
                 "properties": {
-                  "ip": {
-                    "type": "string",
-                    "description": "IP address (uses caller's IP if omitted)"
-                  }
+                  "prompt": { "type": "string" },
+                  "model": { "type": "string", "enum": ["claude", "gpt4", "grok", "gemini"], "default": "claude" },
+                  "mode": { "type": "string", "enum": ["fast", "smart", "deep"], "description": "AI routing mode preset" },
+                  "system": { "type": "string" },
+                  "max_tokens": { "type": "integer", "default": 1024 }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Geolocation, ISP, and VPN/proxy detection data"
-          }
-        }
+        "responses": { "200": { "description": "Generated text" } }
       }
     },
-    "/v1/tools/qr-code": {
+    "/v1/tools/ai-oracle": {
       "post": {
-        "operationId": "qrCode",
-        "summary": "Generate QR codes (PNG or SVG)",
-        "tags": [
-          "Utility"
-        ],
+        "operationId": "aiOracle",
+        "summary": "Premium reasoning with structured analysis and confidence levels",
+        "tags": ["AI"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "text"
-                ],
+                "required": ["question"],
                 "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text or URL to encode"
-                  },
-                  "size": {
-                    "type": "integer",
-                    "default": 200,
-                    "description": "Image size in pixels"
-                  },
-                  "format": {
-                    "type": "string",
-                    "enum": [
-                      "png",
-                      "svg"
-                    ],
-                    "default": "png"
-                  }
+                  "question": { "type": "string" },
+                  "context": { "type": "string" },
+                  "depth": { "type": "string", "enum": ["quick", "standard", "deep"], "default": "standard" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Base64 encoded QR code image"
-          }
-        }
+        "responses": { "200": { "description": "Structured analysis with confidence levels" } }
       }
     },
-    "/v1/tools/news-search": {
+    "/v1/tools/summarize": {
       "post": {
-        "operationId": "newsSearch",
-        "summary": "Search real-time news articles by keyword",
-        "tags": [
-          "Web"
-        ],
+        "operationId": "summarize",
+        "summary": "Summarize text in 5 styles (bullets, tldr, executive…)",
+        "tags": ["AI"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "query"
-                ],
+                "required": ["text"],
                 "properties": {
-                  "query": {
-                    "type": "string",
-                    "description": "News search query"
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "default": 10,
-                    "description": "Maximum number of articles to return"
-                  },
-                  "language": {
-                    "type": "string",
-                    "default": "en",
-                    "description": "ISO-639-1 language code"
-                  }
+                  "text": { "type": "string" },
+                  "style": { "type": "string", "enum": ["bullets", "tldr", "executive", "paragraph", "headline"], "default": "bullets" },
+                  "max_length": { "type": "integer" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "News articles with title, source, date, and URL"
-          }
-        }
+        "responses": { "200": { "description": "Summarized text" } }
       }
     },
     "/v1/tools/research-report": {
       "post": {
         "operationId": "researchReport",
         "summary": "Generate a structured research report on any topic",
-        "tags": [
-          "AI"
-        ],
+        "tags": ["AI"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "topic"
-                ],
+                "required": ["topic"],
                 "properties": {
-                  "topic": {
-                    "type": "string",
-                    "description": "Research topic or question"
-                  },
-                  "depth": {
-                    "type": "string",
-                    "enum": [
-                      "brief",
-                      "standard",
-                      "comprehensive"
-                    ],
-                    "default": "standard",
-                    "description": "Report depth level"
-                  },
-                  "format": {
-                    "type": "string",
-                    "enum": [
-                      "markdown",
-                      "json"
-                    ],
-                    "default": "markdown"
-                  }
+                  "topic": { "type": "string" },
+                  "depth": { "type": "string", "enum": ["brief", "standard", "comprehensive"], "default": "standard" },
+                  "format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Structured research report with sources"
-          }
-        }
+        "responses": { "200": { "description": "Structured research report with sources" } }
       }
     },
     "/v1/tools/fact-check": {
       "post": {
         "operationId": "factCheck",
         "summary": "Verify claims against real-time web sources",
-        "tags": [
-          "AI"
-        ],
+        "tags": ["AI"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "claim"
-                ],
+                "required": ["claim"],
                 "properties": {
-                  "claim": {
-                    "type": "string",
-                    "description": "The claim or statement to verify"
-                  },
-                  "context": {
-                    "type": "string",
-                    "description": "Additional context about the claim"
-                  }
+                  "claim": { "type": "string" },
+                  "context": { "type": "string" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Fact-check result with verdict, sources, and confidence"
+        "responses": { "200": { "description": "Fact-check result with verdict and sources" } }
+      }
+    },
+    "/v1/tools/workflow-agent": {
+      "post": {
+        "operationId": "workflowAgent",
+        "summary": "Execute multi-step AI workflows with tool chaining",
+        "tags": ["AI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["task"],
+                "properties": {
+                  "task": { "type": "string", "description": "Task description for the workflow agent" },
+                  "tools": { "type": "array", "items": { "type": "string" }, "description": "Tools to make available" }
+                }
+              }
+            }
           }
-        }
+        },
+        "responses": { "200": { "description": "Workflow execution result" } }
+      }
+    },
+    "/v1/tools/session-create": {
+      "post": {
+        "operationId": "sessionCreate",
+        "summary": "Create a managed conversation session for agents",
+        "tags": ["AI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "system": { "type": "string", "description": "System prompt for the session" },
+                  "model": { "type": "string", "default": "claude" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Session ID and metadata" } }
+      }
+    },
+    "/v1/tools/session-message": {
+      "post": {
+        "operationId": "sessionMessage",
+        "summary": "Send a message in an existing conversation session",
+        "tags": ["AI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["session_id", "message"],
+                "properties": {
+                  "session_id": { "type": "string" },
+                  "message": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "AI response with conversation context" } }
+      }
+    },
+    "/v1/tools/semantic-search": {
+      "post": {
+        "operationId": "semanticSearch",
+        "summary": "Semantic vector search across web content",
+        "tags": ["AI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string" },
+                  "limit": { "type": "integer", "default": 5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Semantically relevant results" } }
+      }
+    },
+    "/v1/tools/image-generate": {
+      "post": {
+        "operationId": "imageGenerate",
+        "summary": "Generate images from text prompts (DALL-E 3)",
+        "tags": ["Image"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "size": { "type": "string", "enum": ["1024x1024", "1792x1024", "1024x1792"], "default": "1024x1024" },
+                  "style": { "type": "string", "enum": ["vivid", "natural"], "default": "vivid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Generated image URL" } }
+      }
+    },
+    "/v1/tools/design-create": {
+      "post": {
+        "operationId": "designCreate",
+        "summary": "Generate design assets and graphics",
+        "tags": ["Image"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "type": { "type": "string", "description": "Design type (logo, banner, icon, etc.)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Generated design asset" } }
+      }
+    },
+    "/v1/tools/image-remove-bg": {
+      "post": {
+        "operationId": "imageRemoveBg",
+        "summary": "Remove background from images",
+        "tags": ["Image"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["image_url"],
+                "properties": {
+                  "image_url": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Image with background removed" } }
+      }
+    },
+    "/v1/tools/ocr-extract": {
+      "post": {
+        "operationId": "ocrExtract",
+        "summary": "Extract text from images (OCR)",
+        "tags": ["Image"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image_url": { "type": "string" },
+                  "image_base64": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Extracted text from image" } }
+      }
+    },
+    "/v1/tools/sentiment-analysis": {
+      "post": {
+        "operationId": "sentimentAnalysis",
+        "summary": "Sentiment + emotion detection (joy, anger, fear…)",
+        "tags": ["NLP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Sentiment score and detected emotions" } }
+      }
+    },
+    "/v1/tools/extract-entities": {
+      "post": {
+        "operationId": "extractEntities",
+        "summary": "Named Entity Recognition: people, orgs, locations, dates",
+        "tags": ["NLP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Extracted entities by type" } }
+      }
+    },
+    "/v1/tools/language-detect": {
+      "post": {
+        "operationId": "languageDetect",
+        "summary": "Detect language with confidence score (100+ languages)",
+        "tags": ["NLP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Detected language with confidence" } }
+      }
+    },
+    "/v1/tools/pii-detect": {
+      "post": {
+        "operationId": "piiDetect",
+        "summary": "Detect and optionally redact PII",
+        "tags": ["NLP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "redact": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Detected PII items with optional redaction" } }
+      }
+    },
+    "/v1/tools/readability-score": {
+      "post": {
+        "operationId": "readabilityScore",
+        "summary": "Calculate readability scores (Flesch-Kincaid, etc.)",
+        "tags": ["NLP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Readability scores and metrics" } }
+      }
+    },
+    "/v1/tools/regex-generate": {
+      "post": {
+        "operationId": "regexGenerate",
+        "summary": "Generate regex patterns from natural language descriptions",
+        "tags": ["NLP"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["description"],
+                "properties": {
+                  "description": { "type": "string", "description": "Natural language description of the pattern" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Generated regex pattern with explanation" } }
+      }
+    },
+    "/v1/tools/crypto-price": {
+      "post": {
+        "operationId": "cryptoPrice",
+        "summary": "Get current cryptocurrency price and market data",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["symbol"],
+                "properties": {
+                  "symbol": { "type": "string", "description": "CoinGecko coin ID (e.g. bitcoin, ethereum)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Current price and market data" } }
+      }
+    },
+    "/v1/tools/crypto-market-cap": {
+      "post": {
+        "operationId": "cryptoMarketCap",
+        "summary": "Top cryptocurrencies by market cap",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": { "type": "integer", "default": 10 },
+                  "currency": { "type": "string", "default": "usd" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Top coins by market cap" } }
+      }
+    },
+    "/v1/tools/crypto-fear-greed": {
+      "post": {
+        "operationId": "cryptoFearGreed",
+        "summary": "Get the crypto Fear & Greed Index",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": { "type": "integer", "default": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Fear & Greed Index" } }
+      }
+    },
+    "/v1/tools/crypto-news": {
+      "post": {
+        "operationId": "cryptoNews",
+        "summary": "Latest crypto news from top sources",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "symbol": { "type": "string" },
+                  "limit": { "type": "integer", "default": 10, "maximum": 20 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Latest crypto news" } }
+      }
+    },
+    "/v1/tools/crypto-sentiment": {
+      "post": {
+        "operationId": "cryptoSentiment",
+        "summary": "Social sentiment analysis for cryptocurrencies",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["symbol"],
+                "properties": {
+                  "symbol": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Sentiment metrics and social data" } }
+      }
+    },
+    "/v1/tools/crypto-ohlcv": {
+      "post": {
+        "operationId": "cryptoOhlcv",
+        "summary": "Historical OHLCV (Open, High, Low, Close, Volume) data",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["symbol"],
+                "properties": {
+                  "symbol": { "type": "string" },
+                  "days": { "type": "integer", "default": 30 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OHLCV historical data" } }
+      }
+    },
+    "/v1/tools/token-lookup": {
+      "post": {
+        "operationId": "tokenLookup",
+        "summary": "Search for a token by name or ticker",
+        "tags": ["Crypto"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Token metadata" } }
+      }
+    },
+    "/v1/tools/currency-convert": {
+      "post": {
+        "operationId": "currencyConvert",
+        "summary": "Convert between 170+ currencies with live rates",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amount", "from", "to"],
+                "properties": {
+                  "amount": { "type": "number" },
+                  "from": { "type": "string" },
+                  "to": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Converted amount with rate" } }
+      }
+    },
+    "/v1/tools/email-verify": {
+      "post": {
+        "operationId": "emailVerify",
+        "summary": "MX check + disposable domain detection",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Verification result" } }
+      }
+    },
+    "/v1/tools/phone-validate": {
+      "post": {
+        "operationId": "phoneValidate",
+        "summary": "Validate and format phone numbers internationally",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone"],
+                "properties": {
+                  "phone": { "type": "string" },
+                  "country": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Validated phone number info" } }
+      }
+    },
+    "/v1/tools/qr-code": {
+      "post": {
+        "operationId": "qrCode",
+        "summary": "Generate QR codes (PNG or SVG)",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "size": { "type": "integer", "default": 200 },
+                  "format": { "type": "string", "enum": ["png", "svg"], "default": "png" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "QR code image" } }
+      }
+    },
+    "/v1/tools/barcode-generate": {
+      "post": {
+        "operationId": "barcodeGenerate",
+        "summary": "Generate barcodes in various formats",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "format": { "type": "string", "default": "code128" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Barcode image" } }
       }
     },
     "/v1/tools/domain-check": {
       "post": {
         "operationId": "domainCheck",
-        "summary": "Check if a domain is available or registered via RDAP (no key needed)",
-        "tags": [
-          "Utility"
-        ],
+        "summary": "Check domain availability via RDAP",
+        "tags": ["Utility"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "domain"
-                ],
+                "required": ["domain"],
                 "properties": {
-                  "domain": {
-                    "type": "string",
-                    "description": "Domain name (e.g. example.com)"
-                  }
+                  "domain": { "type": "string" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Registration status, expiry, nameservers"
+        "responses": { "200": { "description": "Domain availability status" } }
+      }
+    },
+    "/v1/tools/generate-uuid": {
+      "post": {
+        "operationId": "generateUuid",
+        "summary": "Generate UUIDs (v1 or v4)",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": { "type": "integer", "enum": [1, 4], "default": 4 },
+                  "count": { "type": "integer", "default": 1 }
+                }
+              }
+            }
           }
-        }
+        },
+        "responses": { "200": { "description": "Generated UUIDs" } }
+      }
+    },
+    "/v1/tools/generate-hash": {
+      "post": {
+        "operationId": "generateHash",
+        "summary": "Generate cryptographic hashes (MD5, SHA-256, etc.)",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "algorithm": { "type": "string", "enum": ["md5", "sha1", "sha256", "sha512"], "default": "sha256" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Hash digest" } }
+      }
+    },
+    "/v1/tools/validate-data": {
+      "post": {
+        "operationId": "validateData",
+        "summary": "Validate JSON data against a schema",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["data", "schema"],
+                "properties": {
+                  "data": { "description": "Data to validate" },
+                  "schema": { "description": "JSON Schema to validate against" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Validation result" } }
+      }
+    },
+    "/v1/tools/convert-format": {
+      "post": {
+        "operationId": "convertFormat",
+        "summary": "Convert between data formats (JSON, YAML, CSV, XML)",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["data", "from", "to"],
+                "properties": {
+                  "data": { "type": "string" },
+                  "from": { "type": "string", "enum": ["json", "yaml", "csv", "xml"] },
+                  "to": { "type": "string", "enum": ["json", "yaml", "csv", "xml"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Converted data" } }
+      }
+    },
+    "/v1/tools/transform-text": {
+      "post": {
+        "operationId": "transformText",
+        "summary": "Transform text (uppercase, slugify, camelCase, etc.)",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text", "transform"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "transform": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Transformed text" } }
+      }
+    },
+    "/v1/tools/extract-metadata": {
+      "post": {
+        "operationId": "extractMetadata",
+        "summary": "Extract metadata from files and URLs",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Extracted metadata" } }
+      }
+    },
+    "/v1/tools/diff-text": {
+      "post": {
+        "operationId": "diffText",
+        "summary": "Compare two texts and get a diff",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text1", "text2"],
+                "properties": {
+                  "text1": { "type": "string" },
+                  "text2": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Text diff" } }
+      }
+    },
+    "/v1/tools/timezone-convert": {
+      "post": {
+        "operationId": "timezoneConvert",
+        "summary": "Convert between timezones",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["time", "from", "to"],
+                "properties": {
+                  "time": { "type": "string" },
+                  "from": { "type": "string" },
+                  "to": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Converted time" } }
+      }
+    },
+    "/v1/tools/jsonpath-query": {
+      "post": {
+        "operationId": "jsonpathQuery",
+        "summary": "Query JSON data using JSONPath expressions",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["data", "query"],
+                "properties": {
+                  "data": { "description": "JSON data to query" },
+                  "query": { "type": "string", "description": "JSONPath expression" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Query results" } }
+      }
+    },
+    "/v1/tools/webhook-send": {
+      "post": {
+        "operationId": "webhookSend",
+        "summary": "Send HTTP webhooks with custom payload and headers",
+        "tags": ["Webhooks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["webhook_url"],
+                "properties": {
+                  "webhook_url": { "type": "string" },
+                  "payload": { "description": "JSON payload to send" },
+                  "headers": { "type": "object", "description": "Custom headers" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Webhook delivery result" } }
+      }
+    },
+    "/v1/tools/text-to-speech": {
+      "post": {
+        "operationId": "textToSpeech",
+        "summary": "Convert text to speech audio (ElevenLabs)",
+        "tags": ["Media"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "voice": { "type": "string", "description": "Voice ID or name" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Audio file URL" } }
+      }
+    },
+    "/v1/tools/transcribe-audio": {
+      "post": {
+        "operationId": "transcribeAudio",
+        "summary": "Transcribe audio to text (OpenAI Whisper)",
+        "tags": ["Media"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["audio_url"],
+                "properties": {
+                  "audio_url": { "type": "string" },
+                  "language": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Transcribed text" } }
+      }
+    },
+    "/v1/tools/video-generate": {
+      "post": {
+        "operationId": "videoGenerate",
+        "summary": "Generate short video clips from text prompts",
+        "tags": ["Media"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "duration": { "type": "integer", "default": 5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Video URL" } }
+      }
+    },
+    "/v1/tools/extract-pdf": {
+      "post": {
+        "operationId": "extractPdf",
+        "summary": "Extract text from PDFs",
+        "tags": ["Utility"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pdf_url": { "type": "string" },
+                  "pdf_base64": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Extracted PDF content" } }
+      }
+    },
+    "/v1/tools/email-send": {
+      "post": {
+        "operationId": "emailSend",
+        "summary": "Send emails via Resend",
+        "tags": ["Communication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["to", "subject", "body"],
+                "properties": {
+                  "to": { "type": "string" },
+                  "subject": { "type": "string" },
+                  "body": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Email delivery result" } }
+      }
+    },
+    "/v1/tools/email-find": {
+      "post": {
+        "operationId": "emailFind",
+        "summary": "Find professional email addresses by name and company",
+        "tags": ["Communication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "domain"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "domain": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Found email addresses" } }
+      }
+    },
+    "/v1/tools/social-post": {
+      "post": {
+        "operationId": "socialPost",
+        "summary": "Generate social media post content",
+        "tags": ["Communication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["topic"],
+                "properties": {
+                  "topic": { "type": "string" },
+                  "platform": { "type": "string", "enum": ["twitter", "linkedin", "instagram"] },
+                  "tone": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Generated social post" } }
+      }
+    },
+    "/v1/tools/news-search": {
+      "post": {
+        "operationId": "newsSearch",
+        "summary": "Search real-time news articles",
+        "tags": ["Web"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string" },
+                  "limit": { "type": "integer", "default": 10 },
+                  "language": { "type": "string", "default": "en" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "News articles" } }
+      }
+    },
+    "/v1/agent/register": {
+      "post": {
+        "operationId": "agentRegister",
+        "summary": "Register a new agent and get an API key",
+        "tags": ["Agent"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "name": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "API key and agent details" } }
+      }
+    },
+    "/v1/agent/balance": {
+      "get": {
+        "operationId": "agentBalance",
+        "summary": "Get current credit balance",
+        "tags": ["Agent"],
+        "responses": { "200": { "description": "Credit balance" } }
+      }
+    },
+    "/v1/agent/usage": {
+      "get": {
+        "operationId": "agentUsage",
+        "summary": "Get usage history and statistics",
+        "tags": ["Agent"],
+        "responses": { "200": { "description": "Usage history" } }
+      }
+    },
+    "/api/v1/agents/register": {
+      "post": {
+        "operationId": "agentsRegister",
+        "summary": "Register an agent in the public directory",
+        "tags": ["Agents Directory"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "description"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "walletAddress": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Agent registration result" } }
+      }
+    },
+    "/api/v1/agents/leaderboard": {
+      "get": {
+        "operationId": "agentsLeaderboard",
+        "summary": "Get the agent leaderboard ranked by usage",
+        "tags": ["Agents Directory"],
+        "responses": { "200": { "description": "Ranked agent list" } }
+      }
+    },
+    "/api/v1/agents/{agentId}": {
+      "get": {
+        "operationId": "agentsGetById",
+        "summary": "Get agent profile by ID",
+        "tags": ["Agents Directory"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Agent profile" } }
+      }
+    },
+    "/api/v1/facilitator/register": {
+      "post": {
+        "operationId": "facilitatorRegister",
+        "summary": "Register as an x402 payment facilitator",
+        "tags": ["Facilitator"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "walletAddress"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "walletAddress": { "type": "string" },
+                  "webhookUrl": { "type": "string" },
+                  "networks": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Facilitator credentials" } }
+      }
+    },
+    "/api/v1/facilitator/verify": {
+      "post": {
+        "operationId": "facilitatorVerify",
+        "summary": "Verify an x402 payment",
+        "tags": ["Facilitator"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentHeader"],
+                "properties": {
+                  "paymentHeader": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Verification result" } }
+      }
+    },
+    "/api/v1/facilitator/settle": {
+      "post": {
+        "operationId": "facilitatorSettle",
+        "summary": "Settle a verified x402 payment on-chain",
+        "tags": ["Facilitator"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentId"],
+                "properties": {
+                  "paymentId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Settlement result with transaction hash" } }
+      }
+    },
+    "/api/v1/facilitator/networks": {
+      "get": {
+        "operationId": "facilitatorNetworks",
+        "summary": "List supported blockchain networks",
+        "tags": ["Facilitator"],
+        "responses": { "200": { "description": "Supported networks" } }
+      }
+    },
+    "/api/v1/facilitator/health": {
+      "get": {
+        "operationId": "facilitatorHealth",
+        "summary": "Facilitator service health check",
+        "tags": ["Facilitator"],
+        "responses": { "200": { "description": "Health status" } }
+      }
+    },
+    "/api/v1/x402/directory": {
+      "get": {
+        "operationId": "directoryList",
+        "summary": "List all services in the x402 directory",
+        "tags": ["Directory"],
+        "responses": { "200": { "description": "Directory listings" } }
+      }
+    },
+    "/api/v1/x402/directory/search": {
+      "get": {
+        "operationId": "directorySearch",
+        "summary": "Search the service directory",
+        "tags": ["Directory"],
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Search results" } }
+      }
+    },
+    "/api/v1/x402/directory/{id}": {
+      "get": {
+        "operationId": "directoryGetById",
+        "summary": "Get a specific directory listing",
+        "tags": ["Directory"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Directory entry" } }
+      }
+    },
+    "/api/v1/x402/directory/submit": {
+      "post": {
+        "operationId": "directorySubmit",
+        "summary": "Submit a new service to the directory",
+        "tags": ["Directory"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "url", "description"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "url": { "type": "string" },
+                  "description": { "type": "string" },
+                  "category": { "type": "string" },
+                  "pricing": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Submission result" } }
+      }
+    },
+    "/api/v1/x402/directory/stats": {
+      "get": {
+        "operationId": "directoryStats",
+        "summary": "Get directory statistics",
+        "tags": ["Directory"],
+        "responses": { "200": { "description": "Directory stats" } }
+      }
+    },
+    "/api/v1/analytics/overview": {
+      "get": {
+        "operationId": "analyticsOverview",
+        "summary": "Get platform analytics overview (admin)",
+        "tags": ["Analytics"],
+        "responses": { "200": { "description": "Analytics overview" } }
+      }
+    },
+    "/api/v1/analytics/tools": {
+      "get": {
+        "operationId": "analyticsTools",
+        "summary": "Get per-tool usage analytics (admin)",
+        "tags": ["Analytics"],
+        "responses": { "200": { "description": "Tool usage breakdown" } }
+      }
+    },
+    "/api/v1/analytics/agents": {
+      "get": {
+        "operationId": "analyticsAgents",
+        "summary": "Get agent analytics (admin)",
+        "tags": ["Analytics"],
+        "responses": { "200": { "description": "Agent analytics" } }
+      }
+    },
+    "/api/v1/analytics/revenue": {
+      "get": {
+        "operationId": "analyticsRevenue",
+        "summary": "Get revenue analytics (admin)",
+        "tags": ["Analytics"],
+        "parameters": [
+          { "name": "period", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Revenue data" } }
+      }
+    },
+    "/api/v1/analytics/realtime": {
+      "get": {
+        "operationId": "analyticsRealtime",
+        "summary": "Get real-time usage data (admin)",
+        "tags": ["Analytics"],
+        "responses": { "200": { "description": "Real-time metrics" } }
+      }
+    },
+    "/v1/tools": {
+      "get": {
+        "operationId": "listTools",
+        "summary": "List all available tools with metadata",
+        "tags": ["Utility"],
+        "responses": { "200": { "description": "Tool catalog" } }
+      }
+    },
+    "/v1/billing/plans": {
+      "get": {
+        "operationId": "billingPlans",
+        "summary": "List available subscription plans",
+        "tags": ["Billing"],
+        "responses": { "200": { "description": "Available plans" } }
+      }
+    },
+    "/v1/workflows/run": {
+      "post": {
+        "operationId": "workflowRun",
+        "summary": "Execute a multi-step workflow",
+        "tags": ["Workflows"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["steps"],
+                "properties": {
+                  "steps": { "type": "array", "items": { "type": "object" }, "description": "Workflow steps" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Workflow results" } }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "API health check",
+        "tags": ["Utility"],
+        "responses": { "200": { "description": "Health status" } }
+      }
+    },
+    "/.well-known/x402": {
+      "get": {
+        "operationId": "x402Discovery",
+        "summary": "x402 payment protocol discovery",
+        "tags": ["Utility"],
+        "responses": { "200": { "description": "x402 payment configuration" } }
+      }
+    },
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "operationId": "oauthDiscovery",
+        "summary": "OAuth 2.1 authorization server metadata",
+        "tags": ["OAuth"],
+        "responses": { "200": { "description": "OAuth server metadata" } }
       }
     }
   },
@@ -1190,13 +1783,48 @@
       "ApiKeyAuth": {
         "type": "apiKey",
         "in": "header",
-        "name": "x-api-key"
+        "name": "x-api-key",
+        "description": "API key obtained from registration. Pass in x-api-key header."
+      },
+      "x402Payment": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-PAYMENT",
+        "description": "x402 payment header for USDC micropayments. Alternative to API key auth."
+      },
+      "OAuth2": {
+        "type": "oauth2",
+        "description": "OAuth 2.1 with PKCE",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://archtools.dev/oauth/authorize",
+            "tokenUrl": "https://archtools.dev/oauth/token",
+            "scopes": {
+              "tools:read": "Access tool endpoints",
+              "tools:write": "Execute tool operations",
+              "agent:read": "Read agent profile",
+              "agent:write": "Modify agent profile"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "RateLimited": {
+        "description": "Rate limit exceeded. Check X-RateLimit-* headers.",
+        "headers": {
+          "X-RateLimit-Limit": { "schema": { "type": "integer" }, "description": "Requests allowed per minute" },
+          "X-RateLimit-Remaining": { "schema": { "type": "integer" }, "description": "Requests remaining" },
+          "X-RateLimit-Reset": { "schema": { "type": "integer" }, "description": "Unix timestamp when limit resets" }
+        }
+      },
+      "PaymentRequired": {
+        "description": "x402 payment required. Include X-PAYMENT header with valid USDC payment."
       }
     }
   },
   "security": [
-    {
-      "ApiKeyAuth": []
-    }
+    { "ApiKeyAuth": [] },
+    { "x402Payment": [] }
   ]
 }

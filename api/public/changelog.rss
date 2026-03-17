@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Arch Tools Changelog</title>
+    <link>https://archtools.dev/changelog</link>
+    <description>What's new, changed, and fixed in every release of Arch Tools — the first API platform AI agents can pay autonomously.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 17 Mar 2026 12:00:00 GMT</lastBuildDate>
+    <atom:link href="https://archtools.dev/v1/changelog.rss" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>https://archtools.dev/og-image.png</url>
+      <title>Arch Tools</title>
+      <link>https://archtools.dev</link>
+    </image>
+
+    <item>
+      <title>v1.11.0 — x402 Ecosystem Launch</title>
+      <link>https://archtools.dev/changelog#v1.11.0</link>
+      <guid isPermaLink="true">https://archtools.dev/changelog#v1.11.0</guid>
+      <pubDate>Tue, 17 Mar 2026 12:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <h3>Added</h3>
+        <ul>
+          <li><strong>x402 SDK Integration</strong> — native x402 payment protocol support with USDC micropayments across 15 blockchain networks</li>
+          <li><strong>Service Directory</strong> — curated directory of 112 AI-powered services with search, filtering, and x402 payment support</li>
+          <li><strong>Fund Page + Wallet Onboarding</strong> — guided wallet setup and funding flow for x402 payments</li>
+          <li><strong>Interactive Playground</strong> — live API testing environment with code generation for all 53+ tools</li>
+          <li><strong>Framework Integrations</strong> — official SDKs for 5 platforms: Python, JavaScript/TypeScript, LangChain, CrewAI, and OpenAI Agents</li>
+          <li><strong>Agent Identity (KYA)</strong> — Know Your Agent system with verifiable on-chain identity, reputation scoring, and trust metrics</li>
+          <li><strong>Facilitator-as-a-Service</strong> — turnkey x402 payment facilitation for third-party API providers</li>
+          <li><strong>Analytics Dashboard</strong> — real-time usage analytics with per-tool breakdowns and cost tracking</li>
+          <li><strong>API Documentation Overhaul</strong> — comprehensive endpoint reference with interactive examples</li>
+          <li><strong>Competitor Comparison Page</strong> — side-by-side feature and pricing comparison</li>
+        </ul>
+        <h3>Changed</h3>
+        <ul>
+          <li>Privacy Policy updated with x402 payment data, agent identity, and directory listing sections</li>
+          <li>Terms of Service expanded with x402 payment terms, facilitator terms, and agent identity terms</li>
+          <li>SEO optimization across all pages</li>
+          <li>Landing page updated with x402 ecosystem messaging</li>
+        </ul>
+      ]]></description>
+    </item>
+
+    <item>
+      <title>v1.10.0 — Pricing &amp; Platform Updates</title>
+      <link>https://archtools.dev/changelog#v1.10.0</link>
+      <guid isPermaLink="true">https://archtools.dev/changelog#v1.10.0</guid>
+      <pubDate>Mon, 16 Mar 2026 18:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <h3>Added</h3>
+        <ul>
+          <li>Pricing restructured: Developer $19/mo, Pro $49/mo, Business $149/mo subscriptions</li>
+          <li>Enterprise tier (Contact Us)</li>
+          <li>250 free credits on signup (was 100)</li>
+          <li>BYOK for Brave Search, Tavily, and Exa APIs</li>
+          <li>Customer support chatbot</li>
+          <li>Investor page</li>
+          <li>Sentry frontend monitoring</li>
+          <li>Cloudflare CDN + performance optimizations</li>
+        </ul>
+        <h3>Changed</h3>
+        <ul>
+          <li>Image generation credits: 15 → 30 per call</li>
+          <li>Text-to-speech credits: 5 → 10 per call</li>
+          <li>Transcribe audio credits: 8 → 12 per call</li>
+          <li>Annual discount: 25% → 17%</li>
+        </ul>
+        <h3>Fixed</h3>
+        <ul>
+          <li>Sign-out now properly clears session cookie</li>
+          <li>crypto-market-cap no longer 500s on empty body</li>
+          <li>All pages standardized with correct logo + footer</li>
+        </ul>
+      ]]></description>
+    </item>
+
+    <item>
+      <title>v1.9.0 — AI Modes, Oracle &amp; Sessions</title>
+      <link>https://archtools.dev/changelog#v1.9.0</link>
+      <guid isPermaLink="true">https://archtools.dev/changelog#v1.9.0</guid>
+      <pubDate>Mon, 16 Mar 2026 06:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <h3>Added</h3>
+        <ul>
+          <li>AI mode presets: pass mode: "fast" | "smart" | "deep" to ai-generate</li>
+          <li>AI Oracle endpoint (/v1/tools/ai-oracle) — premium reasoning with structured analysis (25 credits)</li>
+          <li>Session API: /v1/tools/session-create and /v1/tools/session-message — managed conversation history</li>
+          <li>Getting Started guide</li>
+          <li>This changelog page</li>
+          <li>JavaScript SDK (@archtools/sdk) — full TypeScript client with retry logic</li>
+          <li>Python SDK (archtools) — complete client with type hints</li>
+        </ul>
+      ]]></description>
+    </item>
+
+    <item>
+      <title>v1.8.0 — 53 Tools, MCP Annotations, OAuth 2.1</title>
+      <link>https://archtools.dev/changelog#v1.8.0</link>
+      <guid isPermaLink="true">https://archtools.dev/changelog#v1.8.0</guid>
+      <pubDate>Sat, 15 Mar 2026 12:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <h3>Added</h3>
+        <ul>
+          <li>53 production-ready tools (up from 45) — fact-check, news-search, research-report, crypto-sentiment, crypto-ohlcv, token-lookup, crypto-fear-greed, workflow-agent</li>
+          <li>MCP server-card.json with full tool annotations</li>
+          <li>DALL-E 3 image generation</li>
+          <li>ElevenLabs text-to-speech</li>
+          <li>OpenAI Whisper audio transcription</li>
+          <li>Browser automation via Playwright</li>
+          <li>OAuth 2.1 with PKCE + Dynamic Client Registration</li>
+          <li>Comprehensive legal pages</li>
+        </ul>
+        <h3>Changed</h3>
+        <ul>
+          <li>SSE transport upgraded to SSE + Streamable HTTP</li>
+          <li>Improved rate limiting with plan-based tiers (free/pro/business)</li>
+        </ul>
+        <h3>Fixed</h3>
+        <ul>
+          <li>SSRF hardening on web-scrape and browser-task tools</li>
+          <li>Stripe webhook idempotency</li>
+          <li>Registration rate limiting</li>
+        </ul>
+      ]]></description>
+    </item>
+
+    <item>
+      <title>v1.0.0 — Initial Release</title>
+      <link>https://archtools.dev/changelog#v1.0.0</link>
+      <guid isPermaLink="true">https://archtools.dev/changelog#v1.0.0</guid>
+      <pubDate>Thu, 27 Feb 2026 12:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <h3>Added</h3>
+        <ul>
+          <li>Initial release — 38 tools across 13 categories</li>
+          <li>API key authentication with credit-based billing</li>
+          <li>x402 autonomous agent payments (USDC on 15 chains)</li>
+          <li>Stripe integration for human credit purchases</li>
+          <li>MCP server for Claude Desktop, Cursor, and Windsurf</li>
+        </ul>
+      ]]></description>
+    </item>
+
+  </channel>
+</rss>
