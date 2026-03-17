@@ -42,6 +42,11 @@ import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
 
+// Analytics
+import { analyticsMiddleware } from "./middleware/analytics.js";
+import analyticsRouter from "./routes/analytics.js";
+import statsRouter from "./routes/stats.js";
+
 const app = express();
 
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
@@ -52,7 +57,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],  // landing page inline scripts
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],  // landing page inline scripts + Chart.js CDN
       "script-src-attr": ["'unsafe-inline'"],  // allow inline event handlers (onclick etc)
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -118,6 +123,9 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   req.headers["x-request-id"] = req.headers["x-request-id"] ?? crypto.randomUUID();
   next();
 });
+
+// ─── Analytics middleware (response timing + metrics) ─────────────────────────
+app.use(analyticsMiddleware);
 
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
@@ -213,6 +221,10 @@ app.use("/webhooks", billingRouter);
 app.use("/v1/admin", adminRouter);
 app.use("/admin", adminRouter);
 
+// Analytics (admin-only API + public stats)
+app.use("/api/v1/analytics", analyticsRouter);
+app.use("/api/v1/stats", statsRouter);
+
 // x402 Service Directory
 app.use("/api/v1/x402/directory", directoryRouter);
 
@@ -267,6 +279,8 @@ app.get("/blog/:slug", (_req: Request, res: Response) => res.sendFile(path.join(
 app.get("/sdk", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/fund.html')));
 app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/analytics", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/stats", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/stats.html')));
 
 // /success — Stripe post-checkout success page
 app.get("/success", (_req: Request, res: Response) => {

@@ -2689,6 +2689,7 @@ import { X402_PRICES } from "../../middleware/x402.js";
 // that calls x402Middleware which handles the 402 response
 router.get("/:toolName", (req: Request, res: Response): void => {
   const toolName = req.params.toolName;
+    // @ts-ignore — Express params typing
   const price = X402_PRICES[toolName];
   if (!price) {
     res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
@@ -2696,6 +2697,7 @@ router.get("/:toolName", (req: Request, res: Response): void => {
   }
   // Return 402 by passing through the x402 middleware
   // x402Middleware checks for X-Payment header first; with no header on GET, it returns 402
+    // @ts-ignore — Express params typing
   const middleware = x402Middleware(toolName);
   // x402Middleware returns an array or function — call it as middleware
   const handler = Array.isArray(middleware) ? middleware[0] : middleware;

@@ -67,6 +67,7 @@ router.post(
 
     try {
       // Dynamic import so the server doesn't crash if @coinbase/agentkit isn't installed yet
+      // @ts-ignore — package not yet installed
       const { CdpEvmWalletProvider } = await import("@coinbase/agentkit");
 
       const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
@@ -144,6 +145,7 @@ router.get(
 
     try {
       // Try to fetch on-chain USDC balance via CDP SDK
+      // @ts-ignore — package not yet installed
       const { CdpClient } = await import("@coinbase/cdp-sdk");
 
       const cdp = new CdpClient({

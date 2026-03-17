@@ -27,6 +27,11 @@ export const config = {
     coingecko: {
         apiKey: process.env.COINGECKO_API_KEY ?? "",
     },
+    cdp: {
+        apiKeyId: process.env.CDP_API_KEY_ID ?? "",
+        apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
+        projectId: process.env.CDP_PROJECT_ID ?? "",
+    },
     redisUrl: process.env.REDIS_URL ?? "",
     x402: {
         // Only use wallet address if it looks like a real Ethereum/Base address (0x + 40 hex chars)

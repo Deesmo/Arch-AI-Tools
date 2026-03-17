@@ -63,7 +63,7 @@ router.get("/", (_req: Request, res: Response): void => {
 // Get pricing for a specific tool
 router.get("/:tool", (req: Request, res: Response): void => {
   const toolName = req.params.tool;
-  const priceUsdc = X402_PRICES[toolName];
+  const priceUsdc = X402_PRICES[toolName as string];
 
   if (!priceUsdc) {
     res.status(404).json({

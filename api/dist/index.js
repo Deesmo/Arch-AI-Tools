@@ -28,9 +28,19 @@ import legalRouter from "./routes/legal.js";
 import oauthRouter from "./routes/oauth.js";
 import authRouter, { verifySession } from "./routes/auth.js";
 import chatRouter from "./routes/chat.js";
+import directoryRouter from "./routes/directory.js";
+import walletRouter from "./routes/wallet.js";
+import pricingRouter from "./routes/pricing.js";
+import playgroundRouter from "./routes/playground.js";
+// x402 SDK (official Coinbase @x402/express integration)
+import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
+// Analytics
+import { analyticsMiddleware } from "./middleware/analytics.js";
+import analyticsRouter from "./routes/analytics.js";
+import statsRouter from "./routes/stats.js";
 const app = express();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
@@ -39,12 +49,12 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // landing page inline scripts
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // landing page inline scripts + Chart.js CDN
             "script-src-attr": ["'unsafe-inline'"], // allow inline event handlers (onclick etc)
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com"],
+            connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com"],
         },
     },
     crossOriginEmbedderPolicy: false, // needed for fonts/CDN
@@ -96,6 +106,8 @@ app.use((req, _res, next) => {
     req.headers["x-request-id"] = req.headers["x-request-id"] ?? crypto.randomUUID();
     next();
 });
+// ─── Analytics middleware (response timing + metrics) ─────────────────────────
+app.use(analyticsMiddleware);
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
     if (err)
@@ -105,12 +117,17 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
+    dotfiles: 'ignore',
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         }
         else if (filePath.match(/\.(png|jpg|svg|ico|webp)$/)) {
             res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+        else if (filePath.endsWith('.json') && filePath.includes('.well-known')) {
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Content-Type', 'application/json');
         }
     }
 }));
@@ -163,6 +180,10 @@ app.use("/v1/agent/register", registerLimiter);
 app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
+// x402 SDK middleware — applies official Coinbase x402 protocol to all tool routes
+// When enabled (X402_SDK_ENABLED=true), handles payment verification/settlement
+// via the official facilitator before requests reach the tool handlers
+app.use("/v1/tools", x402SdkMiddleware);
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);
 // Billing
@@ -171,6 +192,17 @@ app.use("/webhooks", billingRouter);
 // Admin
 app.use("/v1/admin", adminRouter);
 app.use("/admin", adminRouter);
+// Analytics (admin-only API + public stats)
+app.use("/api/v1/analytics", analyticsRouter);
+app.use("/api/v1/stats", statsRouter);
+// x402 Service Directory
+app.use("/api/v1/x402/directory", directoryRouter);
+// x402 Pricing API (public, no auth)
+app.use("/api/v1/x402/pricing", pricingRouter);
+// x402 Playground API (public, no auth — demo flow)
+app.use("/api/v1/x402/playground", playgroundRouter);
+// Wallet provisioning (AgentKit)
+app.use("/v1/wallet", walletRouter);
 // Workflows
 app.use("/v1/workflows", workflowsRouter);
 // Legal
@@ -199,12 +231,17 @@ app.get("/terms", (_req, res) => res.redirect(301, "/terms.html"));
 app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
 app.get("/changelog", (_req, res) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
+app.get("/directory", (_req, res) => res.sendFile(path.join(__dirname, '../public/directory.html')));
 app.get("/docs", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/docs/getting-started", (_req, res) => res.sendFile(path.join(__dirname, '../public/getting-started.html')));
 app.get("/docs/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/blog", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/blog/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/sdk", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
+app.get("/fund", (_req, res) => res.sendFile(path.join(__dirname, '../public/fund.html')));
+app.get("/playground", (_req, res) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/analytics", (_req, res) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/stats", (_req, res) => res.sendFile(path.join(__dirname, '../public/stats.html')));
 // /success — Stripe post-checkout success page
 app.get("/success", (_req, res) => {
     res.type("text/html").send(`<!DOCTYPE html>
@@ -255,6 +292,12 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
     console.error("FATAL: ADMIN_KEY must be set to a secure value in production. Exiting.");
     process.exit(1);
 }
+// Initialize x402 SDK (official Coinbase protocol support)
+initX402Sdk();
+// x402 SDK status endpoint (for admin/health checks)
+app.get("/v1/x402/status", (_req, res) => {
+    res.json({ ok: true, x402_sdk: getX402SdkStatus() });
+});
 app.listen(config.port, () => {
     console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
     console.log(`   ENV: ${config.nodeEnv}`);
