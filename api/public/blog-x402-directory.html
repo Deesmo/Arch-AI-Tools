@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How We Built the First x402 Service Directory — Arch Tools</title>
+  <meta name="description" content="The first comprehensive catalog of x402-enabled APIs. Search 58+ AI tools by category, chain, or price. Machine-readable API included. List your service today.">
+  <meta name="keywords" content="x402, API marketplace, AI tools, crypto payments, Coinbase, x402 directory, service catalog, micropayments, USDC, agent payments, agentic commerce">
+  <meta property="og:title" content="How We Built the First x402 Service Directory">
+  <meta property="og:description" content="No one had built a catalog for x402 services. So we built one — 58+ AI tools, 15+ chains, machine-readable API, open submissions. Here's how.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://archtools.dev/blog/x402-directory">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How We Built the First x402 Service Directory">
+  <meta name="twitter:description" content="The first comprehensive catalog of x402-enabled APIs. 58+ tools, 15+ chains, machine-readable API.">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <link rel="canonical" href="https://archtools.dev/blog/x402-directory">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "How We Built the First x402 Service Directory",
+    "description": "The first comprehensive catalog of x402-enabled APIs for AI agents and developers.",
+    "author": {"@type": "Organization", "name": "Arch Tools"},
+    "publisher": {"@type": "Organization", "name": "Arch Tools", "url": "https://archtools.dev"},
+    "datePublished": "2026-03-17",
+    "url": "https://archtools.dev/blog/x402-directory",
+    "keywords": "x402, API marketplace, AI tools, crypto payments, Coinbase"
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#07061A;--text:#E0DFF5;--muted:#8B8AA8;--dimmer:#6B6A8A;--purple:#8844FF;--green:#34d399;--amber:#FF9010;--border:rgba(255,255,255,0.08);--mono:'Fira Code','Cascadia Code','Courier New',monospace;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;line-height:1.75;padding:0;}
+    nav{position:sticky;top:0;z-index:100;background:rgba(7,6,26,0.97);border-bottom:1px solid var(--border);padding:0 24px;}
+    .nav-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+    .nav-logo{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);text-decoration:none;letter-spacing:-0.3px;}
+    .nav-logo span{color:var(--purple);}
+    .nav-cta{background:var(--purple);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-family:var(--mono);cursor:pointer;text-decoration:none;}
+    .wrap{max-width:760px;margin:0 auto;padding:0 24px;}
+    .hero-blog{padding:64px 0 48px;}
+    .blog-tag{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    h1{font-size:clamp(28px,5vw,46px);font-weight:800;line-height:1.12;letter-spacing:-1.5px;margin-bottom:24px;}
+    .byline{color:var(--dimmer);font-size:14px;font-family:var(--mono);margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+    h2{font-size:22px;font-weight:700;color:var(--amber);margin:48px 0 16px;}
+    h3{font-size:17px;font-weight:700;margin:32px 0 12px;}
+    p{color:#C0BFDB;margin-bottom:20px;}
+    strong{color:var(--text);}
+    ul,ol{padding-left:24px;margin-bottom:20px;}
+    li{color:#C0BFDB;margin-bottom:8px;}
+    code{font-family:var(--mono);font-size:13px;background:rgba(136,68,255,0.12);color:#c4b5fd;padding:2px 7px;border-radius:4px;}
+    pre{background:rgba(12,11,34,0.8);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;margin:24px 0;}
+    pre code{background:none;padding:0;color:#E0DFF5;font-size:13px;line-height:1.7;}
+    .comment{color:#6B6A8A;}
+    .key{color:#FF9010;}
+    .str{color:#34d399;}
+    .out{color:#8844FF;}
+    .kw{color:#FF2896;}
+    blockquote{border-left:3px solid var(--purple);padding-left:20px;margin:32px 0;color:var(--muted);font-style:italic;}
+    .callout{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout strong{color:var(--purple);}
+    .callout-green{background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout-green strong{color:var(--green);}
+    .callout-amber{background:rgba(255,144,16,0.07);border:1px solid rgba(255,144,16,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout-amber strong{color:var(--amber);}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:32px 0;}
+    .stat-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;}
+    .stat-num{font-family:var(--mono);font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--amber),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .stat-label{font-size:13px;color:var(--muted);margin-top:4px;}
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:40px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;}
+    .btn{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:600;}
+    .btn-ghost{display:inline-block;border:1px solid var(--border);color:var(--muted);text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;margin-left:12px;}
+    .btn-green{display:inline-block;background:var(--green);color:#030308;text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:600;}
+    footer{padding:32px 24px;border-top:1px solid var(--border);color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    .footer-inner{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    footer a{color:var(--dimmer);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+    a{color:var(--purple);}
+    a:hover{opacity:0.85;}
+    .copy-btn{position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;z-index:2;}
+    .copy-btn:hover{background:rgba(255,255,255,0.16);color:#fff;}
+    @media(max-width:640px){h1{font-size:clamp(26px,8vw,38px);}.btn-ghost{margin-left:0;margin-top:10px;}.cta-section{padding:28px 20px;}.stat-grid{grid-template-columns:repeat(2,1fr);}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/" style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav)" filter="url(#arch-neon-nav)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <a class="nav-cta" href="/#register">Get API Key →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <article class="hero-blog">
+    <div class="blog-tag">Engineering · March 2026</div>
+    <h1>How We Built the First x402 Service Directory</h1>
+    <p class="byline">archtools.dev · March 17, 2026 · 7 min read</p>
+
+    <p>The x402 protocol lets AI agents pay for API calls with crypto — no credit card, no subscription, no human in the loop. Coinbase built the protocol. Developers started building services. But nobody built the directory.</p>
+
+    <p>We just shipped it. <a href="/directory.html">The x402 Service Directory</a> is the first comprehensive catalog of x402-enabled APIs — <strong>58+ tools</strong> across <strong>15+ chains</strong>, searchable by category, network, and price. With a machine-readable API so your agents can discover services programmatically.</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num">58+</div>
+        <div class="stat-label">AI Tools Listed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">15+</div>
+        <div class="stat-label">Chains Supported</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">6</div>
+        <div class="stat-label">Token Types</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">$0.001</div>
+        <div class="stat-label">Min Per Call</div>
+      </div>
+    </div>
+
+    <h2>What x402 Is (and Why It Matters)</h2>
+
+    <p>HTTP status code <code>402 Payment Required</code> has existed since 1997. It sat unused for almost 30 years. Coinbase's x402 protocol finally gives it a purpose: a standardized way for servers to request payment and for clients — including AI agents — to pay, all within a single HTTP round-trip.</p>
+
+    <p>Here's the flow:</p>
+    <ol>
+      <li>Agent calls an API endpoint</li>
+      <li>Server responds with <code>402</code> and a payment requirement (amount, token, network)</li>
+      <li>Agent signs a crypto payment (USDC, USDT, ETH, SOL, etc.)</li>
+      <li>Agent retries with a payment header — server verifies, executes, returns the result</li>
+    </ol>
+
+    <p>No API keys. No accounts. No Stripe. Just a wallet with funds and a standard protocol.</p>
+
+    <blockquote>x402 is to API payments what OAuth was to API authentication — a standard that makes everything interoperable.</blockquote>
+
+    <h2>The Problem: No Central Directory</h2>
+
+    <p>x402 adoption is accelerating. Coinbase launched the x402 Bazaar. Developers are wrapping their APIs with <code>@x402/express</code> middleware. Agent frameworks like LangChain and CrewAI are adding x402 payment support.</p>
+
+    <p>But there's been no way for an agent to answer a simple question: <strong>"Which APIs accept x402, what do they cost, and which chains do they support?"</strong></p>
+
+    <p>Every x402 service exposes <code>/.well-known/x402</code> — but you need to know the URL first. There's no search. No catalog. No machine-readable index. An agent building a workflow has to hard-code every service URL it might need.</p>
+
+    <p>That's the problem we solved.</p>
+
+    <h2>What We Built</h2>
+
+    <p>The <a href="/directory.html">x402 Service Directory</a> is a searchable catalog of every x402-enabled API we've cataloged. Here's what's in it:</p>
+
+    <div class="callout">
+      <strong>For Developers (the UI)</strong><br><br>
+      Browse all 58+ tools with filtering by category (AI, scraping, crypto, utilities), chain support, token type, and price range. Each listing shows endpoint, pricing, supported networks, and a direct link to test it in the <a href="/playground.html">x402 Playground</a>.
+    </div>
+
+    <div class="callout-green">
+      <strong>For Agents (the API)</strong><br><br>
+      A machine-readable JSON endpoint at <code>/api/v1/directory</code> returns the full catalog. Your agent can query it, filter by capability, compare prices across providers, and build workflows dynamically — without any hard-coded service URLs.
+    </div>
+
+    <h3>The Directory API</h3>
+    <div style="position:relative;">
+    <button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement.querySelector('pre');navigator.clipboard.writeText(pre.innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button>
+    <pre><code><span class="comment"># Fetch the full x402 service catalog</span>
+curl https://archtools.dev/api/v1/directory
+
+<span class="comment"># Response:</span>
+<span class="out">{
+  "services": [
+    {
+      "name": "web-scrape",
+      "category": "scraping",
+      "description": "Extract content from any URL",
+      "endpoint": "/v1/tools/web-scrape",
+      "pricing": {
+        "x402": { "amount": "0.001", "token": "USDC" },
+        "credits": 3
+      },
+      "chains": ["base-mainnet", "ethereum-mainnet", "solana-mainnet", ...],
+      "tokens": ["USDC", "USDT", "ETH", "SOL", "BNB"]
+    },
+    ...
+  ],
+  "total": 58,
+  "updated": "2026-03-17T00:00:00Z"
+}</span>
+
+<span class="comment"># Filter by category</span>
+curl https://archtools.dev/api/v1/directory?category=ai
+
+<span class="comment"># Filter by chain</span>
+curl https://archtools.dev/api/v1/directory?chain=solana-mainnet
+
+<span class="comment"># Filter by price range (in USDC)</span>
+curl https://archtools.dev/api/v1/directory?max_price=0.005</code></pre>
+    </div>
+
+    <h2>The Full Stack</h2>
+
+    <p>Beyond the directory, we shipped a complete x402 integration layer:</p>
+
+    <h3>1. Coinbase x402 SDK Integration</h3>
+    <p>Every one of our 58+ tools accepts x402 payments using the official <code>@x402/express</code> SDK from Coinbase. The middleware handles payment verification, on-chain settlement, and receipt generation. We didn't roll our own — we use the standard.</p>
+
+    <h3>2. Agent Wallet Funding Page</h3>
+    <p>The <a href="/fund.html">funding page</a> lets agent operators load USDC into their agent's wallet. Connect via WalletConnect, MetaMask, or Coinbase Wallet. Pick a network. Fund and go. Your agent can start calling APIs in minutes.</p>
+
+    <h3>3. Interactive x402 Playground</h3>
+    <p>The <a href="/playground.html">x402 Playground</a> lets you test any tool with a real x402 payment. Pick a tool, connect a wallet, pay $0.001 in USDC, and watch the full round-trip: payment header construction, on-chain verification, tool execution, receipt. It's the fastest way to understand how x402 works.</p>
+
+    <h3>4. Analytics Dashboard</h3>
+    <p>The <a href="/analytics.html">analytics dashboard</a> shows real-time x402 payment volume, most-called tools, network distribution, and settlement stats. We built it for transparency — you can see exactly how the x402 ecosystem is growing on Arch Tools.</p>
+
+    <h2>How We Handle Multi-Chain</h2>
+
+    <p>Supporting 15+ chains isn't just about listing them. Each network has different settlement times, gas costs, and token availability. Here's how we handle it:</p>
+
+    <div style="position:relative;">
+    <button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement.querySelector('pre');navigator.clipboard.writeText(pre.innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button>
+    <pre><code><span class="comment">// Supported networks and their primary tokens</span>
+<span class="kw">const</span> SUPPORTED_CHAINS = {
+  <span class="str">"base-mainnet"</span>:      [<span class="str">"USDC"</span>, <span class="str">"USDT"</span>, <span class="str">"ETH"</span>],    <span class="comment">// Primary — lowest fees</span>
+  <span class="str">"ethereum-mainnet"</span>:  [<span class="str">"USDC"</span>, <span class="str">"USDT"</span>, <span class="str">"ETH"</span>],
+  <span class="str">"solana-mainnet"</span>:    [<span class="str">"USDC"</span>, <span class="str">"SOL"</span>],
+  <span class="str">"bsc-mainnet"</span>:       [<span class="str">"USDT"</span>, <span class="str">"BNB"</span>],
+  <span class="str">"polygon-mainnet"</span>:   [<span class="str">"USDC"</span>, <span class="str">"USDT"</span>],
+  <span class="str">"arbitrum-mainnet"</span>:  [<span class="str">"USDC"</span>, <span class="str">"USDT"</span>, <span class="str">"ETH"</span>],
+  <span class="str">"optimism-mainnet"</span>:  [<span class="str">"USDC"</span>, <span class="str">"USDT"</span>, <span class="str">"ETH"</span>],
+  <span class="str">"avalanche-mainnet"</span>: [<span class="str">"USDC"</span>, <span class="str">"USDT"</span>],
+  <span class="str">"near-mainnet"</span>:      [<span class="str">"NEAR"</span>],
+  <span class="str">"bittensor-mainnet"</span>: [<span class="str">"TAO"</span>],
+  <span class="comment">// + 5 more chains</span>
+};
+
+<span class="comment">// Agent picks the cheapest chain with available balance</span>
+<span class="kw">function</span> <span class="key">selectOptimalChain</span>(agentWallet, requiredAmount) {
+  <span class="kw">return</span> Object.entries(SUPPORTED_CHAINS)
+    .filter(([chain]) => agentWallet.hasBalance(chain, requiredAmount))
+    .sort((a, b) => getGasCost(a[<span class="str">0</span>]) - getGasCost(b[<span class="str">0</span>]))
+    [<span class="str">0</span>];
+}</code></pre>
+    </div>
+
+    <p>Base is the recommended default — it has the lowest fees and fastest settlement for USDC. But agents operating on Solana, BNB Chain, or any other supported network can pay natively without bridging.</p>
+
+    <h2>How to List Your Service</h2>
+
+    <p>The directory is open for submissions. If you've built an API that accepts x402 payments, we want to list it.</p>
+
+    <div class="callout-amber">
+      <strong>Submit Your x402 Service</strong><br><br>
+      <strong>Option 1:</strong> Open a PR on <a href="https://github.com/Deesmo/Arch-AI-Tools">GitHub</a> adding your service to the directory config.<br><br>
+      <strong>Option 2:</strong> Fill out the submission form on the <a href="/directory.html">directory page</a>.<br><br>
+      <strong>Requirements:</strong> Your API must expose a valid <code>/.well-known/x402</code> endpoint, accept at least one supported token, and return consistent responses. We verify every submission before listing.
+    </div>
+
+    <h3>Submission Format</h3>
+    <div style="position:relative;">
+    <button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement.querySelector('pre');navigator.clipboard.writeText(pre.innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button>
+    <pre><code><span class="comment">// Add to directory-services.json</span>
+{
+  <span class="key">"name"</span>: <span class="str">"your-service-name"</span>,
+  <span class="key">"provider"</span>: <span class="str">"Your Company"</span>,
+  <span class="key">"description"</span>: <span class="str">"What your API does in one sentence"</span>,
+  <span class="key">"endpoint"</span>: <span class="str">"https://api.yourservice.com/v1/action"</span>,
+  <span class="key">"wellKnown"</span>: <span class="str">"https://api.yourservice.com/.well-known/x402"</span>,
+  <span class="key">"category"</span>: <span class="str">"ai | scraping | crypto | utilities | data"</span>,
+  <span class="key">"pricing"</span>: {
+    <span class="key">"amount"</span>: <span class="str">"0.001"</span>,
+    <span class="key">"token"</span>: <span class="str">"USDC"</span>
+  },
+  <span class="key">"chains"</span>: [<span class="str">"base-mainnet"</span>, <span class="str">"ethereum-mainnet"</span>],
+  <span class="key">"docs"</span>: <span class="str">"https://docs.yourservice.com"</span>
+}</code></pre>
+    </div>
+
+    <h2>What This Means for the Agent Economy</h2>
+
+    <p>A directory isn't just a list. It's infrastructure. When agents can programmatically discover, compare, and pay for services — the agent economy starts to self-organize.</p>
+
+    <p>Today an agent building a research workflow has to be pre-configured with specific API URLs. With the directory API, that agent can:</p>
+
+    <ol>
+      <li>Query the directory for "scraping" services</li>
+      <li>Compare prices across providers</li>
+      <li>Pick the cheapest option on the chain where it holds funds</li>
+      <li>Call the service, pay per use, get the result</li>
+    </ol>
+
+    <p>No hard-coded URLs. No pre-negotiated contracts. No human approvals. Just autonomous service discovery and payment.</p>
+
+    <blockquote>The first step toward an autonomous agent economy isn't better models — it's better infrastructure. Discovery + payment + execution in a single standard protocol.</blockquote>
+
+    <h2>Try It Now</h2>
+
+    <p>Everything is live. No waitlist.</p>
+
+    <ul>
+      <li><strong><a href="/directory.html">Browse the Directory</a></strong> — Search 58+ x402-enabled tools</li>
+      <li><strong><a href="/playground.html">Try the Playground</a></strong> — Make a real x402 payment and see it work</li>
+      <li><strong><a href="/fund.html">Fund an Agent Wallet</a></strong> — Load USDC and start calling APIs</li>
+      <li><strong><a href="/docs-x402-guide.html">Integration Guide</a></strong> — Add x402 payments to your API in 5 minutes</li>
+      <li><strong><a href="/analytics.html">View Analytics</a></strong> — Real-time x402 payment data</li>
+    </ul>
+
+  </article>
+</div>
+
+<div class="wrap">
+  <div class="cta-section">
+    <h2>List your API in the directory.</h2>
+    <p>The x402 Service Directory is open for submissions. If your API accepts x402 payments, it should be here.</p>
+    <a class="btn" href="/directory.html">Browse Directory →</a>
+    <a class="btn-ghost" href="/playground.html">Try Playground</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>© 2026 Arch Tools</span>
+    <span>
+      <a href="/">Home</a> ·
+      <a href="/blog-x402.html">x402 Launch</a> ·
+      <a href="/docs-x402-guide.html">Integration Guide</a> ·
+      <a href="/terms.html">Terms</a> ·
+      <a href="/privacy.html">Privacy</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

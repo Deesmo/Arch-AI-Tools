@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add x402 Payments to Your API in 5 Minutes — Arch Tools</title>
+  <meta name="description" content="Step-by-step guide to adding x402 crypto payments to any API. TypeScript and Python examples. Set up a facilitator, accept USDC, and list on the Arch Tools directory.">
+  <meta name="keywords" content="x402 tutorial, x402 express, API crypto payments, USDC micropayments, Coinbase x402, facilitator setup, AI agent payments">
+  <meta property="og:title" content="Add x402 Payments to Your API in 5 Minutes">
+  <meta property="og:description" content="Step-by-step integration guide. TypeScript and Python code. Accept USDC from AI agents today.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://archtools.dev/docs/x402-guide">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <link rel="canonical" href="https://archtools.dev/docs/x402-guide">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Add x402 Payments to Your API in 5 Minutes",
+    "description": "Step-by-step guide to integrating x402 crypto payments with TypeScript and Python examples.",
+    "author": {"@type": "Organization", "name": "Arch Tools"},
+    "datePublished": "2026-03-17",
+    "url": "https://archtools.dev/docs/x402-guide"
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#07061A;--text:#E0DFF5;--muted:#8B8AA8;--dimmer:#6B6A8A;--purple:#8844FF;--green:#34d399;--amber:#FF9010;--border:rgba(255,255,255,0.08);--mono:'Fira Code','Cascadia Code','Courier New',monospace;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;line-height:1.75;padding:0;}
+    nav{position:sticky;top:0;z-index:100;background:rgba(7,6,26,0.97);border-bottom:1px solid var(--border);padding:0 24px;}
+    .nav-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+    .nav-logo{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);text-decoration:none;letter-spacing:-0.3px;}
+    .nav-logo span{color:var(--purple);}
+    .nav-cta{background:var(--purple);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-family:var(--mono);cursor:pointer;text-decoration:none;}
+    .wrap{max-width:760px;margin:0 auto;padding:0 24px;}
+    .hero-blog{padding:64px 0 48px;}
+    .blog-tag{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    h1{font-size:clamp(28px,5vw,42px);font-weight:800;line-height:1.12;letter-spacing:-1.5px;margin-bottom:24px;}
+    .byline{color:var(--dimmer);font-size:14px;font-family:var(--mono);margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+    h2{font-size:22px;font-weight:700;color:var(--amber);margin:48px 0 16px;}
+    h3{font-size:17px;font-weight:700;margin:32px 0 12px;}
+    p{color:#C0BFDB;margin-bottom:20px;}
+    strong{color:var(--text);}
+    ul,ol{padding-left:24px;margin-bottom:20px;}
+    li{color:#C0BFDB;margin-bottom:8px;}
+    code{font-family:var(--mono);font-size:13px;background:rgba(136,68,255,0.12);color:#c4b5fd;padding:2px 7px;border-radius:4px;}
+    pre{background:rgba(12,11,34,0.8);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;margin:24px 0;position:relative;}
+    pre code{background:none;padding:0;color:#E0DFF5;font-size:13px;line-height:1.7;}
+    .comment{color:#6B6A8A;}
+    .key{color:#FF9010;}
+    .str{color:#34d399;}
+    .out{color:#8844FF;}
+    .kw{color:#FF2896;}
+    .num{color:#22d3ee;}
+    blockquote{border-left:3px solid var(--purple);padding-left:20px;margin:32px 0;color:var(--muted);font-style:italic;}
+    .callout{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout strong{color:var(--purple);}
+    .callout-green{background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout-green strong{color:var(--green);}
+    .callout-amber{background:rgba(255,144,16,0.07);border:1px solid rgba(255,144,16,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout-amber strong{color:var(--amber);}
+    .step{display:flex;gap:16px;margin:32px 0;align-items:flex-start;}
+    .step-num{background:var(--purple);color:#fff;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:15px;flex-shrink:0;}
+    .step-content{flex:1;}
+    .step-content h3{margin-top:4px;margin-bottom:8px;}
+    .toc{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .toc h3{margin:0 0 12px;font-size:15px;color:var(--muted);}
+    .toc ol{margin-bottom:0;}
+    .toc li{margin-bottom:4px;}
+    .toc a{color:var(--purple);text-decoration:none;font-size:14px;}
+    .toc a:hover{text-decoration:underline;}
+    .tab-bar{display:flex;gap:0;margin-bottom:-1px;position:relative;z-index:1;}
+    .tab{padding:8px 20px;font-family:var(--mono);font-size:13px;color:var(--muted);cursor:pointer;border:1px solid transparent;border-bottom:1px solid var(--border);border-radius:8px 8px 0 0;background:transparent;transition:all 0.15s;}
+    .tab.active{color:var(--text);background:rgba(12,11,34,0.8);border-color:var(--border);border-bottom-color:rgba(12,11,34,0.8);}
+    .tab:hover:not(.active){color:var(--text);}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:40px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;}
+    .btn{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:600;}
+    .btn-ghost{display:inline-block;border:1px solid var(--border);color:var(--muted);text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;margin-left:12px;}
+    .copy-btn{position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;z-index:2;}
+    .copy-btn:hover{background:rgba(255,255,255,0.16);color:#fff;}
+    footer{padding:32px 24px;border-top:1px solid var(--border);color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    .footer-inner{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    footer a{color:var(--dimmer);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+    a{color:var(--purple);}
+    a:hover{opacity:0.85;}
+    @media(max-width:640px){h1{font-size:clamp(26px,8vw,36px);}.btn-ghost{margin-left:0;margin-top:10px;}.cta-section{padding:28px 20px;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/" style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav)" filter="url(#arch-neon-nav)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <a class="nav-cta" href="/#register">Get API Key →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <article class="hero-blog">
+    <div class="blog-tag">Documentation · Guide</div>
+    <h1>Add x402 Payments to Your API in 5 Minutes</h1>
+    <p class="byline">archtools.dev · March 17, 2026 · Integration Guide</p>
+
+    <p>This guide walks you through adding x402 payment support to an existing API using the official Coinbase SDK. By the end, your API will accept USDC payments from AI agents — no Stripe, no signup, no human in the loop.</p>
+
+    <div class="callout-green">
+      <strong>What you'll need:</strong><br>
+      • An Express.js or Python (Flask/FastAPI) API<br>
+      • A wallet address to receive payments<br>
+      • 5 minutes
+    </div>
+
+    <div class="toc">
+      <h3>In This Guide</h3>
+      <ol>
+        <li><a href="#install">Install the x402 SDK</a></li>
+        <li><a href="#middleware">Add the Payment Middleware</a></li>
+        <li><a href="#facilitator">Set Up a Facilitator</a></li>
+        <li><a href="#wellknown">Expose /.well-known/x402</a></li>
+        <li><a href="#test">Test with the Playground</a></li>
+        <li><a href="#list">List on Arch Tools Directory</a></li>
+      </ol>
+    </div>
+
+    <!-- STEP 1 -->
+    <div id="install">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Install the x402 SDK</h3>
+      </div>
+    </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab(this, 'install-ts')">TypeScript</div>
+      <div class="tab" onclick="switchTab(this, 'install-py')">Python</div>
+    </div>
+
+    <div class="tab-content active" id="install-ts">
+    <pre><code><span class="comment"># Install the official Coinbase x402 Express middleware</span>
+npm install @x402/express
+
+<span class="comment"># Or with yarn</span>
+yarn add @x402/express</code></pre>
+    </div>
+
+    <div class="tab-content" id="install-py">
+    <pre><code><span class="comment"># Install the Python x402 middleware</span>
+pip install x402-python
+
+<span class="comment"># Or with poetry</span>
+poetry add x402-python</code></pre>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="middleware">
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Add the Payment Middleware</h3>
+      </div>
+    </div>
+    </div>
+
+    <p>Wrap your protected routes with the x402 middleware. Every request to these routes will require a valid payment header.</p>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab(this, 'mw-ts')">TypeScript</div>
+      <div class="tab" onclick="switchTab(this, 'mw-py')">Python</div>
+    </div>
+
+    <div class="tab-content active" id="mw-ts">
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="kw">import</span> express <span class="kw">from</span> <span class="str">'express'</span>;
+<span class="kw">import</span> { paymentMiddleware } <span class="kw">from</span> <span class="str">'@x402/express'</span>;
+
+<span class="kw">const</span> app = express();
+
+<span class="comment">// Your wallet address (receives payments)</span>
+<span class="kw">const</span> PAYEE_ADDRESS = <span class="str">'0xYourWalletAddress'</span>;
+
+<span class="comment">// Facilitator verifies payments on-chain</span>
+<span class="kw">const</span> FACILITATOR_URL = <span class="str">'https://x402.org/facilitator'</span>;
+
+<span class="comment">// Protect routes with x402 payment requirement</span>
+app.use(
+  <span class="str">'/v1/tools/*'</span>,
+  paymentMiddleware({
+    <span class="key">payeeAddress</span>: PAYEE_ADDRESS,
+    <span class="key">facilitatorUrl</span>: FACILITATOR_URL,
+    <span class="key">network</span>: <span class="str">'base-mainnet'</span>,
+    <span class="key">description</span>: <span class="str">'API call payment'</span>,
+    <span class="key">price</span>: {
+      <span class="key">amount</span>: <span class="str">'0.001'</span>,     <span class="comment">// $0.001 USDC per call</span>
+      <span class="key">token</span>: <span class="str">'USDC'</span>,
+    },
+  })
+);
+
+<span class="comment">// Your normal route handler — no payment logic needed here</span>
+app.post(<span class="str">'/v1/tools/summarize'</span>, <span class="kw">async</span> (req, res) => {
+  <span class="kw">const</span> { text } = req.body;
+  <span class="kw">const</span> summary = <span class="kw">await</span> generateSummary(text);
+  res.json({ summary });
+});
+
+app.listen(<span class="num">3000</span>, () => {
+  console.log(<span class="str">'API running with x402 payments on :3000'</span>);
+});</code></pre>
+    </div>
+
+    <div class="tab-content" id="mw-py">
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="kw">from</span> flask <span class="kw">import</span> Flask, request, jsonify
+<span class="kw">from</span> x402 <span class="kw">import</span> require_payment
+
+app = Flask(__name__)
+
+<span class="comment"># Your wallet address (receives payments)</span>
+PAYEE_ADDRESS = <span class="str">"0xYourWalletAddress"</span>
+FACILITATOR_URL = <span class="str">"https://x402.org/facilitator"</span>
+
+<span class="comment"># Decorator protects routes with x402 payment</span>
+<span class="key">@app.route</span>(<span class="str">"/v1/tools/summarize"</span>, methods=[<span class="str">"POST"</span>])
+<span class="key">@require_payment</span>(
+    payee_address=PAYEE_ADDRESS,
+    facilitator_url=FACILITATOR_URL,
+    network=<span class="str">"base-mainnet"</span>,
+    amount=<span class="str">"0.001"</span>,
+    token=<span class="str">"USDC"</span>,
+)
+<span class="kw">def</span> <span class="key">summarize</span>():
+    text = request.json.get(<span class="str">"text"</span>)
+    summary = generate_summary(text)
+    <span class="kw">return</span> jsonify({<span class="str">"summary"</span>: summary})
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    app.run(port=<span class="num">3000</span>)</code></pre>
+    </div>
+
+    <p>That's it for the basic integration. When a request comes in without a valid payment header, the middleware automatically returns a <code>402 Payment Required</code> response with the pricing details. Clients that support x402 handle the rest.</p>
+
+    <!-- STEP 3 -->
+    <div id="facilitator">
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Set Up a Facilitator</h3>
+      </div>
+    </div>
+    </div>
+
+    <p>The facilitator is a service that verifies payments on-chain. You have three options:</p>
+
+    <div class="callout">
+      <strong>Option A: Use the Public Facilitator (Recommended for Starting)</strong><br><br>
+      Coinbase runs a public facilitator at <code>https://x402.org/facilitator</code>. It's free, handles verification on all supported networks, and works out of the box. Use this to get started.
+    </div>
+
+    <div class="callout">
+      <strong>Option B: Self-Host a Facilitator</strong><br><br>
+      For production workloads with high volume, you can run your own facilitator. The <code>@x402/facilitator</code> package provides a ready-to-deploy Node.js server.
+    </div>
+
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="comment"># Install the facilitator</span>
+npm install @x402/facilitator
+
+<span class="comment"># Run it</span>
+npx x402-facilitator \
+  --network base-mainnet \
+  --port 4020
+
+<span class="comment"># Now point your middleware to your facilitator</span>
+<span class="comment"># facilitatorUrl: 'http://localhost:4020'</span></code></pre>
+
+    <div class="callout-amber">
+      <strong>Option C: Coinbase Developer Platform (CDP)</strong><br><br>
+      If you're building on the Coinbase ecosystem, CDP provides managed facilitator infrastructure as part of their agentic commerce toolkit. See <a href="https://docs.cdp.coinbase.com">docs.cdp.coinbase.com</a>.
+    </div>
+
+    <!-- STEP 4 -->
+    <div id="wellknown">
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Expose /.well-known/x402</h3>
+      </div>
+    </div>
+    </div>
+
+    <p>The <code>/.well-known/x402</code> endpoint is how agents discover your pricing and payment requirements. It's the standard x402 discovery mechanism.</p>
+
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="comment">// Add this route to your Express app</span>
+app.get(<span class="str">'/.well-known/x402'</span>, (req, res) => {
+  res.json({
+    <span class="key">accepts</span>: [
+      {
+        <span class="key">scheme</span>: <span class="str">'exact'</span>,
+        <span class="key">network</span>: <span class="str">'base-mainnet'</span>,
+        <span class="key">asset</span>: <span class="str">'USDC'</span>,
+        <span class="key">maxAmountRequired</span>: <span class="str">'1000'</span>,    <span class="comment">// in smallest unit (0.001 USDC)</span>
+        <span class="key">payeeAddress</span>: <span class="str">'0xYourWalletAddress'</span>,
+      },
+      <span class="comment">// Add more networks/tokens as needed</span>
+      {
+        <span class="key">scheme</span>: <span class="str">'exact'</span>,
+        <span class="key">network</span>: <span class="str">'ethereum-mainnet'</span>,
+        <span class="key">asset</span>: <span class="str">'USDC'</span>,
+        <span class="key">maxAmountRequired</span>: <span class="str">'1000'</span>,
+        <span class="key">payeeAddress</span>: <span class="str">'0xYourWalletAddress'</span>,
+      },
+    ],
+    <span class="key">facilitatorUrl</span>: <span class="str">'https://x402.org/facilitator'</span>,
+    <span class="key">description</span>: <span class="str">'Your API description'</span>,
+    <span class="key">docs</span>: <span class="str">'https://your-api.com/docs'</span>,
+  });
+});</code></pre>
+
+    <div class="callout-green">
+      <strong>Pro tip:</strong> The <code>@x402/express</code> middleware can auto-generate the <code>/.well-known/x402</code> endpoint based on your middleware configuration. Set <code>exposeWellKnown: true</code> in your middleware options.
+    </div>
+
+    <!-- STEP 5 -->
+    <div id="test">
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3>Test with the Playground</h3>
+      </div>
+    </div>
+    </div>
+
+    <p>Before listing your service, test it. The <a href="/playground.html">Arch Tools x402 Playground</a> lets you make real x402 payments against any endpoint.</p>
+
+    <h3>Quick Test with curl</h3>
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="comment"># 1. Check your well-known endpoint</span>
+curl https://your-api.com/.well-known/x402
+
+<span class="comment"># 2. Call a protected endpoint without payment — should return 402</span>
+curl -i https://your-api.com/v1/tools/summarize \
+  -X POST \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"text": "test"}'</span>
+
+<span class="comment"># Expected response:</span>
+<span class="out">HTTP/1.1 402 Payment Required
+X-Payment-Required: true
+Content-Type: application/json
+
+{
+  "error": "Payment required",
+  "accepts": [...],
+  "amount": "0.001",
+  "token": "USDC",
+  "network": "base-mainnet"
+}</span></code></pre>
+
+    <h3>Test with the Arch Tools Playground</h3>
+    <ol>
+      <li>Go to <a href="/playground.html">archtools.dev/playground</a></li>
+      <li>Enter your API endpoint URL</li>
+      <li>Connect your wallet (MetaMask, Coinbase Wallet, or WalletConnect)</li>
+      <li>Click "Pay & Call" — the playground constructs the payment header, sends it, and shows the full round-trip</li>
+      <li>Verify you received the payment in your wallet</li>
+    </ol>
+
+    <!-- STEP 6 -->
+    <div id="list">
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <h3>List on the Arch Tools Directory</h3>
+      </div>
+    </div>
+    </div>
+
+    <p>Once your service is tested and live, submit it to the <a href="/directory.html">x402 Service Directory</a> — the first comprehensive catalog of x402-enabled APIs.</p>
+
+    <h3>Via Pull Request (Preferred)</h3>
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="comment"># 1. Fork the Arch Tools repo</span>
+gh repo fork Deesmo/Arch-AI-Tools
+
+<span class="comment"># 2. Add your service to directory-services.json</span>
+{
+  <span class="key">"name"</span>: <span class="str">"your-service"</span>,
+  <span class="key">"provider"</span>: <span class="str">"Your Company"</span>,
+  <span class="key">"description"</span>: <span class="str">"What your API does"</span>,
+  <span class="key">"endpoint"</span>: <span class="str">"https://api.yourservice.com/v1/action"</span>,
+  <span class="key">"wellKnown"</span>: <span class="str">"https://api.yourservice.com/.well-known/x402"</span>,
+  <span class="key">"category"</span>: <span class="str">"ai"</span>,
+  <span class="key">"pricing"</span>: { <span class="key">"amount"</span>: <span class="str">"0.001"</span>, <span class="key">"token"</span>: <span class="str">"USDC"</span> },
+  <span class="key">"chains"</span>: [<span class="str">"base-mainnet"</span>],
+  <span class="key">"docs"</span>: <span class="str">"https://docs.yourservice.com"</span>
+}
+
+<span class="comment"># 3. Open a PR</span>
+gh pr create --title <span class="str">"Add [your-service] to x402 directory"</span></code></pre>
+
+    <h3>Via the Directory Page</h3>
+    <p>Visit the <a href="/directory.html">directory page</a> and use the submission form. We'll verify your <code>/.well-known/x402</code> endpoint and add you within 24 hours.</p>
+
+    <h2>Multi-Network Support</h2>
+
+    <p>Want to accept payments on multiple chains? Add more entries to your middleware config:</p>
+
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="comment">// Accept USDC on Base, Ethereum, and Arbitrum</span>
+app.use(
+  <span class="str">'/v1/tools/*'</span>,
+  paymentMiddleware({
+    <span class="key">payeeAddress</span>: PAYEE_ADDRESS,
+    <span class="key">facilitatorUrl</span>: FACILITATOR_URL,
+    <span class="key">networks</span>: [
+      { <span class="key">network</span>: <span class="str">'base-mainnet'</span>,     <span class="key">token</span>: <span class="str">'USDC'</span>, <span class="key">amount</span>: <span class="str">'0.001'</span> },
+      { <span class="key">network</span>: <span class="str">'ethereum-mainnet'</span>, <span class="key">token</span>: <span class="str">'USDC'</span>, <span class="key">amount</span>: <span class="str">'0.001'</span> },
+      { <span class="key">network</span>: <span class="str">'arbitrum-mainnet'</span>, <span class="key">token</span>: <span class="str">'USDC'</span>, <span class="key">amount</span>: <span class="str">'0.001'</span> },
+      { <span class="key">network</span>: <span class="str">'solana-mainnet'</span>,   <span class="key">token</span>: <span class="str">'USDC'</span>, <span class="key">amount</span>: <span class="str">'0.001'</span> },
+    ],
+  })
+);</code></pre>
+
+    <h2>Per-Route Pricing</h2>
+
+    <p>Different endpoints can have different prices. Expensive operations (image generation, research reports) cost more than simple lookups:</p>
+
+    <pre><button class="copy-btn" onclick="(function(btn){var pre=btn.parentElement;navigator.clipboard.writeText(pre.querySelector('code').innerText).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},2000);});})(this)">Copy</button><code><span class="comment">// Cheap: text utilities ($0.001)</span>
+app.use(<span class="str">'/v1/tools/summarize'</span>, paymentMiddleware({
+  ...baseConfig,
+  <span class="key">price</span>: { <span class="key">amount</span>: <span class="str">'0.001'</span>, <span class="key">token</span>: <span class="str">'USDC'</span> },
+}));
+
+<span class="comment">// Medium: AI generation ($0.005)</span>
+app.use(<span class="str">'/v1/tools/ai-generate'</span>, paymentMiddleware({
+  ...baseConfig,
+  <span class="key">price</span>: { <span class="key">amount</span>: <span class="str">'0.005'</span>, <span class="key">token</span>: <span class="str">'USDC'</span> },
+}));
+
+<span class="comment">// Expensive: image generation ($0.02)</span>
+app.use(<span class="str">'/v1/tools/generate-image'</span>, paymentMiddleware({
+  ...baseConfig,
+  <span class="key">price</span>: { <span class="key">amount</span>: <span class="str">'0.02'</span>, <span class="key">token</span>: <span class="str">'USDC'</span> },
+}));</code></pre>
+
+    <h2>Common Issues</h2>
+
+    <div class="callout-amber">
+      <strong>Payment header rejected?</strong><br>
+      Check that your wallet has sufficient USDC on the correct network. Base USDC ≠ Ethereum USDC. The payment must be on the exact network your middleware expects.
+    </div>
+
+    <div class="callout-amber">
+      <strong>Facilitator timeout?</strong><br>
+      The public facilitator at <code>x402.org</code> may have higher latency during peak usage. For production, consider self-hosting or using CDP's managed facilitator.
+    </div>
+
+    <div class="callout-amber">
+      <strong>Agent can't discover your service?</strong><br>
+      Make sure <code>/.well-known/x402</code> returns valid JSON with CORS headers enabled. Test with <code>curl -v</code> to verify.
+    </div>
+
+    <h2>Next Steps</h2>
+
+    <ul>
+      <li><a href="/blog-x402-directory.html">Read the announcement</a> — How we built the first x402 Service Directory</li>
+      <li><a href="/directory.html">Browse the directory</a> — See what other APIs accept x402</li>
+      <li><a href="/playground.html">Try the playground</a> — Make a real x402 payment</li>
+      <li><a href="/fund.html">Fund an agent wallet</a> — Load USDC for your agents</li>
+      <li><a href="https://github.com/coinbase/x402">x402 Protocol Spec</a> — The official Coinbase spec</li>
+    </ul>
+
+  </article>
+</div>
+
+<div class="wrap">
+  <div class="cta-section">
+    <h2>Your API accepts x402 now. List it.</h2>
+    <p>Submit your service to the directory and let agents discover you.</p>
+    <a class="btn" href="/directory.html">Submit to Directory →</a>
+    <a class="btn-ghost" href="/playground.html">Test in Playground</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>© 2026 Arch Tools</span>
+    <span>
+      <a href="/">Home</a> ·
+      <a href="/blog-x402-directory.html">Directory Blog</a> ·
+      <a href="/blog-x402.html">x402 Launch</a> ·
+      <a href="/terms.html">Terms</a> ·
+      <a href="/privacy.html">Privacy</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+function switchTab(tabEl, contentId) {
+  const bar = tabEl.parentElement;
+  const parent = bar.parentElement;
+  bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  // Find all tab-content siblings after this tab-bar
+  let el = bar.nextElementSibling;
+  while (el && el.classList.contains('tab-content')) {
+    el.classList.remove('active');
+    if (el.id === contentId) el.classList.add('active');
+    el = el.nextElementSibling;
+  }
+}
+</script>
+
+</body>
+</html>
