@@ -134,6 +134,16 @@ app.use(express.static(path.join(__dirname, "../public"), {
   }
 }));
 
+// ─── .well-known/glama.json — Glama ownership verification ──────────────
+app.get("/.well-known/glama.json", (_req: Request, res: Response): void => {
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json({
+    "$schema": "https://glama.ai/mcp/schemas/server.json",
+    "maintainers": ["Deesmo"]
+  });
+});
+
 // ─── og-image.png — serve actual PNG from public directory ──────────────
 app.get("/og-image.png", (_req: Request, res: Response): void => {
   res.setHeader("Content-Type", "image/png");
