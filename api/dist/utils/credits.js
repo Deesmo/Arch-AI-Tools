@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { fingerprintCaller } from "../lib/fingerprint.js";
 import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
 import { recordAgentCall, updateAgentReputation } from "../services/reputation.js";
+import { fireWebhookEvent } from "../services/webhooks.js";
 export async function deductCredits(req, res, toolName, cost) {
     const agent = req.agent;
     if (!agent) {
@@ -35,6 +36,20 @@ export async function deductCredits(req, res, toolName, cost) {
             .then(a => { if (a?.email)
             sendLowCreditAlert(a.email, agent.credits, agent.id).catch(() => { }); })
             .catch(() => { });
+        // Fire credits.low webhook
+        fireWebhookEvent("credits.low", agent.id, {
+            credits_remaining: agent.credits,
+            tool_name: toolName,
+            threshold: LOW_CREDIT_THRESHOLD,
+        }).catch(() => { });
+    }
+    // Credits depleted webhook
+    if (agent.credits <= 0) {
+        fireWebhookEvent("credits.depleted", agent.id, {
+            credits_remaining: 0,
+            tool_name: toolName,
+            message: "Your credit balance has reached zero. Purchase more at https://archtools.dev/pricing",
+        }).catch(() => { });
     }
     // Log the request with agent fingerprint
     try {
@@ -79,6 +94,11 @@ export async function logError(agentId, toolName, cost) {
         // KYA: Track error and update reputation (non-blocking)
         void recordAgentCall(agentId, false);
         void updateAgentReputation(agentId);
+        // Fire tool.error webhook (non-blocking)
+        fireWebhookEvent("tool.error", agentId, {
+            tool_name: toolName,
+            credits_charged: cost,
+        }).catch(() => { });
     }
     catch {
         // Non-fatal

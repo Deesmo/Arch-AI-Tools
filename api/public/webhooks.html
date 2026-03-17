@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Webhooks — Arch Tools</title>
+  <meta name="description" content="Receive real-time event notifications from Arch Tools via webhooks.">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:#07061A;color:#f0f0f6;line-height:1.7;-webkit-font-smoothing:antialiased}
+    a{color:#00e5b0;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .container{max-width:900px;margin:0 auto;padding:48px 24px 96px}
+
+    /* Nav */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.06);max-width:1200px;margin:0 auto}
+    .nav-logo{font-weight:700;font-size:18px;color:#f0f0f6}
+    .nav-logo span{color:#00e5b0}
+    .nav-links{display:flex;gap:24px;font-size:14px}
+    .nav-links a{color:#8b8ba6;font-weight:500}
+    .nav-links a:hover{color:#f0f0f6;text-decoration:none}
+
+    /* Hero */
+    h1{font-size:2.5rem;font-weight:700;margin:48px 0 16px;background:linear-gradient(135deg,#00e5b0,#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .subtitle{font-size:1.1rem;color:#8b8ba6;margin-bottom:48px}
+
+    /* Sections */
+    h2{font-size:1.5rem;font-weight:600;margin:48px 0 16px;color:#f0f0f6;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+    h3{font-size:1.1rem;font-weight:600;margin:32px 0 12px;color:#f0f0f6}
+    p{color:#c0c0d6;margin-bottom:16px}
+
+    /* Code blocks */
+    pre{background:#0c0c1e;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:20px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;margin:16px 0 24px;color:#e0e0f0}
+    code{font-family:'JetBrains Mono',monospace;font-size:13px}
+    p code,li code{background:rgba(0,229,176,.08);color:#00e5b0;padding:2px 6px;border-radius:4px;font-size:12px}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;margin:16px 0 24px}
+    th,td{text-align:left;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+    th{color:#8b8ba6;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+    td{color:#c0c0d6}
+    td code{background:rgba(0,229,176,.08);color:#00e5b0;padding:2px 6px;border-radius:4px;font-size:12px}
+
+    /* Badge */
+    .method{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-right:8px}
+    .method-post{background:rgba(0,229,176,.15);color:#00e5b0}
+    .method-get{background:rgba(0,180,216,.15);color:#00b4d8}
+    .method-delete{background:rgba(255,82,82,.15);color:#ff5252}
+
+    /* Endpoint */
+    .endpoint{background:#0c0c1e;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:20px;margin:16px 0 24px}
+    .endpoint-path{font-family:'JetBrains Mono',monospace;font-size:14px;color:#f0f0f6;font-weight:500}
+
+    /* Alert */
+    .alert{background:rgba(0,229,176,.06);border:1px solid rgba(0,229,176,.15);border-radius:12px;padding:16px 20px;margin:24px 0;font-size:14px;color:#c0c0d6}
+    .alert strong{color:#00e5b0}
+
+    /* Footer */
+    .footer{text-align:center;padding:48px 24px;border-top:1px solid rgba(255,255,255,.06);color:#8b8ba6;font-size:13px;margin-top:64px}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-logo">⚡ Arch <span>Tools</span></a>
+    <div class="nav-links">
+      <a href="/docs">Docs</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/webhooks">Webhooks</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Webhooks</h1>
+    <p class="subtitle">Receive real-time event notifications when things happen in your Arch Tools account — payments, credit alerts, errors, and more.</p>
+
+    <!-- Overview -->
+    <h2>How It Works</h2>
+    <p>Register an HTTPS endpoint with the events you want to subscribe to. When an event fires, Arch Tools sends a <code>POST</code> request to your URL with a signed JSON payload.</p>
+    <p>Every delivery includes an HMAC-SHA256 signature so you can verify it came from us. We retry failed deliveries up to 3 times with exponential backoff.</p>
+
+    <!-- Events -->
+    <h2>Event Types</h2>
+    <table>
+      <thead><tr><th>Event</th><th>Fires When</th><th>Payload Fields</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>payment.received</code></td>
+          <td>A payment completes (one-time pack, subscription start, or renewal)</td>
+          <td><code>type</code>, <code>credits_added</code>, <code>amount_usd</code>, <code>plan</code></td>
+        </tr>
+        <tr>
+          <td><code>credits.low</code></td>
+          <td>Credit balance drops below 20% threshold after a tool call</td>
+          <td><code>credits_remaining</code>, <code>tool_name</code>, <code>threshold</code></td>
+        </tr>
+        <tr>
+          <td><code>credits.depleted</code></td>
+          <td>Credit balance hits zero</td>
+          <td><code>credits_remaining</code>, <code>tool_name</code>, <code>message</code></td>
+        </tr>
+        <tr>
+          <td><code>agent.registered</code></td>
+          <td>A new agent registers (for admin/platform webhooks)</td>
+          <td><code>agent_id</code>, <code>email</code>, <code>tier</code></td>
+        </tr>
+        <tr>
+          <td><code>tool.error</code></td>
+          <td>A tool call fails with an error</td>
+          <td><code>tool_name</code>, <code>credits_charged</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Payload -->
+    <h2>Payload Format</h2>
+    <p>Every webhook delivery is a JSON <code>POST</code> with this structure:</p>
+    <pre>{
+  "id": "evt_a1b2c3d4e5f6g7h8i9j0k1l2",
+  "event": "payment.received",
+  "timestamp": "2026-03-17T14:30:00.000Z",
+  "data": {
+    "agent_id": "clx1abc2def3ghi4jkl",
+    "type": "one_time",
+    "credits_added": 5000,
+    "amount_usd": "9.00",
+    "stripe_session_id": "cs_test_..."
+  }
+}</pre>
+
+    <!-- Headers -->
+    <h3>Request Headers</h3>
+    <table>
+      <thead><tr><th>Header</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Content-Type</code></td><td><code>application/json</code></td></tr>
+        <tr><td><code>X-Webhook-Id</code></td><td>Unique event ID (for idempotency)</td></tr>
+        <tr><td><code>X-Webhook-Event</code></td><td>Event type (e.g. <code>payment.received</code>)</td></tr>
+        <tr><td><code>X-Webhook-Signature</code></td><td>HMAC-SHA256 signature: <code>sha256=&lt;hex&gt;</code></td></tr>
+        <tr><td><code>X-Webhook-Timestamp</code></td><td>ISO 8601 timestamp</td></tr>
+        <tr><td><code>User-Agent</code></td><td><code>ArchTools-Webhook/1.0</code></td></tr>
+      </tbody>
+    </table>
+
+    <!-- Security -->
+    <h2>Verifying Signatures</h2>
+    <p>Every delivery is signed with your webhook's secret using HMAC-SHA256. Always verify the signature before processing.</p>
+
+    <h3>Node.js</h3>
+    <pre>import crypto from "crypto";
+
+function verifyWebhook(body, signature, secret) {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex");
+  return signature === `sha256=${expected}`;
+}
+
+// In your Express handler:
+app.post("/my-webhook", (req, res) => {
+  const sig = req.headers["x-webhook-signature"];
+  const rawBody = JSON.stringify(req.body);
+
+  if (!verifyWebhook(rawBody, sig, "whsec_your_secret_here")) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  const event = req.body;
+  console.log(`Received ${event.event}:`, event.data);
+  res.status(200).send("OK");
+});</pre>
+
+    <h3>Python</h3>
+    <pre>import hmac
+import hashlib
+
+def verify_webhook(body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(
+        secret.encode(), body, hashlib.sha256
+    ).hexdigest()
+    return signature == f"sha256={expected}"
+
+# In your Flask handler:
+@app.route("/my-webhook", methods=["POST"])
+def webhook():
+    sig = request.headers.get("X-Webhook-Signature", "")
+    if not verify_webhook(request.data, sig, "whsec_your_secret_here"):
+        return "Invalid signature", 401
+
+    event = request.json
+    print(f"Received {event['event']}: {event['data']}")
+    return "OK", 200</pre>
+
+    <!-- API Reference -->
+    <h2>API Reference</h2>
+
+    <h3>Register a Webhook</h3>
+    <div class="endpoint">
+      <span class="method method-post">POST</span>
+      <span class="endpoint-path">/api/v1/webhooks/register</span>
+    </div>
+    <pre>curl -X POST https://archtools.dev/api/v1/webhooks/register \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/webhook",
+    "events": ["payment.received", "credits.low"]
+  }'</pre>
+    <div class="alert"><strong>⚠️ Important:</strong> The webhook <code>secret</code> is only returned once at registration. Save it immediately — you'll need it to verify signatures.</div>
+
+    <h3>List Webhooks</h3>
+    <div class="endpoint">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-path">/api/v1/webhooks</span>
+    </div>
+    <pre>curl https://archtools.dev/api/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+
+    <h3>Delete a Webhook</h3>
+    <div class="endpoint">
+      <span class="method method-delete">DELETE</span>
+      <span class="endpoint-path">/api/v1/webhooks/:id</span>
+    </div>
+    <pre>curl -X DELETE https://archtools.dev/api/v1/webhooks/WEBHOOK_ID \
+  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+
+    <h3>Send a Test Event</h3>
+    <div class="endpoint">
+      <span class="method method-post">POST</span>
+      <span class="endpoint-path">/api/v1/webhooks/test</span>
+    </div>
+    <pre>curl -X POST https://archtools.dev/api/v1/webhooks/test \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "webhook_id": "OPTIONAL_SPECIFIC_WEBHOOK_ID" }'</pre>
+
+    <!-- Retry Policy -->
+    <h2>Retry Policy</h2>
+    <p>If your endpoint returns a non-2xx status or times out (10s), we retry up to <strong>3 times</strong> with exponential backoff:</p>
+    <table>
+      <thead><tr><th>Attempt</th><th>Delay</th></tr></thead>
+      <tbody>
+        <tr><td>1st retry</td><td>1 second</td></tr>
+        <tr><td>2nd retry</td><td>4 seconds</td></tr>
+        <tr><td>3rd retry</td><td>9 seconds</td></tr>
+      </tbody>
+    </table>
+    <p>Client errors (4xx except 429) are <strong>not retried</strong> — fix your endpoint and use the test endpoint to verify.</p>
+
+    <!-- Best Practices -->
+    <h2>Best Practices</h2>
+    <ul style="color:#c0c0d6;padding-left:24px;margin-bottom:24px">
+      <li>Always verify the <code>X-Webhook-Signature</code> before processing</li>
+      <li>Return <code>200 OK</code> quickly — process events asynchronously if needed</li>
+      <li>Use the <code>id</code> field for idempotency (don't process the same event twice)</li>
+      <li>Store and check the <code>X-Webhook-Timestamp</code> to reject old replays</li>
+      <li>Keep your endpoint URL stable — use a dedicated <code>/webhook</code> path</li>
+      <li>Use the <code>/test</code> endpoint to verify your setup before going live</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <p>© 2026 Arch Tools — <a href="/docs">Docs</a> · <a href="/pricing">Pricing</a> · <a href="https://github.com/Deesmo/Arch-AI-Tools">GitHub</a></p>
+  </div>
+</body>
+</html>

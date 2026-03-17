@@ -38,6 +38,7 @@ import playgroundRouter from "./routes/playground.js";
 import x402PaymentsRouter from "./routes/x402-payments.js";
 import facilitatorRouter from "./routes/facilitator.js";
 import agentsRouter from "./routes/agents.js";
+import webhooksRouter from "./routes/webhooks.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
@@ -257,6 +258,9 @@ app.use("/api/v1/facilitator", facilitatorRouter);
 // Agent Identity (KYA — Know Your Agent)
 app.use("/api/v1/agents", agentsRouter);
 
+// Webhooks — event notification system
+app.use("/api/v1/webhooks", webhooksRouter);
+
 // Wallet provisioning (AgentKit)
 app.use("/v1/wallet", walletRouter);
 
@@ -308,6 +312,7 @@ app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dir
 app.get("/status", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/status.html')));
 app.get("/stats", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/stats.html')));
 app.get("/facilitator", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
+app.get("/webhooks", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/webhooks.html')));
 
 // /success — Stripe post-checkout success page
 app.get("/success", (_req: Request, res: Response) => {

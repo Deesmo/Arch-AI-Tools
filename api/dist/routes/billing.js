@@ -4,6 +4,7 @@ import { stripe } from "../lib/stripe.js";
 import { requireAuth } from "../middleware/auth.js";
 import { reqId } from "../utils/credits.js";
 import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
+import { fireWebhookEvent } from "../services/webhooks.js";
 const router = Router();
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
@@ -224,6 +225,13 @@ router.post("/stripe", async (req, res) => {
                     prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: credits } } }),
                 ]);
                 console.log(`[billing] One-time: +${credits} credits to agent ${agentId}`);
+                // Fire webhook event (non-blocking)
+                fireWebhookEvent("payment.received", agentId, {
+                    type: "one_time",
+                    credits_added: credits,
+                    amount_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+                    stripe_session_id: stripeId,
+                }).catch(() => { });
                 try {
                     const agentRecord = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true, credits: true } });
                     if (agentRecord?.email) {
@@ -250,6 +258,14 @@ router.post("/stripe", async (req, res) => {
                     prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId } }),
                 ]);
                 console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
+                // Fire webhook event (non-blocking)
+                fireWebhookEvent("payment.received", agentId, {
+                    type: "subscription",
+                    plan: planId,
+                    credits_added: creditsPerMonth,
+                    amount_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+                    stripe_session_id: stripeId,
+                }).catch(() => { });
                 try {
                     const agentRecord2 = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } });
                     const amountUsd2 = ((session.amount_total ?? 0) / 100).toFixed(2);
@@ -295,6 +311,13 @@ router.post("/stripe", async (req, res) => {
                 prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth } } }),
             ]);
             console.log(`[billing] Renewal: +${creditsPerMonth} credits to agent ${agentId}`);
+            // Fire webhook event (non-blocking)
+            fireWebhookEvent("payment.received", agentId, {
+                type: "renewal",
+                credits_added: creditsPerMonth,
+                amount_usd: ((invoice.amount_paid ?? 0) / 100).toFixed(2),
+                subscription_id: subscriptionId,
+            }).catch(() => { });
             const agentRenewal = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } }).catch(() => null);
             const renewalAmount = ((invoice.amount_paid ?? 0) / 100).toFixed(2);
             sendAdminAlert(`🔄 Arch Tools subscription renewal — $${renewalAmount}`, `Subscription renewed!\n\nCustomer: ${agentRenewal?.email ?? "unknown"}\nCredits added: ${creditsPerMonth.toLocaleString()}\nAmount: $${renewalAmount}\nSubscription: ${subscriptionId}`).catch(() => { });
