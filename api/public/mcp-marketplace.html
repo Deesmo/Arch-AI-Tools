@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCP Server Marketplace — Arch Tools</title>
+  <meta name="description" content="The curated MCP Server Marketplace. Discover, search, and install quality Model Context Protocol servers for Claude, Cursor, Windsurf, VS Code, and ChatGPT." />
+  <meta property="og:title" content="MCP Server Marketplace — Arch Tools" />
+  <meta property="og:description" content="The curated MCP Server Marketplace. 50+ quality MCP servers searchable by category, capability, and framework support." />
+  <meta property="og:image" content="https://archtools.dev/og-image.png" />
+  <meta property="og:url" content="https://archtools.dev/mcp-marketplace" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="MCP Server Marketplace — Arch Tools" />
+  <meta name="twitter:description" content="The curated MCP Server Marketplace. Discover quality MCP servers for your AI agents." />
+  <meta name="twitter:image" content="https://archtools.dev/og-image.png" />
+  <meta name="keywords" content="MCP servers, MCP marketplace, model context protocol, AI tools, Claude MCP, Cursor MCP, MCP directory, AI agents, MCP install" />
+  <link rel="canonical" href="https://archtools.dev/mcp-marketplace" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "MCP Server Marketplace",
+    "description": "The curated MCP Server Marketplace. Discover, search, and install quality Model Context Protocol servers.",
+    "url": "https://archtools.dev/mcp-marketplace",
+    "publisher": { "@type": "Organization", "name": "Arch Tools", "url": "https://archtools.dev" }
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #030308;
+      --bg2: #080810;
+      --card: #0c0c16;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --text: #f0f0f6;
+      --muted: #6b6b80;
+      --accent: #00e5b0;
+      --accent2: #0066ff;
+      --accent3: #aa44ff;
+      --grad: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+
+    .topline { height: 2px; background: linear-gradient(90deg, transparent 0%, var(--accent) 20%, var(--accent2) 55%, var(--accent3) 80%, transparent 100%); }
+
+    /* Nav */
+    .nav { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .nav-logo img { height: 32px; width: 32px; }
+    .nav-logo span { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active { color: var(--accent); }
+    .nav-links .btn-sm { background: var(--accent); color: #030308; padding: 8px 16px; border-radius: 8px; font-weight: 600; }
+
+    /* Hero */
+    .hero { text-align: center; padding: 60px 24px 40px; max-width: 900px; margin: 0 auto; }
+    .hero-badge { display: inline-block; background: rgba(0,229,176,0.08); color: var(--accent); font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(0,229,176,0.2); margin-bottom: 20px; letter-spacing: 0.5px; }
+    .hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
+    .hero h1 .grad { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { color: var(--muted); font-size: 18px; max-width: 640px; margin: 0 auto 24px; }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-actions a { padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; border: none; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: #030308; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border2) !important; }
+    .btn-secondary:hover { border-color: var(--accent) !important; color: var(--accent); }
+
+    /* Stats */
+    .stats-bar { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; margin-bottom: 48px; }
+    .stat { text-align: center; }
+    .stat-num { font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 800; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Search & Filters */
+    .filters { max-width: 1200px; margin: 0 auto 32px; padding: 0 24px; }
+    .search-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 16px; color: var(--text); font-size: 15px; outline: none; font-family: inherit; }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+    .sort-select { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 16px; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; outline: none; }
+    .sort-select:focus { border-color: var(--accent); }
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .filter-label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; align-self: center; }
+    .chip { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.2s; user-select: none; }
+    .chip:hover, .chip.active { background: rgba(0,229,176,0.08); border-color: rgba(0,229,176,0.3); color: var(--accent); }
+
+    /* Grid */
+    .grid { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: all 0.3s; position: relative; overflow: hidden; cursor: pointer; }
+    .card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .card.featured { border-color: rgba(0,229,176,0.2); }
+    .card.featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--grad); }
+
+    .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .card-icon { width: 42px; height: 42px; border-radius: 10px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .card-icon.ts { background: rgba(0,122,204,0.12); color: #3178c6; }
+    .card-icon.py { background: rgba(55,118,171,0.12); color: #3776ab; }
+    .card-icon.go { background: rgba(0,173,216,0.12); color: #00add8; }
+    .card-title-wrap { flex: 1; min-width: 0; }
+    .card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-author { font-size: 12px; color: var(--muted); }
+    .card-badges { display: flex; gap: 6px; flex-shrink: 0; }
+    .badge { font-size: 10px; padding: 3px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-verified { background: rgba(0,229,176,0.12); color: var(--accent); }
+    .badge-featured { background: rgba(170,68,255,0.12); color: var(--accent3); }
+    .badge-official { background: rgba(0,102,255,0.12); color: var(--accent2); }
+
+    .card-desc { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tag { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 3px 10px; font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+    .card-install { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .card-install code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copy-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; transition: color 0.2s; flex-shrink: 0; }
+    .copy-btn:hover { color: var(--accent); }
+    .copy-btn.copied { color: var(--accent); }
+
+    .card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px; }
+    .card-stars { font-size: 13px; color: var(--muted); }
+    .card-stars span { color: #f5c542; }
+    .card-rating { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); }
+    .card-frameworks { display: flex; gap: 4px; }
+    .fw-badge { background: rgba(255,255,255,0.04); border-radius: 4px; padding: 2px 6px; font-size: 10px; color: var(--muted); font-weight: 500; }
+
+    /* Detail modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 24px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border2); border-radius: 20px; max-width: 680px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px; position: relative; }
+    .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--muted); font-size: 24px; cursor: pointer; padding: 4px 8px; }
+    .modal-close:hover { color: var(--text); }
+    .modal h2 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+    .modal .modal-author { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    .modal .modal-desc { color: var(--text); font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .modal-install { background: rgba(0,0,0,0.4); border-radius: 10px; padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .modal-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .modal-links { display: flex; gap: 12px; flex-wrap: wrap; }
+    .modal-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent2); text-decoration: none; font-size: 14px; font-weight: 600; }
+    .modal-link:hover { text-decoration: underline; }
+    .modal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-meta-item { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px 14px; }
+    .modal-meta-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .modal-meta-value { font-size: 15px; font-weight: 600; margin-top: 2px; }
+
+    /* Submit form */
+    .submit-section { max-width: 800px; margin: 0 auto 80px; padding: 0 24px; }
+    .submit-card { background: var(--card); border: 1px solid var(--border2); border-radius: 20px; padding: 48px; }
+    .submit-card h2 { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; text-align: center; }
+    .submit-card > p { color: var(--muted); margin-bottom: 32px; text-align: center; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .form-group input, .form-group select, .form-group textarea { background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-group select { cursor: pointer; }
+    .form-actions { display: flex; justify-content: center; margin-top: 24px; }
+    .btn-accent { display: inline-block; background: var(--accent); color: #030308; padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; border: none; cursor: pointer; font-family: inherit; }
+    .btn-accent:hover { opacity: 0.9; }
+    .btn-accent:disabled { opacity: 0.5; cursor: not-allowed; }
+    .submit-success { display: none; text-align: center; padding: 32px; }
+    .submit-success .icon { font-size: 3rem; margin-bottom: 12px; }
+    .submit-success h3 { font-family: 'Syne', sans-serif; font-size: 1.4rem; margin-bottom: 8px; }
+    .submit-success p { color: var(--muted); }
+
+    /* Results count */
+    .results-info { max-width: 1200px; margin: 0 auto 16px; padding: 0 24px; color: var(--muted); font-size: 14px; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 60px 24px; grid-column: 1 / -1; }
+    .empty h3 { font-family: 'Syne', sans-serif; font-size: 1.2rem; margin-bottom: 8px; }
+    .empty p { color: var(--muted); }
+
+    /* Footer */
+    .footer { text-align: center; padding: 40px 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 60px; color: var(--muted); grid-column: 1 / -1; }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stats-bar { gap: 24px; }
+      .grid { grid-template-columns: 1fr; }
+      .nav-links { gap: 12px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .modal-meta { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">
+      <img src="/arch-icon.svg" alt="Arch Tools" />
+      <span>Arch Tools</span>
+    </a>
+    <div class="nav-links">
+      <a href="/docs">Docs</a>
+      <a href="/mcp-marketplace" class="active">MCP Servers</a>
+      <a href="/mcp-setup">Setup Guide</a>
+      <a href="/directory">x402 Directory</a>
+      <a href="/dashboard" class="btn-sm">Dashboard</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">🔌 THE MCP MARKETPLACE</div>
+    <h1>The <span class="grad">MCP Server Marketplace</span></h1>
+    <p>The curated directory of quality Model Context Protocol servers. Find the right MCP server for Claude, Cursor, Windsurf, VS Code, and ChatGPT.</p>
+    <div class="hero-actions">
+      <a href="#servers" class="btn-primary">Browse Servers</a>
+      <a href="#submit" class="btn-secondary">Add Your Server</a>
+      <a href="/mcp-setup" class="btn-secondary">Setup Guide →</a>
+    </div>
+  </section>
+
+  <section class="stats-bar" id="stats-bar">
+    <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-label">MCP Servers</div></div>
+    <div class="stat"><div class="stat-num" id="stat-verified">—</div><div class="stat-label">Verified</div></div>
+    <div class="stat"><div class="stat-num" id="stat-categories">—</div><div class="stat-label">Categories</div></div>
+    <div class="stat"><div class="stat-num" id="stat-frameworks">5</div><div class="stat-label">Frameworks</div></div>
+  </section>
+
+  <section class="filters" id="servers">
+    <div class="search-row">
+      <input type="text" class="search-input" id="search" placeholder="Search MCP servers by name, capability, or tag..." autocomplete="off" />
+      <select class="sort-select" id="sort">
+        <option value="stars">⭐ Most Popular</option>
+        <option value="rating">🏆 Highest Rated</option>
+        <option value="updated">🕐 Recently Updated</option>
+        <option value="name">🔤 Alphabetical</option>
+      </select>
+    </div>
+    <div class="filter-row" id="category-filters">
+      <span class="filter-label">Category</span>
+      <span class="chip active" data-cat="all">All</span>
+    </div>
+    <div class="filter-row" id="framework-filters">
+      <span class="filter-label">Framework</span>
+      <span class="chip active" data-fw="all">All</span>
+      <span class="chip" data-fw="claude-desktop">Claude Desktop</span>
+      <span class="chip" data-fw="cursor">Cursor</span>
+      <span class="chip" data-fw="windsurf">Windsurf</span>
+      <span class="chip" data-fw="vscode">VS Code</span>
+      <span class="chip" data-fw="chatgpt">ChatGPT</span>
+    </div>
+    <div class="filter-row" id="lang-filters">
+      <span class="filter-label">Language</span>
+      <span class="chip active" data-lang="all">All</span>
+      <span class="chip" data-lang="typescript">TypeScript</span>
+      <span class="chip" data-lang="python">Python</span>
+      <span class="chip" data-lang="go">Go</span>
+    </div>
+  </section>
+
+  <div class="results-info" id="results-info"></div>
+  <section class="grid" id="grid">
+    <div class="loading"><div class="spinner"></div><p style="margin-top:12px">Loading MCP servers…</p></div>
+  </section>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <button class="modal-close" id="modal-close">&times;</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Submit Section -->
+  <section class="submit-section" id="submit">
+    <div class="submit-card">
+      <h2>🚀 Add Your MCP Server</h2>
+      <p>Built an MCP server? Submit it for review and get listed in the marketplace.</p>
+      <div id="submit-form-wrap">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Server Name *</label>
+            <input type="text" id="sub-name" placeholder="e.g. My Awesome MCP" />
+          </div>
+          <div class="form-group">
+            <label>Contact Email *</label>
+            <input type="email" id="sub-email" placeholder="you@example.com" />
+          </div>
+          <div class="form-group full">
+            <label>Description *</label>
+            <textarea id="sub-desc" placeholder="What does your MCP server do? What problems does it solve?"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Repository URL *</label>
+            <input type="url" id="sub-repo" placeholder="https://github.com/you/your-mcp" />
+          </div>
+          <div class="form-group">
+            <label>Package (npm/pip)</label>
+            <input type="text" id="sub-package" placeholder="npm:your-mcp-server" />
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select id="sub-category">
+              <option value="">Select category...</option>
+              <option value="aggregator">Aggregator</option>
+              <option value="art">Art & Creative</option>
+              <option value="browser">Browser Automation</option>
+              <option value="cloud">Cloud Platforms</option>
+              <option value="communication">Communication</option>
+              <option value="database">Database</option>
+              <option value="developer-tools">Developer Tools</option>
+              <option value="filesystem">File System</option>
+              <option value="finance">Finance & Fintech</option>
+              <option value="knowledge">Knowledge & Memory</option>
+              <option value="location">Location Services</option>
+              <option value="marketing">Marketing</option>
+              <option value="monitoring">Monitoring</option>
+              <option value="productivity">Productivity</option>
+              <option value="search">Search & Data</option>
+              <option value="security">Security</option>
+              <option value="utility">Utility</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Capabilities</label>
+            <select id="sub-capabilities" multiple>
+              <option value="tools">Tools</option>
+              <option value="resources">Resources</option>
+              <option value="prompts">Prompts</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-accent" id="submit-btn" onclick="submitServer()">Submit for Review</button>
+        </div>
+      </div>
+      <div class="submit-success" id="submit-success">
+        <div class="icon">✅</div>
+        <h3>Submitted Successfully!</h3>
+        <p>We'll review your server within 48 hours. You'll receive an email when it's approved.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- API Info -->
+  <section class="submit-section">
+    <div class="submit-card" style="text-align:left">
+      <h2 style="text-align:center">📡 MCP Directory API</h2>
+      <p style="text-align:center">Integrate the MCP marketplace into your own tools.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+        <div class="card-install"><code>GET /api/v1/mcp/servers</code><span style="color:var(--muted)">List all servers</span></div>
+        <div class="card-install"><code>GET /api/v1/mcp/servers/search?q=database</code><span style="color:var(--muted)">Search</span></div>
+        <div class="card-install"><code>GET /api/v1/mcp/servers/:id</code><span style="color:var(--muted)">Server detail</span></div>
+        <div class="card-install"><code>POST /api/v1/mcp/servers/submit</code><span style="color:var(--muted)">Submit server</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>© 2026 <a href="/">Arch Tools</a> · <a href="/docs">API Docs</a> · <a href="/mcp-setup">MCP Setup Guide</a> · <a href="/directory">x402 Directory</a> · <a href="https://x.com/AiArchTools" target="_blank">@AiArchTools</a></p>
+  </footer>
+
+  <script>
+    const API = '/api/v1/mcp';
+    let allServers = [];
+    let activeCategory = 'all';
+    let activeFramework = 'all';
+    let activeLang = 'all';
+
+    const CATEGORY_LABELS = {
+      aggregator: '🔗 Aggregator', art: '🎨 Art & Creative', browser: '📂 Browser',
+      cloud: '☁️ Cloud', communication: '💬 Communication', database: '🗄️ Database',
+      'developer-tools': '🛠️ Dev Tools', filesystem: '📂 Filesystem', finance: '💰 Finance',
+      knowledge: '🧠 Knowledge', location: '🗺️ Location', marketing: '🎯 Marketing',
+      monitoring: '📊 Monitoring', productivity: '🏢 Productivity', search: '🔎 Search',
+      security: '🔒 Security', utility: '⚙️ Utility'
+    };
+
+    const LANG_ICONS = { typescript: 'TS', python: 'PY', go: 'GO' };
+
+    async function loadServers() {
+      try {
+        const res = await fetch(`${API}/servers?limit=100`);
+        const data = await res.json();
+        if (data.ok) {
+          allServers = data.servers;
+          buildCategoryFilters(data.categories || []);
+          renderServers();
+          loadStats();
+        }
+      } catch (e) {
+        document.getElementById('grid').innerHTML = '<div class="empty"><h3>Failed to load servers</h3><p>Please try again later.</p></div>';
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API}/stats`);
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('stat-total').textContent = data.totalServers;
+          document.getElementById('stat-verified').textContent = data.verifiedServers;
+          document.getElementById('stat-categories').textContent = data.categories;
+        }
+      } catch {}
+    }
+
+    function buildCategoryFilters(categories) {
+      const wrap = document.getElementById('category-filters');
+      const existing = wrap.querySelectorAll('.chip[data-cat]:not([data-cat="all"])');
+      existing.forEach(e => e.remove());
+      const cats = [...new Set(allServers.map(s => s.category))].sort();
+      cats.forEach(cat => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.dataset.cat = cat;
+        chip.textContent = CATEGORY_LABELS[cat] || cat;
+        chip.onclick = () => setCategory(cat);
+        wrap.appendChild(chip);
+      });
+    }
+
+    function setCategory(cat) {
+      activeCategory = cat;
+      document.querySelectorAll('#category-filters .chip').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
+      renderServers();
+    }
+
+    function setFramework(fw) {
+      activeFramework = fw;
+      document.querySelectorAll('#framework-filters .chip').forEach(c => c.classList.toggle('active', c.dataset.fw === fw));
+      renderServers();
+    }
+
+    function setLang(lang) {
+      activeLang = lang;
+      document.querySelectorAll('#lang-filters .chip').forEach(c => c.classList.toggle('active', c.dataset.lang === lang));
+      renderServers();
+    }
+
+    function renderServers() {
+      const query = document.getElementById('search').value.toLowerCase().trim();
+      const sort = document.getElementById('sort').value;
+
+      let filtered = [...allServers];
+
+      if (query) {
+        filtered = filtered.filter(s =>
+          s.name.toLowerCase().includes(query) ||
+          s.description.toLowerCase().includes(query) ||
+          s.tags.some(t => t.includes(query)) ||
+          s.author.toLowerCase().includes(query)
+        );
+      }
+      if (activeCategory !== 'all') {
+        filtered = filtered.filter(s => s.category === activeCategory);
+      }
+      if (activeFramework !== 'all') {
+        filtered = filtered.filter(s => s.frameworks.includes(activeFramework));
+      }
+      if (activeLang !== 'all') {
+        filtered = filtered.filter(s => s.language === activeLang);
+      }
+
+      // Sort
+      if (sort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
+      else if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+      else if (sort === 'updated') filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      else filtered.sort((a, b) => b.stars - a.stars);
+
+      document.getElementById('results-info').textContent = `Showing ${filtered.length} of ${allServers.length} MCP servers`;
+
+      if (filtered.length === 0) {
+        document.getElementById('grid').innerHTML = '<div class="empty"><h3>No servers found</h3><p>Try a different search or filter.</p></div>';
+        return;
+      }
+
+      document.getElementById('grid').innerHTML = filtered.map(s => {
+        const langClass = s.language === 'typescript' ? 'ts' : s.language === 'python' ? 'py' : s.language === 'go' ? 'go' : '';
+        const langIcon = LANG_ICONS[s.language] || s.language?.slice(0,2).toUpperCase() || '??';
+        const isOfficial = s.tags.includes('official');
+        return `
+          <div class="card ${s.featured ? 'featured' : ''}" onclick="openDetail('${s.id}')">
+            <div class="card-head">
+              <div class="card-icon ${langClass}">${langIcon}</div>
+              <div class="card-title-wrap">
+                <div class="card-title">${esc(s.name)}</div>
+                <div class="card-author">by ${esc(s.author)}</div>
+              </div>
+              <div class="card-badges">
+                ${s.featured ? '<span class="badge badge-featured">Featured</span>' : ''}
+                ${s.verified ? '<span class="badge badge-verified">Verified</span>' : ''}
+                ${isOfficial ? '<span class="badge badge-official">Official</span>' : ''}
+              </div>
+            </div>
+            <div class="card-desc">${esc(s.description)}</div>
+            <div class="card-tags">${s.tags.slice(0, 5).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+            <div class="card-install"><code>${esc(s.installCommand)}</code><button class="copy-btn" onclick="event.stopPropagation();copyCmd(this,'${esc(s.installCommand)}')">📋</button></div>
+            <div class="card-footer">
+              <span class="card-stars"><span>⭐</span> ${s.stars >= 1000 ? (s.stars/1000).toFixed(1)+'k' : s.stars}</span>
+              <span class="card-rating">★ ${s.rating.toFixed(1)}</span>
+              <div class="card-frameworks">${s.frameworks.slice(0,3).map(f => `<span class="fw-badge">${f === 'claude-desktop' ? 'Claude' : f === 'vscode' ? 'VS Code' : f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join('')}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openDetail(id) {
+      const s = allServers.find(x => x.id === id);
+      if (!s) return;
+      const isOfficial = s.tags.includes('official');
+      document.getElementById('modal-content').innerHTML = `
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          ${s.featured ? '<span class="badge badge-featured">Featured</span>' : ''}
+          ${s.verified ? '<span class="badge badge-verified">Verified</span>' : ''}
+          ${isOfficial ? '<span class="badge badge-official">Official</span>' : ''}
+        </div>
+        <h2>${esc(s.name)}</h2>
+        <div class="modal-author">by ${esc(s.author)} · ${CATEGORY_LABELS[s.category] || s.category}</div>
+        <div class="modal-desc">${esc(s.description)}</div>
+
+        <div class="modal-section">
+          <h3>Install</h3>
+          <div class="modal-install"><code>${esc(s.installCommand)}</code><button class="copy-btn" onclick="copyCmd(this,'${esc(s.installCommand)}')">📋 Copy</button></div>
+        </div>
+
+        <div class="modal-section">
+          <h3>Details</h3>
+          <div class="modal-meta">
+            <div class="modal-meta-item"><div class="modal-meta-label">Language</div><div class="modal-meta-value">${s.language}</div></div>
+            <div class="modal-meta-item"><div class="modal-meta-label">Rating</div><div class="modal-meta-value">★ ${s.rating.toFixed(1)}</div></div>
+            <div class="modal-meta-item"><div class="modal-meta-label">Stars</div><div class="modal-meta-value">${s.stars.toLocaleString()}</div></div>
+            <div class="modal-meta-item"><div class="modal-meta-label">Transport</div><div class="modal-meta-value">${s.transport.join(', ')}</div></div>
+            <div class="modal-meta-item"><div class="modal-meta-label">Capabilities</div><div class="modal-meta-value">${s.capabilities.join(', ')}</div></div>
+            <div class="modal-meta-item"><div class="modal-meta-label">Updated</div><div class="modal-meta-value">${s.updatedAt}</div></div>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h3>Tags</h3>
+          <div class="modal-tags">${s.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        </div>
+
+        <div class="modal-section">
+          <h3>Supported Frameworks</h3>
+          <div class="card-frameworks" style="gap:8px">${s.frameworks.map(f => `<span class="fw-badge" style="font-size:13px;padding:4px 10px">${f === 'claude-desktop' ? 'Claude Desktop' : f === 'vscode' ? 'VS Code' : f.charAt(0).toUpperCase()+f.slice(1)}</span>`).join('')}</div>
+        </div>
+
+        <div class="modal-section">
+          <h3>Links</h3>
+          <div class="modal-links">
+            <a class="modal-link" href="${esc(s.repository)}" target="_blank">📦 Repository</a>
+            ${s.homepage ? `<a class="modal-link" href="${esc(s.homepage)}" target="_blank">🌐 Website</a>` : ''}
+            <a class="modal-link" href="/mcp-setup" >📖 Setup Guide</a>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function copyCmd(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied');
+        btn.textContent = '✅';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋'; }, 1500);
+      });
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s || '';
+      return d.innerHTML;
+    }
+
+    async function submitServer() {
+      const name = document.getElementById('sub-name').value.trim();
+      const email = document.getElementById('sub-email').value.trim();
+      const desc = document.getElementById('sub-desc').value.trim();
+      const repo = document.getElementById('sub-repo').value.trim();
+      const pkg = document.getElementById('sub-package').value.trim();
+      const cat = document.getElementById('sub-category').value;
+      const caps = [...document.getElementById('sub-capabilities').selectedOptions].map(o => o.value);
+
+      if (!name || !email || !desc || !repo || !cat) {
+        alert('Please fill in all required fields (*)');
+        return;
+      }
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const res = await fetch(`${API}/servers/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description: desc, repository: repo, packageName: pkg, category: cat, capabilities: caps, contactEmail: email }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('submit-form-wrap').style.display = 'none';
+          document.getElementById('submit-success').style.display = 'block';
+        } else {
+          alert(data.message || 'Submission failed. Please try again.');
+        }
+      } catch {
+        alert('Network error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Submit for Review';
+      }
+    }
+
+    // Event listeners
+    document.getElementById('search').addEventListener('input', renderServers);
+    document.getElementById('sort').addEventListener('change', renderServers);
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    // Category chip clicks
+    document.querySelector('[data-cat="all"]').onclick = () => setCategory('all');
+
+    // Framework chip clicks
+    document.querySelectorAll('#framework-filters .chip').forEach(c => {
+      c.onclick = () => setFramework(c.dataset.fw);
+    });
+
+    // Language chip clicks
+    document.querySelectorAll('#lang-filters .chip').forEach(c => {
+      c.onclick = () => setLang(c.dataset.lang);
+    });
+
+    // Load on init
+    loadServers();
+  </script>
+</body>
+</html>

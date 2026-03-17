@@ -39,6 +39,7 @@ import x402PaymentsRouter from "./routes/x402-payments.js";
 import facilitatorRouter from "./routes/facilitator.js";
 import agentsRouter from "./routes/agents.js";
 import webhooksRouter from "./routes/webhooks.js";
+import mcpMarketplaceRouter from "./routes/mcp-marketplace.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
@@ -261,6 +262,9 @@ app.use("/api/v1/agents", agentsRouter);
 // Webhooks — event notification system
 app.use("/api/v1/webhooks", webhooksRouter);
 
+// MCP Server Marketplace — curated MCP server directory
+app.use("/api/v1/mcp", mcpMarketplaceRouter);
+
 // Wallet provisioning (AgentKit)
 app.use("/v1/wallet", walletRouter);
 
@@ -314,6 +318,8 @@ app.get("/stats", (_req: Request, res: Response) => res.sendFile(path.join(__dir
 app.get("/facilitator", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
 app.get("/webhooks", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/webhooks.html')));
 app.get("/developers", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/developers.html')));
+app.get("/mcp-marketplace", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/mcp-marketplace.html')));
+app.get("/mcp-setup", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/mcp-setup.html')));
 app.get("/sdks", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/sdks.html')));
 app.get("/v1/changelog.rss", (_req: Request, res: Response) => {
   res.type("application/rss+xml").sendFile(path.join(__dirname, '../public/changelog.rss'));
