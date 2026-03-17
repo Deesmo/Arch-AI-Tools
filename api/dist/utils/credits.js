@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { fingerprintCaller } from "../lib/fingerprint.js";
 import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
+import { recordAgentCall, updateAgentReputation } from "../services/reputation.js";
 export async function deductCredits(req, res, toolName, cost) {
     const agent = req.agent;
     if (!agent) {
@@ -56,6 +57,9 @@ export async function deductCredits(req, res, toolName, cost) {
             update: { callCount: { increment: 1 } },
             create: { date: today, toolName, callCount: 1 },
         });
+        // KYA: Track success and update reputation (non-blocking)
+        void recordAgentCall(agent.id, true);
+        void updateAgentReputation(agent.id);
     }
     catch {
         // Non-fatal — don't block the response
@@ -72,6 +76,9 @@ export async function logError(agentId, toolName, cost) {
                 status: "ERROR",
             },
         });
+        // KYA: Track error and update reputation (non-blocking)
+        void recordAgentCall(agentId, false);
+        void updateAgentReputation(agentId);
     }
     catch {
         // Non-fatal

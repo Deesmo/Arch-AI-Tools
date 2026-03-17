@@ -325,6 +325,12 @@ app.get("/success", (_req: Request, res: Response) => {
 
 
 
+
+// x402 SDK status endpoint
+app.get("/v1/x402/status", (_req: Request, res: Response) => {
+  res.json({ ok: true, x402_sdk: getX402SdkStatus() });
+});
+
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
@@ -356,9 +362,6 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 initX402Sdk();
 
 // x402 SDK status endpoint (for admin/health checks)
-app.get("/v1/x402/status", (_req: Request, res: Response) => {
-  res.json({ ok: true, x402_sdk: getX402SdkStatus() });
-});
 
 app.listen(config.port, () => {
   console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);

@@ -33,6 +33,8 @@ import walletRouter from "./routes/wallet.js";
 import pricingRouter from "./routes/pricing.js";
 import playgroundRouter from "./routes/playground.js";
 import x402PaymentsRouter from "./routes/x402-payments.js";
+import facilitatorRouter from "./routes/facilitator.js";
+import agentsRouter from "./routes/agents.js";
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
@@ -204,6 +206,10 @@ app.use("/api/v1/x402/pricing", pricingRouter);
 app.use("/api/v1/x402/playground", playgroundRouter);
 // x402 Payment receipts & history
 app.use("/api/v1/x402", x402PaymentsRouter);
+// Facilitator-as-a-Service — let other API providers use Arch Tools as their x402 facilitator
+app.use("/api/v1/facilitator", facilitatorRouter);
+// Agent Identity (KYA — Know Your Agent)
+app.use("/api/v1/agents", agentsRouter);
 // Wallet provisioning (AgentKit)
 app.use("/v1/wallet", walletRouter);
 // Workflows
@@ -243,8 +249,10 @@ app.get("/blog/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../publ
 app.get("/sdk", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 app.get("/fund", (_req, res) => res.sendFile(path.join(__dirname, '../public/fund.html')));
 app.get("/playground", (_req, res) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/agents", (_req, res) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req, res) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
 app.get("/stats", (_req, res) => res.sendFile(path.join(__dirname, '../public/stats.html')));
+app.get("/facilitator", (_req, res) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
 // /success — Stripe post-checkout success page
 app.get("/success", (_req, res) => {
     res.type("text/html").send(`<!DOCTYPE html>
@@ -270,6 +278,10 @@ app.get("/success", (_req, res) => {
   </div>
 </body>
 </html>`);
+});
+// x402 SDK status endpoint
+app.get("/v1/x402/status", (_req, res) => {
+    res.json({ ok: true, x402_sdk: getX402SdkStatus() });
 });
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -298,9 +310,6 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 // Initialize x402 SDK (official Coinbase protocol support)
 initX402Sdk();
 // x402 SDK status endpoint (for admin/health checks)
-app.get("/v1/x402/status", (_req, res) => {
-    res.json({ ok: true, x402_sdk: getX402SdkStatus() });
-});
 app.listen(config.port, () => {
     console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
     console.log(`   ENV: ${config.nodeEnv}`);
