@@ -16,6 +16,8 @@
     "npm:audit": "npm audit --json > /tmp/audit.json && echo \"Audit complete\""
   },
   "dependencies": {
+    "@coinbase/agentkit": "^0.2.0",
+    "@coinbase/cdp-sdk": "^0.2.0",
     "@anthropic-ai/sdk": "^0.39.0",
     "@mendable/firecrawl-js": "^4.15.4",
     "@prisma/client": "^5.22.0",

@@ -32,6 +32,8 @@ import oauthRouter from "./routes/oauth.js";
 import authRouter, { verifySession } from "./routes/auth.js";
 import chatRouter from "./routes/chat.js";
 import directoryRouter from "./routes/directory.js";
+import walletRouter from "./routes/wallet.js";
+import pricingRouter from "./routes/pricing.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
@@ -54,7 +56,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com"],
+      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com"],
     },
   },
   crossOriginEmbedderPolicy: false,  // needed for fonts/CDN
@@ -213,6 +215,12 @@ app.use("/admin", adminRouter);
 // x402 Service Directory
 app.use("/api/v1/x402/directory", directoryRouter);
 
+// x402 Pricing API (public, no auth)
+app.use("/api/v1/x402/pricing", pricingRouter);
+
+// Wallet provisioning (AgentKit)
+app.use("/v1/wallet", walletRouter);
+
 // Workflows
 app.use("/v1/workflows", workflowsRouter);
 
@@ -253,6 +261,7 @@ app.get("/docs/:slug", (_req: Request, res: Response) => res.sendFile(path.join(
 app.get("/blog", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/blog/:slug", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/sdk", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
+app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/fund.html')));
 
 // /success — Stripe post-checkout success page
 app.get("/success", (_req: Request, res: Response) => {

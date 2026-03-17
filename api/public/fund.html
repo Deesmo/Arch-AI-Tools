@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Fund Your Wallet — Arch Tools</title>
+  <meta name="description" content="Buy USDC on Base to pay for Arch Tools. Coinbase Onramp — fund your wallet in minutes.">
+  <meta property="og:title" content="Fund Your Wallet — Arch Tools">
+  <meta property="og:description" content="Buy USDC on Base to pay for Arch Tools via Coinbase Onramp.">
+  <meta property="og:url" content="https://archtools.dev/fund">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;
+      --border:#1C1A3A;--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:1240px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.18) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.12) 0%,transparent 55%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;}
+    @media(max-width:768px){.wrap{padding:0 20px;}}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo-mark{width:32px;height:32px;flex-shrink:0;}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-links a.active{color:var(--amber);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;}
+    .hamburger svg{width:24px;height:24px;stroke:var(--text);stroke-width:2;stroke-linecap:round;}
+    .mobile-menu{display:none;flex-direction:column;gap:6px;padding:12px 24px 16px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.97);}
+    .mobile-menu a{color:var(--muted);text-decoration:none;font-size:14px;font-family:var(--mono);padding:8px 0;}
+    .mobile-menu.open{display:flex;}
+    @media(max-width:768px){.nav-links{display:none!important;}.hamburger{display:block;}}
+
+    /* CONTENT */
+    .page-header{padding:60px 0 40px;text-align:center;}
+    .page-header h1{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:800;letter-spacing:-1.5px;margin-bottom:16px;}
+    .grad{background:linear-gradient(135deg,var(--amber) 0%,var(--pink) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .page-header p{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto;line-height:1.7;}
+
+    .steps-section{padding:0 0 60px;}
+    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:48px;}
+    @media(max-width:768px){.steps-grid{grid-template-columns:1fr;}}
+    .step-card{background:rgba(12,11,34,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:28px;text-align:center;}
+    .step-num{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;}
+    .step-title{font-family:var(--display);font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+    .step-desc{font-size:14px;color:var(--muted);line-height:1.6;}
+    .step-icon{font-size:32px;margin-bottom:16px;}
+
+    /* FUND CARD */
+    .fund-card{max-width:560px;margin:0 auto 60px;background:rgba(12,11,34,0.6);border:1px solid rgba(136,68,255,0.3);border-radius:20px;padding:40px;text-align:center;box-shadow:0 0 60px rgba(136,68,255,0.1);}
+    .fund-card h2{font-family:var(--display);font-size:24px;font-weight:800;margin-bottom:16px;}
+    .fund-card p{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.7;}
+
+    .wallet-input-group{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;text-align:left;}
+    .wallet-input-group label{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;}
+    .wallet-input{width:100%;background:rgba(12,11,34,0.8);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color 0.2s;}
+    .wallet-input:focus{border-color:var(--purple);}
+    .wallet-input::placeholder{color:var(--muted);opacity:0.5;}
+
+    .amount-pills{display:flex;gap:8px;margin-bottom:24px;justify-content:center;flex-wrap:wrap;}
+    .amount-pill{font-family:var(--mono);font-size:13px;padding:8px 18px;border-radius:100px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all 0.15s;background:transparent;}
+    .amount-pill:hover,.amount-pill.active{color:var(--amber);border-color:var(--amber);background:rgba(255,144,16,0.08);}
+
+    .btn-fund{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;padding:16px 36px;border-radius:12px;font-family:var(--mono);font-size:15px;font-weight:600;text-decoration:none;transition:opacity 0.2s,transform 0.2s;border:none;cursor:pointer;width:100%;}
+    .btn-fund:hover{opacity:0.88;transform:translateY(-2px);}
+    .btn-fund:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+    .fund-note{font-family:var(--mono);font-size:11px;color:var(--dimmer);margin-top:16px;}
+
+    /* INFO SECTION */
+    .info-section{padding:0 0 80px;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
+    @media(max-width:768px){.info-grid{grid-template-columns:1fr;}}
+    .info-box{background:rgba(12,11,34,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:28px;}
+    .info-box h3{font-family:var(--display);font-size:18px;font-weight:700;margin-bottom:12px;}
+    .info-box p,.info-box li{font-size:14px;color:var(--muted);line-height:1.7;}
+    .info-box ul{list-style:none;margin-top:12px;}
+    .info-box ul li{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:flex-start;gap:8px;}
+    .info-box ul li::before{content:'→';color:var(--purple);font-family:var(--mono);font-size:12px;flex-shrink:0;margin-top:2px;}
+    .info-box code{background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:12px;font-family:var(--mono);}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:40px 0 32px;}
+    .footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+    .footer-left{font-family:var(--mono);font-size:12px;color:var(--muted);}
+    .footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+    .footer-links a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;transition:color 0.15s;}
+    .footer-links a:hover{color:var(--text);}
+
+    /* STATUS TOAST */
+    .fund-toast{font-family:var(--mono);font-size:13px;margin-top:12px;min-height:20px;text-align:center;transition:opacity 0.4s;}
+    .fund-toast-success{color:var(--green);}
+    .fund-toast-error{color:#f87171;}
+    .fund-toast-info{color:var(--cyan);}
+  </style>
+</head>
+<body>
+
+<!-- ARCH SVG DEFS -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF9010"/>
+      <stop offset="60%" stop-color="#FF2896"/>
+      <stop offset="100%" stop-color="#8844FF"/>
+    </linearGradient>
+    <filter id="arch-neon">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <symbol id="arch-mark" viewBox="0 10 100 90" overflow="visible">
+      <path fill="url(#arch-grad)" filter="url(#arch-neon)"
+        d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z
+           M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- NAV -->
+<nav>
+  <div class="wrap">
+    <div class="nav-inner">
+      <a class="logo" href="/" aria-label="Arch Tools home">
+        <svg class="logo-mark" viewBox="0 10 100 90" overflow="visible" aria-hidden="true">
+          <use href="#arch-mark"/>
+        </svg>
+        ARCH TOOLS
+      </a>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <ul class="nav-links">
+          <li><a href="/#tools">tools</a></li>
+          <li><a href="/#pricing">pricing</a></li>
+          <li><a href="/docs">api docs</a></li>
+          <li><a href="/fund" class="active">fund wallet</a></li>
+          <li><a href="/dashboard">dashboard</a></li>
+        </ul>
+        <a href="/signup" class="nav-cta" style="font-family:var(--mono);font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;">$ get-api-key</a>
+        <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+<div id="mobile-menu" class="mobile-menu" style="position:sticky;top:60px;z-index:99;">
+  <a href="/#tools">Tools</a>
+  <a href="/#pricing">Pricing</a>
+  <a href="/docs">API Docs</a>
+  <a href="/fund">Fund Wallet</a>
+  <a href="/dashboard">Dashboard</a>
+  <a href="/signup">Get API Key</a>
+</div>
+
+<!-- HEADER -->
+<div class="wrap">
+  <div class="page-header">
+    <h1><span class="grad">Fund Your Wallet</span></h1>
+    <p>Arch Tools accepts x402 USDC payments on Base. Buy USDC directly with your debit card, bank account, or Apple Pay via Coinbase Onramp — no Coinbase account required.</p>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps-section">
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-icon">👛</div>
+        <div class="step-num">Step 01</div>
+        <div class="step-title">Enter Your Wallet</div>
+        <div class="step-desc">Paste the Base wallet address you want to fund. This is where your USDC will be sent.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">💰</div>
+        <div class="step-num">Step 02</div>
+        <div class="step-title">Choose Amount</div>
+        <div class="step-desc">Pick how much USDC you want to buy. As little as $5 — enough for thousands of API calls.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-icon">⚡</div>
+        <div class="step-num">Step 03</div>
+        <div class="step-title">Fund via Coinbase</div>
+        <div class="step-desc">Complete the purchase through Coinbase Onramp. USDC arrives in your wallet in minutes.</div>
+      </div>
+    </div>
+
+    <!-- FUND CARD -->
+    <div class="fund-card">
+      <h2>Buy USDC on Base</h2>
+      <p>Your agent can then use this USDC to pay for any Arch Tools endpoint autonomously via the x402 protocol. No credit card, no subscription — just on-chain payments.</p>
+
+      <div class="wallet-input-group">
+        <label for="wallet-address">Destination Wallet Address (Base)</label>
+        <input
+          type="text"
+          id="wallet-address"
+          class="wallet-input"
+          placeholder="0x..."
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="42"
+        >
+      </div>
+
+      <div class="amount-pills">
+        <button type="button" class="amount-pill" data-amount="5" onclick="selectAmount(5, this)">$5</button>
+        <button type="button" class="amount-pill active" data-amount="25" onclick="selectAmount(25, this)">$25</button>
+        <button type="button" class="amount-pill" data-amount="50" onclick="selectAmount(50, this)">$50</button>
+        <button type="button" class="amount-pill" data-amount="100" onclick="selectAmount(100, this)">$100</button>
+        <button type="button" class="amount-pill" data-amount="500" onclick="selectAmount(500, this)">$500</button>
+      </div>
+
+      <button type="button" class="btn-fund" id="fund-btn" onclick="openOnramp()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Fund Your Wallet
+      </button>
+
+      <div id="fund-toast" class="fund-toast" style="display:none;"></div>
+      <p class="fund-note">Powered by Coinbase Onramp · USDC on Base network · No Coinbase account required</p>
+    </div>
+  </div>
+
+  <!-- INFO SECTION -->
+  <div class="info-section">
+    <div class="info-grid">
+      <div class="info-box">
+        <h3>How x402 Payments Work</h3>
+        <p>When your AI agent calls an Arch Tools endpoint without pre-purchased credits, it receives an HTTP 402 response containing the USDC price and wallet address. The agent signs a payment on Base, includes the receipt, and retries — the tool executes automatically.</p>
+        <ul>
+          <li>Agent calls endpoint → gets 402 with price</li>
+          <li>Agent pays in USDC on Base → ~2 second settlement</li>
+          <li>Agent retries with payment proof → tool executes</li>
+          <li>No human approval needed at any step</li>
+          <li>Works across all 58 Arch Tools</li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h3>Manual USDC Purchase (Fallback)</h3>
+        <p>If you prefer not to use Coinbase Onramp, you can acquire USDC on Base through any of these methods:</p>
+        <ul>
+          <li>Buy USDC on <a href="https://www.coinbase.com" target="_blank" rel="noopener" style="color:var(--cyan);">Coinbase</a> and withdraw to Base</li>
+          <li>Buy on any exchange (Binance, Kraken, etc.) and bridge to Base via the <a href="https://bridge.base.org" target="_blank" rel="noopener" style="color:var(--cyan);">Base Bridge</a></li>
+          <li>Swap ETH for USDC on Base using <a href="https://app.uniswap.org" target="_blank" rel="noopener" style="color:var(--cyan);">Uniswap</a></li>
+          <li>Use any DEX aggregator (1inch, Paraswap) on Base network</li>
+          <li>USDC contract on Base: <code>0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="footer-left">Arch Tools · Built in Columbia, SC · MCMetaverse LLC</div>
+      <div class="footer-links">
+        <a href="/docs">API Docs</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/#x402">x402 Protocol</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/privacy.html">Privacy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+var selectedAmount = 25;
+
+// CDP Project ID — injected at build time or read from meta tag
+// For now, uses placeholder that Brad will replace with actual CDP_PROJECT_ID
+var CDP_PROJECT_ID = '';
+(function() {
+  // Try to read from a meta tag if present
+  var meta = document.querySelector('meta[name="cdp-project-id"]');
+  if (meta) CDP_PROJECT_ID = meta.getAttribute('content') || '';
+})();
+
+function selectAmount(amount, btn) {
+  selectedAmount = amount;
+  document.querySelectorAll('.amount-pill').forEach(function(p) { p.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+function showToast(msg, type) {
+  var toast = document.getElementById('fund-toast');
+  toast.textContent = msg;
+  toast.className = 'fund-toast fund-toast-' + (type || 'info');
+  toast.style.display = 'block';
+  setTimeout(function() { toast.style.display = 'none'; }, 8000);
+}
+
+function isValidEthAddress(addr) {
+  return /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
+
+// ── Coinbase Onramp URL Builder ───────────────────────────────────────────────
+// Uses the Coinbase Pay URL scheme (getOnrampBuyUrl pattern)
+// Docs: https://docs.cdp.coinbase.com/onramp/docs/api-initializing
+function buildOnrampUrl(walletAddress, amount) {
+  var baseUrl = 'https://pay.coinbase.com/buy/select-asset';
+  var params = new URLSearchParams();
+
+  // Required params
+  params.set('appId', CDP_PROJECT_ID || 'arch-tools'); // fallback app ID
+  params.set('destinationWallets', JSON.stringify([{
+    address: walletAddress,
+    blockchains: ['base'],
+    assets: ['USDC'],
+    supportedNetworks: ['base']
+  }]));
+
+  // Pre-select asset and amount
+  params.set('defaultAsset', 'USDC');
+  params.set('defaultNetwork', 'base');
+  params.set('presetFiatAmount', amount.toString());
+  params.set('fiatCurrency', 'USD');
+
+  // Redirect back after purchase
+  params.set('redirectUrl', window.location.origin + '/fund?status=success');
+
+  return baseUrl + '?' + params.toString();
+}
+
+function openOnramp() {
+  var walletInput = document.getElementById('wallet-address');
+  var address = walletInput.value.trim();
+
+  if (!address) {
+    showToast('Please enter your Base wallet address.', 'error');
+    walletInput.focus();
+    return;
+  }
+
+  if (!isValidEthAddress(address)) {
+    showToast('Invalid wallet address. Must be 0x followed by 40 hex characters.', 'error');
+    walletInput.focus();
+    return;
+  }
+
+  showToast('Opening Coinbase Onramp...', 'info');
+
+  var url = buildOnrampUrl(address, selectedAmount);
+
+  // Open in a popup window (better UX than redirect)
+  var width = 460;
+  var height = 700;
+  var left = (screen.width - width) / 2;
+  var top = (screen.height - height) / 2;
+  var popup = window.open(
+    url,
+    'coinbase-onramp',
+    'width=' + width + ',height=' + height + ',left=' + left + ',top=' + top + ',toolbar=no,menubar=no,scrollbars=yes,resizable=yes'
+  );
+
+  if (!popup || popup.closed) {
+    // Popup blocked — fall back to redirect
+    showToast('Popup blocked. Redirecting to Coinbase...', 'info');
+    window.location.href = url;
+  }
+}
+
+// Check for success redirect
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('status') === 'success') {
+    // Clean URL
+    window.history.replaceState({}, '', '/fund');
+    setTimeout(function() {
+      showToast('✓ Purchase initiated! USDC should arrive in your wallet within a few minutes.', 'success');
+    }, 500);
+  }
+})();
+</script>
+</body>
+</html>
