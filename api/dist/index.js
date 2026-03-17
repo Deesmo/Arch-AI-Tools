@@ -105,17 +105,12 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
-    dotfiles: 'ignore',
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         }
         else if (filePath.match(/\.(png|jpg|svg|ico|webp)$/)) {
             res.setHeader('Cache-Control', 'public, max-age=86400');
-        }
-        else if (filePath.endsWith('.json') && filePath.includes('.well-known')) {
-            res.setHeader('Cache-Control', 'public, max-age=3600');
-            res.setHeader('Content-Type', 'application/json');
         }
     }
 }));
