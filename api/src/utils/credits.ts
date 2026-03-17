@@ -3,6 +3,7 @@ import { AuthedRequest } from "../middleware/auth.js";
 import { Response } from "express";
 import { fingerprintCaller } from "../lib/fingerprint.js";
 import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
+import { recordAgentCall, updateAgentReputation } from "../services/reputation.js";
 
 export async function deductCredits(
   req: AuthedRequest,
@@ -69,6 +70,10 @@ export async function deductCredits(
       update: { callCount: { increment: 1 } },
       create: { date: today, toolName, callCount: 1 },
     });
+
+    // KYA: Track success and update reputation (non-blocking)
+    void recordAgentCall(agent.id, true);
+    void updateAgentReputation(agent.id);
   } catch {
     // Non-fatal — don't block the response
   }
@@ -90,6 +95,10 @@ export async function logError(
         status: "ERROR",
       },
     });
+
+    // KYA: Track error and update reputation (non-blocking)
+    void recordAgentCall(agentId, false);
+    void updateAgentReputation(agentId);
   } catch {
     // Non-fatal
   }

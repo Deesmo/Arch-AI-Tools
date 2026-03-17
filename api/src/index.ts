@@ -36,6 +36,8 @@ import walletRouter from "./routes/wallet.js";
 import pricingRouter from "./routes/pricing.js";
 import playgroundRouter from "./routes/playground.js";
 import x402PaymentsRouter from "./routes/x402-payments.js";
+import facilitatorRouter from "./routes/facilitator.js";
+import agentsRouter from "./routes/agents.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
@@ -238,6 +240,12 @@ app.use("/api/v1/x402/playground", playgroundRouter);
 // x402 Payment receipts & history
 app.use("/api/v1/x402", x402PaymentsRouter);
 
+// Facilitator-as-a-Service — let other API providers use Arch Tools as their x402 facilitator
+app.use("/api/v1/facilitator", facilitatorRouter);
+
+// Agent Identity (KYA — Know Your Agent)
+app.use("/api/v1/agents", agentsRouter);
+
 // Wallet provisioning (AgentKit)
 app.use("/v1/wallet", walletRouter);
 
@@ -283,8 +291,10 @@ app.get("/blog/:slug", (_req: Request, res: Response) => res.sendFile(path.join(
 app.get("/sdk", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/fund.html')));
 app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
 app.get("/stats", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/stats.html')));
+app.get("/facilitator", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
 
 // /success — Stripe post-checkout success page
 app.get("/success", (_req: Request, res: Response) => {

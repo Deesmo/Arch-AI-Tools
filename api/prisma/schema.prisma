@@ -26,6 +26,18 @@ model Agent {
   lastSeenAt   DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+
+  // ─── Agent Identity (KYA — Know Your Agent) ──────────────────────────────
+  description     String?                          // what this agent does
+  walletAddress   String?      @map("wallet_address")  // primary wallet for x402 payments
+  callbackUrl     String?      @map("callback_url")    // webhook for async notifications
+  reputationScore Int          @default(50) @map("reputation_score")  // 0-100
+  badge           String       @default("none")    // none | bronze | silver | gold | diamond
+  errorCount      Int          @default(0) @map("error_count")
+  successCount    Int          @default(0) @map("success_count")
+  totalSpentUsdc  Float        @default(0) @map("total_spent_usdc")
+  isPublic        Boolean      @default(true) @map("is_public")  // show on leaderboard/profile
+
   // back-references — required for Prisma v5 relations
   apiRequests  ApiRequest[]
   purchases    Purchase[]
@@ -160,4 +172,55 @@ model X402Payment {
   @@index([txHash])
   @@index([toolName])
   @@index([agentId])
+}
+
+// ─── Facilitator-as-a-Service ─────────────────────────────────────────────────
+// API providers register with Arch Tools to use us as their x402 facilitator.
+// We verify payments, settle on-chain, and take a small fee.
+
+model FacilitatorProvider {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  apiKey          String   @unique @map("api_key")       // Provider's facilitator API key
+  apiKeyHash      String?  @map("api_key_hash")           // bcrypt hash for secure comparison
+  walletAddress   String   @map("wallet_address")         // Provider's wallet for settlement
+  webhookUrl      String?  @map("webhook_url")            // Optional webhook for payment events
+  feePercent      Float    @default(1.0)                   // Arch Tools fee (% of each tx)
+  networks        String[] @default(["eip155:8453"])       // Supported networks
+  endpoints       Json?                                     // Provider's registered endpoints + pricing
+  active          Boolean  @default(true)
+  totalPayments   Int      @default(0) @map("total_payments")
+  totalRevenue    Float    @default(0) @map("total_revenue")     // Total USDC settled for provider
+  totalFees       Float    @default(0) @map("total_fees")        // Total fees collected by Arch Tools
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  payments        FacilitatorPayment[]
+
+  @@index([apiKey])
+  @@index([email])
+}
+
+model FacilitatorPayment {
+  id              String   @id @default(cuid())
+  providerId      String   @map("provider_id")
+  provider        FacilitatorProvider @relation(fields: [providerId], references: [id])
+  paymentPayload  String   @map("payment_payload") @db.Text  // Base64-encoded x402 payment
+  resource        String                                        // The resource URL being paid for
+  amount          String                                        // Amount in token atomic units
+  token           String   @default("USDC")                     // Token symbol
+  network         String   @default("eip155:8453")              // Chain ID
+  payerAddress    String?  @map("payer_address")                // Extracted from payment payload
+  txHash          String?  @map("tx_hash")                      // On-chain settlement tx hash
+  feeAmount       String?  @map("fee_amount")                   // Fee charged by Arch Tools
+  status          String   @default("pending")                   // pending | verified | settled | failed
+  verifiedAt      DateTime? @map("verified_at")
+  settledAt       DateTime? @map("settled_at")
+  errorMessage    String?  @map("error_message")
+  createdAt       DateTime @default(now())
+
+  @@index([providerId])
+  @@index([status])
+  @@index([txHash])
+  @@index([createdAt])
 }
