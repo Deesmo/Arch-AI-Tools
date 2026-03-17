@@ -2679,4 +2679,34 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   } catch (e) { console.error("[social-post]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── GET handler for x402scan compatibility ─────────────────────────────────
+// x402scan sends GET to each endpoint and expects 402 Payment Required.
+// Our tools are POST-only, so GET would 404. This catch-all returns 402 with
+// the same payment schema x402scan needs to register the resource.
+import { X402_PRICES } from "../../middleware/x402.js";
+
+// We need buildPaymentRequired but it's not exported — inline a minimal version
+// that calls x402Middleware which handles the 402 response
+router.get("/:toolName", (req: Request, res: Response): void => {
+  const toolName = req.params.toolName;
+  const price = X402_PRICES[toolName];
+  if (!price) {
+    res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
+    return;
+  }
+  // Return 402 by passing through the x402 middleware
+  // x402Middleware checks for X-Payment header first; with no header on GET, it returns 402
+  const middleware = x402Middleware(toolName);
+  // x402Middleware returns an array or function — call it as middleware
+  const handler = Array.isArray(middleware) ? middleware[0] : middleware;
+  if (typeof handler === 'function') {
+    handler(req, res, () => {
+      // If somehow it passes (shouldn't without auth), return 402 anyway
+      res.status(402).json({ error: "payment_required" });
+    });
+  } else {
+    res.status(402).json({ error: "payment_required" });
+  }
+});
+
 export default router;

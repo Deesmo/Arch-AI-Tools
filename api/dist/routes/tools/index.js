@@ -3232,5 +3232,25 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req, res) =
         res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
+// GET handler for x402scan compatibility — returns 402 for GET requests
+import { X402_PRICES } from "../../middleware/x402.js";
+router.get("/:toolName", (req, res) => {
+    const toolName = req.params.toolName;
+    const price = X402_PRICES[toolName];
+    if (!price) {
+        res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
+        return;
+    }
+    const middleware = x402Middleware(toolName);
+    const handler = Array.isArray(middleware) ? middleware[0] : middleware;
+    if (typeof handler === 'function') {
+        handler(req, res, () => {
+            res.status(402).json({ error: "payment_required" });
+        });
+    }
+    else {
+        res.status(402).json({ error: "payment_required" });
+    }
+});
 export default router;
 //# sourceMappingURL=index.js.map
