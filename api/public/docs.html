@@ -4,20 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API Docs — Arch Tools</title>
-  <meta name="description" content="Arch Tools API documentation. 58 tools, one API key. REST, MCP, and SDK." />
+  <meta name="description" content="Comprehensive API documentation for Arch Tools. 61 tools, one API key. REST, MCP, x402, and SDK." />
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
       --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
       --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
-      --green: #34d399; --orange: #FFB030; --pink: #FF1888;
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888; --purple: #8844FF;
     }
-    body { font-family: Syne, system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    h1, h2, h3, h4 { font-family: 'Syne', system-ui, sans-serif; }
+
     /* NAV */
     .at-nav {
       display: flex; align-items: center; justify-content: space-between;
@@ -27,347 +30,466 @@
     }
     .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
     .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
-    .at-logo-name { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
     .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
     .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
     .at-nav-links a:hover { color: var(--text); }
     .at-nav-links a.active { color: var(--text); }
     .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+
     /* LAYOUT */
-    .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+    .layout { display: flex; max-width: 1280px; margin: 0 auto; }
+
     /* SIDEBAR */
     .sidebar {
-      width: 240px; flex-shrink: 0; padding: 32px 0 32px 24px;
+      width: 260px; flex-shrink: 0; padding: 20px 0 32px 20px;
       position: sticky; top: 60px; height: calc(100vh - 60px);
       overflow-y: auto; border-right: 1px solid var(--border);
     }
-    .sidebar::-webkit-scrollbar { width: 4px; } .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-    .sidebar-section { margin-bottom: 24px; }
-    .sidebar-heading { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding-left: 4px; }
-    .sidebar a { display: block; font-size: 12px; color: var(--muted); text-decoration: none; padding: 4px 4px 4px 8px; border-radius: 6px; border-left: 2px solid transparent; transition: all 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .sidebar-search {
+      width: calc(100% - 12px); padding: 8px 12px; margin-bottom: 16px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    .sidebar-search::placeholder { color: rgba(255,255,255,0.3); }
+    .sidebar-search:focus { border-color: var(--accent); }
+    .sidebar-section { margin-bottom: 20px; }
+    .sidebar-heading {
+      font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 6px; padding-left: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sidebar-heading .count {
+      background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;
+      font-size: 9px; color: rgba(255,255,255,0.4);
+    }
+    .sidebar a {
+      display: block; font-size: 12px; color: var(--muted); text-decoration: none;
+      padding: 3px 4px 3px 8px; border-radius: 6px; border-left: 2px solid transparent;
+      transition: all 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     .sidebar a:hover { color: var(--text); background: var(--card); }
     .sidebar a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(34,211,238,0.06); }
+    .sidebar a.hidden { display: none; }
+
     /* CONTENT */
     .content { flex: 1; padding: 40px 48px 80px; min-width: 0; }
-    h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 12px; }
-    h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; margin: 48px 0 16px; padding-top: 8px; border-top: 1px solid var(--border); }
+    h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 8px; }
+    .subtitle { font-size: 16px; color: var(--muted); margin-bottom: 24px; }
+    h2 {
+      font-size: 22px; font-weight: 700; letter-spacing: -0.03em;
+      margin: 48px 0 16px; padding-top: 12px; border-top: 1px solid var(--border);
+      scroll-margin-top: 80px;
+    }
     h2:first-of-type { border-top: none; margin-top: 32px; }
-    h3 { font-size: 16px; font-weight: 700; margin: 28px 0 10px; color: var(--orange); }
+    h3 { font-size: 16px; font-weight: 700; margin: 28px 0 10px; color: var(--orange); scroll-margin-top: 80px; }
     p { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 12px; }
+    a { color: var(--accent); }
+
+    /* BADGES */
     .badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 8px; vertical-align: middle; }
     .badge-post { background: rgba(85,34,255,0.3); color: #c4aaff; border: 1px solid rgba(85,34,255,0.4); }
-    .badge-free { background: rgba(0,229,176,0.15); color: #34d399; border: 1px solid rgba(0,229,176,0.3); }
-    /* CODE BLOCKS */
-    pre { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; overflow-x: auto; margin: 12px 0; }
-    code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: rgba(255,255,255,0.85); }
+    .badge-get { background: rgba(34,211,238,0.2); color: var(--accent); border: 1px solid rgba(34,211,238,0.3); }
+    .badge-price { background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.25); font-family: 'JetBrains Mono', monospace; }
+
+    /* CODE */
+    pre { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; overflow-x: auto; margin: 12px 0; }
+    pre code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: rgba(255,255,255,0.85); background: none !important; padding: 0 !important; }
+    code { font-family: "JetBrains Mono", monospace; font-size: 12px; }
     .inline-code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-family: "JetBrains Mono", monospace; font-size: 12px; }
-    .c-key { color: #79c0ff; } .c-str { color: #a5d6ff; } .c-num { color: #79c0ff; } .c-muted { color: rgba(255,255,255,0.4); }
+
     /* TOOL CARDS */
-    .tool-doc { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; }
-    .tool-doc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .tool-doc {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px 24px; margin-bottom: 16px; scroll-margin-top: 80px;
+      transition: border-color 0.2s;
+    }
+    .tool-doc:hover { border-color: rgba(255,255,255,0.18); }
+    .tool-doc:target { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(34,211,238,0.2); }
+    .tool-doc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .tool-doc-name { font-family: "JetBrains Mono", monospace; font-size: 14px; font-weight: 600; color: var(--text); }
-    .tool-doc-desc { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-    .params-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 4px; }
-    .params-table th { text-align: left; padding: 4px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .tool-doc-desc { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+
+    /* PARAMS TABLE */
+    .params-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+    .params-table th { text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
     .params-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
     .params-table td:first-child { font-family: "JetBrains Mono", monospace; color: #79c0ff; white-space: nowrap; }
-    .params-table td:nth-child(2) { color: var(--orange); font-family: "JetBrains Mono", monospace; }
-    .params-table td:nth-child(3) { color: var(--muted); }
+    .params-table td:nth-child(2) { color: var(--orange); font-family: "JetBrains Mono", monospace; white-space: nowrap; }
     .req { color: var(--pink); font-size: 10px; font-weight: 700; }
     .opt { color: rgba(255,255,255,0.3); font-size: 10px; }
-    /* ALERT */
-    .alert { padding: 12px 16px; border-radius: 10px; border: 1px solid; margin-bottom: 16px; font-size: 13px; }
-    .alert-info { background: rgba(34,211,238,0.07); border-color: rgba(34,211,238,0.25); color: rgba(255,255,255,0.7); }
-    .alert-warn { background: rgba(255,176,48,0.07); border-color: rgba(255,176,48,0.25); color: rgba(255,255,255,0.7); }
+
+    /* TABS */
+    .code-tabs { display: flex; gap: 0; margin-bottom: -1px; position: relative; z-index: 1; }
+    .code-tab {
+      padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer;
+      background: transparent; border: 1px solid transparent; border-bottom: none;
+      color: var(--muted); border-radius: 8px 8px 0 0; transition: all 0.12s;
+      font-family: inherit;
+    }
+    .code-tab.active { background: rgba(0,0,0,0.5); border-color: var(--border); color: var(--text); }
+    .code-tab:hover:not(.active) { color: var(--text); }
+    .code-panel { display: none; }
+    .code-panel.active { display: block; }
+
     /* COPY BTN */
     .code-wrap { position: relative; }
-    .copy-btn { position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.12s; }
+    .copy-btn {
+      position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,0.08);
+      border: 1px solid var(--border); color: var(--muted); font-size: 11px;
+      padding: 3px 8px; border-radius: 6px; cursor: pointer; font-family: inherit;
+      transition: all 0.12s; z-index: 2;
+    }
     .copy-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
-    @media (max-width: 768px) { .sidebar { display: none; } .content { padding: 24px 20px; } }
+
+    /* TRY IT BTN */
+    .try-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; font-size: 12px; font-weight: 600;
+      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
+      color: var(--accent); border-radius: 8px; cursor: pointer;
+      text-decoration: none; transition: all 0.15s; font-family: inherit;
+    }
+    .try-btn:hover { background: rgba(34,211,238,0.18); border-color: var(--accent); }
+    .try-btn svg { width: 14px; height: 14px; }
+
+    /* RESPONSE TOGGLE */
+    .response-toggle {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; font-size: 11px; font-weight: 600;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px; cursor: pointer;
+      font-family: inherit; transition: all 0.12s; margin-left: 8px;
+    }
+    .response-toggle:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+    .response-body { display: none; margin-top: 8px; }
+    .response-body.open { display: block; }
+
+    /* ALERT */
+    .alert { padding: 14px 18px; border-radius: 10px; border: 1px solid; margin-bottom: 16px; font-size: 13px; }
+    .alert-info { background: rgba(34,211,238,0.07); border-color: rgba(34,211,238,0.25); color: rgba(255,255,255,0.7); }
+    .alert-warn { background: rgba(255,176,48,0.07); border-color: rgba(255,176,48,0.25); color: rgba(255,255,255,0.7); }
+    .alert-green { background: rgba(52,211,153,0.07); border-color: rgba(52,211,153,0.25); color: rgba(255,255,255,0.7); }
+
+    /* TOOL ACTIONS */
+    .tool-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+
+    /* STATS ROW */
+    .stats-row { display: flex; gap: 16px; margin: 20px 0 32px; flex-wrap: wrap; }
+    .stat-card {
+      flex: 1; min-width: 140px; padding: 16px 20px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    }
+    .stat-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+    .stat-value.grad { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* SEARCH RESULTS */
+    .no-results { display: none; padding: 48px 0; text-align: center; color: var(--muted); font-size: 14px; }
+    .no-results.show { display: block; }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .content { padding: 24px 16px; }
+      .stats-row { flex-direction: column; }
+      .at-nav-links a:not(.at-nav-cta) { display: none; }
+    }
   </style>
 </head>
 <body>
-  <nav class="at-nav">
-    <a class="at-nav-logo" href="/">
-      <div class="at-logo-mark">
-        <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav-docs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-docs"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-docs)" filter="url(#arch-neon-nav-docs)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
-      </div>
-      <span class="at-logo-name">Arch Tools</span>
-    </a>
-    <div class="at-nav-links">
-      <a href="/">Home</a>
-      <a href="/docs" class="active">Docs</a>
-      <a href="/changelog">Changelog</a>
-      <a href="/#pricing">Pricing</a>
-      <a href="/signup" class="at-nav-cta">Get API Key</a>
+
+<nav class="at-nav">
+  <a class="at-nav-logo" href="/">
+    <div class="at-logo-mark">
+      <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="an"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#ag)" filter="url(#an)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+    </div>
+    <span class="at-logo-name">Arch Tools</span>
+  </a>
+  <div class="at-nav-links">
+    <a href="/">Home</a>
+    <a href="/docs" class="active">Docs</a>
+    <a href="/playground">Playground</a>
+    <a href="/changelog">Changelog</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/signup" class="at-nav-cta">Get API Key</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <input type="text" class="sidebar-search" id="sidebarSearch" placeholder="Search tools..." autocomplete="off" />
+
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Getting Started</div>
+      <a href="#authentication">Authentication</a>
+      <a href="#quickstart">Quickstart</a>
+      <a href="#x402">x402 Crypto Payments</a>
+      <a href="#credits">Credits &amp; Limits</a>
+      <a href="#errors">Error Codes</a>
+      <a href="#mcp">MCP Setup</a>
+      <a href="#quickstart-lang">Quick Start by Language</a>
+    </div>
+
+    <div class="sidebar-section" data-category="web">
+      <div class="sidebar-heading">Web &amp; Search <span class="count">10</span></div>
+      <a href="#web-scrape" data-tool="web-scrape">web-scrape</a>
+      <a href="#extract-page" data-tool="extract-page">extract-page</a>
+      <a href="#search-web" data-tool="search-web">search-web</a>
+      <a href="#web-search" data-tool="web-search">web-search</a>
+      <a href="#semantic-search" data-tool="semantic-search">semantic-search</a>
+      <a href="#news-search" data-tool="news-search">news-search</a>
+      <a href="#rss-parse" data-tool="rss-parse">rss-parse</a>
+      <a href="#extract-metadata" data-tool="extract-metadata">extract-metadata</a>
+      <a href="#screenshot-capture" data-tool="screenshot-capture">screenshot-capture</a>
+      <a href="#browser-task" data-tool="browser-task">browser-task</a>
+    </div>
+
+    <div class="sidebar-section" data-category="ai">
+      <div class="sidebar-heading">AI &amp; Analysis <span class="count">12</span></div>
+      <a href="#ai-generate" data-tool="ai-generate">ai-generate</a>
+      <a href="#ai-oracle" data-tool="ai-oracle">ai-oracle</a>
+      <a href="#summarize" data-tool="summarize">summarize</a>
+      <a href="#sentiment-analysis" data-tool="sentiment-analysis">sentiment-analysis</a>
+      <a href="#extract-entities" data-tool="extract-entities">extract-entities</a>
+      <a href="#regex-generate" data-tool="regex-generate">regex-generate</a>
+      <a href="#pii-detect" data-tool="pii-detect">pii-detect</a>
+      <a href="#readability-score" data-tool="readability-score">readability-score</a>
+      <a href="#language-detect" data-tool="language-detect">language-detect</a>
+      <a href="#research-report" data-tool="research-report">research-report</a>
+      <a href="#fact-check" data-tool="fact-check">fact-check</a>
+      <a href="#workflow-agent" data-tool="workflow-agent">workflow-agent</a>
+    </div>
+
+    <div class="sidebar-section" data-category="sessions">
+      <div class="sidebar-heading">Sessions <span class="count">2</span></div>
+      <a href="#session-create" data-tool="session-create">session-create</a>
+      <a href="#session-message" data-tool="session-message">session-message</a>
+    </div>
+
+    <div class="sidebar-section" data-category="image">
+      <div class="sidebar-heading">Image &amp; Video <span class="count">4</span></div>
+      <a href="#image-generate" data-tool="image-generate">image-generate</a>
+      <a href="#design-create" data-tool="design-create">design-create</a>
+      <a href="#image-remove-bg" data-tool="image-remove-bg">image-remove-bg</a>
+      <a href="#video-generate" data-tool="video-generate">video-generate</a>
+    </div>
+
+    <div class="sidebar-section" data-category="audio">
+      <div class="sidebar-heading">Audio <span class="count">2</span></div>
+      <a href="#text-to-speech" data-tool="text-to-speech">text-to-speech</a>
+      <a href="#transcribe-audio" data-tool="transcribe-audio">transcribe-audio</a>
+    </div>
+
+    <div class="sidebar-section" data-category="crypto">
+      <div class="sidebar-heading">Crypto <span class="count">7</span></div>
+      <a href="#crypto-price" data-tool="crypto-price">crypto-price</a>
+      <a href="#crypto-market-cap" data-tool="crypto-market-cap">crypto-market-cap</a>
+      <a href="#crypto-ohlcv" data-tool="crypto-ohlcv">crypto-ohlcv</a>
+      <a href="#crypto-fear-greed" data-tool="crypto-fear-greed">crypto-fear-greed</a>
+      <a href="#crypto-sentiment" data-tool="crypto-sentiment">crypto-sentiment</a>
+      <a href="#crypto-news" data-tool="crypto-news">crypto-news</a>
+      <a href="#token-lookup" data-tool="token-lookup">token-lookup</a>
+    </div>
+
+    <div class="sidebar-section" data-category="utility">
+      <div class="sidebar-heading">Utility <span class="count">14</span></div>
+      <a href="#validate-data" data-tool="validate-data">validate-data</a>
+      <a href="#generate-hash" data-tool="generate-hash">generate-hash</a>
+      <a href="#generate-uuid" data-tool="generate-uuid">generate-uuid</a>
+      <a href="#qr-code" data-tool="qr-code">qr-code</a>
+      <a href="#barcode-generate" data-tool="barcode-generate">barcode-generate</a>
+      <a href="#convert-format" data-tool="convert-format">convert-format</a>
+      <a href="#transform-text" data-tool="transform-text">transform-text</a>
+      <a href="#diff-text" data-tool="diff-text">diff-text</a>
+      <a href="#html-to-markdown" data-tool="html-to-markdown">html-to-markdown</a>
+      <a href="#jsonpath-query" data-tool="jsonpath-query">jsonpath-query</a>
+      <a href="#url-shorten" data-tool="url-shorten">url-shorten</a>
+      <a href="#webhook-send" data-tool="webhook-send">webhook-send</a>
+      <a href="#currency-convert" data-tool="currency-convert">currency-convert</a>
+      <a href="#timezone-convert" data-tool="timezone-convert">timezone-convert</a>
+    </div>
+
+    <div class="sidebar-section" data-category="identity">
+      <div class="sidebar-heading">Identity &amp; Comms <span class="count">7</span></div>
+      <a href="#email-verify" data-tool="email-verify">email-verify</a>
+      <a href="#email-send" data-tool="email-send">email-send</a>
+      <a href="#email-find" data-tool="email-find">email-find</a>
+      <a href="#phone-validate" data-tool="phone-validate">phone-validate</a>
+      <a href="#ip-lookup" data-tool="ip-lookup">ip-lookup</a>
+      <a href="#whois-lookup" data-tool="whois-lookup">whois-lookup</a>
+      <a href="#domain-check" data-tool="domain-check">domain-check</a>
+    </div>
+
+    <div class="sidebar-section" data-category="social">
+      <div class="sidebar-heading">Social <span class="count">1</span></div>
+      <a href="#social-post" data-tool="social-post">social-post</a>
+    </div>
+
+    <div class="sidebar-section" data-category="files">
+      <div class="sidebar-heading">Files &amp; Extraction <span class="count">2</span></div>
+      <a href="#ocr-extract" data-tool="ocr-extract">ocr-extract</a>
+      <a href="#extract-pdf" data-tool="extract-pdf">extract-pdf</a>
     </div>
   </nav>
 
-  <div class="layout">
-    <nav class="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Getting Started</div>
-        <a href="#authentication">Authentication</a>
-        <a href="#quickstart">Quickstart</a>
-        <a href="#credits">Credits &amp; Limits</a>
-        <a href="#errors">Error Codes</a>
-        <a href="#mcp">MCP — All Clients</a>
-        <a href="#quickstart-lang">Quick Start by Language</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Data &amp; Validation</div>
-        <a href="#validate-data">validate-data</a>
-        <a href="#generate-hash">generate-hash</a>
-        <a href="#pii-detect">pii-detect</a>
-        <a href="#diff-text">diff-text</a>
-        <a href="#readability-score">readability-score</a>
-        <a href="#language-detect">language-detect</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Web &amp; Scraping</div>
-        <a href="#web-scrape">web-scrape</a>
-        <a href="#extract-page">extract-page</a>
-        <a href="#search-web">search-web</a>
-        <a href="#rss-parse">rss-parse</a>
-        <a href="#ip-lookup">ip-lookup</a>
-        <a href="#whois-lookup">whois-lookup</a>
-        <a href="#screenshot-capture">screenshot-capture</a>
-        <a href="#html-to-markdown">html-to-markdown</a>
-        <a href="#url-shorten">url-shorten</a>
-        <a href="#webhook-send">webhook-send</a>
-        <a href="#extract-metadata">extract-metadata</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Text &amp; AI</div>
-        <a href="#transform-text">transform-text</a>
-        <a href="#ai-generate">ai-generate</a>
-        <a href="#summarize">summarize</a>
-        <a href="#sentiment-analysis">sentiment-analysis</a>
-        <a href="#extract-entities">extract-entities</a>
-        <a href="#regex-generate">regex-generate</a>
-        <a href="#jsonpath-query">jsonpath-query</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Conversion &amp; Format</div>
-        <a href="#convert-format">convert-format</a>
-        <a href="#convert-units">convert-units</a>
-        <a href="#currency-convert">currency-convert</a>
-        <a href="#timezone-convert">timezone-convert</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Files &amp; Media</div>
-        <a href="#ocr-extract">ocr-extract</a>
-        <a href="#extract-pdf">extract-pdf</a>
-        <a href="#image-generate">image-generate</a>
-        <a href="#qr-code">qr-code</a>
-        <a href="#barcode-generate">barcode-generate</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Identity &amp; Comms</div>
-        <a href="#generate-uuid">generate-uuid</a>
-        <a href="#email-verify">email-verify</a>
-        <a href="#phone-validate">phone-validate</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Crypto</div>
-        <a href="#crypto-price">crypto-price</a>
-        <a href="#crypto-market-cap">crypto-market-cap</a>
-        <a href="#crypto-ohlcv">crypto-ohlcv</a>
-        <a href="#crypto-fear-greed">crypto-fear-greed</a>
-        <a href="#crypto-news">crypto-news</a>
-        <a href="#crypto-sentiment">crypto-sentiment</a>
-        <a href="#token-lookup">token-lookup</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Audio &amp; Voice</div>
-        <a href="#text-to-speech">text-to-speech</a>
-        <a href="#transcribe-audio">transcribe-audio</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Email &amp; Design</div>
-        <a href="#email-send">email-send</a>
-        <a href="#design-create">design-create</a>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Domain &amp; Browser</div>
-        <a href="#domain-check">domain-check</a>
-        <a href="#browser-task">browser-task</a>
-        <a href="#workflow-agent">workflow-agent</a>
-      </div>
-    </nav>
+  <div class="content" id="content">
+    <h1>API Reference</h1>
+    <p class="subtitle">61 production tools. One API key. Every endpoint documented with examples, parameters, and pricing.</p>
 
-    <div class="content">
-      <h1>API Reference</h1>
-      <p>53 production tools. One API key. Every request is authenticated, credit-deducted, and logged.</p>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value grad">61</div><div class="stat-label">Tools</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">$0.001</div><div class="stat-label">Cheapest call (x402)</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">250</div><div class="stat-label">Free credits on signup</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--orange)">REST + MCP</div><div class="stat-label">Protocols</div></div>
+    </div>
 
-      <div class="alert alert-info">
-        <strong>Base URL:</strong> <span class="inline-code">https://arch-ai-tools.onrender.com</span> &nbsp;·&nbsp;
-        <strong>Also available at:</strong> <span class="inline-code">https://archtools.dev</span>
-      </div>
+    <div class="alert alert-info">
+      <strong>Base URL:</strong> <span class="inline-code">https://archtools.dev</span> &nbsp;·&nbsp;
+      All endpoints accept <span class="inline-code">POST</span> with JSON body &nbsp;·&nbsp;
+      <a href="/openapi.json" style="color:var(--accent)">OpenAPI spec</a>
+    </div>
 
-      <!-- AUTHENTICATION -->
-      <h2 id="authentication">Authentication</h2>
-      <p>Pass your API key in the <span class="inline-code">x-api-key</span> header (or as <span class="inline-code">Authorization: Bearer &lt;key&gt;</span>). You can get a key at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a>.</p>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code><span class="c-muted"># Pass as header</span>
-curl -X POST https://archtools.dev/v1/tools/generate-hash \
-  -H <span class="c-str">"x-api-key: arch_your_key_here"</span> \
-  -H <span class="c-str">"Content-Type: application/json"</span> \
-  -d <span class="c-str">'{"text":"hello","algorithm":"sha256"}'</span></code></pre>
-      </div>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- AUTHENTICATION -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="authentication">Authentication</h2>
+    <p>Every request requires authentication. Two methods are supported:</p>
 
-      <!-- QUICKSTART -->
-      <h2 id="quickstart">Quickstart</h2>
-      <p>Register, get your key, make your first call in under 60 seconds:</p>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code><span class="c-muted"># 1. Register (get key instantly, no email verify)</span>
+    <h3>Option 1: API Key (recommended)</h3>
+    <p>Pass your key in the <span class="inline-code">x-api-key</span> header. Get one free at <a href="/signup">archtools.dev/signup</a>.</p>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/generate-hash \
+  -H "x-api-key: arch_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"hello","algorithm":"sha256"}'</code></pre>
+    </div>
+
+    <h3 id="x402">Option 2: x402 Crypto Payments</h3>
+    <p>Pay per call with USDC on Base — no account needed. Send the <span class="inline-code">X-PAYMENT</span> header with a signed x402 payment proof.</p>
+    <div class="alert alert-green">
+      <strong>How it works:</strong> Call without auth → get <span class="inline-code">402 Payment Required</span> with pricing → sign payment → resend with <span class="inline-code">X-PAYMENT</span> header.
+      <br>Pricing endpoint: <span class="inline-code">GET /api/v1/x402/pricing</span> · <a href="/docs-x402-guide" style="color:var(--green)">Full x402 Guide →</a>
+    </div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code class="language-bash"># Check pricing for a specific tool
+curl https://archtools.dev/api/v1/x402/pricing/web-scrape
+
+# Response: { "tool": "web-scrape", "price_usdc": "0.005", ... }</code></pre>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- QUICKSTART -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="quickstart">Quickstart</h2>
+    <p>Register, get your key, and make your first call in under 60 seconds:</p>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code class="language-bash"># 1. Register (key delivered instantly, no email verification)
 curl -X POST https://archtools.dev/v1/agent/register \
-  -H <span class="c-str">"Content-Type: application/json"</span> \
-  -d <span class="c-str">'{"email":"you@example.com","plan":"free"}'</span>
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","plan":"free"}'
 
-<span class="c-muted"># 2. Call a tool</span>
+# 2. Call any tool
 curl -X POST https://archtools.dev/v1/tools/ai-generate \
-  -H <span class="c-str">"x-api-key: arch_&lt;your_key&gt;"</span> \
-  -H <span class="c-str">"Content-Type: application/json"</span> \
-  -d <span class="c-str">'{"prompt":"Summarize what Arch Tools does in one sentence"}'</span></code></pre>
-      </div>
+  -H "x-api-key: arch_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"What is Arch Tools in one sentence?"}'</code></pre>
+    </div>
 
-      <!-- CREDITS -->
-      <h2 id="credits">Credits &amp; Rate Limits</h2>
-      <p>Every new account gets <strong>250 free credits</strong> on signup. Most tools cost 1 credit per call. AI tools cost 2–30 credits (image-generate/design-create = 30, text-to-speech = 10, transcribe-audio = 12, ai-oracle = 25). Subscription plans refresh credits monthly. Annual billing saves 17% off monthly rates.</p>
-      <table class="params-table" style="margin-bottom:16px">
-        <tr><th>Tier</th><th>Price</th><th>Rate Limit</th><th>Daily Limit</th></tr>
-        <tr><td>Free</td><td>$0</td><td>30 req/min</td><td>500 req/day</td></tr>
-        <tr><td>Developer</td><td>$19/mo</td><td>60 req/min</td><td>5,000 req/day</td></tr>
-        <tr><td>Pro</td><td>$49/mo</td><td>120 req/min</td><td>20,000 req/day</td></tr>
-        <tr><td>Business</td><td>$149/mo</td><td>300 req/min</td><td>100,000 req/day</td></tr>
-        <tr><td>Enterprise</td><td><a href="mailto:support@archtools.dev" style="color:var(--accent)">Contact Us</a></td><td>Custom</td><td>Custom</td></tr>
-      </table>
-      <p>One-time credit packs: <strong>$9</strong> / 5K credits · <strong>$49</strong> / 30K credits · <strong>$199</strong> / 200K credits. Overage beyond subscription credits is billed at one-time pack rates.</p>
-      <p>Check your usage: <span class="inline-code">GET /v1/agent/usage</span> with your key.</p>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- CREDITS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="credits">Credits &amp; Rate Limits</h2>
+    <p>Every new account gets <strong>250 free credits</strong> on signup. Tools cost 1–30 credits per call depending on complexity.</p>
+    <table class="params-table" style="margin-bottom:16px">
+      <tr><th>Tier</th><th>Price</th><th>Rate Limit</th><th>Daily Limit</th></tr>
+      <tr><td>Free</td><td>$0</td><td>30 req/min</td><td>500 req/day</td></tr>
+      <tr><td>Developer</td><td>$19/mo</td><td>60 req/min</td><td>5,000 req/day</td></tr>
+      <tr><td>Pro</td><td>$49/mo</td><td>120 req/min</td><td>20,000 req/day</td></tr>
+      <tr><td>Business</td><td>$149/mo</td><td>300 req/min</td><td>100,000 req/day</td></tr>
+      <tr><td>Enterprise</td><td><a href="mailto:support@archtools.dev">Contact Us</a></td><td>Custom</td><td>Custom</td></tr>
+    </table>
+    <p>One-time credit packs: <strong>$9</strong> / 5K · <strong>$49</strong> / 30K · <strong>$199</strong> / 200K. Check usage: <span class="inline-code">GET /v1/agent/usage</span></p>
 
-      <!-- ERRORS -->
-      <h2 id="errors">Error Codes</h2>
-      <table class="params-table">
-        <tr><th>Code</th><th>Meaning</th></tr>
-        <tr><td>401</td><td>Invalid or missing API key</td></tr>
-        <tr><td>400</td><td>Missing required parameter — check the <span class="inline-code">message</span> field</td></tr>
-        <tr><td>402</td><td>Insufficient credits — purchase more at archtools.dev/#pricing</td></tr>
-        <tr><td>429</td><td>Rate limit exceeded — back off and retry</td></tr>
-        <tr><td>500</td><td>Internal error — retry with exponential backoff</td></tr>
-        <tr><td>502</td><td>Upstream service unavailable (e.g. CoinGecko, Stripe)</td></tr>
-      </table>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- ERRORS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="errors">Error Codes</h2>
+    <table class="params-table">
+      <tr><th>Code</th><th>Meaning</th><th>Action</th></tr>
+      <tr><td>400</td><td>Bad Request</td><td>Check the <span class="inline-code">message</span> field for missing params</td></tr>
+      <tr><td>401</td><td>Unauthorized</td><td>Invalid or missing API key</td></tr>
+      <tr><td>402</td><td>Payment Required</td><td>Insufficient credits or x402 payment needed</td></tr>
+      <tr><td>429</td><td>Rate Limited</td><td>Back off and retry with exponential backoff</td></tr>
+      <tr><td>500</td><td>Server Error</td><td>Retry with backoff; report if persistent</td></tr>
+      <tr><td>502</td><td>Upstream Error</td><td>Third-party service unavailable; retry later</td></tr>
+    </table>
 
-      <!-- MCP -->
-      <h2 id="mcp">MCP Setup — All Clients</h2>
-      <p>All 58 tools are auto-exposed as MCP functions. One config block works across every MCP-compatible client.</p>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- MCP -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="mcp">MCP Setup — All Clients</h2>
+    <p>All 61 tools are auto-exposed as MCP functions. One config block works across every MCP-compatible client.</p>
 
-      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Claude Desktop</h3>
-      <table class="params-table" style="margin:10px 0 14px;">
-        <tr><th>OS</th><th>Config file path</th></tr>
-        <tr><td>macOS</td><td><span class="inline-code">~/Library/Application Support/Claude/claude_desktop_config.json</span></td></tr>
-        <tr><td>Windows</td><td><span class="inline-code">%APPDATA%\Claude\claude_desktop_config.json</span></td></tr>
-        <tr><td>Linux</td><td><span class="inline-code">~/.config/Claude/claude_desktop_config.json</span></td></tr>
-      </table>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>{
-  <span class="c-key">"mcpServers"</span>: {
-    <span class="c-key">"arch-tools"</span>: {
-      <span class="c-key">"command"</span>: <span class="c-str">"npx"</span>,
-      <span class="c-key">"args"</span>: [<span class="c-str">"-y"</span>, <span class="c-str">"mcp-remote"</span>, <span class="c-str">"https://arch-tools-mcp.onrender.com/sse"</span>],
-      <span class="c-key">"env"</span>: { <span class="c-key">"ARCH_API_KEY"</span>: <span class="c-str">"arch_your_key_here"</span> }
+    <h3>Claude Desktop / Cursor / Windsurf</h3>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code class="language-json">{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://arch-tools-mcp.onrender.com/sse"],
+      "env": { "ARCH_API_KEY": "arch_your_key_here" }
     }
   }
 }</code></pre>
-      </div>
+    </div>
+    <table class="params-table" style="margin:10px 0 14px">
+      <tr><th>Client</th><th>Config Location</th></tr>
+      <tr><td>Claude Desktop (macOS)</td><td><span class="inline-code">~/Library/Application Support/Claude/claude_desktop_config.json</span></td></tr>
+      <tr><td>Claude Desktop (Win)</td><td><span class="inline-code">%APPDATA%\Claude\claude_desktop_config.json</span></td></tr>
+      <tr><td>Cursor</td><td><span class="inline-code">~/.cursor/mcp.json</span></td></tr>
+      <tr><td>Windsurf</td><td><span class="inline-code">~/.codeium/windsurf/mcp_config.json</span></td></tr>
+    </table>
 
-      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Cursor</h3>
-      <table class="params-table" style="margin:10px 0 14px;">
-        <tr><th>OS</th><th>Config file path</th></tr>
-        <tr><td>macOS / Linux</td><td><span class="inline-code">~/.cursor/mcp.json</span></td></tr>
-        <tr><td>Windows</td><td><span class="inline-code">%USERPROFILE%\.cursor\mcp.json</span></td></tr>
-      </table>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>{
-  <span class="c-key">"mcpServers"</span>: {
-    <span class="c-key">"arch-tools"</span>: {
-      <span class="c-key">"command"</span>: <span class="c-str">"npx"</span>,
-      <span class="c-key">"args"</span>: [<span class="c-str">"-y"</span>, <span class="c-str">"mcp-remote"</span>, <span class="c-str">"https://arch-tools-mcp.onrender.com/sse"</span>],
-      <span class="c-key">"env"</span>: { <span class="c-key">"ARCH_API_KEY"</span>: <span class="c-str">"arch_your_key_here"</span> }
-    }
-  }
-}</code></pre>
-      </div>
+    <h3>ChatGPT Custom GPT</h3>
+    <ol style="color:var(--muted);line-height:2;padding-left:20px;font-size:14px;">
+      <li>Go to <span class="inline-code">chat.openai.com/gpts/editor</span> → Create</li>
+      <li>Click <strong>Actions</strong> → <strong>Import from URL</strong></li>
+      <li>Paste: <span class="inline-code">https://archtools.dev/openapi.json</span></li>
+      <li>Set auth: <strong>API Key</strong> → header name <span class="inline-code">x-api-key</span></li>
+      <li>Save — your GPT now has all Arch Tools natively</li>
+    </ol>
 
-      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Windsurf (Codeium)</h3>
-      <table class="params-table" style="margin:10px 0 14px;">
-        <tr><th>OS</th><th>Config file path</th></tr>
-        <tr><td>macOS / Linux</td><td><span class="inline-code">~/.codeium/windsurf/mcp_config.json</span></td></tr>
-        <tr><td>Windows</td><td><span class="inline-code">%USERPROFILE%\.codeium\windsurf\mcp_config.json</span></td></tr>
-      </table>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>{
-  <span class="c-key">"mcpServers"</span>: {
-    <span class="c-key">"arch-tools"</span>: {
-      <span class="c-key">"command"</span>: <span class="c-str">"npx"</span>,
-      <span class="c-key">"args"</span>: [<span class="c-str">"-y"</span>, <span class="c-str">"mcp-remote"</span>, <span class="c-str">"https://arch-tools-mcp.onrender.com/sse"</span>],
-      <span class="c-key">"env"</span>: { <span class="c-key">"ARCH_API_KEY"</span>: <span class="c-str">"arch_your_key_here"</span> }
-    }
-  }
-}</code></pre>
-      </div>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- QUICKSTART BY LANGUAGE -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="quickstart-lang">Quick Start by Language</h2>
 
-      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">ChatGPT Custom GPT Actions</h3>
-      <p>Connect Arch Tools to a Custom GPT in the ChatGPT GPT Store (requires OpenAI account):</p>
-      <ol style="color:var(--muted);line-height:2;padding-left:20px;font-size:14px;">
-        <li>Go to <span class="inline-code">chat.openai.com/gpts/editor</span> → Create</li>
-        <li>Click <strong>Actions</strong> → <strong>Import from URL</strong></li>
-        <li>Paste: <span class="inline-code">https://arch-ai-tools.onrender.com/openapi.json</span></li>
-        <li>Set auth: <strong>API Key</strong> → header name <span class="inline-code">x-api-key</span></li>
-        <li>Save and publish — your GPT now has 18 core Arch Tools natively</li>
-      </ol>
-
-      <h3 style="font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--fg);">Grok &amp; Gemini (API function calling)</h3>
-      <p style="color:var(--muted);font-size:14px;line-height:1.7;">Both xAI (Grok) and Google (Gemini) support function calling via their APIs. Pass the Arch Tools OpenAPI spec or define tool functions manually. No consumer app connector stores exist yet for either platform — use the REST API directly in your agent code. The <span class="inline-code">openapi.json</span> at <span class="inline-code">https://arch-ai-tools.onrender.com/openapi.json</span> has all parameter definitions.</p>
-
-      <h2 id="quickstart-lang">Quick Start by Language</h2>
-
-      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">curl (Mac / Linux)</h3>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/web-scrape \
+    <div class="code-tabs">
+      <button class="code-tab active" onclick="switchLangTab(this,'curl')">curl</button>
+      <button class="code-tab" onclick="switchLangTab(this,'node')">Node.js</button>
+      <button class="code-tab" onclick="switchLangTab(this,'python')">Python</button>
+      <button class="code-tab" onclick="switchLangTab(this,'powershell')">PowerShell</button>
+    </div>
+    <div class="code-panel active" data-lang="curl">
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/web-scrape \
   -H "x-api-key: arch_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com"}'</code></pre>
       </div>
-
-      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">curl.exe (Windows Command Prompt)</h3>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>curl.exe -X POST https://arch-ai-tools.onrender.com/v1/tools/web-scrape ^
-  -H "x-api-key: arch_your_key_here" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"url\":\"https://example.com\"}"</code></pre>
-      </div>
-
-      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">PowerShell</h3>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>Invoke-RestMethod -Uri "https://arch-ai-tools.onrender.com/v1/tools/web-scrape" `
-  -Method POST `
-  -Headers @{ "x-api-key" = "arch_your_key_here"; "Content-Type" = "application/json" } `
-  -Body '{"url":"https://example.com"}'</code></pre>
-      </div>
-
-      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">Node.js (fetch)</h3>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>const res = await fetch('https://arch-ai-tools.onrender.com/v1/tools/web-scrape', {
+    </div>
+    <div class="code-panel" data-lang="node">
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-javascript">const res = await fetch('https://archtools.dev/v1/tools/web-scrape', {
   method: 'POST',
   headers: {
     'x-api-key': 'arch_your_key_here',
@@ -378,559 +500,1606 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
 const data = await res.json();
 console.log(data);</code></pre>
       </div>
-
-      <h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--fg);">Python</h3>
-      <div class="code-wrap">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <pre><code>import requests
+    </div>
+    <div class="code-panel" data-lang="python">
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-python">import requests
 
 res = requests.post(
-    "https://arch-ai-tools.onrender.com/v1/tools/web-scrape",
+    "https://archtools.dev/v1/tools/web-scrape",
     headers={"x-api-key": "arch_your_key_here"},
     json={"url": "https://example.com"}
 )
 print(res.json())</code></pre>
       </div>
-
-      <!-- ── DATA & VALIDATION ── -->
-      <h2>Data &amp; Validation</h2>
-
-      <div class="tool-doc" id="validate-data">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/validate-data</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Validate a JSON object against a schema. Returns field-level errors.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>data</td><td>object</td><td><span class="req">required</span> — the JSON object to validate</td></tr>
-          <tr><td>schema</td><td>object</td><td><span class="req">required</span> — key: type map, e.g. <span class="inline-code">{"name":"string","age":"number"}</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="generate-hash">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/generate-hash</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Hash a string using MD5, SHA1, SHA256, or SHA512.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>algorithm</td><td>string</td><td><span class="opt">optional</span> — md5 | sha1 | sha256 | sha512. Default: sha256</td></tr>
-          <tr><td>encoding</td><td>string</td><td><span class="opt">optional</span> — hex | base64. Default: hex</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="pii-detect">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/pii-detect</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Detect personally identifiable information (emails, phones, SSNs, credit cards) in text.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="diff-text">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/diff-text</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Compare two strings and return the differences.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text1</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>text2</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>mode</td><td>string</td><td><span class="opt">optional</span> — words | chars | lines. Default: words</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="readability-score">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/readability-score</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Return Flesch-Kincaid and other readability scores for text.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="language-detect">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/language-detect</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Detect the language of a text string.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <!-- ── WEB & SCRAPING ── -->
-      <h2>Web &amp; Scraping</h2>
-
-      <div class="tool-doc" id="web-scrape">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/web-scrape</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Scrape a URL and return raw HTML or a specific CSS selector's content.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>selector</td><td>string</td><td><span class="opt">optional</span> — CSS selector to extract, e.g. <span class="inline-code">h1</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="extract-page">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-page</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Extract clean readable text from a URL (strips ads, nav, boilerplate).</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="search-web">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/search-web</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Search the web and return titles, URLs, and snippets.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>query</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>num_results</td><td>number</td><td><span class="opt">optional</span> — Default: 5</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="rss-parse">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/rss-parse</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Parse an RSS feed and return structured article data.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span> — RSS feed URL</td></tr>
-          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — max items. Default: 20</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="ip-lookup">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/ip-lookup</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Geolocate an IP address. Returns country, city, ISP, ASN.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>ip</td><td>string</td><td><span class="req">required</span> — IPv4 or IPv6</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="whois-lookup">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/whois-lookup</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">WHOIS lookup for a domain. Returns registrar, expiry, nameservers.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>domain</td><td>string</td><td><span class="req">required</span> — e.g. archtools.dev</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="screenshot-capture">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/screenshot-capture</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
-        <div class="tool-doc-desc">Capture a screenshot of any URL and return a base64 image.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="html-to-markdown">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/html-to-markdown</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Convert HTML to clean Markdown. Pass raw HTML or a URL.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>html</td><td>string</td><td><span class="opt">optional</span> — raw HTML string</td></tr>
-          <tr><td>url</td><td>string</td><td><span class="opt">optional</span> — fetch and convert from URL</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="url-shorten">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/url-shorten</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Shorten a URL.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="webhook-send">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/webhook-send</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Send a POST payload to any webhook URL.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>webhook_url</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>payload</td><td>object</td><td><span class="req">required</span> — JSON body to POST</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="extract-metadata">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-metadata</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Extract Open Graph, Twitter Card, and meta tags from a URL or HTML.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="opt">optional</span></td></tr>
-          <tr><td>text</td><td>string</td><td><span class="opt">optional</span> — raw HTML</td></tr>
-        </table>
-      </div>
-
-      <!-- ── TEXT & AI ── -->
-      <h2>Text &amp; AI</h2>
-
-      <div class="tool-doc" id="transform-text">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/transform-text</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Transform text: uppercase, lowercase, title case, reverse, slug, camelCase, snake_case, and more.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>mode</td><td>string</td><td><span class="req">required</span> — uppercase | lowercase | title | reverse | slug | camelCase | snake_case | trim</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="ai-generate">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/ai-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
-        <div class="tool-doc-desc">Generate text using Claude, GPT-4, Grok, or Gemini. Specify model or let it default to Claude.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>prompt</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>system</td><td>string</td><td><span class="opt">optional</span> — system prompt</td></tr>
-          <tr><td>model</td><td>string</td><td><span class="opt">optional</span> — Default: claude-sonnet-4-6</td></tr>
-          <tr><td>max_tokens</td><td>number</td><td><span class="opt">optional</span> — Default: 1000</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="summarize">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/summarize</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
-        <div class="tool-doc-desc">Summarize a block of text or a URL using AI.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="opt">optional</span></td></tr>
-          <tr><td>url</td><td>string</td><td><span class="opt">optional</span> — fetch and summarize from URL</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="sentiment-analysis">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/sentiment-analysis</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Analyze the sentiment of text. Returns positive/neutral/negative with confidence score.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="extract-entities">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-entities</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Extract named entities (people, orgs, locations, dates) from text.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="regex-generate">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/regex-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Generate a regex pattern from a plain-English description using AI.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>description</td><td>string</td><td><span class="req">required</span> — e.g. "match US phone numbers"</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="jsonpath-query">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/jsonpath-query</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Run a JSONPath query against a JSON object.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>data</td><td>object</td><td><span class="req">required</span> — the JSON to query</td></tr>
-          <tr><td>path</td><td>string</td><td><span class="req">required</span> — JSONPath expression, e.g. <span class="inline-code">$.store.book[*].title</span></td></tr>
-        </table>
-      </div>
-
-      <!-- ── CONVERSION ── -->
-      <h2>Conversion &amp; Format</h2>
-
-      <div class="tool-doc" id="convert-format">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/convert-format</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Convert between JSON, YAML, TOML, CSV, and XML.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>input</td><td>string</td><td><span class="req">required</span> — the content to convert</td></tr>
-          <tr><td>from</td><td>string</td><td><span class="req">required</span> — json | yaml | toml | csv | xml</td></tr>
-          <tr><td>to</td><td>string</td><td><span class="req">required</span> — json | yaml | toml | csv | xml</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="convert-units">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/convert-units</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Convert between units of measurement (length, weight, temperature, volume, etc).</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>value</td><td>number</td><td><span class="req">required</span></td></tr>
-          <tr><td>from</td><td>string</td><td><span class="req">required</span> — e.g. km, lbs, celsius</td></tr>
-          <tr><td>to</td><td>string</td><td><span class="req">required</span> — e.g. miles, kg, fahrenheit</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="currency-convert">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/currency-convert</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Convert between world currencies using live FX rates.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>amount</td><td>number</td><td><span class="req">required</span></td></tr>
-          <tr><td>from</td><td>string</td><td><span class="req">required</span> — e.g. USD</td></tr>
-          <tr><td>to</td><td>string</td><td><span class="req">required</span> — e.g. EUR</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="timezone-convert">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/timezone-convert</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Convert a datetime between timezones.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>datetime</td><td>string</td><td><span class="req">required</span> — ISO 8601</td></tr>
-          <tr><td>from_tz</td><td>string</td><td><span class="req">required</span> — e.g. UTC, America/New_York</td></tr>
-          <tr><td>to_tz</td><td>string</td><td><span class="req">required</span> — e.g. Asia/Tokyo</td></tr>
-        </table>
-      </div>
-
-      <!-- ── FILES & MEDIA ── -->
-      <h2>Files &amp; Media</h2>
-
-      <div class="tool-doc" id="ocr-extract">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/ocr-extract</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
-        <div class="tool-doc-desc">Extract text from an image using OCR. Pass an image URL.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span> — public image URL</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="extract-pdf">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/extract-pdf</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
-        <div class="tool-doc-desc">Extract text content from a PDF by URL.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span> — public PDF URL</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="image-generate">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/image-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">30 credits</span></div>
-        <div class="tool-doc-desc">Generate an image from a text prompt using AI.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>prompt</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>size</td><td>string</td><td><span class="opt">optional</span> — 256x256 | 512x512 | 1024x1024. Default: 512x512</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="qr-code">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/qr-code</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Generate a QR code image for any text or URL. Returns base64 PNG.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>text</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>size</td><td>number</td><td><span class="opt">optional</span> — px. Default: 256</td></tr>
-          <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — png | svg. Default: png</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="barcode-generate">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/barcode-generate</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Generate a barcode (Code128, QR, EAN, UPC) as base64 PNG.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>data</td><td>string</td><td><span class="req">required</span> — value to encode</td></tr>
-          <tr><td>type</td><td>string</td><td><span class="opt">optional</span> — code128 | qr | ean13 | upc. Default: code128</td></tr>
-        </table>
-      </div>
-
-      <!-- ── IDENTITY ── -->
-      <h2>Identity &amp; Communications</h2>
-
-      <div class="tool-doc" id="generate-uuid">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/generate-uuid</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Generate one or more UUIDs.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>version</td><td>string</td><td><span class="opt">optional</span> — v4 | v1. Default: v4</td></tr>
-          <tr><td>count</td><td>number</td><td><span class="opt">optional</span> — 1–100. Default: 1</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="email-verify">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/email-verify</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Validate email format and check MX records.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>email</td><td>string</td><td><span class="req">required</span></td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="phone-validate">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/phone-validate</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Validate and parse a phone number. Returns country, format, type.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>phone</td><td>string</td><td><span class="req">required</span></td></tr>
-          <tr><td>country</td><td>string</td><td><span class="opt">optional</span> — ISO 3166 code. Default: US</td></tr>
-        </table>
-      </div>
-
-      <!-- ── CRYPTO ── -->
-      <h2>Crypto</h2>
-
-      <div class="tool-doc" id="crypto-price">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-price</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Get live price, 24h change, market cap, and volume for any token. Use CoinGecko IDs (bitcoin, ethereum, solana).</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID, e.g. <span class="inline-code">bitcoin</span></td></tr>
-          <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Default: usd</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="crypto-market-cap">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-market-cap</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Top N tokens by market cap with price and 24h change.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — Default: 10, max 250</td></tr>
-          <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Default: usd</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="crypto-ohlcv">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-ohlcv</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">OHLCV candlestick data for a token over N days.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID</td></tr>
-          <tr><td>days</td><td>number</td><td><span class="opt">optional</span> — Default: 7</td></tr>
-          <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Default: usd</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="crypto-fear-greed">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-fear-greed</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Crypto Fear &amp; Greed Index — current value and historical data.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — days of history. Default: 7</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="crypto-news">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-news</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Latest crypto news headlines for a specific token or the market overall.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>symbol</td><td>string</td><td><span class="opt">optional</span> — CoinGecko ID. Omit for general news.</td></tr>
-          <tr><td>limit</td><td>number</td><td><span class="opt">optional</span> — Default: 10</td></tr>
-        </table>
-      </div>
-
-      <div class="tool-doc" id="token-lookup">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/token-lookup</span><span class="badge badge-post">POST</span><span class="badge badge-free">1 credit</span></div>
-        <div class="tool-doc-desc">Search CoinGecko for a token by name or ticker. Returns the CoinGecko ID to use with other crypto tools.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>query</td><td>string</td><td><span class="req">required</span> — e.g. "bitcoin" or "BTC"</td></tr>
-        </table>
-      </div>
-
-      <!-- crypto-sentiment -->
-      <div class="tool-doc" id="crypto-sentiment">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/crypto-sentiment</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">AI-powered sentiment analysis for a cryptocurrency. Aggregates recent news and social signals via CryptoPanic, returns bullish/bearish/neutral score with summary.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — e.g. "BTC", "ETH", "SOL"</td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/crypto-sentiment \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"symbol":"BTC"}'</code></pre></div>
-      </div>
-
-      <!-- text-to-speech -->
-      <div class="tool-doc" id="text-to-speech">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/text-to-speech</span><span class="badge badge-post">POST</span><span class="badge badge-free">10 credits</span></div>
-        <div class="tool-doc-desc">Convert text to natural-sounding speech via ElevenLabs. Returns base64-encoded MP3 audio. 50+ voices available.</div>
-        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
-          <tr><td>text</td><td>string</td><td>✓</td><td>Text to convert. Max 5,000 characters.</td></tr>
-          <tr><td>voice_id</td><td>string</td><td></td><td>ElevenLabs voice ID. Default: <span class="inline-code">EXAVITQu4vr4xnSDxMaL</span> (Sarah)</td></tr>
-          <tr><td>model_id</td><td>string</td><td></td><td>ElevenLabs model. Default: <span class="inline-code">eleven_turbo_v2_5</span></td></tr>
-          <tr><td>stability</td><td>number</td><td></td><td>Voice stability 0–1. Default: 0.5</td></tr>
-          <tr><td>similarity_boost</td><td>number</td><td></td><td>Clarity/similarity 0–1. Default: 0.75</td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/text-to-speech \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"text":"Hello from Arch Tools","voice_id":"EXAVITQu4vr4xnSDxMaL"}'</code></pre></div>
-      </div>
-
-      <!-- transcribe-audio -->
-      <div class="tool-doc" id="transcribe-audio">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/transcribe-audio</span><span class="badge badge-post">POST</span><span class="badge badge-free">12 credits</span></div>
-        <div class="tool-doc-desc">Transcribe audio files to text via OpenAI Whisper. Pass a public audio URL. Supports 100+ languages.</div>
-        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
-          <tr><td>audio_url</td><td>string</td><td>✓</td><td>Public URL of the audio file (MP3, WAV, M4A, OGG, WEBM)</td></tr>
-          <tr><td>language</td><td>string</td><td></td><td>ISO-639-1 language code hint (e.g. <span class="inline-code">en</span>, <span class="inline-code">es</span>). Auto-detected if omitted.</td></tr>
-          <tr><td>prompt</td><td>string</td><td></td><td>Optional context prompt to improve accuracy (e.g. technical terms, speaker names)</td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/transcribe-audio \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"audio_url":"https://example.com/audio.mp3","language":"en"}'</code></pre></div>
-      </div>
-
-      <!-- email-send -->
-      <div class="tool-doc" id="email-send">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/email-send</span><span class="badge badge-post">POST</span><span class="badge badge-free">3 credits</span></div>
-        <div class="tool-doc-desc">Send transactional emails via Resend. Plain text or HTML. Sent from no-reply@archtools.dev by default.</div>
-        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
-          <tr><td>to</td><td>string</td><td>✓</td><td>Recipient email address</td></tr>
-          <tr><td>subject</td><td>string</td><td>✓</td><td>Email subject line</td></tr>
-          <tr><td>body</td><td>string</td><td>✓*</td><td>Plain text body. Required if <span class="inline-code">html</span> not provided.</td></tr>
-          <tr><td>html</td><td>string</td><td>✓*</td><td>HTML body. Required if <span class="inline-code">body</span> not provided.</td></tr>
-          <tr><td>from</td><td>string</td><td></td><td>Sender address. Default: <span class="inline-code">Arch Tools &lt;no-reply@archtools.dev&gt;</span></td></tr>
-        </table>
-        <p style="font-size:12px;color:var(--muted);margin:8px 0 0;">⚠️ You are responsible for CAN-SPAM / GDPR compliance. Do not send unsolicited email.</p>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/email-send \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"to":"user@example.com","subject":"Hello","body":"Message body here"}'</code></pre></div>
-      </div>
-
-      <!-- design-create -->
-      <div class="tool-doc" id="design-create">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/design-create</span><span class="badge badge-post">POST</span><span class="badge badge-free">30 credits</span></div>
-        <div class="tool-doc-desc">Generate images from text prompts via DALL-E 3. Returns an image URL. Three sizes, vivid or natural style.</div>
-        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
-          <tr><td>prompt</td><td>string</td><td>✓</td><td>Image description / prompt</td></tr>
-          <tr><td>size</td><td>string</td><td></td><td><span class="inline-code">1024x1024</span> (default), <span class="inline-code">1792x1024</span>, or <span class="inline-code">1024x1792</span></td></tr>
-          <tr><td>quality</td><td>string</td><td></td><td><span class="inline-code">standard</span> (default) or <span class="inline-code">hd</span></td></tr>
-          <tr><td>style</td><td>string</td><td></td><td><span class="inline-code">vivid</span> (default) or <span class="inline-code">natural</span></td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/design-create \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"prompt":"A futuristic city skyline at sunset, ultra-detailed","size":"1792x1024"}'</code></pre></div>
-      </div>
-
-      <!-- domain-check -->
-      <div class="tool-doc" id="domain-check">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/domain-check</span><span class="badge badge-post">POST</span><span class="badge badge-free">2 credits</span></div>
-        <div class="tool-doc-desc">Check if a domain is registered or available via RDAP. Returns registration date, expiry, nameservers, and status. No API key needed.</div>
-        <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
-          <tr><td>domain</td><td>string</td><td>✓</td><td>Domain to check (e.g. <span class="inline-code">archtools.dev</span>, <span class="inline-code">example.com</span>). URL format also accepted.</td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/domain-check \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"domain":"archtools.dev"}'</code></pre></div>
-      </div>
-
-      <!-- browser-task -->
-      <div class="tool-doc" id="browser-task">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/browser-task</span><span class="badge badge-post">POST</span><span class="badge badge-free">10 credits</span></div>
-        <div class="tool-doc-desc">Headless browser automation powered by Playwright. Extract data, click elements, fill forms, and scrape JavaScript-rendered SPAs. Returns extracted content, screenshots, or structured data depending on the task.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>url</td><td>string</td><td><span class="req">required</span> — URL of the page to automate</td></tr>
-          <tr><td>task</td><td>string</td><td><span class="req">required</span> — Natural language description of what to do (e.g. "click the login button and return the page title")</td></tr>
-          <tr><td>selector</td><td>string</td><td>optional — CSS selector for targeted extraction</td></tr>
-          <tr><td>screenshot</td><td>boolean</td><td>optional — return a base64 screenshot of the final state. Default: false</td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/browser-task \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","task":"extract all product names from the page"}'</code></pre></div>
-      </div>
-
-      <!-- workflow-agent -->
-      <div class="tool-doc" id="workflow-agent">
-        <div class="tool-doc-header"><span class="tool-doc-name">POST /v1/tools/workflow-agent</span><span class="badge badge-post">POST</span><span class="badge badge-free">25 credits</span></div>
-        <div class="tool-doc-desc">Multi-step AI agent that chains multiple Arch Tools together to complete a complex task. Describe the goal in plain language — the agent plans and executes the steps automatically using available tools.</div>
-        <table class="params-table"><tr><th>Param</th><th>Type</th><th>Notes</th></tr>
-          <tr><td>goal</td><td>string</td><td><span class="req">required</span> — What you want the agent to accomplish (e.g. "scrape the top 5 headlines from BBC News and summarize them")</td></tr>
-          <tr><td>model</td><td>string</td><td>optional — AI model to use for planning: claude (default), gpt-4, grok, gemini</td></tr>
-          <tr><td>max_steps</td><td>number</td><td>optional — Maximum tool calls allowed. Default: 5</td></tr>
-        </table>
-        <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre><code>curl -X POST https://arch-ai-tools.onrender.com/v1/tools/workflow-agent \
-  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"goal":"Find the current Bitcoin price and write a 2-sentence market summary","model":"claude"}'</code></pre></div>
-      </div>
-
     </div>
+    <div class="code-panel" data-lang="powershell">
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-powershell">Invoke-RestMethod -Uri "https://archtools.dev/v1/tools/web-scrape" `
+  -Method POST `
+  -Headers @{ "x-api-key" = "arch_your_key_here"; "Content-Type" = "application/json" } `
+  -Body '{"url":"https://example.com"}'</code></pre>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- WEB & SEARCH -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-web">Web &amp; Search</h2>
+
+    <div class="tool-doc" id="web-scrape" data-tool="web-scrape" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/web-scrape</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.005</span>
+      </div>
+      <div class="tool-doc-desc">Scrape any public URL. Return HTML, markdown, or plain text. Optional CSS selector for targeted extraction.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="req">required</span> — URL to scrape</td></tr>
+        <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">markdown</span> | <span class="inline-code">html</span> | <span class="inline-code">text</span>. Default: markdown</td></tr>
+        <tr><td>selector</td><td>string</td><td><span class="opt">optional</span> — CSS selector to extract specific element</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/web-scrape \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","format":"markdown"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "content": "# Example Domain\n\nThis domain is for use in illustrative examples...",
+  "url": "https://example.com",
+  "format": "markdown",
+  "content_length": 1256
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=web-scrape&url=https://example.com&format=markdown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="extract-page" data-tool="extract-page" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/extract-page</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.005</span>
+      </div>
+      <div class="tool-doc-desc">Extract clean readable text, links, and metadata from any webpage. Strips ads, nav, and boilerplate.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="req">required</span> — URL to extract</td></tr>
+        <tr><td>include_links</td><td>boolean</td><td><span class="opt">optional</span> — Include extracted links. Default: true</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/extract-page \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "title": "Example Domain",
+  "text": "This domain is for use in illustrative examples in documents...",
+  "links": ["https://www.iana.org/domains/example"],
+  "word_count": 58
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=extract-page&url=https://example.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="search-web" data-tool="search-web" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/search-web</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.005</span>
+      </div>
+      <div class="tool-doc-desc">Web search with structured results via DuckDuckGo. Returns titles, URLs, and snippets.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>query</td><td>string</td><td><span class="req">required</span> — Search query</td></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Max results (max 20). Default: 10</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/search-web \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"query":"best AI tools 2026","limit":5}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "results": [
+    { "title": "Top AI Tools 2026", "url": "https://...", "snippet": "..." }
+  ],
+  "total": 5
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=search-web&query=best+AI+tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="web-search" data-tool="web-search" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/web-search</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Real-time web search with AI-synthesized answer and source citations. Premium search powered by AI.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>query</td><td>string</td><td><span class="req">required</span> — Search query</td></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Number of source results. Default: 5</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/web-search \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"query":"What is x402 protocol?"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "answer": "x402 is an open protocol for HTTP-native micropayments...",
+  "sources": [
+    { "title": "x402.org", "url": "https://x402.org", "snippet": "..." }
+  ]
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=web-search&query=What+is+x402"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="semantic-search" data-tool="semantic-search" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/semantic-search</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.008</span>
+      </div>
+      <div class="tool-doc-desc">Neural/semantic web search via Exa AI. Find content by meaning, not just keywords.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>query</td><td>string</td><td><span class="req">required</span> — Natural language search query</td></tr>
+        <tr><td>num_results</td><td>integer</td><td><span class="opt">optional</span> — Results to return. Default: 10</td></tr>
+        <tr><td>include_text</td><td>boolean</td><td><span class="opt">optional</span> — Include full page text. Default: true</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/semantic-search \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"query":"tutorials about building AI agents with tool use","num_results":5}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=semantic-search&query=AI+agent+tutorials"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="news-search" data-tool="news-search" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/news-search</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Search real-time news articles by keyword. Returns title, source, date, and URL.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>query</td><td>string</td><td><span class="req">required</span> — News search query</td></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Max articles. Default: 10</td></tr>
+        <tr><td>language</td><td>string</td><td><span class="opt">optional</span> — ISO-639-1 code. Default: en</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/news-search \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"query":"artificial intelligence","limit":5}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=news-search&query=artificial+intelligence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="rss-parse" data-tool="rss-parse" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/rss-parse</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.004</span>
+      </div>
+      <div class="tool-doc-desc">Parse RSS/Atom feeds into structured JSON with title, link, date, and content.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="req">required</span> — RSS or Atom feed URL</td></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Max items. Default: 20</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/rss-parse \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://hnrss.org/frontpage","limit":5}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=rss-parse&url=https://hnrss.org/frontpage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="extract-metadata" data-tool="extract-metadata" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/extract-metadata</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Extract OG tags, Twitter Card, word count, and links from a URL or HTML text.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="opt">optional</span> — URL to extract metadata from</td></tr>
+        <tr><td>text</td><td>string</td><td><span class="opt">optional</span> — Raw HTML to analyze</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/extract-metadata \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://archtools.dev"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=extract-metadata&url=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="screenshot-capture" data-tool="screenshot-capture" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/screenshot-capture</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Capture a screenshot of any webpage. Returns base64-encoded image.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="req">required</span> — URL to screenshot</td></tr>
+        <tr><td>width</td><td>integer</td><td><span class="opt">optional</span> — Viewport width. Default: 1280</td></tr>
+        <tr><td>height</td><td>integer</td><td><span class="opt">optional</span> — Viewport height. Default: 800</td></tr>
+        <tr><td>full_page</td><td>boolean</td><td><span class="opt">optional</span> — Capture full page. Default: false</td></tr>
+        <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">png</span> | <span class="inline-code">jpeg</span>. Default: png</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/screenshot-capture \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://archtools.dev","full_page":true}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=screenshot-capture&url=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="browser-task" data-tool="browser-task" data-category="web">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/browser-task</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Headless browser automation via Playwright. Click, type, extract, screenshot — automate multi-step browser workflows.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="req">required</span> — Starting URL</td></tr>
+        <tr><td>steps</td><td>array</td><td><span class="req">required</span> — Array of action objects: <span class="inline-code">{action, selector, value}</span></td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--muted)">Step actions: <span class="inline-code">click</span> | <span class="inline-code">type</span> | <span class="inline-code">extract</span> | <span class="inline-code">screenshot</span> | <span class="inline-code">wait</span> | <span class="inline-code">navigate</span></p>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/browser-task \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","steps":[{"action":"extract","selector":"h1"}]}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=browser-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- AI & ANALYSIS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-ai">AI &amp; Analysis</h2>
+
+    <div class="tool-doc" id="ai-generate" data-tool="ai-generate" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/ai-generate</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.020</span>
+      </div>
+      <div class="tool-doc-desc">AI text generation. Choose from Claude, GPT-4, Grok, or Gemini. Optional system prompt for persona.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>prompt</td><td>string</td><td><span class="req">required</span> — The prompt or question</td></tr>
+        <tr><td>model</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">claude</span> | <span class="inline-code">gpt4</span> | <span class="inline-code">grok</span> | <span class="inline-code">gemini</span>. Default: claude</td></tr>
+        <tr><td>system</td><td>string</td><td><span class="opt">optional</span> — System prompt / persona</td></tr>
+        <tr><td>max_tokens</td><td>integer</td><td><span class="opt">optional</span> — Default: 1024</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/ai-generate \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"prompt":"Explain quantum computing in 3 sentences","model":"claude"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "text": "Quantum computing harnesses quantum mechanical phenomena like superposition and entanglement...",
+  "model": "claude-sonnet-4-6",
+  "tokens_used": 87
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=ai-generate&prompt=Explain+quantum+computing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="ai-oracle" data-tool="ai-oracle" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/ai-oracle</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.025</span>
+      </div>
+      <div class="tool-doc-desc">Premium reasoning with structured analysis, confidence levels, and multi-perspective evaluation.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>question</td><td>string</td><td><span class="req">required</span> — Question or topic to analyze</td></tr>
+        <tr><td>context</td><td>string</td><td><span class="opt">optional</span> — Additional context</td></tr>
+        <tr><td>depth</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">quick</span> | <span class="inline-code">standard</span> | <span class="inline-code">deep</span>. Default: standard</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/ai-oracle \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"question":"Should I use serverless or containers for a high-traffic API?","depth":"deep"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=ai-oracle&question=serverless+vs+containers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="summarize" data-tool="summarize" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/summarize</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Summarize text in 5 styles: bullets, TLDR, executive, paragraph, or headline.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to summarize</td></tr>
+        <tr><td>style</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">bullets</span> | <span class="inline-code">tldr</span> | <span class="inline-code">executive</span> | <span class="inline-code">paragraph</span> | <span class="inline-code">headline</span>. Default: bullets</td></tr>
+        <tr><td>max_length</td><td>integer</td><td><span class="opt">optional</span> — Max summary length in words</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/summarize \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Long article text here...","style":"tldr"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=summarize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="sentiment-analysis" data-tool="sentiment-analysis" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/sentiment-analysis</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.008</span>
+      </div>
+      <div class="tool-doc-desc">Sentiment analysis with emotion detection (joy, anger, fear, surprise, sadness, disgust).</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to analyze</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/sentiment-analysis \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"This product is absolutely amazing! Best purchase ever."}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "sentiment": "positive",
+  "score": 0.95,
+  "emotions": { "joy": 0.89, "surprise": 0.12, "anger": 0.01 }
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=sentiment-analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="extract-entities" data-tool="extract-entities" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/extract-entities</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.008</span>
+      </div>
+      <div class="tool-doc-desc">Named entity recognition: extract people, organizations, locations, dates, and money from text.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to extract entities from</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/extract-entities \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Tim Cook announced Apple will invest $500M in Austin, Texas by March 2026."}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=extract-entities"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="regex-generate" data-tool="regex-generate" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/regex-generate</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.008</span>
+      </div>
+      <div class="tool-doc-desc">Generate regex patterns from plain English descriptions with explanations and optional test results.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>description</td><td>string</td><td><span class="req">required</span> — Plain English description of the pattern</td></tr>
+        <tr><td>test_strings</td><td>array</td><td><span class="opt">optional</span> — Strings to test against</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/regex-generate \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"description":"match US phone numbers like (555) 123-4567","test_strings":["(555) 123-4567","hello"]}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=regex-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="pii-detect" data-tool="pii-detect" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/pii-detect</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Detect and optionally redact personally identifiable information (emails, phones, SSNs, credit cards).</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to scan for PII</td></tr>
+        <tr><td>redact</td><td>boolean</td><td><span class="opt">optional</span> — Return redacted version. Default: false</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/pii-detect \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Contact john@example.com or call 555-0123","redact":true}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=pii-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="readability-score" data-tool="readability-score" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/readability-score</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Flesch-Kincaid readability score and grade level analysis.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to analyze</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/readability-score \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"The quick brown fox jumps over the lazy dog."}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=readability-score"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="language-detect" data-tool="language-detect" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/language-detect</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Detect the language of text with confidence score. Supports 100+ languages.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to detect language of</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/language-detect \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Bonjour le monde"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=language-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="research-report" data-tool="research-report" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/research-report</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.015</span>
+      </div>
+      <div class="tool-doc-desc">Generate a structured research report on any topic with sources. Three depth levels.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>topic</td><td>string</td><td><span class="req">required</span> — Research topic or question</td></tr>
+        <tr><td>depth</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">brief</span> | <span class="inline-code">standard</span> | <span class="inline-code">comprehensive</span>. Default: standard</td></tr>
+        <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">markdown</span> | <span class="inline-code">json</span>. Default: markdown</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/research-report \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"topic":"State of AI agents in 2026","depth":"comprehensive"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=research-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="fact-check" data-tool="fact-check" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/fact-check</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Verify claims against real-time web sources. Returns verdict, confidence, and supporting sources.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>claim</td><td>string</td><td><span class="req">required</span> — The claim to verify</td></tr>
+        <tr><td>context</td><td>string</td><td><span class="opt">optional</span> — Additional context</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/fact-check \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"claim":"The Great Wall of China is visible from space"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=fact-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="workflow-agent" data-tool="workflow-agent" data-category="ai">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/workflow-agent</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.025</span>
+      </div>
+      <div class="tool-doc-desc">Multi-step AI agent that chains tools together. Describe a goal — the agent plans and executes automatically.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>goal</td><td>string</td><td><span class="req">required</span> — High-level goal</td></tr>
+        <tr><td>tools</td><td>array</td><td><span class="opt">optional</span> — Restrict to specific tool names</td></tr>
+        <tr><td>max_steps</td><td>integer</td><td><span class="opt">optional</span> — Max tool calls. Default: 5</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/workflow-agent \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"goal":"Get Bitcoin price and write a 2-sentence market summary","max_steps":3}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=workflow-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SESSIONS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-sessions">Sessions</h2>
+
+    <div class="tool-doc" id="session-create" data-tool="session-create" data-category="sessions">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/session-create</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.005</span>
+      </div>
+      <div class="tool-doc-desc">Create a managed conversation session with memory. Returns a session ID for multi-turn conversations.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>system</td><td>string</td><td><span class="opt">optional</span> — System prompt for the session</td></tr>
+        <tr><td>model</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">claude</span> | <span class="inline-code">gpt4</span> | <span class="inline-code">grok</span> | <span class="inline-code">gemini</span>. Default: claude</td></tr>
+        <tr><td>ttl</td><td>integer</td><td><span class="opt">optional</span> — Session TTL in seconds. Default: 3600</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/session-create \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"system":"You are a helpful coding assistant","model":"claude"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "session_id": "sess_abc123def456",
+  "model": "claude",
+  "ttl": 3600,
+  "expires_at": "2026-03-17T08:00:00Z"
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=session-create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="session-message" data-tool="session-message" data-category="sessions">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/session-message</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.020</span>
+      </div>
+      <div class="tool-doc-desc">Send a message in an existing conversation session. Maintains full conversation history.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>session_id</td><td>string</td><td><span class="req">required</span> — Session ID from session-create</td></tr>
+        <tr><td>message</td><td>string</td><td><span class="req">required</span> — User message</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/session-message \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"session_id":"sess_abc123def456","message":"How do I sort an array in Python?"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=session-message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- IMAGE & VIDEO -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-image">Image &amp; Video</h2>
+
+    <div class="tool-doc" id="image-generate" data-tool="image-generate" data-category="image">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/image-generate</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.030</span>
+      </div>
+      <div class="tool-doc-desc">Generate images from text prompts. Returns a URL to the generated image.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>prompt</td><td>string</td><td><span class="req">required</span> — Image description</td></tr>
+        <tr><td>size</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">1024x1024</span> | <span class="inline-code">1792x1024</span> | <span class="inline-code">1024x1792</span>. Default: 1024x1024</td></tr>
+        <tr><td>style</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">vivid</span> | <span class="inline-code">natural</span>. Default: vivid</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/image-generate \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"prompt":"A cyberpunk cityscape at night, neon lights, rain","size":"1792x1024"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=image-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="design-create" data-tool="design-create" data-category="image">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/design-create</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.030</span>
+      </div>
+      <div class="tool-doc-desc">Generate images via DALL-E 3. HD quality option. Three sizes, vivid or natural style.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>prompt</td><td>string</td><td><span class="req">required</span> — Image description</td></tr>
+        <tr><td>size</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">1024x1024</span> | <span class="inline-code">1792x1024</span> | <span class="inline-code">1024x1792</span>. Default: 1024x1024</td></tr>
+        <tr><td>quality</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">standard</span> | <span class="inline-code">hd</span>. Default: standard</td></tr>
+        <tr><td>style</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">vivid</span> | <span class="inline-code">natural</span>. Default: vivid</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/design-create \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"prompt":"Minimalist logo for a tech startup","quality":"hd","style":"natural"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=design-create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="image-remove-bg" data-tool="image-remove-bg" data-category="image">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/image-remove-bg</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Remove background from any image via RemoveBG. Returns transparent PNG.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>image_url</td><td>string</td><td><span class="opt">optional</span> — Public URL of the image</td></tr>
+        <tr><td>image_base64</td><td>string</td><td><span class="opt">optional</span> — Base64-encoded image</td></tr>
+        <tr><td>size</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">preview</span> | <span class="inline-code">full</span> | <span class="inline-code">auto</span>. Default: auto</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/image-remove-bg \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"image_url":"https://example.com/photo.jpg","size":"full"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=image-remove-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="video-generate" data-tool="video-generate" data-category="image">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/video-generate</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.100</span>
+      </div>
+      <div class="tool-doc-desc">AI video generation from text prompts via Runway Gen-3. 4 or 10 second clips.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>prompt</td><td>string</td><td><span class="req">required</span> — Text description of the video</td></tr>
+        <tr><td>duration</td><td>integer</td><td><span class="opt">optional</span> — <span class="inline-code">4</span> or <span class="inline-code">10</span> seconds. Default: 4</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/video-generate \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"prompt":"A drone shot flying over a tropical island at sunset","duration":10}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=video-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- AUDIO -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-audio">Audio</h2>
+
+    <div class="tool-doc" id="text-to-speech" data-tool="text-to-speech" data-category="audio">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/text-to-speech</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Convert text to natural-sounding speech via ElevenLabs. Returns base64-encoded MP3. 50+ voices.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to convert (max 5,000 chars)</td></tr>
+        <tr><td>voice_id</td><td>string</td><td><span class="opt">optional</span> — ElevenLabs voice ID. Default: EXAVITQu4vr4xnSDxMaL (Sarah)</td></tr>
+        <tr><td>model_id</td><td>string</td><td><span class="opt">optional</span> — Default: eleven_turbo_v2_5</td></tr>
+        <tr><td>stability</td><td>number</td><td><span class="opt">optional</span> — Voice stability 0–1. Default: 0.42</td></tr>
+        <tr><td>similarity_boost</td><td>number</td><td><span class="opt">optional</span> — Clarity 0–1. Default: 0.82</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/text-to-speech \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Hello from Arch Tools!","voice_id":"EXAVITQu4vr4xnSDxMaL"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=text-to-speech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="transcribe-audio" data-tool="transcribe-audio" data-category="audio">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/transcribe-audio</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.012</span>
+      </div>
+      <div class="tool-doc-desc">Transcribe audio to text via OpenAI Whisper. Pass a public audio URL. 100+ languages.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>audio_url</td><td>string</td><td><span class="req">required</span> — Public URL (MP3, WAV, M4A, OGG, WEBM)</td></tr>
+        <tr><td>language</td><td>string</td><td><span class="opt">optional</span> — ISO-639-1 hint. Auto-detected if omitted.</td></tr>
+        <tr><td>prompt</td><td>string</td><td><span class="opt">optional</span> — Context hint for accuracy</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/transcribe-audio \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"audio_url":"https://example.com/audio.mp3","language":"en"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=transcribe-audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- CRYPTO -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-crypto">Crypto</h2>
+
+    <div class="tool-doc" id="crypto-price" data-tool="crypto-price" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/crypto-price</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Get current price, 24h change, market cap, and volume for any cryptocurrency.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID (e.g. <span class="inline-code">bitcoin</span>, <span class="inline-code">ethereum</span>, <span class="inline-code">solana</span>)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/crypto-price \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"symbol":"bitcoin"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "symbol": "bitcoin",
+  "price_usd": 84521.30,
+  "change_24h": 2.45,
+  "market_cap": 1672000000000,
+  "volume_24h": 28400000000
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=crypto-price&symbol=bitcoin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="crypto-market-cap" data-tool="crypto-market-cap" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/crypto-market-cap</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Get top cryptocurrencies ranked by market cap with prices and 24h changes.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Number of coins. Default: 10</td></tr>
+        <tr><td>currency</td><td>string</td><td><span class="opt">optional</span> — Fiat currency. Default: usd</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/crypto-market-cap \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"limit":5}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=crypto-market-cap&limit=10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="crypto-ohlcv" data-tool="crypto-ohlcv" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/crypto-ohlcv</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Get OHLCV (candlestick) data for a cryptocurrency over N days.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID</td></tr>
+        <tr><td>days</td><td>integer</td><td><span class="opt">optional</span> — 1, 7, 14, 30, 90, 180, 365. Default: 7</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/crypto-ohlcv \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"symbol":"ethereum","days":30}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=crypto-ohlcv&symbol=ethereum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="crypto-fear-greed" data-tool="crypto-fear-greed" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/crypto-fear-greed</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Crypto Fear &amp; Greed Index — current value and historical data.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Historical entries (1 = current). Default: 1</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/crypto-fear-greed \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"limit":7}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=crypto-fear-greed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="crypto-sentiment" data-tool="crypto-sentiment" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/crypto-sentiment</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Get community sentiment for a cryptocurrency — bullish/bearish/neutral with social signals.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>symbol</td><td>string</td><td><span class="req">required</span> — CoinGecko ID</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/crypto-sentiment \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"symbol":"bitcoin"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=crypto-sentiment&symbol=bitcoin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="crypto-news" data-tool="crypto-news" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/crypto-news</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine. Filter by coin.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>symbol</td><td>string</td><td><span class="opt">optional</span> — Filter by symbol (e.g. BTC, ETH). Omit for general.</td></tr>
+        <tr><td>limit</td><td>integer</td><td><span class="opt">optional</span> — Max articles (max 20). Default: 10</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/crypto-news \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"symbol":"ETH","limit":5}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=crypto-news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="token-lookup" data-tool="token-lookup" data-category="crypto">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/token-lookup</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Search CoinGecko for a token by name or ticker. Returns the CoinGecko ID for use with other crypto tools.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>query</td><td>string</td><td><span class="req">required</span> — Token name or ticker (e.g. "bitcoin", "BTC", "solana")</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/token-lookup \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"query":"SOL"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=token-lookup&query=SOL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- UTILITY -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-utility">Utility</h2>
+
+    <div class="tool-doc" id="validate-data" data-tool="validate-data" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/validate-data</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Validate JSON data against a JSON Schema. Returns field-level errors.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>data</td><td>object</td><td><span class="req">required</span> — JSON data to validate</td></tr>
+        <tr><td>schema</td><td>object</td><td><span class="req">required</span> — JSON Schema to validate against</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/validate-data \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"data":{"name":"Brad","age":43},"schema":{"type":"object","required":["name"],"properties":{"name":{"type":"string"},"age":{"type":"number"}}}}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=validate-data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="generate-hash" data-tool="generate-hash" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/generate-hash</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Generate cryptographic hashes — SHA256, SHA512, MD5, SHA1.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to hash</td></tr>
+        <tr><td>algorithm</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">sha256</span> | <span class="inline-code">sha512</span> | <span class="inline-code">md5</span> | <span class="inline-code">sha1</span>. Default: sha256</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/generate-hash \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"hello world","algorithm":"sha256"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "hash": "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+  "algorithm": "sha256"
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=generate-hash&text=hello+world"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="generate-uuid" data-tool="generate-uuid" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/generate-uuid</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Generate UUIDs, random tokens, or API-key-format strings.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>type</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">uuid</span> | <span class="inline-code">token</span> | <span class="inline-code">api-key</span>. Default: uuid</td></tr>
+        <tr><td>count</td><td>integer</td><td><span class="opt">optional</span> — Number to generate. Default: 1</td></tr>
+        <tr><td>length</td><td>integer</td><td><span class="opt">optional</span> — Length for token/api-key. Default: 32</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/generate-uuid \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"type":"api-key","count":3}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=generate-uuid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="qr-code" data-tool="qr-code" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/qr-code</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Generate QR codes as PNG or SVG. Base64 encoded.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text or URL to encode</td></tr>
+        <tr><td>size</td><td>integer</td><td><span class="opt">optional</span> — Image size in pixels. Default: 200</td></tr>
+        <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">png</span> | <span class="inline-code">svg</span>. Default: png</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/qr-code \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"https://archtools.dev","size":300}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=qr-code&text=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="barcode-generate" data-tool="barcode-generate" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/barcode-generate</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Generate barcodes in CODE128, EAN13, UPC, CODE39, or ITF14 format.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text or number to encode</td></tr>
+        <tr><td>format</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">CODE128</span> | <span class="inline-code">EAN13</span> | <span class="inline-code">UPC</span> | <span class="inline-code">CODE39</span> | <span class="inline-code">ITF14</span>. Default: CODE128</td></tr>
+        <tr><td>width</td><td>integer</td><td><span class="opt">optional</span> — Bar width. Default: 2</td></tr>
+        <tr><td>height</td><td>integer</td><td><span class="opt">optional</span> — Bar height px. Default: 100</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/barcode-generate \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"123456789","format":"CODE128"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=barcode-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="convert-format" data-tool="convert-format" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/convert-format</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Convert between JSON, YAML, CSV, XML, and TOML.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>input</td><td>string</td><td><span class="req">required</span> — Content to convert</td></tr>
+        <tr><td>from</td><td>string</td><td><span class="req">required</span> — Source format: <span class="inline-code">json</span> | <span class="inline-code">yaml</span> | <span class="inline-code">csv</span> | <span class="inline-code">xml</span> | <span class="inline-code">toml</span></td></tr>
+        <tr><td>to</td><td>string</td><td><span class="req">required</span> — Target format</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/convert-format \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"input":"{\"name\":\"Brad\",\"age\":43}","from":"json","to":"yaml"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=convert-format"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="transform-text" data-tool="transform-text" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/transform-text</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Transform text in 10 modes: slug, camelCase, snake_case, PascalCase, kebab-case, upper, lower, title, base64 encode/decode.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Text to transform</td></tr>
+        <tr><td>mode</td><td>string</td><td><span class="req">required</span> — <span class="inline-code">slug</span> | <span class="inline-code">camel</span> | <span class="inline-code">snake</span> | <span class="inline-code">pascal</span> | <span class="inline-code">kebab</span> | <span class="inline-code">upper</span> | <span class="inline-code">lower</span> | <span class="inline-code">title</span> | <span class="inline-code">base64_encode</span> | <span class="inline-code">base64_decode</span></td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/transform-text \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"hello world example","mode":"camel"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=transform-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="diff-text" data-tool="diff-text" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/diff-text</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Structured diff between two texts. Output in unified, words, chars, or JSON format.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text1</td><td>string</td><td><span class="req">required</span> — Original text</td></tr>
+        <tr><td>text2</td><td>string</td><td><span class="req">required</span> — Modified text</td></tr>
+        <tr><td>mode</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">unified</span> | <span class="inline-code">words</span> | <span class="inline-code">chars</span> | <span class="inline-code">json</span>. Default: unified</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/diff-text \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text1":"The quick brown fox","text2":"The slow brown dog","mode":"words"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=diff-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="html-to-markdown" data-tool="html-to-markdown" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/html-to-markdown</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Convert HTML content to clean Markdown. Pass raw HTML or a URL.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>html</td><td>string</td><td><span class="opt">optional</span> — Raw HTML to convert</td></tr>
+        <tr><td>url</td><td>string</td><td><span class="opt">optional</span> — Fetch and convert from URL</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/html-to-markdown \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"html":"<h1>Hello</h1><p>World</p>"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=html-to-markdown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="jsonpath-query" data-tool="jsonpath-query" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/jsonpath-query</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Run a JSONPath expression against a JSON object.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>data</td><td>object</td><td><span class="req">required</span> — JSON to query</td></tr>
+        <tr><td>path</td><td>string</td><td><span class="req">required</span> — JSONPath expression (e.g. <span class="inline-code">$.store.book[*].title</span>)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/jsonpath-query \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"data":{"users":[{"name":"Alice"},{"name":"Bob"}]},"path":"$.users[*].name"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=jsonpath-query"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="url-shorten" data-tool="url-shorten" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/url-shorten</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Shorten a URL.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>url</td><td>string</td><td><span class="req">required</span> — Long URL to shorten</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/url-shorten \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://archtools.dev/docs#authentication"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=url-shorten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="webhook-send" data-tool="webhook-send" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/webhook-send</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Send a JSON payload to any webhook URL. Supports GET, POST, PUT, PATCH, DELETE.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>webhook_url</td><td>string</td><td><span class="req">required</span> — Webhook endpoint URL</td></tr>
+        <tr><td>payload</td><td>object</td><td><span class="req">required</span> — JSON body to send</td></tr>
+        <tr><td>headers</td><td>object</td><td><span class="opt">optional</span> — Custom headers</td></tr>
+        <tr><td>method</td><td>string</td><td><span class="opt">optional</span> — <span class="inline-code">GET</span> | <span class="inline-code">POST</span> | <span class="inline-code">PUT</span> | <span class="inline-code">PATCH</span> | <span class="inline-code">DELETE</span>. Default: POST</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/webhook-send \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"webhook_url":"https://hooks.slack.com/services/xxx","payload":{"text":"Hello from Arch Tools!"}}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=webhook-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="currency-convert" data-tool="currency-convert" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/currency-convert</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Convert between 170+ currencies with live exchange rates.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>amount</td><td>number</td><td><span class="req">required</span> — Amount to convert</td></tr>
+        <tr><td>from</td><td>string</td><td><span class="req">required</span> — Source currency (e.g. USD)</td></tr>
+        <tr><td>to</td><td>string</td><td><span class="req">required</span> — Target currency (e.g. EUR)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/currency-convert \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"amount":100,"from":"USD","to":"EUR"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=currency-convert&amount=100&from=USD&to=EUR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="timezone-convert" data-tool="timezone-convert" data-category="utility">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/timezone-convert</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.001</span>
+      </div>
+      <div class="tool-doc-desc">Convert datetime between any two IANA timezones.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>datetime</td><td>string</td><td><span class="req">required</span> — ISO 8601 datetime</td></tr>
+        <tr><td>from_tz</td><td>string</td><td><span class="req">required</span> — Source IANA timezone (e.g. America/New_York)</td></tr>
+        <tr><td>to_tz</td><td>string</td><td><span class="req">required</span> — Target IANA timezone (e.g. Europe/London)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/timezone-convert \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"datetime":"2026-03-17T09:00:00","from_tz":"America/New_York","to_tz":"Asia/Tokyo"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=timezone-convert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- IDENTITY & COMMS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-identity">Identity &amp; Communications</h2>
+
+    <div class="tool-doc" id="email-verify" data-tool="email-verify" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/email-verify</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Validate email with MX record check and disposable domain detection.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>email</td><td>string</td><td><span class="req">required</span> — Email address to verify</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/email-verify \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"email":"test@gmail.com"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=email-verify"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="email-send" data-tool="email-send" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/email-send</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Send transactional emails via Resend — plain text or HTML. From no-reply@archtools.dev by default.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>to</td><td>string</td><td><span class="req">required</span> — Recipient email</td></tr>
+        <tr><td>subject</td><td>string</td><td><span class="req">required</span> — Subject line</td></tr>
+        <tr><td>body</td><td>string</td><td><span class="req">required*</span> — Plain text body (or use html)</td></tr>
+        <tr><td>html</td><td>string</td><td><span class="opt">optional</span> — HTML body (alternative to body)</td></tr>
+        <tr><td>from</td><td>string</td><td><span class="opt">optional</span> — Sender. Default: no-reply@archtools.dev</td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--muted)">⚠️ You are responsible for CAN-SPAM / GDPR compliance.</p>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/email-send \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"to":"user@example.com","subject":"Hello","body":"Message body"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=email-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="email-find" data-tool="email-find" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/email-find</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.005</span>
+      </div>
+      <div class="tool-doc-desc">Find email address for a person at a company via Hunter.io.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>domain</td><td>string</td><td><span class="req">required</span> — Company domain (e.g. google.com)</td></tr>
+        <tr><td>first_name</td><td>string</td><td><span class="opt">optional</span> — Person's first name</td></tr>
+        <tr><td>last_name</td><td>string</td><td><span class="opt">optional</span> — Person's last name</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/email-find \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"domain":"stripe.com","first_name":"Patrick","last_name":"Collison"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=email-find"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="phone-validate" data-tool="phone-validate" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/phone-validate</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Validate phone number — E.164 format, type, country code.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>phone</td><td>string</td><td><span class="req">required</span> — Phone number to validate</td></tr>
+        <tr><td>country</td><td>string</td><td><span class="opt">optional</span> — ISO 3166-1 alpha-2 code (e.g. US, GB)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/phone-validate \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"phone":"+15551234567"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=phone-validate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="ip-lookup" data-tool="ip-lookup" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/ip-lookup</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">IP geolocation — country, city, ISP, ASN, VPN/proxy detection.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>ip</td><td>string</td><td><span class="opt">optional</span> — IP address (uses caller's IP if omitted)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/ip-lookup \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"ip":"8.8.8.8"}'</code></pre>
+      </div>
+      <button class="response-toggle" onclick="toggleResponse(this)">▶ Example Response</button>
+      <div class="response-body">
+        <pre><code class="language-json">{
+  "ok": true,
+  "ip": "8.8.8.8",
+  "country": "US",
+  "city": "Mountain View",
+  "isp": "Google LLC",
+  "is_vpn": false
+}</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=ip-lookup&ip=8.8.8.8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="whois-lookup" data-tool="whois-lookup" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/whois-lookup</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.003</span>
+      </div>
+      <div class="tool-doc-desc">Domain WHOIS via RDAP — registration, expiry, nameservers.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>domain</td><td>string</td><td><span class="req">required</span> — Domain name (e.g. example.com)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/whois-lookup \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"domain":"archtools.dev"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=whois-lookup&domain=archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="domain-check" data-tool="domain-check" data-category="identity">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/domain-check</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.002</span>
+      </div>
+      <div class="tool-doc-desc">Check if a domain is available or registered. Returns registration status, expiry, nameservers.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>domain</td><td>string</td><td><span class="req">required</span> — Domain to check (e.g. example.com)</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/domain-check \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"domain":"my-cool-startup.com"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=domain-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SOCIAL -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-social">Social</h2>
+
+    <div class="tool-doc" id="social-post" data-tool="social-post" data-category="social">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/social-post</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.005</span>
+      </div>
+      <div class="tool-doc-desc">Post a tweet to X/Twitter via API v2.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>text</td><td>string</td><td><span class="req">required</span> — Tweet text (max 280 characters)</td></tr>
+        <tr><td>reply_to</td><td>string</td><td><span class="opt">optional</span> — Tweet ID to reply to</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/social-post \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"Just shipped a new feature with Arch Tools! 🚀"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=social-post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- FILES & EXTRACTION -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="cat-files">Files &amp; Extraction</h2>
+
+    <div class="tool-doc" id="ocr-extract" data-tool="ocr-extract" data-category="files">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/ocr-extract</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.010</span>
+      </div>
+      <div class="tool-doc-desc">Extract text from images using OCR. Pass an image URL or base64.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>image_url</td><td>string</td><td><span class="opt">optional</span> — Public URL of the image</td></tr>
+        <tr><td>image_base64</td><td>string</td><td><span class="opt">optional</span> — Base64-encoded image</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/ocr-extract \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"image_url":"https://example.com/receipt.png"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=ocr-extract"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <div class="tool-doc" id="extract-pdf" data-tool="extract-pdf" data-category="files">
+      <div class="tool-doc-header">
+        <span class="tool-doc-name">POST /v1/tools/extract-pdf</span>
+        <span class="badge badge-post">POST</span>
+        <span class="badge badge-price">$0.006</span>
+      </div>
+      <div class="tool-doc-desc">Extract text from a PDF. Pass a URL or base64-encoded file.</div>
+      <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td>pdf_url</td><td>string</td><td><span class="opt">optional</span> — Public URL of the PDF</td></tr>
+        <tr><td>pdf_base64</td><td>string</td><td><span class="opt">optional</span> — Base64-encoded PDF</td></tr>
+      </table>
+      <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/extract-pdf \
+  -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"pdf_url":"https://example.com/document.pdf"}'</code></pre>
+      </div>
+      <div class="tool-actions">
+        <a class="try-btn" href="/playground?tool=extract-pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- x402 PRICING TABLE -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="pricing-table">Full Pricing Table (x402)</h2>
+    <p>All prices in USDC on Base network. Live pricing: <span class="inline-code">GET /api/v1/x402/pricing</span></p>
+    <div id="pricingTable"></div>
+
+    <div class="no-results" id="noResults">
+      <p>🔍 No tools match your search. Try a different query.</p>
+    </div>
+
   </div>
+</div>
 
-  <script>
-    function copyCode(btn) {
-      var pre = btn.parentElement.querySelector("pre");
-      var text = pre ? pre.innerText : "";
-      navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = "\u2713 Copied";
-        setTimeout(function() { btn.textContent = "Copy"; }, 2000);
-      });
-    }
+<footer style="border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:48px;">
+  © 2026 MCMetaverse LLC · <a href="/terms" style="color:rgba(255,255,255,0.45);text-decoration:none;">Terms</a> · <a href="/privacy" style="color:rgba(255,255,255,0.45);text-decoration:none;">Privacy</a> · <a href="/docs" style="color:rgba(255,255,255,0.45);text-decoration:none;">Docs</a> · <a href="/playground" style="color:rgba(255,255,255,0.45);text-decoration:none;">Playground</a>
+</footer>
 
-    // Sidebar active link on scroll
-    var sections = document.querySelectorAll("[id]");
-    var links = document.querySelectorAll(".sidebar a");
-    function onScroll() {
-      var scrollY = window.scrollY + 100;
-      var active = null;
-      sections.forEach(function(s) {
-        if (s.offsetTop <= scrollY) active = s.id;
-      });
-      links.forEach(function(a) {
-        a.classList.toggle("active", a.getAttribute("href") === "#" + active);
-      });
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-  </script>
-  <footer style="border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:48px;">
-    © 2026 MCMetaverse LLC · <a href="/terms.html" style="color:rgba(255,255,255,0.45);text-decoration:none;">Terms</a> · <a href="/privacy.html" style="color:rgba(255,255,255,0.45);text-decoration:none;">Privacy</a> · <a href="/docs" style="color:rgba(255,255,255,0.45);text-decoration:none;">Docs</a>
-  </footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-powershell.min.js"></script>
+<script>
+// ── Copy code ──
+function copyCode(btn) {
+  var pre = btn.parentElement.querySelector("pre");
+  var text = pre ? pre.innerText : "";
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = "✓ Copied";
+    setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+  });
+}
+
+// ── Response toggle ──
+function toggleResponse(btn) {
+  var body = btn.nextElementSibling;
+  var open = body.classList.toggle("open");
+  btn.textContent = open ? "▼ Example Response" : "▶ Example Response";
+}
+
+// ── Language tabs ──
+function switchLangTab(tab, lang) {
+  var parent = tab.parentElement.parentElement;
+  parent.querySelectorAll(".code-tab").forEach(function(t) { t.classList.remove("active"); });
+  parent.querySelectorAll(".code-panel").forEach(function(p) { p.classList.remove("active"); });
+  tab.classList.add("active");
+  parent.querySelector('.code-panel[data-lang="' + lang + '"]').classList.add("active");
+}
+
+// ── Sidebar search ──
+var searchInput = document.getElementById("sidebarSearch");
+var toolDocs = document.querySelectorAll(".tool-doc");
+var sidebarLinks = document.querySelectorAll(".sidebar a[data-tool]");
+var noResults = document.getElementById("noResults");
+
+searchInput.addEventListener("input", function() {
+  var q = this.value.toLowerCase().trim();
+  var matched = 0;
+
+  toolDocs.forEach(function(doc) {
+    var name = (doc.getAttribute("data-tool") || "").toLowerCase();
+    var desc = (doc.querySelector(".tool-doc-desc") || {}).textContent || "";
+    var show = !q || name.includes(q) || desc.toLowerCase().includes(q);
+    doc.style.display = show ? "" : "none";
+    if (show) matched++;
+  });
+
+  sidebarLinks.forEach(function(link) {
+    var name = (link.getAttribute("data-tool") || "").toLowerCase();
+    link.classList.toggle("hidden", q && !name.includes(q));
+  });
+
+  noResults.classList.toggle("show", q && matched === 0);
+});
+
+// ── Sidebar active on scroll ──
+var allSections = document.querySelectorAll("[id]");
+var allLinks = document.querySelectorAll(".sidebar a");
+function onScroll() {
+  var scrollY = window.scrollY + 120;
+  var active = null;
+  allSections.forEach(function(s) {
+    if (s.offsetTop <= scrollY) active = s.id;
+  });
+  allLinks.forEach(function(a) {
+    a.classList.toggle("active", a.getAttribute("href") === "#" + active);
+  });
+}
+window.addEventListener("scroll", onScroll, { passive: true });
+onScroll();
+
+// ── Build pricing table ──
+var prices = {
+  "validate-data":"0.001","generate-hash":"0.001","qr-code":"0.002","convert-format":"0.002",
+  "transform-text":"0.003","extract-metadata":"0.003","web-scrape":"0.005","extract-page":"0.005",
+  "search-web":"0.005","rss-parse":"0.004","ip-lookup":"0.002","whois-lookup":"0.003",
+  "email-verify":"0.003","phone-validate":"0.002","currency-convert":"0.002","timezone-convert":"0.001",
+  "generate-uuid":"0.001","diff-text":"0.002","readability-score":"0.002","language-detect":"0.003",
+  "sentiment-analysis":"0.008","summarize":"0.010","extract-entities":"0.008","regex-generate":"0.008",
+  "pii-detect":"0.010","web-search":"0.010","ai-generate":"0.020","ocr-extract":"0.010",
+  "browser-task":"0.010","extract-pdf":"0.006","screenshot-capture":"0.010","html-to-markdown":"0.003",
+  "url-shorten":"0.001","webhook-send":"0.002","jsonpath-query":"0.001","image-generate":"0.030",
+  "barcode-generate":"0.002","workflow-agent":"0.025","crypto-price":"0.001","crypto-ohlcv":"0.002",
+  "crypto-market-cap":"0.001","crypto-fear-greed":"0.001","crypto-sentiment":"0.002","crypto-news":"0.002",
+  "token-lookup":"0.001","ai-oracle":"0.025","session-create":"0.005","session-message":"0.020",
+  "text-to-speech":"0.010","transcribe-audio":"0.012","email-send":"0.003","design-create":"0.030",
+  "domain-check":"0.002","news-search":"0.003","research-report":"0.015","fact-check":"0.010",
+  "video-generate":"0.100","image-remove-bg":"0.010","email-find":"0.005","semantic-search":"0.008",
+  "social-post":"0.005"
+};
+
+var sorted = Object.entries(prices).sort(function(a,b) { return parseFloat(a[1]) - parseFloat(b[1]); });
+var html = '<table class="params-table"><tr><th>Tool</th><th>Price (USDC)</th><th>Calls / $1</th><th></th></tr>';
+sorted.forEach(function(e) {
+  var name = e[0], price = e[1];
+  var perDollar = Math.floor(1 / parseFloat(price));
+  html += '<tr><td><a href="#' + name + '" style="color:#79c0ff;text-decoration:none">' + name + '</a></td>';
+  html += '<td style="color:var(--green)">$' + price + '</td>';
+  html += '<td style="color:var(--muted)">' + perDollar.toLocaleString() + '</td>';
+  html += '<td><a href="/playground?tool=' + name + '" style="color:var(--accent);font-size:11px;text-decoration:none">Try →</a></td></tr>';
+});
+html += '</table>';
+document.getElementById("pricingTable").innerHTML = html;
+</script>
 </body>
 </html>
