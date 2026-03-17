@@ -21,7 +21,11 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: npm ci --ignore-scripts
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: api
+        run: npx prisma generate
 
       - name: TypeScript compilation check
         working-directory: api
