@@ -17,6 +17,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { prisma } from "../lib/prisma.js";
+import { requireAdmin } from "../middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -105,14 +107,32 @@ function saveDirectory(data: DirectoryData): void {
 }
 
 // ─── GET /api/v1/x402/directory — Full catalog ───────────────────────────────
-router.get("/", (_req: Request, res: Response): void => {
+router.get("/", async (_req: Request, res: Response): Promise<void> => {
   const data = loadDirectory();
   const activeServices = data.services.filter(s => s.status === "active");
 
-  // Sort: featured first, then by total_endpoints desc
+  // Merge premium listing status from DB
+  try {
+    const activeListings = await prisma.directoryListing.findMany({
+      where: { status: "active", tier: { in: ["featured", "verified"] } },
+    });
+    const listingMap = new Map(activeListings.map(l => [l.serviceId, l]));
+
+    for (const svc of activeServices) {
+      const listing = listingMap.get(svc.id);
+      if (listing) {
+        if (listing.tier === "featured") svc.featured = true;
+        if (listing.tier === "verified") svc.verified = true;
+      }
+    }
+  } catch { /* DB unavailable — use JSON defaults */ }
+
+  // Sort: featured first, then verified, then by total_endpoints desc
   activeServices.sort((a, b) => {
     if (a.featured && !b.featured) return -1;
     if (!a.featured && b.featured) return 1;
+    if (a.verified && !b.verified) return -1;
+    if (!a.verified && b.verified) return 1;
     return b.total_endpoints - a.total_endpoints;
   });
 

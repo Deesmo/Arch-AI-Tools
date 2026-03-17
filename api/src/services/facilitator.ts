@@ -414,11 +414,25 @@ export async function settlePayment(
 
 // ─── Fee Calculation ──────────────────────────────────────────────────────────
 
+/** Default fee from env (FACILITATOR_FEE_PERCENT), falls back to 2.5% */
+export function getDefaultFeePercent(): number {
+  return parseFloat(process.env.FACILITATOR_FEE_PERCENT ?? "2.5");
+}
+
 export function calculateFee(amountAtomic: string, feePercent: number): string {
   const amount = BigInt(amountAtomic);
   const feeBps = Math.round(feePercent * 100);
   const fee = (amount * BigInt(feeBps)) / BigInt(10000);
   return fee.toString();
+}
+
+/** Calculate what the provider receives after fee deduction */
+export function calculateProviderPayout(amountAtomic: string, feePercent: number): { fee: string; payout: string } {
+  const amount = BigInt(amountAtomic);
+  const feeBps = Math.round(feePercent * 100);
+  const fee = (amount * BigInt(feeBps)) / BigInt(10000);
+  const payout = amount - fee;
+  return { fee: fee.toString(), payout: payout.toString() };
 }
 
 // ─── Supported Networks ───────────────────────────────────────────────────────

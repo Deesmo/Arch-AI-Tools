@@ -261,3 +261,47 @@ model WebhookDelivery {
   @@index([status])
   @@index([createdAt])
 }
+
+// ─── Facilitator Fee Records ──────────────────────────────────────────────────
+// Granular per-settlement fee tracking for the revenue dashboard
+
+model FacilitatorFeeRecord {
+  id              String   @id @default(cuid())
+  providerId      String   @map("provider_id")
+  paymentId       String   @map("payment_id")
+  settlementAmount String  @map("settlement_amount")       // Total USDC settled (atomic)
+  feeAmount       String   @map("fee_amount")              // Fee deducted (atomic)
+  feePercent      Float    @map("fee_percent")             // Fee % at time of settlement
+  providerPayout  String   @map("provider_payout")         // Amount forwarded to provider (atomic)
+  network         String   @default("eip155:8453")
+  date            String                                    // YYYY-MM-DD for daily rollup
+  createdAt       DateTime @default(now())
+
+  @@index([providerId])
+  @@index([date])
+  @@index([createdAt])
+}
+
+// ─── Directory Premium Listings ───────────────────────────────────────────────
+// Premium directory listing upgrades (featured / verified tiers)
+
+model DirectoryListing {
+  id              String   @id @default(cuid())
+  serviceId       String   @map("service_id")              // References x402-directory.json service ID
+  serviceName     String   @map("service_name")
+  contactEmail    String   @map("contact_email")
+  tier            String   @default("free")                 // free | verified | featured
+  monthlyPrice    Float    @default(0) @map("monthly_price") // USD per month
+  status          String   @default("pending")              // pending | active | expired | rejected
+  approvedBy      String?  @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  expiresAt       DateTime? @map("expires_at")
+  stripeSubId     String?  @map("stripe_sub_id")           // Stripe subscription (future)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([serviceId, tier])
+  @@index([serviceId])
+  @@index([tier])
+  @@index([status])
+}

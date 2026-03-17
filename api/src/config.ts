@@ -39,6 +39,9 @@ export const config = {
     network: process.env.X402_NETWORK ?? "base",
     facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://api.cdp.coinbase.com/platform/v2/x402",
   },
+  facilitator: {
+    feePercent: parseFloat(process.env.FACILITATOR_FEE_PERCENT ?? "2.5"),
+  },
   rateLimits: {
     free: parseInt(process.env.RATE_LIMIT_FREE ?? "60", 10),
     pro: parseInt(process.env.RATE_LIMIT_PRO ?? "300", 10),

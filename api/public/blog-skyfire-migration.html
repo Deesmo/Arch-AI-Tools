@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skyfire Shut Down — Here's Where to Go Next — Arch Tools</title>
+  <meta name="description" content="Skyfire ceased operations in 2026. If you were using Skyfire for AI agent payments, here's the fastest path forward — with more tools and an open payment standard.">
+  <meta property="og:title" content="Skyfire Shut Down — Here's Where to Go Next">
+  <meta property="og:description" content="Skyfire ceased operations. Your AI agents still need to pay for services. Arch Tools offers 58 tools, x402 payments across 15 chains, and a migration path that takes under 10 minutes.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://archtools.dev/blog/skyfire-migration">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Skyfire Shut Down — Here's Where to Go Next">
+  <meta name="twitter:description" content="Skyfire ceased operations. Arch Tools offers 58 tools, x402 native payments, and a migration guide that takes 10 minutes.">
+  <meta name="twitter:image" content="https://archtools.dev/og-image.png">
+  <meta name="keywords" content="skyfire alternative, skyfire shutdown, skyfire migration, ai agent payments, x402, USDC, autonomous payments, skyfire replacement, ai payments platform">
+  <link rel="canonical" href="https://archtools.dev/blog-skyfire-migration.html">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Skyfire Shut Down — Here's Where to Go Next",
+    "description": "Migration guide for Skyfire customers looking for an alternative AI agent payment platform",
+    "datePublished": "2026-03-17",
+    "author": {"@type": "Organization", "name": "Arch Tools"},
+    "publisher": {"@type": "Organization", "name": "Arch Tools", "url": "https://archtools.dev"},
+    "keywords": ["skyfire alternative", "skyfire shutdown", "skyfire migration", "ai agent payments", "x402"]
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#07061A;--text:#E0DFF5;--muted:#8B8AA8;--dimmer:#6B6A8A;--purple:#8844FF;--green:#34d399;--amber:#FF9010;--pink:#FF2896;--border:rgba(255,255,255,0.08);--mono:'Fira Code','Cascadia Code','JetBrains Mono','Courier New',monospace;--display:'Syne',sans-serif;--body:'DM Sans',sans-serif;}
+    html{scroll-behavior:smooth;background:var(--bg);}
+    body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.75;padding:0;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.12) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.07) 0%,transparent 55%);
+    }
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(136,68,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+
+    nav{position:sticky;top:0;z-index:100;background:rgba(7,6,26,0.97);border-bottom:1px solid var(--border);padding:0 24px;backdrop-filter:blur(20px);}
+    .nav-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+    .nav-logo{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);text-decoration:none;letter-spacing:-0.3px;display:flex;align-items:center;gap:8px;}
+    .nav-logo span{color:var(--purple);}
+    .nav-cta{background:var(--purple);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-family:var(--mono);cursor:pointer;text-decoration:none;}
+
+    .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+    .hero-blog{padding:64px 0 48px;}
+    .blog-tag{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    h1{font-family:var(--display);font-size:clamp(28px,5vw,46px);font-weight:800;line-height:1.12;letter-spacing:-1.5px;margin-bottom:24px;}
+    .byline{color:var(--dimmer);font-size:14px;font-family:var(--mono);margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+    h2{font-size:22px;font-weight:700;color:var(--amber);margin:48px 0 16px;font-family:var(--display);}
+    h3{font-size:17px;font-weight:700;margin:32px 0 12px;}
+    p{color:#C0BFDB;margin-bottom:20px;}
+    strong{color:var(--text);}
+    em{color:var(--muted);}
+    ul,ol{padding-left:24px;margin-bottom:20px;}
+    li{color:#C0BFDB;margin-bottom:8px;}
+    code{font-family:var(--mono);font-size:13px;background:rgba(136,68,255,0.12);color:#c4b5fd;padding:2px 7px;border-radius:4px;}
+    pre{background:rgba(12,11,34,0.8);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;margin:24px 0;}
+    pre code{background:none;padding:0;color:#E0DFF5;font-size:13px;line-height:1.7;}
+    .comment{color:#6B6A8A;}
+    .key{color:#FF9010;}
+    .str{color:#34d399;}
+    .out{color:#8844FF;}
+    blockquote{border-left:3px solid var(--purple);padding-left:20px;margin:32px 0;color:var(--muted);font-style:italic;}
+    a{color:var(--purple);}
+    a:hover{color:var(--text);}
+
+    .callout{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout strong{color:var(--purple);}
+    .callout-green{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);}
+    .callout-green strong{color:var(--green);}
+
+    .highlight-box{background:linear-gradient(135deg,rgba(136,68,255,0.08),rgba(255,40,150,0.06));border:1px solid rgba(136,68,255,0.2);border-radius:16px;padding:32px;margin:40px 0;}
+    .highlight-box h3{color:var(--text);margin-top:0;}
+    .highlight-box ul{margin-bottom:0;}
+
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:40px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;}
+    .btn{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:600;}
+    .btn-ghost{display:inline-block;border:1px solid var(--border);color:var(--muted);text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;margin-left:12px;}
+
+    footer{padding:32px 24px;border-top:1px solid var(--border);color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    .footer-inner{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    footer a{color:var(--dimmer);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+    @media(max-width:640px){h1{font-size:clamp(26px,8vw,38px);}.btn-ghost{margin-left:0;margin-top:10px;}.cta-section{padding:28px 20px;}}
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <a class="nav-cta" href="/#register">Get API Key →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <article class="hero-blog">
+    <div class="blog-tag">Industry · March 2026</div>
+    <h1>Skyfire Shut Down — Here's Where to Go Next</h1>
+    <p class="byline">archtools.dev · March 17, 2026 · 6 min read</p>
+
+    <p>If you built on Skyfire, you already know: the platform that promised to be "Visa for the AI economy" has ceased operations. $9.5 million in funding, a Visa partnership, backers like Coinbase Ventures and a16z — and now the developers and AI agents who relied on it need somewhere else to go.</p>
+
+    <p>This isn't a victory lap. Building infrastructure for the agent economy is hard. Skyfire's team saw the future clearly — AI agents need to pay for services autonomously, without a human holding a credit card. They were right about the problem. We just think there's a better architecture for the solution.</p>
+
+    <blockquote>This post is for the developers who woke up to a 403 error and a dead API. We've been there. Here's the fastest path back online.</blockquote>
+
+    <h2>What Happened</h2>
+
+    <p>Skyfire launched in 2024 with an ambitious vision: create payment rails specifically for AI agents. Their KYAPay protocol gave agents verifiable identities, digital wallets, and the ability to transact in USDC without human intervention. They raised $9.5M from tier-one investors and landed a pilot with Visa's Intelligent Commerce initiative.</p>
+
+    <p>The challenges that caught up with them are common in infrastructure companies: building a payment-only network requires critical mass on both sides of the transaction. Agents need services to pay for. Services need paying agents to justify integration. It's a classic chicken-and-egg problem — and Skyfire was trying to solve it with a proprietary protocol in a market that was rapidly standardizing around open alternatives.</p>
+
+    <h2>The Proprietary Protocol Problem</h2>
+
+    <p>Skyfire built KYAPay — a custom JWT-based protocol for agent identity and payments. It worked, but it required:</p>
+
+    <ul>
+      <li><strong>Seller SDK integration</strong> — service providers had to install <code>@skyfire-xyz/skyfire-seller-sdk-node</code> and validate proprietary tokens</li>
+      <li><strong>KYA registration</strong> — every agent needed a verifiable identity in Skyfire's system before transacting</li>
+      <li><strong>USDC wallet pre-loading</strong> — funds had to be deposited into Skyfire-managed wallets before agents could spend</li>
+      <li><strong>Single-vendor dependency</strong> — when Skyfire goes down, everything built on KYAPay goes with it</li>
+    </ul>
+
+    <p>Meanwhile, the <strong>x402 protocol</strong> was gaining traction — an open standard backed by Coinbase that handles agent-to-service payments at the HTTP level. No proprietary SDK. No vendor lock-in. No registration system that disappears when a startup runs out of runway.</p>
+
+    <h2>What Arch Tools Offers Instead</h2>
+
+    <p>We built Arch Tools with a different philosophy: <strong>tools first, payments native</strong>. Instead of building a payment network and hoping services would join, we built 58 tools that developers and agents actually need — and made them payable via both standard API keys and x402.</p>
+
+    <div class="highlight-box">
+      <h3>The Short Version</h3>
+      <ul>
+        <li><strong>58 tools</strong> — web scrape, AI generation (Claude, GPT-4, Grok, Gemini), crypto prices, email, file conversion, security checks, and more</li>
+        <li><strong>x402 native</strong> — open payment standard, not proprietary. Your agent pays with USDC, USDT, ETH, SOL, BNB, TAO, or NEAR across 15 chains</li>
+        <li><strong>API key path too</strong> — don't need crypto? Sign up, get a key, buy credits with Stripe. No wallet required.</li>
+        <li><strong>MCP server</strong> — 6 lines of config and all 58 tools appear in Claude Desktop, Cursor, and Windsurf</li>
+        <li><strong>Open source</strong> — MIT license. If we disappear tomorrow, the code is still yours.</li>
+        <li><strong>Free to start</strong> — 100 credits on signup, no credit card</li>
+      </ul>
+    </div>
+
+    <h2>Who This Matters To</h2>
+
+    <h3>If You Built on Skyfire's Seller SDK</h3>
+    <p>You were validating KYAPay JWT tokens and charging agents through Skyfire's payment rails. Replace the SDK with a single REST endpoint — your service can accept x402 payments or API key auth with a few lines of code. No proprietary token validation, no SDK dependency.</p>
+
+    <h3>If Your Agent Used Skyfire Wallets</h3>
+    <p>Your agent had a Skyfire digital wallet pre-loaded with USDC. With Arch Tools + x402, your agent uses any standard crypto wallet (MetaMask, Coinbase Wallet, etc.) and pays per-call. No pre-loading into a proprietary wallet system. The agent controls its own funds.</p>
+
+    <h3>If You Were in the Visa/Skyfire Pilot</h3>
+    <p>The Visa Intelligent Commerce initiative is broader than Skyfire — x402 is part of that ecosystem. Moving to x402-native infrastructure keeps you aligned with where Visa and Coinbase are heading.</p>
+
+    <h3>If You Used Skyfire with Apify, Dappier, or Ory</h3>
+    <p>These integrations were Skyfire-specific wrappers. Arch Tools provides the underlying tools directly — no middleman needed. Your agent calls <code>archtools.dev/v1/tools/web-scrape</code> instead of routing through a third-party integration layer.</p>
+
+    <h2>The Migration Takes 10 Minutes</h2>
+
+    <p>We wrote a complete <a href="/migrate-from-skyfire">migration guide</a> with:</p>
+
+    <ul>
+      <li>Feature-by-feature comparison table</li>
+      <li>Concept mapping (Skyfire terms → Arch Tools equivalents)</li>
+      <li>Code examples showing before/after</li>
+      <li>Step-by-step walkthrough</li>
+    </ul>
+
+    <p>The honest summary: remove the Skyfire SDK, replace it with a <code>fetch()</code> call, and add your API key header. That's the migration.</p>
+
+    <h2>Why Open Standards Win</h2>
+
+    <p>Skyfire's shutdown is a case study in why open standards matter for infrastructure. When you build on a proprietary protocol:</p>
+
+    <ul>
+      <li>Your agent's <em>identity</em> lives in someone else's system</li>
+      <li>Your agent's <em>funds</em> sit in someone else's wallets</li>
+      <li>Your agent's <em>ability to transact</em> depends on someone else's servers staying up</li>
+    </ul>
+
+    <p>x402 is different. It's a payment layer at the HTTP protocol level. Any service can accept it. Any wallet can fund it. No single company controls it. When you build on x402, your agent's payment capability survives any individual company's shutdown — including ours.</p>
+
+    <p>That's not a sales pitch. That's just how open standards work.</p>
+
+    <h2>A Note of Respect</h2>
+
+    <p>The Skyfire team — Craig DeWitt and everyone who built the platform — saw the agentic commerce future before most of the industry. KYA (Know Your Agent) was a genuinely innovative concept. The idea that AI agents need verifiable identities and autonomous payment capability is correct and will define the next decade of commerce.</p>
+
+    <p>Building infrastructure startups is brutal. The timing, the market dynamics, the chicken-and-egg problem of two-sided networks — these challenges are real regardless of how good the technology is. We respect what they built and we're committed to making sure the developers who relied on them have a smooth path forward.</p>
+
+    <h2>What to Do Right Now</h2>
+
+    <ol>
+      <li><strong>Get an API key</strong> — <a href="/#register">archtools.dev</a>, 30 seconds, 100 free credits</li>
+      <li><strong>Read the migration guide</strong> — <a href="/migrate-from-skyfire">archtools.dev/migrate-from-skyfire</a></li>
+      <li><strong>Try a tool</strong> — <code>curl -X POST archtools.dev/v1/tools/web-scrape -H "x-api-key: YOUR_KEY" -d '{"url":"https://example.com"}'</code></li>
+      <li><strong>Need help?</strong> — Reach out at <a href="https://x.com/AiArchTools">@AiArchTools</a> on X. We're answering migration questions directly.</li>
+    </ol>
+
+  </article>
+</div>
+
+<div class="wrap">
+  <div class="cta-section">
+    <h2>Your agent shouldn't be down because a startup is.</h2>
+    <p>58 tools. Open source. x402 native. 15 chains. Free to start.</p>
+    <a class="btn" href="/#register">$ get-api-key →</a>
+    <a class="btn-ghost" href="/migrate-from-skyfire">Migration Guide</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>© 2026 Arch Tools</span>
+    <span>
+      <a href="/">Home</a> ·
+      <a href="/blog">Blog</a> ·
+      <a href="/terms.html">Terms</a> ·
+      <a href="/privacy.html">Privacy</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
