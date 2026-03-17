@@ -1,0 +1,34 @@
+name: Arch Tools CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install API dependencies
+        working-directory: api
+        run: npm ci --ignore-scripts
+
+      - name: TypeScript compilation check
+        working-directory: api
+        run: npx tsc --noEmit
+
+      - name: Run integration tests
+        run: node api/tests/integration.test.js
+
+      - name: Run page availability tests
+        run: node api/tests/pages.test.js
