@@ -1,0 +1,134 @@
+# Arch Tools
+> The first API platform built for autonomous agent payments.
+> 58 production-ready tools. One API key. USDC on 15+ chains via x402 or Stripe.
+> Base URL: https://archtools.dev
+> Docs: https://archtools.dev/docs
+> OpenAPI: https://archtools.dev/openapi.json
+> MCP SSE: https://arch-tools-mcp.onrender.com/sse
+> Discovery: https://archtools.dev/v1/tools
+> Agent Card: https://archtools.dev/.well-known/agent.json
+> GitHub: https://github.com/Deesmo/Arch-AI-Tools
+
+## Authentication
+All tool endpoints require an API key:
+  Authorization: Bearer YOUR_API_KEY
+
+Get a free key (100 credits) at https://archtools.dev/#register
+
+## x402 Autonomous Payment (no key required)
+AI agents can pay per-call with USDC on Base via the x402 protocol.
+No API key, no signup, no human credit card needed.
+Discovery: https://archtools.dev/.well-known/x402
+Protocol: https://x402.org
+
+## Credit Pricing
+- Starter Pack: 10,000 credits — $9 ($0.0009/credit)
+- Pro Pack: 60,000 credits — $49 ($0.00082/credit)
+- Business Pack: 250,000 credits — $199 ($0.00080/credit)
+
+## Tool Categories
+
+### AI & NLP
+- [AI Generate](https://archtools.dev/v1/tools/ai-generate): Text generation via Claude Sonnet (20 credits)
+- [AI Oracle](https://archtools.dev/v1/tools/ai-oracle): Premium reasoning with structured analysis (25 credits)
+- [Summarize](https://archtools.dev/v1/tools/summarize): 5 styles — bullets, tldr, executive (10 credits)
+- [Sentiment Analysis](https://archtools.dev/v1/tools/sentiment-analysis): Sentiment + 6 emotions (8 credits)
+- [Extract Entities](https://archtools.dev/v1/tools/extract-entities): NER — people, orgs, locations, dates (8 credits)
+- [Language Detect](https://archtools.dev/v1/tools/language-detect): 100+ languages with confidence (3 credits)
+- [Regex Generate](https://archtools.dev/v1/tools/regex-generate): Natural language → validated regex (8 credits)
+- [PII Detect](https://archtools.dev/v1/tools/pii-detect): Detect and redact PII (10 credits)
+- [Research Report](https://archtools.dev/v1/tools/research-report): Structured research on any topic (15 credits)
+- [Fact Check](https://archtools.dev/v1/tools/fact-check): Verify claims against web sources (10 credits)
+- [Semantic Search](https://archtools.dev/v1/tools/semantic-search): Neural web search via Exa AI (8 credits)
+
+### Web & Scraping
+- [Web Scrape](https://archtools.dev/v1/tools/web-scrape): Scrape any URL with CSS selector (5 credits)
+- [Extract Page](https://archtools.dev/v1/tools/extract-page): Clean text + metadata from any webpage (5 credits)
+- [Search Web](https://archtools.dev/v1/tools/search-web): DuckDuckGo search results (5 credits)
+- [Web Search](https://archtools.dev/v1/tools/web-search): AI-synthesized search answer (10 credits)
+- [Browser Task](https://archtools.dev/v1/tools/browser-task): Headless Playwright automation (10 credits)
+- [Screenshot Capture](https://archtools.dev/v1/tools/screenshot-capture): Screenshot any URL (10 credits)
+- [HTML to Markdown](https://archtools.dev/v1/tools/html-to-markdown): Convert HTML to Markdown (2 credits)
+- [RSS Parse](https://archtools.dev/v1/tools/rss-parse): Parse RSS/Atom feeds (4 credits)
+- [Extract PDF](https://archtools.dev/v1/tools/extract-pdf): Extract text from PDFs (6 credits)
+- [News Search](https://archtools.dev/v1/tools/news-search): Real-time news search (3 credits)
+- [URL Shorten](https://archtools.dev/v1/tools/url-shorten): Shorten any URL (1 credit)
+- [Webhook Send](https://archtools.dev/v1/tools/webhook-send): Send HTTP webhooks (2 credits)
+
+### Crypto
+- [Crypto Price](https://archtools.dev/v1/tools/crypto-price): Real-time price + market data (1 credit)
+- [Crypto OHLCV](https://archtools.dev/v1/tools/crypto-ohlcv): Candlestick data (2 credits)
+- [Crypto Market Cap](https://archtools.dev/v1/tools/crypto-market-cap): Top N coins (1 credit)
+- [Crypto Fear & Greed](https://archtools.dev/v1/tools/crypto-fear-greed): Fear & Greed Index (1 credit)
+- [Crypto Sentiment](https://archtools.dev/v1/tools/crypto-sentiment): Social sentiment (2 credits)
+- [Crypto News](https://archtools.dev/v1/tools/crypto-news): Latest crypto news (2 credits)
+- [Token Lookup](https://archtools.dev/v1/tools/token-lookup): Search tokens by name (1 credit)
+
+### Media & Design
+- [Image Generate](https://archtools.dev/v1/tools/image-generate): SVG from text prompts (15 credits)
+- [Design Create](https://archtools.dev/v1/tools/design-create): DALL-E 3 image generation (15 credits)
+- [Video Generate](https://archtools.dev/v1/tools/video-generate): Runway Gen-3 video (50 credits)
+- [Image Remove BG](https://archtools.dev/v1/tools/image-remove-bg): Remove background (10 credits)
+- [OCR Extract](https://archtools.dev/v1/tools/ocr-extract): Extract text from images (10 credits)
+- [Text to Speech](https://archtools.dev/v1/tools/text-to-speech): ElevenLabs TTS (5 credits)
+- [Transcribe Audio](https://archtools.dev/v1/tools/transcribe-audio): Whisper transcription (8 credits)
+
+### Data & Validation
+- [Validate Data](https://archtools.dev/v1/tools/validate-data): JSON Schema validation (1 credit)
+- [Convert Format](https://archtools.dev/v1/tools/convert-format): JSON/YAML/CSV/XML (2 credits)
+- [JSONPath Query](https://archtools.dev/v1/tools/jsonpath-query): JSONPath on JSON (1 credit)
+- [Extract Metadata](https://archtools.dev/v1/tools/extract-metadata): OG tags + word count (3 credits)
+- [QR Code](https://archtools.dev/v1/tools/qr-code): PNG or SVG QR codes (2 credits)
+- [Barcode Generate](https://archtools.dev/v1/tools/barcode-generate): Code128 barcodes (2 credits)
+
+### Text
+- [Transform Text](https://archtools.dev/v1/tools/transform-text): 10 modes — slug, camel, base64 (3 credits)
+- [Diff Text](https://archtools.dev/v1/tools/diff-text): Structured diffs (2 credits)
+- [Readability Score](https://archtools.dev/v1/tools/readability-score): Flesch-Kincaid (2 credits)
+
+### Network & Validation
+- [IP Lookup](https://archtools.dev/v1/tools/ip-lookup): Geo + ISP + VPN detection (2 credits)
+- [WHOIS Lookup](https://archtools.dev/v1/tools/whois-lookup): Domain RDAP data (3 credits)
+- [Email Verify](https://archtools.dev/v1/tools/email-verify): MX + disposable check (3 credits)
+- [Email Find](https://archtools.dev/v1/tools/email-find): Find email via Hunter.io (5 credits)
+- [Phone Validate](https://archtools.dev/v1/tools/phone-validate): E.164 validation (2 credits)
+- [Domain Check](https://archtools.dev/v1/tools/domain-check): Domain availability (2 credits)
+
+### Utilities
+- [Generate Hash](https://archtools.dev/v1/tools/generate-hash): SHA256/SHA512/MD5 (1 credit)
+- [Generate UUID](https://archtools.dev/v1/tools/generate-uuid): UUIDs + API keys (1 credit)
+- [Currency Convert](https://archtools.dev/v1/tools/currency-convert): 170+ currencies (2 credits)
+- [Timezone Convert](https://archtools.dev/v1/tools/timezone-convert): IANA timezone pairs (1 credit)
+
+### Communication
+- [Email Send](https://archtools.dev/v1/tools/email-send): Transactional email via Resend (3 credits)
+- [Social Post](https://archtools.dev/v1/tools/social-post): Post to X/Twitter (5 credits)
+
+### Sessions & Workflows
+- [Session Create](https://archtools.dev/v1/tools/session-create): Managed conversation (5 credits)
+- [Session Message](https://archtools.dev/v1/tools/session-message): Continue conversation (20 credits)
+- [Workflow Agent](https://archtools.dev/v1/tools/workflow-agent): Multi-step AI pipeline (25 credits)
+
+## Workflows
+POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps)
+
+## Discovery Endpoints (no auth required)
+- GET /v1/tools — Full tool list with schemas
+- GET /v1/discover — All tools + pricing + payment info
+- GET /openapi.json — OpenAPI 3.1 specification
+- GET /health — Service health + dependency status
+- GET /.well-known/x402 — x402 payment discovery
+- GET /.well-known/agent.json — A2A Agent Card
+- GET /.well-known/ai-plugin.json — ChatGPT plugin manifest
+- GET /llms.txt — This file
+- GET /llms-full.txt — Complete documentation
+
+## MCP Integration
+- SSE: https://arch-tools-mcp.onrender.com/sse
+- Streamable HTTP: https://arch-tools-mcp.onrender.com/mcp
+- Registry: io.github.Deesmo/arch-tools-mcp
+- Compatible: Claude Desktop, Cursor, Windsurf, any MCP client
+
+## Legal
+- [Terms](https://archtools.dev/terms.html)
+- [Privacy](https://archtools.dev/privacy.html)

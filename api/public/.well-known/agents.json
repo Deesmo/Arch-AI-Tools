@@ -1,0 +1,58 @@
+{
+  "name": "Arch Tools",
+  "description": "58 production-ready API tools for AI agents. Web scraping, AI generation, crypto data, NLP, media, validation. Pay with API key or USDC (x402).",
+  "url": "https://archtools.dev",
+  "version": "1.10.0",
+  "openapi": "https://archtools.dev/openapi.json",
+  "logo": "https://archtools.dev/arch-icon.svg",
+  "contact": "support@archtools.dev",
+  "authentication": {
+    "type": "bearer",
+    "header": "Authorization",
+    "registrationUrl": "https://archtools.dev/#register",
+    "oauthUrl": "https://archtools.dev/oauth/authorize",
+    "x402": {
+      "enabled": true,
+      "discoveryUrl": "https://archtools.dev/.well-known/x402"
+    }
+  },
+  "capabilities": [
+    "ai-text-generation",
+    "web-scraping",
+    "web-search",
+    "browser-automation",
+    "crypto-data",
+    "image-generation",
+    "video-generation",
+    "text-to-speech",
+    "speech-to-text",
+    "ocr",
+    "email-send",
+    "sentiment-analysis",
+    "entity-extraction",
+    "pii-detection",
+    "data-validation",
+    "format-conversion",
+    "qr-code-generation",
+    "domain-lookup",
+    "currency-conversion"
+  ],
+  "endpoints": {
+    "discover": "GET https://archtools.dev/v1/discover",
+    "tools": "GET https://archtools.dev/v1/tools",
+    "health": "GET https://archtools.dev/health",
+    "openapi": "GET https://archtools.dev/openapi.json"
+  },
+  "mcp": {
+    "sse": "https://arch-tools-mcp.onrender.com/sse",
+    "http": "https://arch-tools-mcp.onrender.com/mcp",
+    "registry": "io.github.Deesmo/arch-tools-mcp"
+  },
+  "payment": {
+    "stripe": true,
+    "x402": true,
+    "freeCredits": 100,
+    "pricingUrl": "https://archtools.dev/#pricing"
+  },
+  "categories": ["developer-tools", "ai", "web", "crypto", "media", "data", "nlp", "automation"]
+}

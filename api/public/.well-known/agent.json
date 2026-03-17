@@ -1,0 +1,141 @@
+{
+  "name": "Arch Tools",
+  "description": "The first API platform built for autonomous agent payments. 58 production-ready tools for AI agents and developers. Web scraping, AI generation, crypto data, NLP, media, validation, and more.",
+  "url": "https://archtools.dev",
+  "version": "1.10.0",
+  "protocol": "a2a/1.0",
+  "provider": {
+    "organization": "Arch Tools",
+    "url": "https://archtools.dev"
+  },
+  "capabilities": {
+    "tools": true,
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "authentication": {
+    "schemes": [
+      {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Bearer token: Authorization: Bearer YOUR_API_KEY"
+      },
+      {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key header"
+      },
+      {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://archtools.dev/oauth/authorize",
+            "tokenUrl": "https://archtools.dev/oauth/token",
+            "scopes": {
+              "tools:read": "Read tool metadata and pricing",
+              "tools:execute": "Execute tools"
+            }
+          }
+        }
+      },
+      {
+        "type": "x402",
+        "description": "Pay-per-call with USDC on 15+ chains. No signup required.",
+        "discoveryUrl": "https://archtools.dev/.well-known/x402"
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "ai-generate",
+      "name": "AI Text Generation",
+      "description": "Generate text via Claude Sonnet",
+      "tags": ["ai", "nlp", "generation"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "web-scrape",
+      "name": "Web Scraping",
+      "description": "Scrape any public URL with optional CSS selector",
+      "tags": ["web", "scraping", "extraction"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "crypto-price",
+      "name": "Crypto Price",
+      "description": "Real-time cryptocurrency price, 24h change, market cap",
+      "tags": ["crypto", "finance", "data"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "ai-oracle",
+      "name": "AI Oracle",
+      "description": "Premium reasoning with structured analysis and confidence levels",
+      "tags": ["ai", "reasoning", "analysis"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "workflow-agent",
+      "name": "Workflow Agent",
+      "description": "Execute multi-step autonomous AI agent pipeline",
+      "tags": ["ai", "automation", "workflow"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "design-create",
+      "name": "Image Generation",
+      "description": "Generate images from text prompts via DALL-E 3",
+      "tags": ["media", "image", "generation"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "video-generate",
+      "name": "Video Generation",
+      "description": "AI video generation from text prompts via Runway Gen-3",
+      "tags": ["media", "video", "generation"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "browser-task",
+      "name": "Browser Automation",
+      "description": "Headless browser automation via Playwright",
+      "tags": ["web", "automation", "browser"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    }
+  ],
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "endpoints": {
+    "tools": "https://archtools.dev/v1/tools",
+    "discover": "https://archtools.dev/v1/discover",
+    "health": "https://archtools.dev/health",
+    "openapi": "https://archtools.dev/openapi.json",
+    "x402": "https://archtools.dev/.well-known/x402",
+    "mcp_sse": "https://arch-tools-mcp.onrender.com/sse",
+    "mcp_http": "https://arch-tools-mcp.onrender.com/mcp"
+  },
+  "pricing": {
+    "model": "credits",
+    "freeCredits": 100,
+    "packs": [
+      { "name": "Starter", "credits": 10000, "price": "$9" },
+      { "name": "Pro", "credits": 60000, "price": "$49" },
+      { "name": "Business", "credits": 250000, "price": "$199" }
+    ],
+    "x402": {
+      "description": "Pay-per-call with USDC — no signup needed",
+      "networks": ["base", "ethereum", "arbitrum", "polygon", "optimism", "avalanche", "solana", "noble", "algorand", "stellar", "sui", "polkadot", "aptos", "unichain", "monad"]
+    }
+  }
+}

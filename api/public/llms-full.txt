@@ -1,0 +1,386 @@
+# Arch Tools — Complete Documentation
+> The first API platform built for autonomous agent payments.
+> 58 production-ready tools. One API key. USDC on 15+ chains via x402 or Stripe.
+> Base URL: https://archtools.dev
+
+## Quick Start
+
+1. Register: POST https://archtools.dev/v1/agent/register with {"name": "my-agent", "email": "agent@example.com"}
+2. Use your API key: Authorization: Bearer YOUR_API_KEY
+3. Call tools: POST https://archtools.dev/v1/tools/{tool-name} with JSON body
+4. Or pay with x402: Send USDC on Base per-call — no key needed
+
+## Authentication
+
+### API Key
+All tool endpoints accept an API key via header:
+```
+Authorization: Bearer YOUR_API_KEY
+```
+Or via x-api-key header:
+```
+x-api-key: YOUR_API_KEY
+```
+
+### x402 Autonomous Payment
+Agents can pay per-call with USDC on Base (and 15+ other chains) via the x402 protocol.
+No API key, no signup, no human credit card needed.
+- Discovery: GET https://archtools.dev/.well-known/x402
+- Protocol spec: https://x402.org
+- When a tool returns 402 Payment Required, the response includes payment instructions.
+- Agent sends USDC to the specified address, includes the payment receipt in the next request.
+
+### OAuth 2.1
+For agent-to-agent integrations:
+- Authorization: GET https://archtools.dev/oauth/authorize
+- Token: POST https://archtools.dev/oauth/token
+- Scopes: tools:read, tools:execute
+- PKCE required (S256)
+
+## Credit System
+Tools cost credits per call. Credits never expire. Non-transferable.
+- Free tier: 100 credits on registration
+- Starter Pack: 10,000 credits — $9 ($0.0009/credit)
+- Pro Pack: 60,000 credits — $49 ($0.00082/credit)
+- Business Pack: 250,000 credits — $199 ($0.00080/credit)
+
+## Tool Reference
+
+All tools accept POST requests to /v1/tools/{tool-name} with a JSON body.
+All responses return JSON with { ok: true, ... } on success or { ok: false, error: "...", message: "..." } on failure.
+
+---
+
+### POST /v1/tools/ai-generate (20 credits)
+Generate text via Claude Sonnet.
+**Body:** { "prompt": "string", "maxTokens": 1000, "temperature": 0.7 }
+**Response:** { "ok": true, "text": "...", "model": "claude-sonnet-4-20250514", "tokens": 150 }
+
+### POST /v1/tools/ai-oracle (25 credits)
+Premium reasoning with structured analysis and confidence levels.
+**Body:** { "question": "string", "context": "optional string" }
+**Response:** { "ok": true, "answer": "...", "confidence": 0.95, "reasoning": "...", "sources": [...] }
+
+### POST /v1/tools/summarize (10 credits)
+Summarize text in 5 styles.
+**Body:** { "text": "string", "style": "bullets|tldr|executive|paragraph|headline", "maxWords": 100 }
+**Response:** { "ok": true, "summary": "..." }
+
+### POST /v1/tools/sentiment-analysis (8 credits)
+Sentiment + emotion detection.
+**Body:** { "text": "string" }
+**Response:** { "ok": true, "sentiment": "positive|negative|neutral", "score": 0.85, "emotions": { "joy": 0.7, "anger": 0.1, ... } }
+
+### POST /v1/tools/extract-entities (8 credits)
+Named entity recognition.
+**Body:** { "text": "string" }
+**Response:** { "ok": true, "entities": [{ "text": "...", "type": "person|org|location|date|money", "start": 0, "end": 10 }] }
+
+### POST /v1/tools/language-detect (3 credits)
+Detect language (100+ supported).
+**Body:** { "text": "string" }
+**Response:** { "ok": true, "language": "en", "confidence": 0.99, "name": "English" }
+
+### POST /v1/tools/regex-generate (8 credits)
+Generate regex from plain English.
+**Body:** { "description": "Match email addresses" }
+**Response:** { "ok": true, "regex": "...", "explanation": "...", "tests": [...] }
+
+### POST /v1/tools/pii-detect (10 credits)
+Detect and optionally redact PII.
+**Body:** { "text": "string", "redact": true }
+**Response:** { "ok": true, "pii_found": [...], "redacted_text": "..." }
+
+### POST /v1/tools/research-report (15 credits)
+Structured research report on any topic.
+**Body:** { "topic": "string", "depth": "brief|standard|deep" }
+**Response:** { "ok": true, "report": { "title": "...", "summary": "...", "sections": [...], "sources": [...] } }
+
+### POST /v1/tools/fact-check (10 credits)
+Verify claims against real-time sources.
+**Body:** { "claim": "string" }
+**Response:** { "ok": true, "verdict": "true|false|partially_true|unverifiable", "evidence": [...] }
+
+### POST /v1/tools/semantic-search (8 credits)
+Neural web search via Exa AI.
+**Body:** { "query": "string", "numResults": 10 }
+**Response:** { "ok": true, "results": [{ "title": "...", "url": "...", "text": "...", "score": 0.95 }] }
+
+### POST /v1/tools/web-scrape (5 credits)
+Scrape any public URL.
+**Body:** { "url": "string", "selector": "optional CSS selector" }
+**Response:** { "ok": true, "content": "...", "title": "...", "links": [...] }
+
+### POST /v1/tools/extract-page (5 credits)
+Clean text extraction from any webpage.
+**Body:** { "url": "string" }
+**Response:** { "ok": true, "text": "...", "title": "...", "links": [...], "metadata": {...} }
+
+### POST /v1/tools/search-web (5 credits)
+Web search via DuckDuckGo.
+**Body:** { "query": "string", "limit": 10 }
+**Response:** { "ok": true, "results": [{ "title": "...", "url": "...", "snippet": "..." }] }
+
+### POST /v1/tools/web-search (10 credits)
+Real-time search with AI-synthesized answer.
+**Body:** { "query": "string" }
+**Response:** { "ok": true, "answer": "...", "sources": [...] }
+
+### POST /v1/tools/browser-task (10 credits)
+Headless browser automation via Playwright.
+**Body:** { "url": "string", "steps": [{ "action": "click|type|extract", "selector": "...", "value": "..." }] }
+**Response:** { "ok": true, "result": "...", "screenshot": "base64" }
+
+### POST /v1/tools/screenshot-capture (10 credits)
+Screenshot any URL as PNG.
+**Body:** { "url": "string", "width": 1280, "height": 720, "fullPage": false }
+**Response:** { "ok": true, "image": "base64 PNG" }
+
+### POST /v1/tools/html-to-markdown (2 credits)
+Convert HTML to clean Markdown.
+**Body:** { "html": "string" }
+**Response:** { "ok": true, "markdown": "..." }
+
+### POST /v1/tools/rss-parse (4 credits)
+Parse RSS/Atom feeds.
+**Body:** { "url": "string" }
+**Response:** { "ok": true, "feed": { "title": "...", "items": [...] } }
+
+### POST /v1/tools/extract-pdf (6 credits)
+Extract text from PDF.
+**Body:** { "url": "string" } or { "base64": "..." }
+**Response:** { "ok": true, "text": "...", "pages": 5 }
+
+### POST /v1/tools/news-search (3 credits)
+Real-time news search.
+**Body:** { "query": "string", "limit": 10 }
+**Response:** { "ok": true, "articles": [{ "title": "...", "url": "...", "source": "...", "publishedAt": "..." }] }
+
+### POST /v1/tools/url-shorten (1 credit)
+Shorten any URL.
+**Body:** { "url": "string" }
+**Response:** { "ok": true, "shortUrl": "..." }
+
+### POST /v1/tools/webhook-send (2 credits)
+Send HTTP webhooks.
+**Body:** { "url": "string", "payload": {...}, "headers": {...} }
+**Response:** { "ok": true, "status": 200, "body": "..." }
+
+### POST /v1/tools/crypto-price (1 credit)
+Real-time cryptocurrency price.
+**Body:** { "symbol": "bitcoin" }
+**Response:** { "ok": true, "price": 67500.00, "change_24h": 2.5, "market_cap": 1300000000000, "volume": 25000000000 }
+
+### POST /v1/tools/crypto-ohlcv (2 credits)
+OHLCV candlestick data.
+**Body:** { "symbol": "bitcoin", "days": 30 }
+**Response:** { "ok": true, "candles": [{ "timestamp": "...", "open": ..., "high": ..., "low": ..., "close": ..., "volume": ... }] }
+
+### POST /v1/tools/crypto-market-cap (1 credit)
+Top N coins by market cap.
+**Body:** { "limit": 10 }
+**Response:** { "ok": true, "coins": [{ "name": "...", "symbol": "...", "market_cap": ..., "price": ... }] }
+
+### POST /v1/tools/crypto-fear-greed (1 credit)
+Fear & Greed Index.
+**Body:** { "days": 7 }
+**Response:** { "ok": true, "current": { "value": 72, "classification": "Greed" }, "history": [...] }
+
+### POST /v1/tools/crypto-sentiment (2 credits)
+Community sentiment + social stats.
+**Body:** { "symbol": "bitcoin" }
+**Response:** { "ok": true, "sentiment": "bullish", "social_score": 85, "mentions": 15000 }
+
+### POST /v1/tools/crypto-news (2 credits)
+Latest crypto news.
+**Body:** { "symbol": "bitcoin", "limit": 10 }
+**Response:** { "ok": true, "articles": [...] }
+
+### POST /v1/tools/token-lookup (1 credit)
+Search token by name or ticker.
+**Body:** { "query": "solana" }
+**Response:** { "ok": true, "tokens": [{ "id": "solana", "symbol": "SOL", "name": "Solana", "platforms": {...} }] }
+
+### POST /v1/tools/image-generate (15 credits)
+Generate SVG from text prompts.
+**Body:** { "prompt": "string" }
+**Response:** { "ok": true, "svg": "..." }
+
+### POST /v1/tools/design-create (15 credits)
+DALL-E 3 image generation.
+**Body:** { "prompt": "string", "size": "1024x1024|1792x1024|1024x1792" }
+**Response:** { "ok": true, "image": "base64 PNG", "url": "..." }
+
+### POST /v1/tools/video-generate (50 credits)
+Runway Gen-3 video generation.
+**Body:** { "prompt": "string", "duration": 4 }
+**Response:** { "ok": true, "video_url": "..." }
+
+### POST /v1/tools/image-remove-bg (10 credits)
+Remove background from image.
+**Body:** { "url": "string" } or { "base64": "..." }
+**Response:** { "ok": true, "image": "base64 PNG" }
+
+### POST /v1/tools/ocr-extract (10 credits)
+Extract text from images.
+**Body:** { "url": "string" } or { "base64": "..." }
+**Response:** { "ok": true, "text": "..." }
+
+### POST /v1/tools/text-to-speech (5 credits)
+ElevenLabs TTS.
+**Body:** { "text": "string", "voice": "optional" }
+**Response:** { "ok": true, "audio": "base64 MP3" }
+
+### POST /v1/tools/transcribe-audio (8 credits)
+Whisper transcription.
+**Body:** { "url": "string" }
+**Response:** { "ok": true, "text": "...", "language": "en" }
+
+### POST /v1/tools/validate-data (1 credit)
+JSON Schema validation.
+**Body:** { "data": {...}, "schema": {...} }
+**Response:** { "ok": true, "valid": true, "errors": [] }
+
+### POST /v1/tools/convert-format (2 credits)
+Convert between JSON, YAML, CSV, XML.
+**Body:** { "input": "string", "from": "json", "to": "yaml" }
+**Response:** { "ok": true, "output": "..." }
+
+### POST /v1/tools/jsonpath-query (1 credit)
+JSONPath queries.
+**Body:** { "data": {...}, "query": "$.store.book[*].author" }
+**Response:** { "ok": true, "result": [...] }
+
+### POST /v1/tools/extract-metadata (3 credits)
+Extract OG tags + word count.
+**Body:** { "url": "string" } or { "text": "string" }
+**Response:** { "ok": true, "title": "...", "description": "...", "og": {...}, "wordCount": 500, "links": [...] }
+
+### POST /v1/tools/qr-code (2 credits)
+Generate QR codes.
+**Body:** { "data": "string", "format": "png|svg", "size": 256 }
+**Response:** { "ok": true, "image": "base64 PNG" } or { "ok": true, "svg": "..." }
+
+### POST /v1/tools/barcode-generate (2 credits)
+Generate Code128 barcodes.
+**Body:** { "data": "string" }
+**Response:** { "ok": true, "svg": "..." }
+
+### POST /v1/tools/transform-text (3 credits)
+Transform text (10 modes).
+**Body:** { "text": "string", "mode": "slug|camel|snake|upper|lower|title|reverse|base64_encode|base64_decode|rot13" }
+**Response:** { "ok": true, "result": "..." }
+
+### POST /v1/tools/diff-text (2 credits)
+Structured text diff.
+**Body:** { "text1": "string", "text2": "string", "format": "unified|words|chars|json" }
+**Response:** { "ok": true, "diff": "..." }
+
+### POST /v1/tools/readability-score (2 credits)
+Flesch-Kincaid readability.
+**Body:** { "text": "string" }
+**Response:** { "ok": true, "score": 65.5, "grade": 8, "level": "8th grade" }
+
+### POST /v1/tools/ip-lookup (2 credits)
+IP geolocation + ISP + VPN detection.
+**Body:** { "ip": "string" }
+**Response:** { "ok": true, "country": "US", "city": "...", "isp": "...", "vpn": false, "proxy": false }
+
+### POST /v1/tools/whois-lookup (3 credits)
+Domain WHOIS via RDAP.
+**Body:** { "domain": "string" }
+**Response:** { "ok": true, "registrar": "...", "created": "...", "expires": "...", "nameservers": [...] }
+
+### POST /v1/tools/email-verify (3 credits)
+Email MX + disposable check.
+**Body:** { "email": "string" }
+**Response:** { "ok": true, "valid": true, "mx": true, "disposable": false }
+
+### POST /v1/tools/email-find (5 credits)
+Find email via Hunter.io.
+**Body:** { "firstName": "string", "lastName": "string", "domain": "string" }
+**Response:** { "ok": true, "email": "...", "confidence": 95 }
+
+### POST /v1/tools/phone-validate (2 credits)
+Phone E.164 validation.
+**Body:** { "phone": "string" }
+**Response:** { "ok": true, "valid": true, "e164": "+1...", "type": "mobile", "country": "US" }
+
+### POST /v1/tools/domain-check (2 credits)
+Domain availability check.
+**Body:** { "domain": "string" }
+**Response:** { "ok": true, "available": false, "registered": true }
+
+### POST /v1/tools/generate-hash (1 credit)
+Cryptographic hashing.
+**Body:** { "text": "string", "algorithm": "sha256|sha512|md5|sha1" }
+**Response:** { "ok": true, "hash": "..." }
+
+### POST /v1/tools/generate-uuid (1 credit)
+Generate UUIDs and tokens.
+**Body:** { "type": "v4|v1|token|apikey" }
+**Response:** { "ok": true, "uuid": "..." }
+
+### POST /v1/tools/currency-convert (2 credits)
+Currency conversion (170+ currencies).
+**Body:** { "amount": 100, "from": "USD", "to": "EUR" }
+**Response:** { "ok": true, "result": 92.50, "rate": 0.925 }
+
+### POST /v1/tools/timezone-convert (1 credit)
+Timezone conversion.
+**Body:** { "datetime": "2025-01-01T12:00:00", "from": "America/New_York", "to": "Asia/Tokyo" }
+**Response:** { "ok": true, "result": "2025-01-02T02:00:00", "offset": "+14h" }
+
+### POST /v1/tools/email-send (3 credits)
+Send email via Resend.
+**Body:** { "to": "string", "subject": "string", "text": "string", "html": "optional" }
+**Response:** { "ok": true, "messageId": "..." }
+
+### POST /v1/tools/social-post (5 credits)
+Post to X/Twitter.
+**Body:** { "text": "string" }
+**Response:** { "ok": true, "tweetId": "...", "url": "..." }
+
+### POST /v1/tools/session-create (5 credits)
+Create conversation session.
+**Body:** { "systemPrompt": "optional" }
+**Response:** { "ok": true, "sessionId": "..." }
+
+### POST /v1/tools/session-message (20 credits)
+Continue conversation.
+**Body:** { "sessionId": "string", "message": "string" }
+**Response:** { "ok": true, "response": "..." }
+
+### POST /v1/tools/workflow-agent (25 credits)
+Multi-step AI pipeline.
+**Body:** { "goal": "string", "tools": ["web-scrape", "summarize"], "maxSteps": 5 }
+**Response:** { "ok": true, "result": "...", "steps": [...] }
+
+---
+
+## Workflows API
+POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps).
+**Body:** { "steps": [{ "tool": "web-scrape", "input": {...} }, { "tool": "summarize", "input": {...} }] }
+
+## Error Codes
+- 400: Bad request (missing/invalid parameters)
+- 401: Unauthorized (missing or invalid API key)
+- 402: Payment Required (x402 — includes payment instructions)
+- 403: Forbidden (insufficient credits)
+- 429: Rate limited
+- 500: Internal server error
+
+## Rate Limits
+- Global: 300 requests/minute per API key
+- Auth endpoints: 20 requests/15 minutes
+- Registration: 5 per hour per IP
+
+## SDKs
+- Python: `pip install archtools` — https://pypi.org/project/archtools/
+- Node.js: `npm install archtools` — https://www.npmjs.com/package/archtools
+- MCP: https://arch-tools-mcp.onrender.com/sse
+
+## Support
+- Docs: https://archtools.dev/docs
+- GitHub: https://github.com/Deesmo/Arch-AI-Tools
+- Email: support@archtools.dev

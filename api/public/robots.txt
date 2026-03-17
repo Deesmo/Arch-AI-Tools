@@ -10,25 +10,74 @@ Allow: /
 Disallow: /api/
 
 # Block AI training crawlers from scraping site content
+# BUT allow access to discovery/documentation endpoints
 User-agent: GPTBot
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /openapi.json
+Allow: /tools.json
+Allow: /.well-known/
+Allow: /v1/tools
+Allow: /v1/discover
+Allow: /schemas/
+Allow: /docs
 Disallow: /
 
 User-agent: ChatGPT-User
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /openapi.json
+Allow: /tools.json
+Allow: /.well-known/
+Allow: /v1/tools
+Allow: /v1/discover
+Allow: /schemas/
+Allow: /docs
 Disallow: /
 
 User-agent: Google-Extended
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /openapi.json
+Allow: /tools.json
+Allow: /.well-known/
+Allow: /v1/tools
+Allow: /v1/discover
+Allow: /schemas/
 Disallow: /
 
 User-agent: anthropic-ai
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /openapi.json
+Allow: /tools.json
+Allow: /.well-known/
+Allow: /v1/tools
+Allow: /v1/discover
+Allow: /schemas/
 Disallow: /
 
 User-agent: ClaudeBot
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /openapi.json
+Allow: /tools.json
+Allow: /.well-known/
+Allow: /v1/tools
+Allow: /v1/discover
+Allow: /schemas/
 Disallow: /
 
 User-agent: cohere-ai
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /.well-known/
 Disallow: /
 
 User-agent: PerplexityBot
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /.well-known/
 Disallow: /
 
 User-agent: Omgilibot
@@ -38,6 +87,8 @@ User-agent: FacebookBot
 Disallow: /
 
 User-agent: Amazonbot
+Allow: /llms.txt
+Allow: /.well-known/
 Disallow: /
 
 User-agent: Bytespider
