@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>White-Label x402 API Marketplace — Powered by Arch Tools</title>
+  <meta name="description" content="Launch your own branded x402 API marketplace in 1-2 weeks. We run the infrastructure, you own the brand. Starting at $499/mo.">
+  <meta property="og:title" content="Your Own x402 API Marketplace — Powered by Arch Tools">
+  <meta property="og:description" content="Launch your own branded x402 API marketplace. We run the infrastructure, you own the brand.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://archtools.dev/white-label">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="White-Label x402 API Marketplace — Arch Tools">
+  <meta name="twitter:description" content="Your brand. Our infrastructure. x402 payments built in.">
+  <link rel="canonical" href="https://archtools.dev/white-label">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "White-Label x402 API Marketplace",
+    "description": "Launch your own branded x402 API marketplace powered by Arch Tools infrastructure.",
+    "url": "https://archtools.dev/white-label",
+    "publisher": {"@type": "Organization", "name": "Arch Tools", "url": "https://archtools.dev"}
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;
+      --border:rgba(255,255,255,0.08);--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:960px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.18) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.12) 0%,transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%,rgba(24,96,255,0.10) 0%,transparent 65%);
+      color:var(--text);line-height:1.7;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:768px){.wrap{padding:0 16px;}}
+    a{color:var(--indigo2);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);backdrop-filter:blur(20px);}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:var(--max);margin:0 auto;padding:0 32px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);letter-spacing:-0.3px;}
+    .logo span{color:var(--purple);}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;font-size:13px;font-family:var(--mono);text-decoration:none;}
+    @media(max-width:768px){.nav-inner{padding:0 16px;}.nav-links{display:none!important;}}
+
+    .hero{padding:72px 0 56px;text-align:center;}
+    .badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.2);padding:4px 12px;border-radius:20px;}
+    h1{font-family:var(--display);font-size:clamp(32px,5vw,48px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:20px;}
+    .grad{background:linear-gradient(135deg,var(--amber) 0%,var(--pink) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto 32px;line-height:1.7;}
+    h2{font-family:var(--display);font-size:clamp(24px,3.5vw,36px);font-weight:700;margin:56px 0 16px;letter-spacing:-0.5px;text-align:center;}
+    h3{font-family:var(--display);font-size:20px;font-weight:700;margin:32px 0 12px;}
+    p{color:var(--muted);font-size:16px;line-height:1.7;margin-bottom:20px;}
+    strong{color:var(--text);}
+
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin:32px 0 48px;}
+    .feature-card{background:rgba(28,26,58,0.3);border:1px solid var(--border);border-radius:16px;padding:28px 24px;transition:border-color 0.2s;}
+    .feature-card:hover{border-color:var(--purple);}
+    .feature-card .icon{font-size:28px;margin-bottom:12px;}
+    .feature-card h3{margin-top:0;font-size:18px;text-align:left;}
+    .feature-card p{font-size:14px;margin-bottom:0;text-align:left;}
+
+    /* HOW IT WORKS */
+    .steps{counter-reset:step;margin:32px 0 48px;max-width:640px;margin-left:auto;margin-right:auto;}
+    .step{position:relative;padding-left:56px;margin-bottom:32px;counter-increment:step;}
+    .step::before{content:counter(step);position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;background:rgba(136,68,255,0.15);color:var(--purple);font-family:var(--mono);font-size:16px;font-weight:700;display:grid;place-items:center;}
+    .step h3{margin-top:0;font-size:18px;color:var(--text);text-align:left;}
+    .step p{margin-bottom:8px;font-size:15px;text-align:left;}
+
+    /* PRICING */
+    .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin:32px 0 48px;}
+    .price-card{background:rgba(28,26,58,0.3);border:1px solid var(--border);border-radius:16px;padding:32px 28px;text-align:center;transition:border-color 0.2s,transform 0.2s;}
+    .price-card:hover{transform:translateY(-2px);}
+    .price-card.featured{border-color:var(--amber);position:relative;}
+    .price-card.featured::before{content:'MOST POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;padding:4px 14px;border-radius:20px;}
+    .price-tier{font-family:var(--display);font-size:22px;font-weight:700;margin-bottom:8px;}
+    .price-amount{font-family:var(--display);font-size:42px;font-weight:800;margin-bottom:4px;}
+    .price-period{font-size:14px;color:var(--dimmer);margin-bottom:24px;font-family:var(--mono);}
+    .price-features{list-style:none;padding:0;text-align:left;margin-bottom:28px;}
+    .price-features li{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:var(--muted);display:flex;align-items:flex-start;gap:10px;}
+    .price-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;}
+    .price-features li.no::before{content:'—';color:var(--dimmer);}
+    .price-btn{display:block;padding:12px;border-radius:10px;font-family:var(--mono);font-size:14px;font-weight:600;text-decoration:none;text-align:center;transition:transform 0.15s;}
+    .price-btn:hover{transform:translateY(-1px);text-decoration:none;}
+    .price-btn-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;}
+    .price-btn-secondary{background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);color:var(--indigo2);}
+
+    /* COMPARISON TABLE */
+    .table-wrap{overflow-x:auto;margin:32px 0 48px;}
+    .compare-table{width:100%;border-collapse:collapse;font-size:14px;min-width:600px;}
+    .compare-table th{text-align:left;padding:12px 16px;border-bottom:2px solid rgba(136,68,255,0.3);color:var(--text);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1px;}
+    .compare-table td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;}
+    .compare-table tr:hover td{background:rgba(136,68,255,0.04);}
+    .compare-table .feature-name{color:var(--text);font-weight:500;}
+    .check{color:var(--green);}
+    .cross{color:#f87171;}
+
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;transition:transform 0.15s,box-shadow 0.15s;font-family:var(--mono);}
+    .btn:hover{transform:translateY(-1px);text-decoration:none;}
+    .btn-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;box-shadow:0 4px 24px rgba(255,144,16,0.3);}
+    .btn-secondary{background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);color:var(--indigo2);}
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:48px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;max-width:500px;margin-left:auto;margin-right:auto;}
+    .btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+    footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;}
+    footer p{color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    footer a{color:var(--muted);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+
+    @media(max-width:768px){
+      .hero{padding:48px 0 40px;}
+      .cta-section{padding:32px 20px;}
+      .pricing-grid{grid-template-columns:1fr;}
+      .price-card.featured{margin-top:16px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <ul class="nav-links">
+      <li><a href="/enterprise">Enterprise</a></li>
+      <li><a href="/directory">Directory</a></li>
+      <li><a href="/investor">Investors</a></li>
+    </ul>
+    <a class="nav-cta" href="mailto:support@archtools.dev?subject=White-Label%20Demo%20Request">Schedule Demo →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="badge">⚡ White Label</div>
+    <h1>Your Own x402 API Marketplace<br><span class="grad">Powered by Arch Tools</span></h1>
+    <p>We built the infrastructure. You get the brand. Launch a fully branded API marketplace with autonomous agent payments — in 1-2 weeks, not 6 months.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="mailto:support@archtools.dev?subject=White-Label%20Demo%20Request">Schedule a Demo →</a>
+      <a class="btn btn-secondary" href="#pricing">See Pricing</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU GET -->
+<div class="wrap">
+  <h2>What You Get</h2>
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">🎨</div>
+      <h3>Branded Directory</h3>
+      <p>Your logo, your colors, your domain. A fully customized API marketplace that looks and feels like yours — because it is.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💸</div>
+      <h3>Your Own Facilitator</h3>
+      <p>Dedicated x402 facilitator instance processing payments under your brand. Your wallet, your settlement, your revenue.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📈</div>
+      <h3>Analytics Dashboard</h3>
+      <p>Full visibility into API usage, agent activity, revenue per service, and growth metrics. White-labeled and embeddable.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤖</div>
+      <h3>Agent Identity</h3>
+      <p>Your agents get branded identities that carry your organization's reputation across the x402 ecosystem.</p>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <h2>How It Works</h2>
+  <div class="steps">
+    <div class="step">
+      <h3>Tell Us Your Vision</h3>
+      <p>Share your brand guidelines, domain, target audience, and which API categories matter to you. We handle the rest.</p>
+    </div>
+    <div class="step">
+      <h3>We Build Your Marketplace</h3>
+      <p>Our team configures your branded directory, deploys your dedicated facilitator, and connects your wallet. Typical setup: 1-2 weeks.</p>
+    </div>
+    <div class="step">
+      <h3>Curate Your Catalog</h3>
+      <p>Choose from 112+ services in the Arch Tools ecosystem, bring your own APIs, or mix both. You control what's listed and at what price.</p>
+    </div>
+    <div class="step">
+      <h3>Launch & Scale</h3>
+      <p>Go live with your branded marketplace. We handle infrastructure, uptime, scaling, and support. You focus on growing your business.</p>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <h2 id="pricing">Pricing</h2>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-tier" style="color:var(--green);">Starter</div>
+      <div class="price-amount" style="color:var(--text);">$499</div>
+      <div class="price-period">/month</div>
+      <ul class="price-features">
+        <li>Branded API directory</li>
+        <li>Shared facilitator instance</li>
+        <li>Up to 25 listed services</li>
+        <li>Basic analytics dashboard</li>
+        <li>Your custom domain</li>
+        <li>Email support</li>
+        <li class="no">Custom facilitator</li>
+        <li class="no">Agent identity system</li>
+      </ul>
+      <a class="price-btn price-btn-secondary" href="mailto:support@archtools.dev?subject=White-Label%20Starter%20Plan">Get Started →</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-tier" style="color:var(--amber);">Growth</div>
+      <div class="price-amount" style="color:var(--text);">$999</div>
+      <div class="price-period">/month</div>
+      <ul class="price-features">
+        <li>Everything in Starter</li>
+        <li>Dedicated facilitator instance</li>
+        <li>Unlimited listed services</li>
+        <li>Advanced analytics + exports</li>
+        <li>Agent identity system</li>
+        <li>Custom branding kit</li>
+        <li>Priority support (Slack/email)</li>
+        <li class="no">SLA guarantee</li>
+      </ul>
+      <a class="price-btn price-btn-primary" href="mailto:support@archtools.dev?subject=White-Label%20Growth%20Plan">Get Started →</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier" style="color:var(--purple);">Enterprise</div>
+      <div class="price-amount" style="color:var(--text);">Custom</div>
+      <div class="price-period">contact us</div>
+      <ul class="price-features">
+        <li>Everything in Growth</li>
+        <li>99.9% uptime SLA</li>
+        <li>Dedicated infrastructure</li>
+        <li>SSO / SAML integration</li>
+        <li>Custom MCP server deployment</li>
+        <li>On-call engineering support</li>
+        <li>Volume transaction discounts</li>
+        <li>Data residency options</li>
+      </ul>
+      <a class="price-btn price-btn-secondary" href="/enterprise">Talk to Sales →</a>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <h2>Feature Comparison</h2>
+  <div class="table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Starter</th>
+          <th>Growth</th>
+          <th>Enterprise</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature-name">Branded directory</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Custom domain</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Listed services</td>
+          <td>Up to 25</td>
+          <td>Unlimited</td>
+          <td>Unlimited</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Facilitator</td>
+          <td>Shared</td>
+          <td class="check">Dedicated</td>
+          <td class="check">Dedicated</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Analytics dashboard</td>
+          <td>Basic</td>
+          <td>Advanced + exports</td>
+          <td>Advanced + API</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Agent identity</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Custom branding kit</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">SSO / SAML</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Custom MCP servers</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Uptime SLA</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="check">99.9%</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Support</td>
+          <td>Email</td>
+          <td>Priority (Slack/email)</td>
+          <td>On-call engineering</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Data residency</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Setup time</td>
+          <td>1 week</td>
+          <td>1-2 weeks</td>
+          <td>2-4 weeks</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Ready to Launch Your Marketplace?</h2>
+    <p>No one else is selling packaged x402 infrastructure. You can be the first in your vertical.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="mailto:support@archtools.dev?subject=White-Label%20Demo%20Request&body=Company%3A%20%0AUse%20Case%3A%20%0APreferred%20Plan%3A%20">Schedule a Demo →</a>
+      <a class="btn btn-secondary" href="/enterprise">Enterprise Options</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <p>© 2026 Arch Tools · <a href="/">Home</a> · <a href="/enterprise">Enterprise</a> · <a href="/investor">Investors</a> · <a href="/docs">Docs</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://x.com/AiArchTools">@AiArchTools</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
