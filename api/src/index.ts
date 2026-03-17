@@ -31,6 +31,10 @@ import legalRouter from "./routes/legal.js";
 import oauthRouter from "./routes/oauth.js";
 import authRouter, { verifySession } from "./routes/auth.js";
 import chatRouter from "./routes/chat.js";
+import directoryRouter from "./routes/directory.js";
+
+// x402 SDK (official Coinbase @x402/express integration)
+import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -190,6 +194,11 @@ app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
 
+// x402 SDK middleware — applies official Coinbase x402 protocol to all tool routes
+// When enabled (X402_SDK_ENABLED=true), handles payment verification/settlement
+// via the official facilitator before requests reach the tool handlers
+app.use("/v1/tools", x402SdkMiddleware);
+
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);
 
@@ -200,6 +209,9 @@ app.use("/webhooks", billingRouter);
 // Admin
 app.use("/v1/admin", adminRouter);
 app.use("/admin", adminRouter);
+
+// x402 Service Directory
+app.use("/api/v1/x402/directory", directoryRouter);
 
 // Workflows
 app.use("/v1/workflows", workflowsRouter);
@@ -234,6 +246,7 @@ app.get("/privacy", (_req: Request, res: Response) => res.redirect(301, "/legal/
 
 // /docs — full API reference page
 app.get("/changelog", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
+app.get("/directory", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/directory.html')));
 app.get("/docs", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/docs/getting-started", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/getting-started.html')));
 app.get("/docs/:slug", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
@@ -296,6 +309,14 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
   console.error("FATAL: ADMIN_KEY must be set to a secure value in production. Exiting.");
   process.exit(1);
 }
+
+// Initialize x402 SDK (official Coinbase protocol support)
+initX402Sdk();
+
+// x402 SDK status endpoint (for admin/health checks)
+app.get("/v1/x402/status", (_req: Request, res: Response) => {
+  res.json({ ok: true, x402_sdk: getX402SdkStatus() });
+});
 
 app.listen(config.port, () => {
   console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
