@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma.js";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
+import { sendFeatureAnnouncement } from "../services/email.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
 
@@ -170,6 +172,90 @@ router.post("/grant-credits", requireAdmin, async (req: Request, res: Response):
     res.json({ ok: true, agent_id, credits_added: credits, new_balance: agent.credits, request_id: reqId() });
   } catch (e) {
     res.status(404).json({ ok: false, error: "agent_not_found", detail: safeErr(e), request_id: reqId() });
+  }
+});
+
+// ─── POST /v1/admin/email/broadcast — Send feature announcement to all users ─
+router.post("/email/broadcast", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  const { headline, body, cta_label, cta_url, dry_run } = req.body as {
+    headline?: string;
+    body?: string;
+    cta_label?: string;
+    cta_url?: string;
+    dry_run?: boolean;
+  };
+
+  if (!headline || !body) {
+    res.status(400).json({
+      ok: false,
+      error: "invalid_request",
+      message: "headline and body are required",
+      request_id: reqId(),
+    });
+    return;
+  }
+
+  try {
+    // Get all agents with valid emails
+    const agents = await prisma.agent.findMany({
+      where: { email: { not: "" } },
+      select: { id: true, email: true },
+    });
+
+    if (dry_run) {
+      res.json({
+        ok: true,
+        dry_run: true,
+        recipients: agents.length,
+        headline,
+        body_preview: body.slice(0, 200),
+        request_id: reqId(),
+      });
+      return;
+    }
+
+    // Send emails in batches of 10 with 1s delay between batches (Resend rate limit: 10/s)
+    let sent = 0;
+    let failed = 0;
+    const batchSize = 10;
+
+    for (let i = 0; i < agents.length; i += batchSize) {
+      const batch = agents.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(agent =>
+          sendFeatureAnnouncement(agent.email, {
+            headline,
+            body,
+            ctaLabel: cta_label,
+            ctaUrl: cta_url,
+          })
+        )
+      );
+
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) sent++;
+        else failed++;
+      }
+
+      // Rate limit pause between batches (skip for last batch)
+      if (i + batchSize < agents.length) {
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+    }
+
+    logger.info({ headline, sent, failed, total: agents.length }, "Broadcast email complete");
+
+    res.json({
+      ok: true,
+      sent,
+      failed,
+      total: agents.length,
+      headline,
+      request_id: reqId(),
+    });
+  } catch (e) {
+    logger.error({ error: e }, "Broadcast email error");
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
