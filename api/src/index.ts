@@ -110,7 +110,18 @@ const registerLimiter = rateLimit({
 });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(cors({
+  origin: config.corsOrigin,
+  credentials: true,
+  exposedHeaders: [
+    "Payment-Required",
+    "Payment-Signature",
+    "Payment-Response",
+    "X-Payment",
+    "X-Payment-Response",
+    "X-Payment-Required",
+  ],
+}));
 app.use(morgan("combined"));
 app.use(globalLimiter);
 

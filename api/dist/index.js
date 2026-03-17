@@ -96,7 +96,18 @@ const registerLimiter = rateLimit({
     message: { ok: false, error: "rate_limited", message: "Too many registration attempts. Try again in 1 hour." },
 });
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(cors({
+    origin: config.corsOrigin,
+    credentials: true,
+    exposedHeaders: [
+        "Payment-Required",
+        "Payment-Signature",
+        "Payment-Response",
+        "X-Payment",
+        "X-Payment-Response",
+        "X-Payment-Required",
+    ],
+}));
 app.use(morgan("combined"));
 app.use(globalLimiter);
 // Stripe webhook needs raw body — must come before express.json()

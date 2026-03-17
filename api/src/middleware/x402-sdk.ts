@@ -15,13 +15,14 @@
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
 import { config } from "../config.js";
-import { X402_PRICES } from "./x402.js";
+import { X402_PRICES, TOOL_OUTPUT_SCHEMAS } from "./x402.js";
 import type { Request, Response, NextFunction } from "express";
 
 // ─── Build x402 SDK route config from our pricing table ──────────────────────
 
-function buildSdkRoutes(): Record<string, { accepts: { scheme: string; price: string; network: string; payTo: string; maxTimeoutSeconds?: number }; description: string }> {
+function buildSdkRoutes(): Record<string, any> {
   const walletAddress = config.x402.walletAddress;
   if (!walletAddress) return {};
 
@@ -29,9 +30,19 @@ function buildSdkRoutes(): Record<string, { accepts: { scheme: string; price: st
     ? "eip155:84532"
     : "eip155:8453"; // Default to Base mainnet
 
-  const routes: Record<string, { accepts: { scheme: string; price: string; network: string; payTo: string; maxTimeoutSeconds?: number }; description: string }> = {};
+  const baseUrl = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
+  const routes: Record<string, any> = {};
 
   for (const [toolName, price] of Object.entries(X402_PRICES)) {
+    // Bazaar discovery metadata — declares input schema for POST tool endpoints
+    const postDiscovery = declareDiscoveryExtension({
+      bodyType: "json",
+      inputSchema: TOOL_OUTPUT_SCHEMAS[toolName]?.input ?? { type: "object" },
+      output: TOOL_OUTPUT_SCHEMAS[toolName]?.output
+        ? { schema: TOOL_OUTPUT_SCHEMAS[toolName].output }
+        : undefined,
+    } as any);
+
     // Each tool is a POST endpoint at /v1/tools/<toolName>
     const routeKey = `POST /v1/tools/${toolName}`;
     routes[routeKey] = {
@@ -43,9 +54,11 @@ function buildSdkRoutes(): Record<string, { accepts: { scheme: string; price: st
         maxTimeoutSeconds: 60,
       },
       description: `Arch Tools — ${toolName}`,
+      extensions: postDiscovery,
     };
 
-    // Also register GET for x402scan compatibility
+    // Also register GET for x402scan compatibility (query-style discovery)
+    const getDiscovery = declareDiscoveryExtension({} as any);
     const getRouteKey = `GET /v1/tools/${toolName}`;
     routes[getRouteKey] = {
       accepts: {
@@ -56,6 +69,7 @@ function buildSdkRoutes(): Record<string, { accepts: { scheme: string; price: st
         maxTimeoutSeconds: 60,
       },
       description: `Arch Tools — ${toolName}`,
+      extensions: getDiscovery,
     };
   }
 
@@ -85,7 +99,7 @@ export function initX402Sdk(): boolean {
   }
 
   try {
-    const facilitatorUrl = config.x402.facilitatorUrl || "https://facilitator.x402.org";
+    const facilitatorUrl = config.x402.facilitatorUrl || "https://api.cdp.coinbase.com/platform/v2/x402";
     const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl });
 
     const network = config.x402.network === "base-sepolia"
@@ -93,7 +107,8 @@ export function initX402Sdk(): boolean {
       : "eip155:8453";
 
     const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register(network, new ExactEvmScheme());
+      .register(network, new ExactEvmScheme())
+      .registerExtension(bazaarResourceServerExtension);
 
     const routes = buildSdkRoutes();
     const routeCount = Object.keys(routes).length;
