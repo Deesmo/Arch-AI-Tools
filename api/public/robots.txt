@@ -1,5 +1,13 @@
+# Allow legitimate search indexing
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
 User-agent: *
 Allow: /
+Disallow: /api/
 
 # Block AI training crawlers from scraping site content
 User-agent: GPTBot
@@ -40,12 +48,5 @@ Disallow: /
 
 User-agent: Diffbot
 Disallow: /
-
-# Allow legitimate search indexing
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
 
 Sitemap: https://archtools.dev/sitemap.xml
