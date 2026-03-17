@@ -157,4 +157,7 @@ model X402Payment {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+  @@index([txHash])
+  @@index([toolName])
+  @@index([agentId])
 }

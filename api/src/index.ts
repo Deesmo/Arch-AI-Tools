@@ -35,6 +35,7 @@ import directoryRouter from "./routes/directory.js";
 import walletRouter from "./routes/wallet.js";
 import pricingRouter from "./routes/pricing.js";
 import playgroundRouter from "./routes/playground.js";
+import x402PaymentsRouter from "./routes/x402-payments.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
@@ -233,6 +234,9 @@ app.use("/api/v1/x402/pricing", pricingRouter);
 
 // x402 Playground API (public, no auth — demo flow)
 app.use("/api/v1/x402/playground", playgroundRouter);
+
+// x402 Payment receipts & history
+app.use("/api/v1/x402", x402PaymentsRouter);
 
 // Wallet provisioning (AgentKit)
 app.use("/v1/wallet", walletRouter);

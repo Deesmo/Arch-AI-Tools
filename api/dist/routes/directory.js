@@ -200,6 +200,32 @@ router.get("/stats", (_req, res) => {
         last_updated: data.meta.last_updated,
     });
 });
+// ─── GET /api/v1/x402/directory/sitemap — Service URLs for search engines ────
+router.get("/sitemap", (_req, res) => {
+    try {
+        const data = loadDirectory();
+        const services = data.services || [];
+        const urls = services
+            .filter((s) => s.status === "active" || s.status === "verified")
+            .map((s) => ({
+            id: s.id,
+            name: s.name,
+            url: `https://archtools.dev/directory#${s.id}`,
+            api_url: s.base_url || s.url || null,
+            category: s.category,
+            updated: s.updated_at || s.created_at || null,
+        }));
+        res.json({
+            ok: true,
+            count: urls.length,
+            generated: new Date().toISOString(),
+            urls,
+        });
+    }
+    catch (err) {
+        res.status(500).json({ ok: false, error: "Failed to generate directory sitemap" });
+    }
+});
 // ─── GET /api/v1/x402/directory/:id — Single service ─────────────────────────
 router.get("/:id", (req, res) => {
     const data = loadDirectory();
