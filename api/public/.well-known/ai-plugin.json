@@ -1,0 +1,19 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Arch Tools",
+  "name_for_model": "arch_tools",
+  "description_for_human": "61 production-ready API tools — web scraping, AI generation, image creation, crypto data, NLP, email, research, video, and more. Pay per use with crypto (x402 USDC on Base) or Stripe.",
+  "description_for_model": "Use Arch Tools to access 61 production APIs. Categories: web scraping & extraction (web-scrape, extract-page, screenshot-capture, html-to-markdown, extract-pdf, ocr-extract, browser-task), AI generation (ai-generate, image-generate, video-generate, text-to-speech, design-create, ai-oracle), crypto (crypto-price, crypto-ohlcv, crypto-market-cap, crypto-fear-greed, crypto-sentiment, crypto-news, token-lookup), NLP (sentiment-analysis, summarize, extract-entities, language-detect, readability-score, pii-detect), search & research (search-web, web-search, news-search, research-report, fact-check, semantic-search), utility (qr-code, barcode-generate, generate-hash, convert-format, transform-text, generate-uuid, diff-text, regex-generate, validate-data, jsonpath-query, currency-convert, timezone-convert), communication (email-send, email-verify, email-find, phone-validate, webhook-send, social-post, url-shorten), and networking (ip-lookup, whois-lookup, domain-check, rss-parse). All endpoints accept JSON POST to /v1/tools/{tool-name}. Auth via x-api-key header or x402 payment.",
+  "auth": {
+    "type": "service_http",
+    "authorization_type": "bearer",
+    "verification_tokens": {}
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://archtools.dev/.well-known/openapi.json"
+  },
+  "logo_url": "https://archtools.dev/arch-icon.svg",
+  "contact_email": "support@archtools.dev",
+  "legal_info_url": "https://archtools.dev/privacy"
+}
