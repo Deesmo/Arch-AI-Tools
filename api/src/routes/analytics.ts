@@ -230,6 +230,34 @@ router.get("/revenue", requireAdmin, async (req: Request, res: Response): Promis
       timestamp: p.createdAt.toISOString(),
     }));
 
+    // ─── Facilitator fee revenue ──────────────────────────────────────
+    let facilitatorFeeTotal = 0;
+    let facilitatorSettledTotal = 0;
+    let facilitatorTxCount = 0;
+    try {
+      const feeRecords = await prisma.facilitatorFeeRecord.findMany({
+        where: { createdAt: { gte: cutoff } },
+        select: { feeAmount: true, settlementAmount: true },
+      });
+      for (const r of feeRecords) {
+        facilitatorFeeTotal += parseFloat(r.feeAmount) / 1_000_000;
+        facilitatorSettledTotal += parseFloat(r.settlementAmount) / 1_000_000;
+        facilitatorTxCount++;
+      }
+    } catch { /* FacilitatorFeeRecord table may not exist yet */ }
+
+    // ─── Directory listing revenue ────────────────────────────────────
+    let directoryListingRevenue = 0;
+    let activeListingsCount = 0;
+    try {
+      const activeListings = await prisma.directoryListing.findMany({
+        where: { status: "active" },
+        select: { monthlyPrice: true },
+      });
+      activeListingsCount = activeListings.length;
+      directoryListingRevenue = activeListings.reduce((sum, l) => sum + l.monthlyPrice, 0);
+    } catch { /* DirectoryListing table may not exist yet */ }
+
     res.json({
       ok: true,
       period,
@@ -256,6 +284,30 @@ router.get("/revenue", requireAdmin, async (req: Request, res: Response): Promis
           date,
           amount_usd: Math.round(amount * 100) / 100,
         })),
+      },
+      facilitator: {
+        fee_revenue_usdc: Math.round(facilitatorFeeTotal * 1000) / 1000,
+        settled_volume_usdc: Math.round(facilitatorSettledTotal * 1000) / 1000,
+        transaction_count: facilitatorTxCount,
+        effective_rate: facilitatorSettledTotal > 0
+          ? Math.round((facilitatorFeeTotal / facilitatorSettledTotal) * 10000) / 100
+          : 0,
+      },
+      directory_listings: {
+        active_count: activeListingsCount,
+        monthly_revenue_usd: directoryListingRevenue,
+      },
+      total_revenue: {
+        x402_usdc: Math.round(x402Payments.reduce((s, p) => s + parseFloat(p.amountUsdc || "0"), 0) * 1000) / 1000,
+        stripe_usd: Math.round(stripePurchases.reduce((s, p) => s + p.amountCents, 0)) / 100,
+        facilitator_fees_usdc: Math.round(facilitatorFeeTotal * 1000) / 1000,
+        directory_listings_usd: directoryListingRevenue,
+        combined_usd_estimate: Math.round((
+          x402Payments.reduce((s, p) => s + parseFloat(p.amountUsdc || "0"), 0) +
+          stripePurchases.reduce((s, p) => s + p.amountCents, 0) / 100 +
+          facilitatorFeeTotal +
+          directoryListingRevenue
+        ) * 100) / 100,
       },
       recent_transactions: recentTx,
       request_id: reqId(),

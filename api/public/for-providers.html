@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>List Your API on Arch Tools — For Providers</title>
+  <meta name="description" content="Monetize your API with x402 crypto payments. Keep 97.5% of revenue, reach AI agents and developers, get instant payouts in USDC. No middleman.">
+  <meta property="og:title" content="List Your API on Arch Tools — For Providers">
+  <meta property="og:description" content="Keep 97.5% of revenue. Reach AI agents and developers. Get instant crypto payouts. List your API on Arch Tools.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://archtools.dev/for-providers">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="List Your API on Arch Tools — For Providers">
+  <meta name="twitter:description" content="Monetize your API via x402. Keep 97.5%. Instant USDC payouts. Reach AI agents + human developers.">
+  <meta name="keywords" content="api monetization, list api, api marketplace, api provider, x402, api revenue, monetize api, api directory, sell api, api income, rapidapi alternative for providers">
+  <link rel="canonical" href="https://archtools.dev/for-providers">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "List Your API on Arch Tools",
+    "description": "Monetize your API with x402 crypto payments. Keep 97.5% of revenue.",
+    "url": "https://archtools.dev/for-providers",
+    "publisher": {"@type": "Organization", "name": "Arch Tools", "url": "https://archtools.dev"}
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;
+      --border:rgba(255,255,255,0.08);--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:900px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.18) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.12) 0%,transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%,rgba(24,96,255,0.10) 0%,transparent 65%);
+      color:var(--text);line-height:1.7;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:768px){.wrap{padding:0 16px;}}
+    a{color:var(--indigo2);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);backdrop-filter:blur(20px);}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:var(--max);margin:0 auto;padding:0 32px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);letter-spacing:-0.3px;}
+    .logo span{color:var(--purple);}
+    .nav-cta{background:var(--purple);color:#fff;padding:7px 16px;border-radius:6px;font-size:13px;font-family:var(--mono);text-decoration:none;}
+    @media(max-width:768px){.nav-inner{padding:0 16px;}}
+
+    /* HERO */
+    .hero{padding:72px 0 56px;text-align:center;}
+    .badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);padding:4px 12px;border-radius:20px;}
+    h1{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:20px;}
+    .grad{background:linear-gradient(135deg,var(--amber) 0%,var(--pink) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto 32px;line-height:1.7;}
+
+    /* STATS ROW */
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:40px 0 64px;}
+    .stat{text-align:center;padding:28px 20px;background:rgba(28,26,58,0.3);border:1px solid var(--border);border-radius:16px;}
+    .stat-num{font-family:var(--display);font-size:clamp(32px,4vw,48px);font-weight:800;line-height:1;}
+    .stat-num.green{color:var(--green);}
+    .stat-num.amber{color:var(--amber);}
+    .stat-num.purple{color:var(--purple);}
+    .stat-label{font-size:14px;color:var(--muted);margin-top:8px;font-family:var(--mono);}
+    @media(max-width:640px){.stats{grid-template-columns:1fr;}}
+
+    /* SECTIONS */
+    h2{font-family:var(--display);font-size:clamp(24px,3.5vw,36px);font-weight:700;margin:56px 0 16px;letter-spacing:-0.5px;}
+    h3{font-family:var(--display);font-size:20px;font-weight:700;margin:32px 0 12px;}
+    p{color:var(--muted);font-size:16px;line-height:1.7;margin-bottom:20px;}
+    strong{color:var(--text);}
+    ul,ol{padding-left:24px;margin-bottom:20px;}
+    li{color:var(--muted);margin-bottom:10px;font-size:16px;line-height:1.7;}
+    code{font-family:var(--mono);font-size:13px;background:rgba(136,68,255,0.12);color:#c4b5fd;padding:2px 7px;border-radius:4px;}
+    pre{background:rgba(12,11,34,0.8);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;margin:24px 0;}
+    pre code{background:none;padding:0;color:#E0DFF5;font-size:13px;line-height:1.7;}
+    .comment{color:#6B6A8A;}
+    .str{color:#34d399;}
+    .key{color:#FF9010;}
+
+    /* FEATURE CARDS */
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin:32px 0 48px;}
+    .feature-card{background:rgba(28,26,58,0.3);border:1px solid var(--border);border-radius:16px;padding:28px 24px;transition:border-color 0.2s;}
+    .feature-card:hover{border-color:var(--amber);}
+    .feature-card .icon{font-size:28px;margin-bottom:12px;}
+    .feature-card h3{margin-top:0;font-size:18px;}
+    .feature-card p{font-size:14px;margin-bottom:0;}
+
+    /* COMPARISON */
+    .compare-table{width:100%;border-collapse:collapse;margin:24px 0 32px;font-size:14px;}
+    .compare-table th{text-align:left;padding:12px 16px;border-bottom:2px solid rgba(136,68,255,0.3);color:var(--text);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1px;}
+    .compare-table td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;}
+    .compare-table tr:hover td{background:rgba(136,68,255,0.04);}
+    .compare-table .feature{color:var(--text);font-weight:500;}
+    .check{color:var(--green);}
+    .cross{color:#f87171;}
+    .partial{color:var(--amber);}
+
+    /* STEPS */
+    .steps{counter-reset:step;margin:32px 0 48px;}
+    .step{position:relative;padding-left:56px;margin-bottom:32px;counter-increment:step;}
+    .step::before{content:counter(step);position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;background:rgba(136,68,255,0.15);color:var(--purple);font-family:var(--mono);font-size:16px;font-weight:700;display:grid;place-items:center;}
+    .step h3{margin-top:0;font-size:18px;color:var(--text);}
+    .step p{margin-bottom:8px;font-size:15px;}
+
+    /* CALLOUTS */
+    .callout{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout strong{color:var(--purple);}
+    .callout-green{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);}
+    .callout-green strong{color:var(--green);}
+    .callout-amber{background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);}
+    .callout-amber strong{color:var(--amber);}
+
+    /* CTA */
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:48px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;max-width:500px;margin-left:auto;margin-right:auto;}
+    .btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;transition:transform 0.15s,box-shadow 0.15s;font-family:var(--mono);}
+    .btn:hover{transform:translateY(-1px);text-decoration:none;}
+    .btn-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;box-shadow:0 4px 24px rgba(255,144,16,0.3);}
+    .btn-primary:hover{box-shadow:0 6px 32px rgba(255,144,16,0.4);}
+    .btn-secondary{background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);color:var(--indigo2);}
+    .btn-secondary:hover{background:rgba(136,68,255,0.15);}
+
+    /* FAQ */
+    .faq-item{border-bottom:1px solid var(--border);padding:20px 0;}
+    .faq-item h3{margin:0 0 8px;font-size:16px;color:var(--text);}
+    .faq-item p{margin:0;font-size:15px;}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;}
+    footer p{color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    footer a{color:var(--muted);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+
+    @media(max-width:768px){.hero{padding:48px 0 40px;}.cta-section{padding:32px 20px;}}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <a class="nav-cta" href="/#register">Get API Key →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="badge">💰 For API Providers</div>
+    <h1>List Your API on <span class="grad">Arch Tools</span></h1>
+    <p>Monetize your API with x402 crypto payments. Keep 97.5% of every transaction. Get instant payouts in USDC. Reach both human developers and autonomous AI agents.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="mailto:brad@archtools.dev?subject=API%20Provider%20Submission&body=API%20Name%3A%20%0AAPI%20URL%3A%20%0ADescription%3A%20%0ADesired%20price%20per%20call%3A%20%0A">Submit Your API →</a>
+      <a class="btn btn-secondary" href="/directory">Browse Directory</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="wrap">
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num green">97.5%</div>
+      <div class="stat-label">Revenue you keep</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num amber">2.5%</div>
+      <div class="stat-label">Facilitator fee</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num purple">15+</div>
+      <div class="stat-label">Blockchain networks</div>
+    </div>
+  </div>
+</div>
+
+<!-- WHY LIST -->
+<div class="wrap">
+  <h2>Why List on Arch Tools?</h2>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">💸</div>
+      <h3>Keep 97.5% of Revenue</h3>
+      <p>We take a 2.5% facilitator fee on x402 transactions. That's it. No hidden platform fees, no marketing charges, no "premium listing" upsells. Compare that to RapidAPI's ~20% commission.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">⚡</div>
+      <h3>Instant Payouts</h3>
+      <p>x402 payments go directly to your wallet. No waiting 30-60-90 days for payout processing. USDC arrives in your wallet the moment the transaction settles on-chain.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤖</div>
+      <h3>Reach AI Agents</h3>
+      <p>AI agents are the fastest-growing segment of API consumers. They can't sign up for accounts or enter credit cards. x402 lets them pay per-call autonomously — your API earns revenue from customers that can't use traditional marketplaces.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🌐</div>
+      <h3>Open Standard</h3>
+      <p>Built on x402 — the open payment protocol backed by Coinbase. Your API isn't locked into a proprietary marketplace. Agents and developers can discover and pay for your service using any x402-compatible client.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h3>Usage Analytics</h3>
+      <p>See who's calling your API, how often, and how much revenue it's generating. Real-time dashboards, not monthly reports delivered weeks late.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔧</div>
+      <h3>MCP Integration</h3>
+      <p>Your API automatically becomes available to AI assistants via our MCP server. Claude Desktop, Cursor, and Windsurf users can discover and use your API without any extra integration work.</p>
+    </div>
+  </div>
+
+  <!-- ECONOMICS COMPARISON -->
+  <h2>Provider Economics: Arch Tools vs. Traditional Marketplaces</h2>
+
+  <p>Here's what the math looks like on a $100 in gross revenue:</p>
+
+  <div style="overflow-x:auto;">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>RapidAPI</th>
+        <th>Arch Tools</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="feature">Platform Commission</td>
+        <td><span class="cross">~20% ($20.00)</span></td>
+        <td><span class="check">2.5% ($2.50)</span></td>
+      </tr>
+      <tr>
+        <td class="feature">You Receive</td>
+        <td>~$80.00</td>
+        <td><span class="check">$97.50</span></td>
+      </tr>
+      <tr>
+        <td class="feature">Payout Speed</td>
+        <td><span class="partial">Monthly (delays reported)</span></td>
+        <td><span class="check">Instant (on-chain settlement)</span></td>
+      </tr>
+      <tr>
+        <td class="feature">Payout Currency</td>
+        <td>USD (PayPal/wire transfer)</td>
+        <td><span class="check">USDC (or USD via standard billing)</span></td>
+      </tr>
+      <tr>
+        <td class="feature">Pricing Control</td>
+        <td><span class="partial">Tiered (Free/Pro/Ultra/Mega)</span></td>
+        <td><span class="check">You set per-call price directly</span></td>
+      </tr>
+      <tr>
+        <td class="feature">Customer Types</td>
+        <td>Human developers only</td>
+        <td><span class="check">Human developers + AI agents</span></td>
+      </tr>
+      <tr>
+        <td class="feature">Customer Relationship</td>
+        <td><span class="cross">Platform owns billing relationship</span></td>
+        <td><span class="check">Direct — x402 payments go to your wallet</span></td>
+      </tr>
+      <tr>
+        <td class="feature">Marketplace Quality</td>
+        <td><span class="cross">Competing with 40K+ APIs (many abandoned)</span></td>
+        <td><span class="check">Curated directory — quality over quantity</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <h2>How the Marketplace Works</h2>
+
+  <p>Arch Tools acts as an <strong>x402 facilitator</strong> — we handle payment verification, routing, and settlement so you don't have to run blockchain infrastructure yourself.</p>
+
+  <div class="steps">
+    <div class="step">
+      <h3>Submit Your API</h3>
+      <p>Tell us about your API — what it does, your desired per-call price, and your USDC wallet address for payouts. We review submissions for quality and relevance.</p>
+    </div>
+
+    <div class="step">
+      <h3>We Integrate It</h3>
+      <p>We add your API to the Arch Tools directory with documentation, a live playground endpoint, and x402 payment configuration. Your API gets a dedicated URL at <code>archtools.dev/v1/tools/your-tool-name</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3>Developers and Agents Discover It</h3>
+      <p>Your API appears in our searchable directory, our MCP server (accessible to Claude Desktop, Cursor, Windsurf), and our x402 service discovery endpoint. Human developers browse the catalog. AI agents discover it programmatically.</p>
+    </div>
+
+    <div class="step">
+      <h3>Calls Come In, Revenue Goes Out</h3>
+      <p>When someone calls your API through Arch Tools, we route the request to your service, verify the x402 payment, take our 2.5% facilitator fee, and send the remaining 97.5% to your wallet. For credit-based calls (human developers with API keys), payouts happen on a regular billing cycle.</p>
+    </div>
+
+    <div class="step">
+      <h3>Track Everything</h3>
+      <p>Monitor your API's usage, revenue, and performance through our analytics dashboard. See call volumes, error rates, response times, and revenue — in real time.</p>
+    </div>
+  </div>
+
+  <!-- x402 DEEP DIVE -->
+  <h2>How x402 Payments Work</h2>
+
+  <p>x402 is an open payment protocol backed by Coinbase. It works at the HTTP protocol level — payments are embedded in request headers, so your API can accept crypto payments without any custom integration.</p>
+
+  <pre><code><span class="comment">// What happens when an AI agent calls your API on Arch Tools</span>
+
+<span class="comment">// 1. Agent discovers your API's pricing</span>
+GET https://archtools.dev/.well-known/x402
+<span class="comment">// → Returns: accepted networks, assets, and per-tool pricing</span>
+
+<span class="comment">// 2. Agent constructs payment and calls your tool</span>
+POST https://archtools.dev/v1/tools/your-tool-name
+Headers:
+  Content-Type: application/json
+  X-PAYMENT: <span class="str">&lt;signed x402 payment for $0.01 USDC on Base&gt;</span>
+Body:
+  { <span class="key">"input"</span>: <span class="str">"whatever your API expects"</span> }
+
+<span class="comment">// 3. Arch Tools verifies payment, routes to your API, returns result</span>
+<span class="comment">// 4. $0.00975 (97.5%) settles to your wallet</span>
+<span class="comment">// 5. $0.00025 (2.5%) is our facilitator fee</span></code></pre>
+
+  <div class="callout-green callout">
+    <strong>🔓 You don't need blockchain expertise.</strong> Arch Tools handles all the x402 payment verification, on-chain settlement, and wallet management. You provide an API endpoint — we handle the payment layer. All you need is a USDC wallet address to receive payouts.
+  </div>
+
+  <!-- WHAT WE LOOK FOR -->
+  <h2>What We Look For in API Submissions</h2>
+
+  <p>We curate our directory for quality. Not every API gets listed — that's intentional. Here's what makes a strong submission:</p>
+
+  <ul>
+    <li><strong>Reliability</strong> — your API should have reasonable uptime and consistent response times</li>
+    <li><strong>Documentation</strong> — clear inputs, outputs, and error handling</li>
+    <li><strong>Active maintenance</strong> — someone is monitoring and fixing issues</li>
+    <li><strong>Useful to developers or AI agents</strong> — solves a real problem, not a toy demo</li>
+    <li><strong>Reasonable pricing</strong> — competitive with direct alternatives</li>
+  </ul>
+
+  <p>We're not looking for thousands of APIs. We're looking for APIs that work, are maintained, and provide real value. Quality over quantity — always.</p>
+
+  <div class="callout-amber callout">
+    <strong>📋 Categories we're actively expanding:</strong> AI/ML inference, data enrichment, blockchain analytics, natural language processing, image and video processing, geospatial data, financial data, security and compliance tools, developer utilities. If your API fits one of these, we want to hear from you.
+  </div>
+
+  <!-- SELF-SERVICE -->
+  <h2>Self-Service Onboarding (Coming Soon)</h2>
+
+  <p>We're building a self-service provider dashboard where you can:</p>
+
+  <ul>
+    <li>Register your API endpoint and set per-call pricing</li>
+    <li>Configure your USDC wallet for instant payouts</li>
+    <li>Define input/output schemas for automatic documentation</li>
+    <li>Test your integration with sandbox x402 payments</li>
+    <li>Go live and start earning immediately</li>
+  </ul>
+
+  <p>Until the dashboard is ready, submissions are handled personally. Email us your API details and we'll get you set up within 48 hours.</p>
+
+  <!-- FAQ -->
+  <h2>Frequently Asked Questions</h2>
+
+  <div class="faq-item">
+    <h3>Do I need to run blockchain infrastructure?</h3>
+    <p>No. Arch Tools handles all x402 payment verification and settlement. You provide a standard REST API endpoint — we handle the crypto layer. All you need is a USDC wallet address (MetaMask, Coinbase Wallet, etc.) to receive payouts.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>Can I keep my API listed on other platforms?</h3>
+    <p>Yes. There's no exclusivity requirement. List on RapidAPI, AWS Marketplace, your own website, and Arch Tools simultaneously. We don't lock you in.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>What if my API is free?</h3>
+    <p>We support free tools too. If you want your API in our directory for visibility but don't want to charge, that's fine. No facilitator fee on free calls.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>How do I set pricing?</h3>
+    <p>You choose your per-call price. We don't dictate pricing tiers or force "Free/Pro/Ultra" structures. If your API costs $0.05 per call, that's what users pay. We take 2.5% ($0.00125) and you receive 97.5% ($0.04875).</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>What wallet do I need?</h3>
+    <p>Any wallet that can receive USDC on Base (or the chain you prefer). MetaMask, Coinbase Wallet, Rainbow, or any EVM-compatible wallet works. For Solana-based payouts, any Solana wallet works.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>How is this different from being a facilitator myself?</h3>
+    <p>You could run your own x402 facilitator — Arch Tools is open source, so you have that option. Listing with us adds: marketplace discovery, MCP server inclusion (your API appears in Claude/Cursor), our developer community, analytics, and payment handling. We earn our 2.5% by driving traffic and handling infrastructure.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>What's the review process?</h3>
+    <p>Submit your API details via email. We review for reliability, documentation quality, and relevance. If accepted, we'll work with you to integrate it into the directory. Typical turnaround: 48 hours from submission to live listing.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>Is the code open source?</h3>
+    <p>Yes. Arch Tools is MIT licensed. You can review the facilitator code, the directory, and the payment handling. Transparency is core to how we build trust with providers.</p>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="wrap">
+  <div class="cta-section">
+    <h2>Ready to list your API?</h2>
+    <p>Keep 97.5% of revenue. Reach AI agents and developers. Get instant payouts in USDC.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="mailto:brad@archtools.dev?subject=API%20Provider%20Submission&body=API%20Name%3A%20%0AAPI%20URL%3A%20%0ADescription%3A%20%0ADesired%20price%20per%20call%3A%20%0AWallet%20address%3A%20%0A">Submit Your API →</a>
+      <a class="btn btn-secondary" href="/facilitator">Learn About x402 Facilitation</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <p>© 2026 Arch Tools · <a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://x.com/AiArchTools">@AiArchTools</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

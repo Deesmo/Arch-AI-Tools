@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Switching from RapidAPI to Arch Tools — Migration Guide</title>
+  <meta name="description" content="Step-by-step migration guide for RapidAPI users moving to Arch Tools. Feature comparison, code examples, and everything you need to switch your API calls in under 10 minutes.">
+  <meta property="og:title" content="Switching from RapidAPI to Arch Tools — Migration Guide">
+  <meta property="og:description" content="RapidAPI isn't what it used to be. Here's how to switch to Arch Tools — better tools, transparent pricing, x402 crypto payments, no middleman.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://archtools.dev/migrate-from-rapidapi">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Switching from RapidAPI to Arch Tools — Migration Guide">
+  <meta name="twitter:description" content="Tired of RapidAPI? Here's how to migrate your API calls to Arch Tools in under 10 minutes.">
+  <meta name="twitter:image" content="https://archtools.dev/og-image.png">
+  <meta name="keywords" content="rapidapi alternative, rapidapi problems, leave rapidapi, rapidapi replacement, api marketplace alternative, rapidapi nokia, api monetization, rapidapi payout, rapidapi spam, best rapidapi alternative 2026">
+  <link rel="canonical" href="https://archtools.dev/migrate-from-rapidapi">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Migrate from RapidAPI to Arch Tools",
+    "description": "Step-by-step guide for migrating API calls from RapidAPI to Arch Tools",
+    "step": [
+      {"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits"},
+      {"@type": "HowToStep", "name": "Remove RapidAPI SDK", "text": "Uninstall the RapidAPI SDK and remove X-RapidAPI headers"},
+      {"@type": "HowToStep", "name": "Update Endpoints", "text": "Replace RapidAPI proxy URLs with direct Arch Tools REST endpoints"},
+      {"@type": "HowToStep", "name": "Choose Payment Path", "text": "Use API key credits or x402 crypto payments — no subscription required"},
+      {"@type": "HowToStep", "name": "Test", "text": "Run your calls against Arch Tools — 58 tools available immediately"}
+    ]
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#07061A;--text:#E0DFF5;--muted:#8B8AA8;--dimmer:#6B6A8A;--purple:#8844FF;--green:#34d399;--amber:#FF9010;--pink:#FF2896;--border:rgba(255,255,255,0.08);--mono:'Fira Code','Cascadia Code','JetBrains Mono','Courier New',monospace;--display:'Syne',sans-serif;--body:'DM Sans',sans-serif;}
+    html{scroll-behavior:smooth;background:var(--bg);}
+    body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.75;padding:0;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.12) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.07) 0%,transparent 55%);
+    }
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(136,68,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+
+    nav{position:sticky;top:0;z-index:100;background:rgba(7,6,26,0.97);border-bottom:1px solid var(--border);padding:0 24px;backdrop-filter:blur(20px);}
+    .nav-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+    .nav-logo{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);text-decoration:none;letter-spacing:-0.3px;display:flex;align-items:center;gap:8px;}
+    .nav-logo span{color:var(--purple);}
+    .nav-cta{background:var(--purple);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-family:var(--mono);cursor:pointer;text-decoration:none;}
+
+    .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+    .hero{padding:64px 0 48px;}
+    .badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);padding:4px 12px;border-radius:20px;}
+    h1{font-family:var(--display);font-size:clamp(28px,5vw,44px);font-weight:800;line-height:1.12;letter-spacing:-1.5px;margin-bottom:24px;}
+    .subtitle{color:var(--muted);font-size:17px;line-height:1.7;margin-bottom:32px;max-width:600px;}
+    .byline{color:var(--dimmer);font-size:14px;font-family:var(--mono);margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+    h2{font-size:22px;font-weight:700;color:var(--amber);margin:48px 0 16px;font-family:var(--display);}
+    h3{font-size:17px;font-weight:700;margin:32px 0 12px;}
+    p{color:#C0BFDB;margin-bottom:20px;}
+    strong{color:var(--text);}
+    ul,ol{padding-left:24px;margin-bottom:20px;}
+    li{color:#C0BFDB;margin-bottom:8px;}
+    code{font-family:var(--mono);font-size:13px;background:rgba(136,68,255,0.12);color:#c4b5fd;padding:2px 7px;border-radius:4px;}
+    pre{background:rgba(12,11,34,0.8);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;margin:24px 0;position:relative;}
+    pre code{background:none;padding:0;color:#E0DFF5;font-size:13px;line-height:1.7;}
+    .comment{color:#6B6A8A;}
+    .key{color:#FF9010;}
+    .str{color:#34d399;}
+    .out{color:#8844FF;}
+    .del{color:#f87171;text-decoration:line-through;opacity:0.7;}
+    .add{color:#34d399;}
+
+    blockquote{border-left:3px solid var(--purple);padding-left:20px;margin:32px 0;color:var(--muted);font-style:italic;}
+
+    .compare-table{width:100%;border-collapse:collapse;margin:24px 0 32px;font-size:14px;}
+    .compare-table th{text-align:left;padding:12px 16px;border-bottom:2px solid rgba(136,68,255,0.3);color:var(--text);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1px;}
+    .compare-table td{padding:12px 16px;border-bottom:1px solid var(--border);color:#C0BFDB;vertical-align:top;}
+    .compare-table tr:hover td{background:rgba(136,68,255,0.04);}
+    .compare-table .feature{color:var(--text);font-weight:500;}
+    .check{color:var(--green);}
+    .cross{color:#f87171;}
+    .partial{color:var(--amber);}
+
+    .callout{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:12px;padding:24px 28px;margin:32px 0;}
+    .callout strong{color:var(--purple);}
+    .callout-green{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);}
+    .callout-green strong{color:var(--green);}
+    .callout-amber{background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);}
+    .callout-amber strong{color:var(--amber);}
+
+    .step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(136,68,255,0.15);color:var(--purple);font-family:var(--mono);font-size:13px;font-weight:700;margin-right:10px;flex-shrink:0;}
+
+    .toc{background:rgba(12,11,34,0.6);border:1px solid var(--border);border-radius:12px;padding:24px 28px;margin:0 0 48px;}
+    .toc h3{margin:0 0 12px;font-size:14px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+    .toc ul{list-style:none;padding:0;margin:0;}
+    .toc li{margin-bottom:6px;}
+    .toc a{color:var(--purple);text-decoration:none;font-size:14px;font-family:var(--mono);}
+    .toc a:hover{color:var(--text);text-decoration:underline;}
+
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:40px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;}
+    .btn{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:600;}
+    .btn-ghost{display:inline-block;border:1px solid var(--border);color:var(--muted);text-decoration:none;padding:12px 28px;border-radius:8px;font-family:var(--mono);font-size:14px;margin-left:12px;}
+
+    .timeline{position:relative;padding-left:32px;margin:24px 0 32px;}
+    .timeline::before{content:'';position:absolute;left:12px;top:4px;bottom:4px;width:2px;background:rgba(136,68,255,0.2);}
+    .timeline-step{position:relative;margin-bottom:24px;}
+    .timeline-step::before{content:'';position:absolute;left:-26px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--purple);border:2px solid var(--bg);}
+    .timeline-step h4{font-size:15px;margin-bottom:4px;color:var(--text);}
+    .timeline-step p{margin-bottom:0;font-size:14px;}
+
+    footer{padding:32px 24px;border-top:1px solid var(--border);color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    .footer-inner{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    footer a{color:var(--dimmer);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+    @media(max-width:640px){h1{font-size:clamp(26px,8vw,36px);}.btn-ghost{margin-left:0;margin-top:10px;}.cta-section{padding:28px 20px;}.compare-table{font-size:12px;}.compare-table th,.compare-table td{padding:8px 10px;}}
+    .copy-btn{position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;z-index:2;}
+    .copy-btn:hover{background:rgba(255,255,255,0.16);color:#fff;}
+
+    a{color:var(--purple);text-decoration:none;}
+    a:hover{color:var(--text);}
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <a class="nav-cta" href="/#register">Get API Key →</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <article>
+    <div class="hero">
+      <div class="badge">🔄 Migration Guide</div>
+      <h1>Switching from RapidAPI to Arch Tools</h1>
+      <p class="subtitle">RapidAPI used to be the default API marketplace. Since the Nokia acquisition, things have changed — delayed payouts, declining quality, rising fees, and frustrated developers. Here's how to move to Arch Tools in under 10 minutes.</p>
+      <p class="byline">archtools.dev · March 2026 · 9 min read</p>
+    </div>
+
+    <div class="toc">
+      <h3>In This Guide</h3>
+      <ul>
+        <li><a href="#tldr">TL;DR — Quick Start</a></li>
+        <li><a href="#why">Why Developers Are Leaving RapidAPI</a></li>
+        <li><a href="#compare">Feature Comparison</a></li>
+        <li><a href="#concepts">Concept Mapping: RapidAPI → Arch Tools</a></li>
+        <li><a href="#migrate">Step-by-Step Migration</a></li>
+        <li><a href="#code">Code Examples</a></li>
+        <li><a href="#gain">What You Gain</a></li>
+        <li><a href="#providers">For API Providers</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
+
+    <!-- TL;DR -->
+    <div id="tldr" class="callout-green callout">
+      <strong>⚡ TL;DR — Switch in 3 Steps</strong><br><br>
+      1. <a href="/#register" style="color:var(--green);">Get an Arch Tools API key</a> (free, 100 credits included)<br>
+      2. Replace RapidAPI proxy URLs and <code>X-RapidAPI-Key</code> headers with <code>x-api-key</code> to Arch Tools endpoints<br>
+      3. Call tools directly — no middleman, no subscription tiers, pay only for what you use<br><br>
+      58 tools available immediately. No credit card required to start.
+    </div>
+
+    <!-- WHY LEAVING -->
+    <h2 id="why">Why Developers Are Leaving RapidAPI</h2>
+
+    <p>RapidAPI was acquired by Nokia in late 2023. Since then, the developer community has reported a pattern of problems that have pushed many to look for alternatives:</p>
+
+    <ul>
+      <li><strong>Payout delays for API providers</strong> — Multiple providers have reported waiting months for earned revenue to arrive, with limited communication from RapidAPI's support team</li>
+      <li><strong>Declining marketplace quality</strong> — The marketplace has been flooded with low-quality, duplicate, and abandoned APIs that make it harder to find reliable tools</li>
+      <li><strong>Opaque pricing and hidden fees</strong> — Subscription tiers, platform fees, and confusing pricing models that obscure the real cost of API calls</li>
+      <li><strong>Support response times</strong> — Developer reports of weeks-long waits for support responses on billing and technical issues</li>
+      <li><strong>Enterprise pivot</strong> — Post-acquisition strategy has shifted focus toward enterprise API management, with less investment in the developer marketplace</li>
+    </ul>
+
+    <div class="callout-amber callout">
+      <strong>⚠️ A note on fairness:</strong> RapidAPI built something genuinely useful — an API marketplace that served millions of developers. These issues are reported by the developer community and may not reflect every user's experience. We're not here to pile on. We're here to offer an alternative for developers who are looking for one.
+    </div>
+
+    <!-- COMPARISON TABLE -->
+    <h2 id="compare">Feature Comparison</h2>
+    <p>Here's how the two platforms compare for API consumers and providers:</p>
+
+    <div style="overflow-x:auto;">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>RapidAPI</th>
+          <th>Arch Tools</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature">Marketplace Model</td>
+          <td>Third-party proxy — routes calls through RapidAPI servers</td>
+          <td><span class="check">Direct API access — no middleman proxy</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Pricing Model</td>
+          <td>Subscription tiers (Free/Pro/Ultra/Mega) per API</td>
+          <td><span class="check">Pay-per-call ($0.001/credit) — no subscriptions</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Platform Fees</td>
+          <td>~20% commission on API provider revenue</td>
+          <td><span class="check">2.5% facilitator fee — providers keep 97.5%</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Provider Payouts</td>
+          <td><span class="partial">Monthly (delays reported by community)</span></td>
+          <td><span class="check">Instant via x402 crypto or standard billing cycle</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Available Tools</td>
+          <td>Thousands (variable quality, many abandoned)</td>
+          <td>58 curated tools (AI, web, crypto, utilities)</td>
+        </tr>
+        <tr>
+          <td class="feature">AI Agent Support</td>
+          <td><span class="cross">Not designed for autonomous agents</span></td>
+          <td><span class="check">x402 native — agents pay per-call, no human required</span></td>
+        </tr>
+        <tr>
+          <td class="feature">MCP Support</td>
+          <td><span class="cross">No MCP server</span></td>
+          <td><span class="check">Full MCP server — works with Claude Desktop, Cursor, Windsurf</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Crypto Payments</td>
+          <td><span class="cross">Credit card only</span></td>
+          <td><span class="check">USDC, USDT, ETH, SOL, BNB, TAO, NEAR across 15 chains</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Open Source</td>
+          <td><span class="cross">Proprietary</span></td>
+          <td><span class="check">MIT License — audit, fork, self-host</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Free Tier</td>
+          <td><span class="partial">Varies by API — most have limited free calls</span></td>
+          <td><span class="check">100 free credits on signup — works across all tools</span></td>
+        </tr>
+        <tr>
+          <td class="feature">API Key Simplicity</td>
+          <td>Requires X-RapidAPI-Key + X-RapidAPI-Host headers</td>
+          <td><span class="check">Single x-api-key header</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Live Playground</td>
+          <td><span class="check">Yes — per API</span></td>
+          <td><span class="check">Yes — unified playground for all tools</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Vendor Lock-In</td>
+          <td><span class="cross">High — calls proxied through RapidAPI servers</span></td>
+          <td><span class="check">None — open source, open standard (x402)</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Self-Hosting</td>
+          <td><span class="cross">Not possible</span></td>
+          <td><span class="check">Full self-host option</span></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- CONCEPT MAPPING -->
+    <h2 id="concepts">Concept Mapping: RapidAPI → Arch Tools</h2>
+    <p>If you're familiar with RapidAPI's architecture, here's how concepts translate:</p>
+
+    <div style="overflow-x:auto;">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>RapidAPI Concept</th>
+          <th>Arch Tools Equivalent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature">X-RapidAPI-Key</td>
+          <td><code>x-api-key: arch_your_key</code></td>
+        </tr>
+        <tr>
+          <td class="feature">X-RapidAPI-Host</td>
+          <td>Not needed — call Arch Tools endpoints directly</td>
+        </tr>
+        <tr>
+          <td class="feature">RapidAPI Proxy URL</td>
+          <td><code>https://archtools.dev/v1/tools/{tool-name}</code></td>
+        </tr>
+        <tr>
+          <td class="feature">Subscription Tiers (Free/Pro/Ultra)</td>
+          <td>No tiers — flat per-call pricing across all tools</td>
+        </tr>
+        <tr>
+          <td class="feature">RapidAPI Hub (marketplace)</td>
+          <td><a href="/directory">Arch Tools Directory</a> — curated, searchable catalog</td>
+        </tr>
+        <tr>
+          <td class="feature">API Dashboard</td>
+          <td>Usage API at <code>/v1/usage</code> + credit balance in response headers</td>
+        </tr>
+        <tr>
+          <td class="feature">RapidAPI Testing</td>
+          <td><a href="/playground">Live Playground</a> — test any tool before integrating</td>
+        </tr>
+        <tr>
+          <td class="feature">Credit Card Billing</td>
+          <td>Stripe credits (credit card) <em>or</em> x402 crypto payments — your choice</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- STEP-BY-STEP -->
+    <h2 id="migrate">Step-by-Step Migration</h2>
+
+    <div class="timeline">
+      <div class="timeline-step">
+        <h4><span class="step-num">1</span> Get Your API Key</h4>
+        <p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 100 free credits. No credit card, no subscription tier selection, no approval process.</p>
+      </div>
+
+      <div class="timeline-step">
+        <h4><span class="step-num">2</span> Remove RapidAPI Dependencies</h4>
+        <p>Uninstall any RapidAPI SDK packages. Remove the <code>X-RapidAPI-Key</code> and <code>X-RapidAPI-Host</code> headers from your requests. You won't need them — Arch Tools uses a single <code>x-api-key</code> header.</p>
+      </div>
+
+      <div class="timeline-step">
+        <h4><span class="step-num">3</span> Find Your Replacement Tools</h4>
+        <p>Browse the <a href="/directory" style="color:var(--purple);">tool directory</a> to find Arch Tools equivalents for the RapidAPI services you were using. Categories include AI generation, web scraping, crypto data, NLP, email, file conversion, and more.</p>
+      </div>
+
+      <div class="timeline-step">
+        <h4><span class="step-num">4</span> Update Your API Calls</h4>
+        <p>Replace the RapidAPI proxy URL with the direct Arch Tools endpoint. Swap the headers. The request body format may differ slightly per tool — check the <a href="/docs" style="color:var(--purple);">docs</a> for each tool's schema.</p>
+      </div>
+
+      <div class="timeline-step">
+        <h4><span class="step-num">5</span> Test in the Playground</h4>
+        <p>Every tool has a <a href="/playground" style="color:var(--purple);">live playground</a> where you can send real requests and see real responses before updating your codebase. No surprises.</p>
+      </div>
+    </div>
+
+    <!-- CODE EXAMPLES -->
+    <h2 id="code">Code Examples</h2>
+
+    <h3>Before: RapidAPI (Web Scraping)</h3>
+    <pre><code><span class="comment">// RapidAPI — proxied through their servers</span>
+<span class="del">const response = await fetch(
+  'https://web-scraper-api.p.rapidapi.com/scrape',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+      'X-RapidAPI-Host': 'web-scraper-api.p.rapidapi.com',
+    },
+    body: JSON.stringify({ url: 'https://example.com' }),
+  }
+);
+
+const data = await response.json();
+// Response format varies per API provider on RapidAPI</span></code></pre>
+
+    <h3>After: Arch Tools (Direct REST)</h3>
+    <pre><code><span class="comment">// Arch Tools — direct call, no proxy</span>
+<span class="add">const response = await fetch(
+  'https://archtools.dev/v1/tools/web-scrape',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ARCH_API_KEY,
+    },
+    body: JSON.stringify({
+      url: 'https://example.com',
+      format: 'markdown',
+    }),
+  }
+);
+
+const data = await response.json();
+// { content: "# Example...", word_count: 342, credits_remaining: 9995 }</span></code></pre>
+
+    <h3>Before: RapidAPI (AI Text Generation)</h3>
+    <pre><code><span class="comment">// RapidAPI — find an AI API, subscribe, call through proxy</span>
+<span class="del">const response = await fetch(
+  'https://chatgpt-api.p.rapidapi.com/generate',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+      'X-RapidAPI-Host': 'chatgpt-api.p.rapidapi.com',
+    },
+    body: JSON.stringify({ prompt: 'Summarize the latest AI news' }),
+  }
+);</span></code></pre>
+
+    <h3>After: Arch Tools (AI Generate)</h3>
+    <pre><code><span class="comment">// Arch Tools — same API key, same format, any AI model</span>
+<span class="add">const response = await fetch(
+  'https://archtools.dev/v1/tools/ai-generate',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ARCH_API_KEY,
+    },
+    body: JSON.stringify({
+      prompt: 'Summarize the latest AI news',
+      model: 'claude-3-5-sonnet',
+    }),
+  }
+);
+
+const data = await response.json();
+// { output: "Here's the latest...", model: "claude-3-5-sonnet", credits_remaining: 9990 }</span></code></pre>
+
+    <h3>Autonomous Agent: x402 Flow (No Account Needed)</h3>
+    <pre><code><span class="comment">// AI agents can pay per-call with crypto — impossible on RapidAPI</span>
+<span class="add">// Step 1: Discover pricing
+const pricing = await fetch('https://archtools.dev/.well-known/x402');
+// Returns accepted networks, assets, and costs
+
+// Step 2: Call tool with x402 payment header
+const response = await fetch('https://archtools.dev/v1/tools/web-scrape', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-PAYMENT': constructX402Payment({
+      network: 'base-mainnet',
+      asset: 'USDC',
+      amount: '0.001',
+    }),
+  },
+  body: JSON.stringify({ url: 'https://example.com', format: 'markdown' }),
+});
+
+// Agent pays per-call. No signup. No subscription. No human in the loop.</span></code></pre>
+
+    <h3>MCP Setup (Claude Desktop / Cursor / Windsurf)</h3>
+    <pre><code><span class="comment">// Add to your MCP config — all 58 tools appear instantly</span>
+<span class="add">{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote",
+        "https://arch-tools-mcp.onrender.com/sse"],
+      "env": { "ARCH_API_KEY": "arch_your_key" }
+    }
+  }
+}</span></code></pre>
+
+    <!-- WHAT YOU GAIN -->
+    <h2 id="gain">What You Gain</h2>
+
+    <div class="callout-green callout">
+      <strong>💰 No More Subscription Games</strong><br>
+      On RapidAPI, every API has its own pricing tiers. Free/Pro/Ultra/Mega — each with different rate limits and features. On Arch Tools, it's simple: one credit = one call. Buy credits when you need them. No monthly commitments, no tier lock-in, no surprise overage charges.
+    </div>
+
+    <div class="callout-green callout">
+      <strong>🔧 58 Curated Tools, One API Key</strong><br>
+      No more hunting through a marketplace of 40,000 APIs to find one that actually works and isn't abandoned. Arch Tools maintains 58 reliable tools — AI generation (Claude, GPT-4, Grok, Gemini), web scraping, crypto prices, email, PDF parsing, fact-checking, domain lookup, and more. All behind a single API key.
+    </div>
+
+    <div class="callout-green callout">
+      <strong>🤖 Built for AI Agents</strong><br>
+      RapidAPI requires a human to sign up, enter a credit card, and manage subscriptions. Arch Tools supports x402 — an open payment protocol that lets AI agents pay for API calls autonomously with crypto. No human bottleneck. This is the future of agent-to-service commerce.
+    </div>
+
+    <div class="callout-green callout">
+      <strong>🌐 x402 — The Open Payment Standard</strong><br>
+      Instead of being locked into one marketplace's payment system, x402 is an open standard backed by Coinbase. Pay with USDC, USDT, ETH, SOL, BNB, TAO, or NEAR across 15 blockchain networks. Or just use a credit card through Stripe. Your choice.
+    </div>
+
+    <div class="callout-green callout">
+      <strong>🔓 Open Source, No Lock-In</strong><br>
+      Arch Tools is open source under MIT license. Self-host it. Fork it. Audit the code. If RapidAPI changes its terms or pricing tomorrow, your code still works. With Arch Tools, you're never at the mercy of someone else's business decisions.
+    </div>
+
+    <div class="callout-green callout">
+      <strong>📊 Transparent, Direct Pricing</strong><br>
+      No proxy markup, no hidden platform fees. Every tool's cost is listed on the site. For API providers: you keep 97.5% of revenue vs. RapidAPI's ~80%. The economics are better on both sides.
+    </div>
+
+    <!-- FOR PROVIDERS -->
+    <h2 id="providers">For API Providers: Better Economics</h2>
+
+    <p>If you're an API provider currently listing on RapidAPI, here's why providers are moving to Arch Tools:</p>
+
+    <div style="overflow-x:auto;">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Provider Feature</th>
+          <th>RapidAPI</th>
+          <th>Arch Tools</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature">Revenue Share</td>
+          <td><span class="cross">~80% (RapidAPI takes ~20%)</span></td>
+          <td><span class="check">97.5% (2.5% facilitator fee)</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Payout Speed</td>
+          <td><span class="partial">Monthly (delays reported)</span></td>
+          <td><span class="check">Instant via x402 or standard billing</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Payout Currency</td>
+          <td>USD (PayPal/wire)</td>
+          <td><span class="check">USDC or USD — your choice</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Pricing Control</td>
+          <td><span class="partial">You set tiers, RapidAPI controls presentation</span></td>
+          <td><span class="check">You set per-call price directly</span></td>
+        </tr>
+        <tr>
+          <td class="feature">New Revenue Channel</td>
+          <td>Human developers only</td>
+          <td><span class="check">Human developers + AI agents (x402)</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Marketplace Quality</td>
+          <td><span class="cross">Competing with spam/abandoned APIs</span></td>
+          <td><span class="check">Curated directory — quality over quantity</span></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>Interested in listing your API? <a href="/for-providers">Learn more about becoming an Arch Tools provider →</a></p>
+
+    <!-- FAQ -->
+    <h2 id="faq">Frequently Asked Questions</h2>
+
+    <h3>Does Arch Tools have the same APIs as RapidAPI?</h3>
+    <p>Not exactly. RapidAPI is a marketplace with 40,000+ third-party APIs of varying quality. Arch Tools maintains 58 curated, reliable tools across the most common categories — AI generation, web scraping, crypto, NLP, email, file conversion, and more. If you were using a niche API on RapidAPI, check our <a href="/directory">directory</a> for equivalents. We're growing the catalog based on developer demand.</p>
+
+    <h3>Can I still use a credit card?</h3>
+    <p>Yes. Sign up, buy credits with Stripe (credit/debit card), and use your API key. No crypto required. The x402 payment path is for developers and AI agents who want to pay with crypto — it's an option, not a requirement.</p>
+
+    <h3>What about rate limits?</h3>
+    <p>Arch Tools doesn't have per-tier rate limits like RapidAPI's Free/Pro/Ultra system. Your rate limit is your credit balance. Higher-volume needs? Buy more credits. For x402 payments, there are no rate limits at all — each call is independently paid.</p>
+
+    <h3>Is there an SDK?</h3>
+    <p>You don't need one. It's a standard REST API — <code>fetch()</code> or <code>curl</code> is all you need. For MCP users, install the MCP server config and all 58 tools appear natively in Claude Desktop, Cursor, and Windsurf.</p>
+
+    <h3>What if I need an API that Arch Tools doesn't have?</h3>
+    <p>We accept tool requests. Reach out at <a href="https://x.com/AiArchTools">@AiArchTools</a> on X or check the <a href="/for-providers">provider page</a> if you want to list your own API. Our directory is growing based on real developer needs — not SEO spam.</p>
+
+    <h3>What makes this different from just using the APIs directly?</h3>
+    <p>You could call each API directly — and for some services, you should. Arch Tools adds value when you want: (1) a single API key for multiple tools, (2) x402 crypto payments, (3) MCP integration for AI assistants, (4) a curated directory you can trust, and (5) transparent per-call pricing without managing multiple subscriptions.</p>
+
+    <h3>Is there a free tier?</h3>
+    <p>Yes — every account gets 100 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
+  </article>
+</div>
+
+<div class="wrap">
+  <div class="cta-section">
+    <h2>Ready to leave the middleman behind?</h2>
+    <p>Get your API key, 100 free credits, and access to all 58 tools — in 30 seconds.</p>
+    <a class="btn" href="/#register">$ get-api-key →</a>
+    <a class="btn-ghost" href="/directory">Browse Tools</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>© 2026 Arch Tools</span>
+    <span>
+      <a href="/">Home</a> ·
+      <a href="/blog">Blog</a> ·
+      <a href="/terms.html">Terms</a> ·
+      <a href="/privacy.html">Privacy</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

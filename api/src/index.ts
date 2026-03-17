@@ -286,8 +286,8 @@ app.get("/dashboard", (req: Request, res: Response) => {
 });
 
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
-// /pricing — referenced in Stripe cancel_url and nav links
-app.get("/pricing", (_req: Request, res: Response) => res.redirect("/#pricing"));
+// /pricing — full pricing page
+app.get("/pricing", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
 // /getting-started — convenience redirect to docs sub-path
 app.get("/getting-started", (_req: Request, res: Response) => res.redirect(301, "/docs/getting-started"));
 // /terms — convenience redirect to static terms page
