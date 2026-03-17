@@ -186,8 +186,17 @@ export async function sendVerificationEmail(args: { to: string; verifyUrl: strin
 }
 
 // ─── 2. Welcome Email ───
-export async function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number): Promise<void> {
+export async function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number, referralCode?: string): Promise<void> {
   const subject = "Welcome to Arch Tools — Your API key is ready";
+
+  const referralSection = referralCode ? `
+    <hr class="divider">
+    <h3 style="font-size:16px;font-weight:700;color:#F0EEFF;margin-bottom:8px;">🎁 Share & Earn More Credits</h3>
+    <p>Give friends <strong>500 free credits</strong> when they sign up with your referral code — and you get <strong>500 credits</strong> too!</p>
+    <div class="key-box" style="font-size:16px;text-align:center;letter-spacing:1px;color:#FF9010;">${referralCode}</div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/refer.html" style="background:linear-gradient(135deg,#AA77FF,#FF2896);">Share your referral link →</a></div>
+  ` : "";
+
   const html = layout(subject, `
     <p>You're in. Here's your API key — <strong>copy it now and store it somewhere safe. It cannot be retrieved again.</strong></p>
     <div class="key-warning">Save this key now — it won't be shown again after you close this email.</div>
@@ -197,13 +206,15 @@ export async function sendWelcomeEmail(to: string, agentId: string, apiKey: stri
       <div class="stat"><span>Plan</span>Free</div>
       <div class="stat"><span>Agent ID</span>${agentId.slice(0, 14)}…</div>
     </div>
+    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 38 AI tools — enough to really put Arch Tools through its paces.</p>
     <p>Use your key in any HTTP request:</p>
     <div class="key-box" style="font-size:13px;">x-api-key: ${apiKey.slice(0, 12)}…</div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Read the docs →</a></div>
+    ${referralSection}
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Credits never expire. When you're ready to scale, grab a credit pack at <a href="${SITE}/#pricing">archtools.dev/pricing</a>.</p>
   `);
-  const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\nDocs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
+  const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\n${referralCode ? `Your referral code: ${referralCode}\nShare it and you both get 500 bonus credits!\n\n` : ""}Docs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
   await sendEmail(to, subject, html, text);
 }
 

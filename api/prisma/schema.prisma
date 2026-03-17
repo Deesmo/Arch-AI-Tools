@@ -282,6 +282,24 @@ model FacilitatorFeeRecord {
   @@index([createdAt])
 }
 
+// ─── Referrals ────────────────────────────────────────────────────────────────
+// Track referral codes and rewards between users
+
+model Referral {
+  id             String   @id @default(cuid())
+  referrerId     String   @map("referrer_id")       // Agent who shared the code
+  referredId     String?  @map("referred_id")        // Agent who signed up with the code
+  code           String   @unique                     // e.g. "ARCH-abc123"
+  status         String   @default("pending")         // pending | completed | expired
+  rewardCredits  Int      @default(500) @map("reward_credits")
+  createdAt      DateTime @default(now())
+  completedAt    DateTime? @map("completed_at")
+
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([code])
+}
+
 // ─── Directory Premium Listings ───────────────────────────────────────────────
 // Premium directory listing upgrades (featured / verified tiers)
 
