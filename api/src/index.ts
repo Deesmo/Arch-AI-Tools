@@ -113,8 +113,15 @@ const registerLimiter = rateLimit({
 });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
+const allowedOrigins = Array.isArray(config.corsOrigin) ? config.corsOrigin : [config.corsOrigin];
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin || true);
+    } else {
+      callback(null, false);
+    }
+  },
   credentials: true,
   exposedHeaders: [
     "Payment-Required",
