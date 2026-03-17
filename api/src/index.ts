@@ -304,6 +304,8 @@ app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirn
 app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/playground.html')));
 app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/usage.html')));
+app.get("/status", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/status.html')));
 app.get("/stats", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/stats.html')));
 app.get("/facilitator", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
 

@@ -262,6 +262,8 @@ app.get("/fund", (_req, res) => res.sendFile(path.join(__dirname, '../public/fun
 app.get("/playground", (_req, res) => res.sendFile(path.join(__dirname, '../public/playground.html')));
 app.get("/agents", (_req, res) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req, res) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/usage", (_req, res) => res.sendFile(path.join(__dirname, '../public/usage.html')));
+app.get("/status", (_req, res) => res.sendFile(path.join(__dirname, '../public/status.html')));
 app.get("/stats", (_req, res) => res.sendFile(path.join(__dirname, '../public/stats.html')));
 app.get("/facilitator", (_req, res) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
 // /success — Stripe post-checkout success page

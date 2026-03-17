@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
+import { redis } from "../lib/redis.js";
 import { X402_PRICES } from "../middleware/x402.js";
+import { getStatusPageData } from "../middleware/analytics.js";
+import { config } from "../config.js";
 const router = Router();
 const BASE_URL = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
 const API_BASE = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
@@ -29,18 +32,86 @@ router.get("/.well-known/oauth-protected-resource", (_req, res) => {
         bearer_methods_supported: ["header"],
     });
 });
-// GET /health
+// GET /health — Enhanced health endpoint with dependency status + response time percentiles
 router.get("/health", async (_req, res) => {
+    const startMs = Date.now();
+    // Check DB connection
+    let dbStatus = "error";
+    let dbLatencyMs = 0;
+    let toolCount = 58;
+    let agentCount = 0;
     try {
-        const [toolCount, agentCount] = await Promise.all([
+        const dbStart = Date.now();
+        [toolCount, agentCount] = await Promise.all([
             prisma.tool.count(),
             prisma.agent.count(),
         ]);
-        res.json({ ok: true, service: "arch-tools-api", version: "1.10.0", db: "connected", tools: toolCount || 58, agents: agentCount });
+        dbLatencyMs = Date.now() - dbStart;
+        dbStatus = "connected";
     }
     catch {
-        res.json({ ok: true, service: "arch-tools-api", version: "1.10.0", db: "error" });
+        dbStatus = "error";
     }
+    // Check Redis connection
+    let redisStatus = "not_configured";
+    let redisLatencyMs = 0;
+    if (redis) {
+        try {
+            const redisStart = Date.now();
+            await redis.ping();
+            redisLatencyMs = Date.now() - redisStart;
+            redisStatus = "connected";
+        }
+        catch {
+            redisStatus = "error";
+        }
+    }
+    // Check x402 facilitator reachability (lightweight HEAD/GET with timeout)
+    let facilitatorStatus = "not_configured";
+    let facilitatorLatencyMs = 0;
+    const facilitatorUrl = config.x402.facilitatorUrl;
+    if (facilitatorUrl) {
+        try {
+            const facStart = Date.now();
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            const facRes = await fetch(facilitatorUrl, {
+                method: "GET",
+                signal: controller.signal,
+                headers: { "User-Agent": "ArchTools-HealthCheck/1.0" },
+            });
+            clearTimeout(timeout);
+            facilitatorLatencyMs = Date.now() - facStart;
+            facilitatorStatus = facRes.status < 500 ? "reachable" : "unreachable";
+        }
+        catch {
+            facilitatorStatus = "unreachable";
+        }
+    }
+    // Get response time percentiles from analytics
+    const statusData = getStatusPageData();
+    const overallOk = dbStatus === "connected";
+    const checkMs = Date.now() - startMs;
+    res.status(overallOk ? 200 : 503).json({
+        ok: overallOk,
+        service: "arch-tools-api",
+        version: "1.10.0",
+        uptime_seconds: statusData.uptime_seconds,
+        tools: toolCount || 58,
+        agents: agentCount,
+        dependencies: {
+            database: { status: dbStatus, latency_ms: dbLatencyMs },
+            redis: { status: redisStatus, latency_ms: redisLatencyMs },
+            x402_facilitator: { status: facilitatorStatus, latency_ms: facilitatorLatencyMs, url: facilitatorUrl },
+        },
+        performance: {
+            health_check_ms: checkMs,
+            p50_response_ms: statusData.p50_response_ms,
+            p95_response_ms: statusData.p95_response_ms,
+            p99_response_ms: statusData.p99_response_ms,
+            avg_response_ms: statusData.avg_response_ms,
+        },
+    });
 });
 // GET /.well-known/x402 — x402 discovery (all supported chains)
 router.get("/.well-known/x402", (_req, res) => {

@@ -14,6 +14,11 @@ import {
   getTotalCallsInMemory,
   getRedisAnalytics,
   getToolRedisStats,
+  getActiveAlerts,
+  getAllAlerts,
+  acknowledgeAlert,
+  getAlertStats,
+  getRateLimitViolators,
 } from "../middleware/analytics.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import { reqId, safeErr } from "../utils/credits.js";
@@ -357,6 +362,44 @@ router.get("/realtime", requireAdmin, async (req: Request, res: Response): Promi
     });
   } catch (e) {
     console.error("Analytics realtime error:", e);
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
+// ─── GET /api/v1/analytics/alerts ────────────────────────────────────────────
+// Active usage alerts (rate limit violations, low credits, traffic spikes)
+router.get("/alerts", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const unacknowledgedOnly = _req.query.active !== "false";
+    const limit = parseInt(String(_req.query.limit ?? "50")) || 50;
+    const alerts = unacknowledgedOnly ? getActiveAlerts(limit) : getAllAlerts(limit);
+    const stats = getAlertStats();
+    const violators = getRateLimitViolators();
+
+    res.json({
+      ok: true,
+      alerts,
+      stats,
+      rate_limit_violators: violators,
+      request_id: reqId(),
+    });
+  } catch (e) {
+    console.error("Analytics alerts error:", e);
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
+// ─── POST /api/v1/analytics/alerts/:id/acknowledge ──────────────────────────
+// Acknowledge (dismiss) an alert
+router.post("/alerts/:id/acknowledge", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const success = acknowledgeAlert(String(req.params.id));
+    if (success) {
+      res.json({ ok: true, message: "Alert acknowledged", request_id: reqId() });
+    } else {
+      res.status(404).json({ ok: false, error: "not_found", message: "Alert not found", request_id: reqId() });
+    }
+  } catch (e) {
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });

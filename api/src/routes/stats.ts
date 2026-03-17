@@ -5,6 +5,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { reqId, safeErr } from "../utils/credits.js";
+import { getStatusPageData } from "../middleware/analytics.js";
 
 const router = Router();
 

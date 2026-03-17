@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>System Status — Arch Tools</title>
+  <meta name="description" content="Live system status for Arch Tools — uptime, response times, and platform health.">
+  <link rel="icon" href="/arch-icon.svg?v=2">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#07061A;color:#f0f0f6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 20px}
+
+    .header{text-align:center;max-width:700px;margin-bottom:40px}
+    .header h1{font-size:2.4rem;font-weight:800;margin-bottom:8px}
+    .header h1 span{color:#00e5b0}
+    .header p{color:#8b8ba6;font-size:1rem;line-height:1.6}
+
+    /* Overall Status Banner */
+    .status-banner{max-width:700px;width:100%;border-radius:16px;padding:28px;margin-bottom:32px;text-align:center;border:1px solid}
+    .status-banner.operational{background:rgba(0,229,176,.06);border-color:rgba(0,229,176,.2)}
+    .status-banner.degraded{background:rgba(255,217,61,.06);border-color:rgba(255,217,61,.2)}
+    .status-banner.down{background:rgba(255,77,106,.06);border-color:rgba(255,77,106,.2)}
+    .status-banner .status-icon{font-size:2.4rem;margin-bottom:8px}
+    .status-banner .status-text{font-size:1.4rem;font-weight:700}
+    .status-banner.operational .status-text{color:#00e5b0}
+    .status-banner.degraded .status-text{color:#ffd93d}
+    .status-banner.down .status-text{color:#ff4d6a}
+    .status-banner .status-sub{color:#8b8ba6;font-size:13px;margin-top:4px}
+
+    /* Component Status */
+    .components{max-width:700px;width:100%;margin-bottom:32px}
+    .component{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;transition:border-color .2s}
+    .component:hover{border-color:rgba(255,255,255,.12)}
+    .component-name{font-size:14px;font-weight:500}
+    .component-name .sub{display:block;font-size:11px;color:#6b6b86;margin-top:2px}
+    .component-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+    .dot.green{background:#00e5b0}
+    .dot.yellow{background:#ffd93d}
+    .dot.red{background:#ff4d6a}
+    .dot.gray{background:#4a4a5a}
+    .latency{color:#6b6b86;font-size:12px}
+
+    /* Stats Grid */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;max-width:700px;width:100%;margin-bottom:32px}
+    .stat-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px;text-align:center;transition:border-color .2s}
+    .stat-card:hover{border-color:rgba(0,229,176,.15)}
+    .stat-value{font-size:2rem;font-weight:800;color:#f0f0f6;margin-bottom:4px}
+    .stat-value.green{color:#00e5b0}
+    .stat-label{font-size:12px;color:#8b8ba6;text-transform:uppercase;letter-spacing:.5px}
+
+    /* Performance */
+    .perf-section{max-width:700px;width:100%;margin-bottom:32px}
+    .perf-title{font-size:14px;color:#8b8ba6;font-weight:500;margin-bottom:12px}
+    .perf-bars{display:flex;gap:12px;flex-wrap:wrap}
+    .perf-bar{flex:1;min-width:140px;background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center}
+    .perf-bar .perf-label{font-size:11px;color:#6b6b86;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .perf-bar .perf-value{font-size:1.6rem;font-weight:700;color:#00e5b0}
+    .perf-bar .perf-unit{font-size:11px;color:#8b8ba6}
+
+    /* Footer */
+    .footer{max-width:700px;width:100%;text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+    .footer p{color:#6b6b86;font-size:12px}
+    .footer a{color:#00e5b0;text-decoration:none}
+    .footer a:hover{text-decoration:underline}
+
+    .loading{color:#8b8ba6;font-size:14px;text-align:center;padding:40px}
+
+    @media(max-width:600px){
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .perf-bars{flex-direction:column}
+      body{padding:32px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ System <span>Status</span></h1>
+  <p>Real-time platform health for Arch Tools</p>
+</div>
+
+<!-- Overall Status -->
+<div class="status-banner operational" id="statusBanner">
+  <div class="status-icon" id="statusIcon">✅</div>
+  <div class="status-text" id="statusText">Loading...</div>
+  <div class="status-sub" id="statusSub">Checking systems...</div>
+</div>
+
+<!-- Component Status -->
+<div class="components" id="components">
+  <div class="loading">Loading component status...</div>
+</div>
+
+<!-- Key Stats -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-card"><div class="stat-value" id="statUptime">—</div><div class="stat-label">Uptime</div></div>
+  <div class="stat-card"><div class="stat-value" id="statCalls24h">—</div><div class="stat-label">Calls (24h)</div></div>
+  <div class="stat-card"><div class="stat-value" id="statAgents">—</div><div class="stat-label">Unique Agents (24h)</div></div>
+  <div class="stat-card"><div class="stat-value green" id="statEndpoints">—</div><div class="stat-label">Active Endpoints</div></div>
+</div>
+
+<!-- Response Time Percentiles -->
+<div class="perf-section">
+  <div class="perf-title">Response Time Percentiles</div>
+  <div class="perf-bars">
+    <div class="perf-bar"><div class="perf-label">Average</div><div class="perf-value" id="perfAvg">—</div><div class="perf-unit">ms</div></div>
+    <div class="perf-bar"><div class="perf-label">p50 (median)</div><div class="perf-value" id="perfP50">—</div><div class="perf-unit">ms</div></div>
+    <div class="perf-bar"><div class="perf-label">p95</div><div class="perf-value" id="perfP95">—</div><div class="perf-unit">ms</div></div>
+    <div class="perf-bar"><div class="perf-label">p99</div><div class="perf-value" id="perfP99">—</div><div class="perf-unit">ms</div></div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>Auto-refreshes every 30 seconds · <a href="/">Arch Tools</a> · <a href="/docs">API Docs</a> · <a href="/stats">Platform Stats</a></p>
+  <p style="margin-top:8px" id="lastChecked">Last checked: —</p>
+</div>
+
+<script>
+async function loadStatus() {
+  try {
+    const res = await fetch('/health');
+    const data = await res.json();
+    renderStatus(data);
+    document.getElementById('lastChecked').textContent = 'Last checked: ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    renderDown();
+  }
+}
+
+function renderStatus(data) {
+  const banner = document.getElementById('statusBanner');
+  const deps = data.dependencies || {};
+  const allOk = data.ok && deps.database?.status === 'connected';
+  const degraded = data.ok && (deps.redis?.status === 'error' || deps.x402_facilitator?.status === 'unreachable');
+
+  // Overall status
+  if (!data.ok) {
+    banner.className = 'status-banner down';
+    document.getElementById('statusIcon').textContent = '🔴';
+    document.getElementById('statusText').textContent = 'Service Disruption';
+    document.getElementById('statusSub').textContent = 'Some systems are experiencing issues';
+  } else if (degraded) {
+    banner.className = 'status-banner degraded';
+    document.getElementById('statusIcon').textContent = '🟡';
+    document.getElementById('statusText').textContent = 'Partial Degradation';
+    document.getElementById('statusSub').textContent = 'Core services operational, some dependencies degraded';
+  } else {
+    banner.className = 'status-banner operational';
+    document.getElementById('statusIcon').textContent = '✅';
+    document.getElementById('statusText').textContent = 'All Systems Operational';
+    document.getElementById('statusSub').textContent = 'All services running normally';
+  }
+
+  // Components
+  const components = [
+    { name: 'API Server', sub: `v${data.version || '1.10.0'} · ${data.tools || 58} tools`, status: data.ok ? 'operational' : 'down', latency: data.performance?.health_check_ms },
+    { name: 'Database (PostgreSQL)', sub: `${data.agents || 0} agents registered`, status: deps.database?.status === 'connected' ? 'operational' : 'down', latency: deps.database?.latency_ms },
+    { name: 'Redis Cache', sub: 'Rate limiting & real-time counters', status: deps.redis?.status === 'connected' ? 'operational' : deps.redis?.status === 'not_configured' ? 'not_configured' : 'degraded', latency: deps.redis?.latency_ms },
+    { name: 'x402 Facilitator', sub: 'Coinbase USDC payment processing', status: deps.x402_facilitator?.status === 'reachable' ? 'operational' : deps.x402_facilitator?.status === 'not_configured' ? 'not_configured' : 'degraded', latency: deps.x402_facilitator?.latency_ms },
+  ];
+
+  const compEl = document.getElementById('components');
+  compEl.innerHTML = components.map(c => {
+    const dotClass = c.status === 'operational' ? 'green' : c.status === 'degraded' ? 'yellow' : c.status === 'not_configured' ? 'gray' : 'red';
+    const statusLabel = c.status === 'operational' ? 'Operational' : c.status === 'degraded' ? 'Degraded' : c.status === 'not_configured' ? 'Not Configured' : 'Down';
+    const latencyStr = c.latency != null ? `${c.latency}ms` : '';
+    return `
+      <div class="component">
+        <div class="component-name">${c.name}<span class="sub">${c.sub}</span></div>
+        <div class="component-status">
+          <span class="latency">${latencyStr}</span>
+          <span class="dot ${dotClass}"></span>
+          ${statusLabel}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Stats
+  const perf = data.performance || {};
+  const upSec = data.uptime_seconds || 0;
+  const days = Math.floor(upSec / 86400);
+  const hours = Math.floor((upSec % 86400) / 3600);
+  document.getElementById('statUptime').textContent = days > 0 ? `${days}d ${hours}h` : `${hours}h ${Math.floor((upSec % 3600) / 60)}m`;
+
+  // Fetch public stats for 24h data
+  fetch('/api/v1/stats').then(r => r.json()).then(stats => {
+    if (stats.ok) {
+      document.getElementById('statCalls24h').textContent = fmt(stats.stats.total_api_calls);
+      document.getElementById('statAgents').textContent = fmt(stats.stats.total_agents);
+      document.getElementById('statEndpoints').textContent = stats.stats.total_tools || '58';
+    }
+  }).catch(() => {});
+
+  // Performance
+  document.getElementById('perfAvg').textContent = perf.avg_response_ms ?? '—';
+  document.getElementById('perfP50').textContent = perf.p50_response_ms ?? '—';
+  document.getElementById('perfP95').textContent = perf.p95_response_ms ?? '—';
+  document.getElementById('perfP99').textContent = perf.p99_response_ms ?? '—';
+}
+
+function renderDown() {
+  const banner = document.getElementById('statusBanner');
+  banner.className = 'status-banner down';
+  document.getElementById('statusIcon').textContent = '🔴';
+  document.getElementById('statusText').textContent = 'Service Unreachable';
+  document.getElementById('statusSub').textContent = 'Unable to reach the API server';
+  document.getElementById('components').innerHTML = '<div class="component"><div class="component-name">API Server</div><div class="component-status"><span class="dot red"></span>Unreachable</div></div>';
+}
+
+function fmt(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+// Load immediately, then every 30s
+loadStatus();
+setInterval(loadStatus, 30000);
+</script>
+</body>
+</html>

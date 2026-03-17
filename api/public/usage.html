@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Usage Dashboard — Arch Tools</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" href="/arch-icon.svg?v=2">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#07061A;color:#f0f0f6;min-height:100vh}
+
+    /* Auth Gate */
+    .auth-gate{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+    .auth-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:40px;max-width:400px;width:100%;text-align:center}
+    .auth-card h2{margin-bottom:20px;font-size:1.5rem;color:#00e5b0}
+    .auth-card input{width:100%;padding:12px 16px;background:#12121e;border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#f0f0f6;font-size:14px;margin-bottom:16px}
+    .auth-card button{width:100%;padding:12px;background:#00e5b0;color:#07061A;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+    .auth-card button:hover{background:#00c89d}
+    .auth-error{color:#ff4d6a;font-size:13px;margin-bottom:12px;display:none}
+
+    /* Dashboard */
+    .dashboard{display:none;max-width:1400px;margin:0 auto;padding:24px}
+    .dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+    .dash-header h1{font-size:1.8rem;font-weight:700}
+    .dash-header h1 span{color:#00e5b0}
+    .header-actions{display:flex;gap:8px;align-items:center}
+    .btn{background:#12121e;border:1px solid rgba(255,255,255,.12);color:#8b8ba6;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;transition:all .2s}
+    .btn:hover{color:#f0f0f6;border-color:#00e5b0}
+    .btn-primary{background:#00e5b0;color:#07061A;border-color:#00e5b0;font-weight:600}
+    .btn-primary:hover{background:#00c89d}
+
+    /* Alert Banner */
+    .alert-banner{background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.3);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:none;align-items:center;gap:12px}
+    .alert-banner.show{display:flex}
+    .alert-banner .alert-icon{font-size:1.4rem}
+    .alert-banner .alert-text{flex:1;font-size:14px;color:#ff8fa3}
+    .alert-banner .alert-count{background:#ff4d6a;color:white;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700}
+
+    /* KPI Cards */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+    .stat-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px;transition:border-color .2s}
+    .stat-card:hover{border-color:rgba(0,229,176,.15)}
+    .stat-card .label{font-size:11px;color:#8b8ba6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .stat-card .value{font-size:1.8rem;font-weight:700;color:#f0f0f6}
+    .stat-card .value.green{color:#00e5b0}
+    .stat-card .value.red{color:#ff4d6a}
+    .stat-card .sub{font-size:11px;color:#6b6b86;margin-top:4px}
+
+    /* Sections */
+    .section{margin-bottom:28px}
+    .section-title{font-size:16px;color:#8b8ba6;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .section-title .icon{font-size:18px}
+
+    /* Charts */
+    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin-bottom:24px}
+    .chart-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px}
+    .chart-card h3{font-size:13px;color:#8b8ba6;margin-bottom:14px;font-weight:500}
+    .chart-card canvas{width:100%!important;max-height:280px}
+
+    /* Tables */
+    .table-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px;overflow-x:auto}
+    .table-card h3{font-size:13px;color:#8b8ba6;margin-bottom:14px;font-weight:500}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:8px 12px;color:#8b8ba6;font-weight:500;border-bottom:1px solid rgba(255,255,255,.06)}
+    td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+    tr:hover td{background:rgba(0,229,176,.03)}
+    .mono{font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:#00e5b0}
+
+    /* Badges */
+    .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+    .badge-critical{background:rgba(255,77,106,.15);color:#ff4d6a}
+    .badge-warning{background:rgba(255,217,61,.15);color:#ffd93d}
+    .badge-ok{background:rgba(0,229,176,.15);color:#00e5b0}
+    .badge-rate-limit{background:rgba(255,77,106,.15);color:#ff4d6a}
+    .badge-low-credits{background:rgba(255,217,61,.15);color:#ffd93d}
+    .badge-traffic-spike{background:rgba(108,99,255,.15);color:#6c63ff}
+
+    /* Alert List */
+    .alert-item{background:#0f0f1e;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+    .alert-item.critical{border-left:3px solid #ff4d6a}
+    .alert-item.warning{border-left:3px solid #ffd93d}
+    .alert-meta{flex:1}
+    .alert-meta .alert-msg{font-size:13px;margin-bottom:4px}
+    .alert-meta .alert-time{font-size:11px;color:#6b6b86}
+    .alert-ack{background:none;border:1px solid rgba(255,255,255,.1);color:#8b8ba6;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px}
+    .alert-ack:hover{color:#00e5b0;border-color:#00e5b0}
+
+    /* Nav back */
+    .nav-back{display:inline-flex;align-items:center;gap:6px;color:#8b8ba6;text-decoration:none;font-size:13px;margin-bottom:16px}
+    .nav-back:hover{color:#00e5b0}
+
+    @media(max-width:768px){
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .charts-grid{grid-template-columns:1fr}
+      .dashboard{padding:16px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Auth Gate -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-card">
+    <h2>📊 Usage Dashboard</h2>
+    <p style="color:#8b8ba6;margin-bottom:20px;font-size:14px">Rate limits, alerts, and usage monitoring</p>
+    <div class="auth-error" id="authError">Invalid admin key</div>
+    <input type="password" id="adminKeyInput" placeholder="Admin API Key" autocomplete="off">
+    <button onclick="authenticate()">Access Dashboard</button>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+  <a href="/analytics" class="nav-back">← Back to Analytics</a>
+
+  <div class="dash-header">
+    <h1>📊 Usage <span>Monitoring</span></h1>
+    <div class="header-actions">
+      <span id="lastUpdate" style="font-size:12px;color:#6b6b86"></span>
+      <button class="btn" onclick="loadAll()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Alert Banner -->
+  <div class="alert-banner" id="alertBanner">
+    <span class="alert-icon">⚠️</span>
+    <span class="alert-text" id="alertBannerText">You have unacknowledged alerts</span>
+    <span class="alert-count" id="alertBannerCount">0</span>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Calls (24h)</div><div class="value" id="kpiCalls24h">—</div></div>
+    <div class="stat-card"><div class="label">Unique Agents (24h)</div><div class="value" id="kpiAgents24h">—</div></div>
+    <div class="stat-card"><div class="label">Avg Response</div><div class="value" id="kpiAvgMs">—</div></div>
+    <div class="stat-card"><div class="label">Error Rate</div><div class="value" id="kpiErrorRate">—</div></div>
+    <div class="stat-card"><div class="label">Rate Limit Violators</div><div class="value red" id="kpiViolators">—</div></div>
+    <div class="stat-card"><div class="label">Active Alerts</div><div class="value red" id="kpiAlerts">—</div></div>
+  </div>
+
+  <!-- Usage Alerts Section -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🚨</span> Usage Alerts</div>
+    <div id="alertsList">
+      <p style="color:#6b6b86;font-size:13px">Loading alerts...</p>
+    </div>
+  </div>
+
+  <!-- Per-Agent Usage Charts -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📈</span> Agent Usage Patterns</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Top Endpoints by Traffic (24h)</h3>
+        <canvas id="topEndpointsChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Rate Limit Violations</h3>
+        <canvas id="rateLimitChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Trend -->
+  <div class="section">
+    <div class="section-title"><span class="icon">💰</span> Revenue Trend</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Daily Revenue (30d)</h3>
+        <canvas id="revenueTrendChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Agent Usage Distribution</h3>
+        <canvas id="agentDistChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rate Limit Violators Table -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🛑</span> Rate Limit Violators (Last Hour)</div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Agent</th><th>Hits (1hr)</th><th>Status</th></tr></thead>
+        <tbody id="violatorsBody"><tr><td colspan="3" style="color:#6b6b86">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let ADMIN_KEY = '';
+let charts = {};
+let refreshTimer = null;
+
+function authenticate() {
+  ADMIN_KEY = document.getElementById('adminKeyInput').value.trim();
+  if (!ADMIN_KEY) return;
+  fetch('/api/v1/analytics/overview', { headers: { 'x-admin-key': ADMIN_KEY } })
+    .then(r => {
+      if (r.ok) {
+        document.getElementById('authGate').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        loadAll();
+        refreshTimer = setInterval(loadAll, 30000);
+      } else {
+        document.getElementById('authError').style.display = 'block';
+      }
+    })
+    .catch(() => document.getElementById('authError').style.display = 'block');
+}
+
+document.getElementById('adminKeyInput').addEventListener('keydown', e => { if (e.key === 'Enter') authenticate(); });
+
+function apiGet(path) {
+  return fetch(path, { headers: { 'x-admin-key': ADMIN_KEY } }).then(r => r.json());
+}
+
+function fmt(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+async function loadAll() {
+  document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  try {
+    const [alerts, realtime, revenue, agents, overview] = await Promise.all([
+      apiGet('/api/v1/analytics/alerts'),
+      apiGet('/api/v1/analytics/realtime?minutes=1440'),
+      apiGet('/api/v1/analytics/revenue?period=30d'),
+      apiGet('/api/v1/analytics/agents'),
+      apiGet('/api/v1/analytics/overview'),
+    ]);
+    renderKPIs(realtime, alerts);
+    renderAlerts(alerts);
+    renderEndpointsChart(realtime);
+    renderRateLimitChart(alerts);
+    renderRevenueTrend(revenue);
+    renderAgentDist(agents);
+    renderViolators(alerts);
+  } catch (e) {
+    console.error('Load error:', e);
+  }
+}
+
+function renderKPIs(realtime, alerts) {
+  if (realtime.ok) {
+    document.getElementById('kpiCalls24h').textContent = fmt(realtime.total_calls);
+    document.getElementById('kpiAvgMs').textContent = realtime.avg_response_ms + 'ms';
+    document.getElementById('kpiErrorRate').textContent = realtime.error_rate + '%';
+  }
+  if (alerts.ok) {
+    const unack = alerts.stats?.unacknowledged ?? 0;
+    document.getElementById('kpiAlerts').textContent = unack;
+    document.getElementById('kpiViolators').textContent = (alerts.rate_limit_violators || []).length;
+    document.getElementById('kpiAgents24h').textContent = fmt(
+      new Set((alerts.alerts || []).map(a => a.agentId)).size
+    );
+
+    // Alert banner
+    const banner = document.getElementById('alertBanner');
+    if (unack > 0) {
+      banner.classList.add('show');
+      document.getElementById('alertBannerText').textContent = 
+        `${unack} unacknowledged alert${unack > 1 ? 's' : ''} requiring attention`;
+      document.getElementById('alertBannerCount').textContent = unack;
+    } else {
+      banner.classList.remove('show');
+    }
+  }
+}
+
+function renderAlerts(data) {
+  if (!data.ok) return;
+  const list = document.getElementById('alertsList');
+  const alerts = data.alerts || [];
+
+  if (alerts.length === 0) {
+    list.innerHTML = '<p style="color:#00e5b0;font-size:13px">✅ No active alerts — all systems nominal</p>';
+    return;
+  }
+
+  list.innerHTML = alerts.map(a => {
+    const badgeClass = a.type === 'rate_limit_repeat' ? 'badge-rate-limit' : 
+                       a.type === 'low_credits' ? 'badge-low-credits' : 'badge-traffic-spike';
+    const typeLabel = a.type === 'rate_limit_repeat' ? 'Rate Limit' :
+                      a.type === 'low_credits' ? 'Low Credits' : 'Traffic Spike';
+    const time = new Date(a.timestamp).toLocaleString();
+    return `
+      <div class="alert-item ${a.severity}">
+        <span class="badge ${badgeClass}">${typeLabel}</span>
+        <div class="alert-meta">
+          <div class="alert-msg">${a.message}</div>
+          <div class="alert-time">${time} · ${a.severity}</div>
+        </div>
+        ${!a.acknowledged ? `<button class="alert-ack" onclick="ackAlert('${a.id}')">Dismiss</button>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function ackAlert(id) {
+  await fetch(`/api/v1/analytics/alerts/${id}/acknowledge`, {
+    method: 'POST',
+    headers: { 'x-admin-key': ADMIN_KEY },
+  });
+  loadAll();
+}
+
+function renderEndpointsChart(data) {
+  if (!data.ok) return;
+  const tools = (data.tools || []).slice(0, 10);
+  destroyChart('topEndpointsChart');
+  const ctx = document.getElementById('topEndpointsChart');
+  if (!ctx) return;
+  charts['topEndpointsChart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: tools.map(t => t.tool),
+      datasets: [{ data: tools.map(t => t.calls), backgroundColor: '#00e5b040', borderColor: '#00e5b0', borderWidth: 1 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b8ba6' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#8b8ba6', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderRateLimitChart(data) {
+  if (!data.ok) return;
+  const violators = (data.rate_limit_violators || []).slice(0, 8);
+  destroyChart('rateLimitChart');
+  const ctx = document.getElementById('rateLimitChart');
+  if (!ctx) return;
+
+  if (violators.length === 0) {
+    ctx.parentElement.querySelector('h3').textContent = 'Rate Limit Violations — None Active ✅';
+    return;
+  }
+
+  charts['rateLimitChart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: violators.map(v => v.agentId.slice(0, 8) + '...'),
+      datasets: [{ data: violators.map(v => v.hits), backgroundColor: '#ff4d6a40', borderColor: '#ff4d6a', borderWidth: 1 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b8ba6', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#8b8ba6' }, grid: { color: 'rgba(255,255,255,.04)' }, title: { display: true, text: 'Hits/hr', color: '#6b6b86', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderRevenueTrend(data) {
+  if (!data.ok) return;
+  const byDay = data.x402?.by_day || [];
+  const stripeByDay = data.stripe?.by_day || [];
+
+  // Merge dates
+  const dateSet = new Set([...byDay.map(d => d.date), ...stripeByDay.map(d => d.date)]);
+  const dates = [...dateSet].sort();
+  const x402Map = Object.fromEntries(byDay.map(d => [d.date, d.amount_usdc]));
+  const stripeMap = Object.fromEntries(stripeByDay.map(d => [d.date, d.amount_usd]));
+
+  destroyChart('revenueTrendChart');
+  const ctx = document.getElementById('revenueTrendChart');
+  if (!ctx) return;
+  charts['revenueTrendChart'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [
+        { label: 'x402 USDC', data: dates.map(d => x402Map[d] || 0), borderColor: '#00e5b0', backgroundColor: '#00e5b020', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Stripe USD', data: dates.map(d => stripeMap[d] || 0), borderColor: '#6c63ff', backgroundColor: '#6c63ff20', fill: true, tension: 0.3, pointRadius: 2 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b8ba6', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#8b8ba6' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#8b8ba6', callback: v => '$' + v }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+}
+
+function renderAgentDist(data) {
+  if (!data.ok) return;
+  const agents = (data.agents || []).slice(0, 10);
+  destroyChart('agentDistChart');
+  const ctx = document.getElementById('agentDistChart');
+  if (!ctx) return;
+  const colors = ['#00e5b0','#6c63ff','#ff4d6a','#ffd93d','#4dc9f6','#f67019','#537bc4','#acc236','#166a8f','#00a950'];
+  charts['agentDistChart'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: agents.map(a => a.agent_id_short),
+      datasets: [{ data: agents.map(a => a.total_calls), backgroundColor: colors.slice(0, agents.length), borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: '#8b8ba6', font: { size: 10 }, padding: 6 } } }
+    }
+  });
+}
+
+function renderViolators(data) {
+  if (!data.ok) return;
+  const violators = data.rate_limit_violators || [];
+  const tbody = document.getElementById('violatorsBody');
+  if (violators.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#00e5b0">✅ No rate limit violators in the last hour</td></tr>';
+    return;
+  }
+  tbody.innerHTML = violators.map(v => `
+    <tr>
+      <td class="mono">${v.agentId.slice(0, 12)}...</td>
+      <td><span style="color:#ff4d6a;font-weight:700">${v.hits}</span></td>
+      <td><span class="badge ${v.hits >= 10 ? 'badge-critical' : 'badge-warning'}">${v.hits >= 10 ? 'Critical' : 'Warning'}</span></td>
+    </tr>`).join('');
+}
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+</script>
+</body>
+</html>
