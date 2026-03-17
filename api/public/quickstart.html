@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Quick-Start Code Generator — Arch Tools</title>
+  <meta name="description" content="Generate ready-to-run code snippets for any Arch Tools API endpoint in Python, Node.js, or curl. Copy, paste, and ship.">
+  <meta property="og:title" content="Quick-Start Code Generator — Arch Tools">
+  <meta property="og:description" content="Generate working code snippets for 61 AI tools in seconds.">
+  <meta property="og:url" content="https://archtools.dev/quickstart">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <link rel="canonical" href="https://archtools.dev/quickstart">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;--border:#1C1A3A;--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;--red:#ef4444;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:960px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+      --grad:linear-gradient(135deg,#FF9010,#FF2896 50%,#8844FF);
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.12) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.08) 0%,transparent 55%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);}
+    .nav-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo-mark{width:32px;height:32px;flex-shrink:0;}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;}
+    .hamburger svg{width:24px;height:24px;stroke:var(--text);stroke-width:2;stroke-linecap:round;}
+    .mobile-menu{display:none;flex-direction:column;gap:6px;padding:12px 24px 16px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.97);}
+    .mobile-menu a{color:var(--muted);text-decoration:none;font-size:14px;font-family:var(--mono);padding:8px 0;}
+    .mobile-menu.open{display:flex;}
+    @media(max-width:768px){.nav-links{display:none!important;}.hamburger{display:block;}.nav-inner{padding:0 20px;}}
+
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:768px){.wrap{padding:0 20px;}}
+
+    .hero{text-align:center;padding:48px 0 12px;}
+    .hero h1{font-family:var(--display);font-size:clamp(28px,4vw,42px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;}
+    .grad{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{color:var(--muted);font-size:15px;max-width:480px;margin:0 auto;}
+
+    /* CONFIG PANEL */
+    .config{
+      display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;
+      margin:36px 0 24px;
+    }
+    @media(max-width:640px){.config{grid-template-columns:1fr;}}
+    .config-group label{font-family:var(--mono);font-size:11px;color:var(--dimmer);letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:8px;}
+    .config-group select{
+      width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border2);
+      border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:13px;
+      color:var(--text);appearance:none;cursor:pointer;outline:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%238A85B0' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 14px center;
+      transition:border-color 0.2s;
+    }
+    .config-group select:focus{border-color:var(--purple);}
+    .config-group select option{background:var(--bg);color:var(--text);}
+
+    /* LANG TABS */
+    .lang-tabs{display:flex;gap:6px;margin-bottom:0;}
+    .lang-tab{
+      font-family:var(--mono);font-size:12px;padding:8px 16px;border-radius:8px 8px 0 0;
+      cursor:pointer;color:var(--dimmer);border:1px solid transparent;
+      border-bottom:none;transition:all 0.15s;background:none;
+    }
+    .lang-tab.active{background:rgba(136,68,255,0.12);border-color:var(--border2);border-bottom-color:transparent;color:var(--indigo2);}
+    .lang-tab:hover:not(.active){color:var(--muted);}
+
+    /* CODE OUTPUT */
+    .code-output{
+      border:1px solid var(--border2);border-radius:0 16px 16px 16px;
+      background:rgba(0,0,0,0.5);overflow:hidden;position:relative;min-height:200px;
+    }
+    .code-output pre{
+      padding:24px;font-family:var(--mono);font-size:12.5px;
+      color:rgba(255,255,255,0.72);line-height:1.85;overflow-x:auto;white-space:pre;
+      min-height:180px;
+    }
+    .code-actions{
+      position:absolute;top:12px;right:12px;display:flex;gap:8px;
+    }
+    .code-btn{
+      background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.4);padding:6px 14px;border-radius:8px;
+      font-size:11px;font-weight:600;cursor:pointer;font-family:var(--mono);
+      transition:all 0.15s;text-decoration:none;display:inline-flex;align-items:center;gap:4px;
+    }
+    .code-btn:hover{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);}
+    .code-btn.copied{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:var(--green);}
+    .code-btn.playground{background:rgba(136,68,255,0.1);border-color:rgba(136,68,255,0.25);color:var(--indigo2);}
+    .code-btn.playground:hover{background:rgba(136,68,255,0.2);}
+
+    /* RESPONSE PREVIEW */
+    .response-section{margin-top:24px;}
+    .response-section h3{font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+    .response-block{
+      border:1px solid rgba(52,211,153,0.2);border-radius:12px;
+      background:rgba(52,211,153,0.03);overflow:hidden;
+    }
+    .response-header{
+      font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:1px;
+      text-transform:uppercase;padding:12px 18px;border-bottom:1px solid rgba(52,211,153,0.1);
+      display:flex;align-items:center;gap:6px;
+    }
+    .response-block pre{padding:18px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,0.6);line-height:1.7;overflow-x:auto;}
+
+    /* TOOL INFO */
+    .tool-info{
+      display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;
+      margin:24px 0;
+    }
+    .info-card{
+      border:1px solid var(--border);border-radius:12px;padding:16px;
+      background:rgba(255,255,255,0.02);text-align:center;
+    }
+    .info-val{font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px;}
+    .info-lbl{font-family:var(--mono);font-size:10px;color:var(--dimmer);text-transform:uppercase;letter-spacing:0.5px;}
+    @media(max-width:640px){.tool-info{grid-template-columns:1fr;}}
+
+    footer{border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:64px;}
+    footer a{color:rgba(255,255,255,0.45);text-decoration:none;}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="/">
+        <svg class="logo-mark" viewBox="0 10 100 90" overflow="visible"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+        Arch Tools
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/docs">Docs</a>
+        <a href="/playground">Playground</a>
+        <a href="/getting-started">Get Started</a>
+        <a href="/signup" class="nav-cta">Get API Key</a>
+      </div>
+      <button class="hamburger" onclick="document.querySelector('.mobile-menu').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div class="mobile-menu">
+      <a href="/">Home</a><a href="/docs">Docs</a><a href="/playground">Playground</a>
+      <a href="/getting-started">Get Started</a><a href="/signup" style="color:var(--amber);">Get API Key →</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div class="hero">
+      <h1>Quick-Start <span class="grad">Code Generator</span></h1>
+      <p>Pick a language, tool, and use case — get a complete, working code snippet you can copy and run.</p>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="config">
+      <div class="config-group">
+        <label>Language</label>
+        <select id="langSelect" onchange="generateCode()">
+          <option value="curl">curl</option>
+          <option value="python" selected>Python</option>
+          <option value="node">Node.js</option>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>Tool</label>
+        <select id="toolSelect" onchange="generateCode()">
+          <optgroup label="Popular">
+            <option value="search-web" selected>search-web (5 cr)</option>
+            <option value="ai-generate">ai-generate (20 cr)</option>
+            <option value="ai-oracle">ai-oracle (25 cr)</option>
+            <option value="summarize">summarize (10 cr)</option>
+            <option value="web-scrape">web-scrape (5 cr)</option>
+          </optgroup>
+          <optgroup label="AI & ML">
+            <option value="sentiment-analysis">sentiment-analysis (8 cr)</option>
+            <option value="fact-check">fact-check (10 cr)</option>
+            <option value="research-report">research-report (15 cr)</option>
+            <option value="extract-entities">extract-entities (8 cr)</option>
+            <option value="language-detect">language-detect (3 cr)</option>
+            <option value="image-generate">image-generate (15 cr)</option>
+            <option value="semantic-search">semantic-search (8 cr)</option>
+          </optgroup>
+          <optgroup label="Web & Search">
+            <option value="web-search">web-search (10 cr)</option>
+            <option value="extract-page">extract-page (5 cr)</option>
+            <option value="screenshot-capture">screenshot-capture (10 cr)</option>
+            <option value="news-search">news-search (3 cr)</option>
+            <option value="html-to-markdown">html-to-markdown (2 cr)</option>
+          </optgroup>
+          <optgroup label="Crypto">
+            <option value="crypto-price">crypto-price (1 cr)</option>
+            <option value="crypto-sentiment">crypto-sentiment (2 cr)</option>
+            <option value="crypto-news">crypto-news (2 cr)</option>
+            <option value="crypto-fear-greed">crypto-fear-greed (1 cr)</option>
+          </optgroup>
+          <optgroup label="Media">
+            <option value="text-to-speech">text-to-speech (5 cr)</option>
+            <option value="transcribe-audio">transcribe-audio (8 cr)</option>
+            <option value="ocr-extract">ocr-extract (10 cr)</option>
+          </optgroup>
+          <optgroup label="Data & Utility">
+            <option value="qr-code">qr-code (2 cr)</option>
+            <option value="currency-convert">currency-convert (2 cr)</option>
+            <option value="email-verify">email-verify (3 cr)</option>
+            <option value="whois-lookup">whois-lookup (3 cr)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="config-group">
+        <label>Use Case</label>
+        <select id="useCaseSelect" onchange="generateCode()">
+          <option value="basic">Basic call</option>
+          <option value="error-handling">With error handling</option>
+          <option value="async">Async / batch</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TOOL INFO CARDS -->
+    <div class="tool-info" id="toolInfo">
+      <div class="info-card">
+        <div class="info-val" id="infoCredits" style="color:var(--green);">5</div>
+        <div class="info-lbl">Credits / Call</div>
+      </div>
+      <div class="info-card">
+        <div class="info-val" id="infoMethod" style="color:var(--cyan);">POST</div>
+        <div class="info-lbl">Method</div>
+      </div>
+      <div class="info-card">
+        <div class="info-val" id="infoCategory" style="color:var(--indigo2);">Web</div>
+        <div class="info-lbl">Category</div>
+      </div>
+    </div>
+
+    <!-- CODE OUTPUT -->
+    <div>
+      <div class="lang-tabs">
+        <div class="lang-tab active" data-lang="python" onclick="switchLang('python')">Python</div>
+        <div class="lang-tab" data-lang="node" onclick="switchLang('node')">Node.js</div>
+        <div class="lang-tab" data-lang="curl" onclick="switchLang('curl')">curl</div>
+      </div>
+      <div class="code-output">
+        <div class="code-actions">
+          <button class="code-btn" id="copyBtn" onclick="copyCode()">Copy</button>
+          <a class="code-btn playground" href="/playground" id="playgroundLink">▶ Run in Playground</a>
+        </div>
+        <pre id="codeOutput"></pre>
+      </div>
+    </div>
+
+    <!-- RESPONSE PREVIEW -->
+    <div class="response-section">
+      <h3><span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span> Example Response</h3>
+      <div class="response-block">
+        <div class="response-header"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span> 200 OK</div>
+        <pre id="responseOutput"></pre>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      © 2026 MCMetaverse LLC · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/docs">Docs</a>
+    </div>
+  </footer>
+
+  <script>
+    const TOOLS = {
+      'search-web': {
+        credits: 5, category: 'Web', method: 'POST',
+        body: { query: 'latest AI news', num_results: 3 },
+        response: { results: [{ title: 'OpenAI Launches GPT-5...', url: 'https://example.com/gpt5', snippet: 'OpenAI today announced the release of...' }], credits_used: 5, credits_remaining: 245 }
+      },
+      'ai-generate': {
+        credits: 20, category: 'AI', method: 'POST',
+        body: { prompt: 'Explain quantum computing in 3 sentences', mode: 'smart', max_tokens: 200 },
+        response: { text: 'Quantum computing harnesses quantum mechanical phenomena...', model_used: 'claude-sonnet', mode: 'smart', credits_used: 20 }
+      },
+      'ai-oracle': {
+        credits: 25, category: 'AI', method: 'POST',
+        body: { question: 'Should a SaaS startup prioritize SEO or paid ads in year one?', reasoning_depth: 'deep' },
+        response: { analysis: 'For a SaaS startup in year one, SEO provides compounding returns...', confidence: 0.87, model_used: 'claude-opus', credits_used: 25 }
+      },
+      'summarize': {
+        credits: 10, category: 'AI', method: 'POST',
+        body: { text: 'Your long article text here...', style: 'bullets', max_length: 200 },
+        response: { summary: '• Key point one\\n• Key point two\\n• Key point three', credits_used: 10 }
+      },
+      'web-scrape': {
+        credits: 5, category: 'Web', method: 'POST',
+        body: { url: 'https://example.com/article', format: 'markdown' },
+        response: { text: '# Article Title\\n\\nArticle content in markdown...', url: 'https://example.com/article', credits_used: 5 }
+      },
+      'sentiment-analysis': {
+        credits: 8, category: 'AI', method: 'POST',
+        body: { text: 'I absolutely love this product! Best purchase ever.' },
+        response: { sentiment: 'positive', score: 0.95, confidence: 0.97, credits_used: 8 }
+      },
+      'fact-check': {
+        credits: 10, category: 'AI', method: 'POST',
+        body: { claim: 'The Great Wall of China is visible from space' },
+        response: { verdict: 'false', explanation: 'This is a common myth. The Great Wall is not visible from space...', sources: ['nasa.gov'], credits_used: 10 }
+      },
+      'research-report': {
+        credits: 15, category: 'AI', method: 'POST',
+        body: { topic: 'AI impact on healthcare 2026', depth: 'comprehensive' },
+        response: { report: '# AI in Healthcare 2026\\n\\n## Executive Summary...', sources: 8, credits_used: 15 }
+      },
+      'extract-entities': {
+        credits: 8, category: 'AI', method: 'POST',
+        body: { text: 'Apple CEO Tim Cook announced new products at WWDC in Cupertino.' },
+        response: { entities: [{ text: 'Apple', type: 'ORG' }, { text: 'Tim Cook', type: 'PERSON' }, { text: 'Cupertino', type: 'LOCATION' }], credits_used: 8 }
+      },
+      'language-detect': {
+        credits: 3, category: 'AI', method: 'POST',
+        body: { text: 'Bonjour le monde' },
+        response: { language: 'French', code: 'fr', confidence: 0.99, credits_used: 3 }
+      },
+      'image-generate': {
+        credits: 15, category: 'AI', method: 'POST',
+        body: { prompt: 'A futuristic cityscape at sunset, cyberpunk style', size: '1024x1024' },
+        response: { url: 'https://archtools.dev/images/gen/abc123.png', credits_used: 15 }
+      },
+      'semantic-search': {
+        credits: 8, category: 'AI', method: 'POST',
+        body: { query: 'machine learning frameworks', documents: ['TensorFlow is...', 'PyTorch is...', 'Cooking recipes...'] },
+        response: { results: [{ index: 0, score: 0.92, text: 'TensorFlow is...' }], credits_used: 8 }
+      },
+      'web-search': {
+        credits: 10, category: 'Web', method: 'POST',
+        body: { query: 'best JavaScript frameworks 2026', num_results: 5 },
+        response: { results: [{ title: 'Top JS Frameworks...', url: 'https://example.com', snippet: '...' }], credits_used: 10 }
+      },
+      'extract-page': {
+        credits: 5, category: 'Web', method: 'POST',
+        body: { url: 'https://example.com', selectors: { title: 'h1', content: 'article' } },
+        response: { data: { title: 'Page Title', content: 'Article content...' }, credits_used: 5 }
+      },
+      'screenshot-capture': {
+        credits: 10, category: 'Web', method: 'POST',
+        body: { url: 'https://example.com', width: 1280, height: 720, format: 'png' },
+        response: { url: 'https://archtools.dev/screenshots/abc123.png', credits_used: 10 }
+      },
+      'news-search': {
+        credits: 3, category: 'Web', method: 'POST',
+        body: { query: 'artificial intelligence', language: 'en', max_results: 5 },
+        response: { articles: [{ title: 'AI Breakthrough...', source: 'TechCrunch', url: '...', published: '2026-03-17' }], credits_used: 3 }
+      },
+      'html-to-markdown': {
+        credits: 2, category: 'Web', method: 'POST',
+        body: { html: '<h1>Title</h1><p>Content here</p>' },
+        response: { markdown: '# Title\\n\\nContent here', credits_used: 2 }
+      },
+      'crypto-price': {
+        credits: 1, category: 'Crypto', method: 'POST',
+        body: { symbol: 'BTC' },
+        response: { symbol: 'BTC', price: 98450.23, change_24h: 2.4, market_cap: 1940000000000, credits_used: 1 }
+      },
+      'crypto-sentiment': {
+        credits: 2, category: 'Crypto', method: 'POST',
+        body: { symbol: 'ETH' },
+        response: { symbol: 'ETH', sentiment: 'bullish', score: 0.72, sources: 15, credits_used: 2 }
+      },
+      'crypto-news': {
+        credits: 2, category: 'Crypto', method: 'POST',
+        body: { query: 'bitcoin', max_results: 5 },
+        response: { articles: [{ title: 'Bitcoin Hits New ATH...', source: 'CoinDesk', sentiment: 'positive' }], credits_used: 2 }
+      },
+      'crypto-fear-greed': {
+        credits: 1, category: 'Crypto', method: 'POST',
+        body: {},
+        response: { value: 72, label: 'Greed', previous: 68, credits_used: 1 }
+      },
+      'text-to-speech': {
+        credits: 5, category: 'Media', method: 'POST',
+        body: { text: 'Hello, welcome to Arch Tools!', voice: 'alloy' },
+        response: { audio_url: 'https://archtools.dev/audio/abc123.mp3', duration_ms: 2100, credits_used: 5 }
+      },
+      'transcribe-audio': {
+        credits: 8, category: 'Media', method: 'POST',
+        body: { audio_url: 'https://example.com/audio.mp3', language: 'en' },
+        response: { text: 'Transcribed audio content here...', duration_ms: 15000, credits_used: 8 }
+      },
+      'ocr-extract': {
+        credits: 10, category: 'Media', method: 'POST',
+        body: { image_url: 'https://example.com/document.png' },
+        response: { text: 'Extracted text from image...', confidence: 0.94, credits_used: 10 }
+      },
+      'qr-code': {
+        credits: 2, category: 'Data', method: 'POST',
+        body: { data: 'https://archtools.dev', size: 256 },
+        response: { url: 'https://archtools.dev/qr/abc123.png', credits_used: 2 }
+      },
+      'currency-convert': {
+        credits: 2, category: 'Finance', method: 'POST',
+        body: { from: 'USD', to: 'EUR', amount: 100 },
+        response: { from: 'USD', to: 'EUR', amount: 100, result: 91.35, rate: 0.9135, credits_used: 2 }
+      },
+      'email-verify': {
+        credits: 3, category: 'Validation', method: 'POST',
+        body: { email: 'test@example.com' },
+        response: { email: 'test@example.com', valid: true, deliverable: true, disposable: false, credits_used: 3 }
+      },
+      'whois-lookup': {
+        credits: 3, category: 'Network', method: 'POST',
+        body: { domain: 'example.com' },
+        response: { domain: 'example.com', registrar: 'IANA', created: '1995-08-14', expires: '2026-08-13', credits_used: 3 }
+      }
+    };
+
+    let currentLang = 'python';
+
+    function switchLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t.dataset.lang === lang));
+      // Also update the select
+      document.getElementById('langSelect').value = lang;
+      generateCode();
+    }
+
+    document.getElementById('langSelect').addEventListener('change', function() {
+      currentLang = this.value;
+      document.querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t.dataset.lang === currentLang));
+      generateCode();
+    });
+
+    function generateCode() {
+      const tool = document.getElementById('toolSelect').value;
+      const useCase = document.getElementById('useCaseSelect').value;
+      const info = TOOLS[tool] || TOOLS['search-web'];
+      const body = JSON.stringify(info.body, null, 2);
+      const bodyOneLine = JSON.stringify(info.body);
+
+      // Update info cards
+      document.getElementById('infoCredits').textContent = info.credits;
+      document.getElementById('infoMethod').textContent = info.method;
+      document.getElementById('infoCategory').textContent = info.category;
+
+      let code = '';
+      if (currentLang === 'curl') {
+        code = genCurl(tool, body, useCase);
+      } else if (currentLang === 'python') {
+        code = genPython(tool, info.body, useCase);
+      } else {
+        code = genNode(tool, info.body, useCase);
+      }
+
+      document.getElementById('codeOutput').textContent = code;
+      document.getElementById('responseOutput').textContent = JSON.stringify(info.response, null, 2);
+      document.getElementById('playgroundLink').href = `/playground#${tool}`;
+    }
+
+    function genCurl(tool, body, useCase) {
+      const base = `curl -X POST https://archtools.dev/v1/tools/${tool} \\
+  -H "Authorization: Bearer $ARCH_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '${body}'`;
+
+      if (useCase === 'error-handling') {
+        return `# With error handling and status check
+response=$(${base.replace(/\n/g, '\n  ')})
+
+status=$?
+if [ $status -ne 0 ]; then
+  echo "Request failed with exit code $status"
+  exit 1
+fi
+
+echo "$response" | python3 -m json.tool`;
+      }
+      if (useCase === 'async') {
+        return `# Fire multiple calls in parallel
+for query in "AI news" "crypto trends" "tech startups"; do
+  curl -s -X POST https://archtools.dev/v1/tools/${tool} \\
+    -H "Authorization: Bearer $ARCH_API_KEY" \\
+    -H "Content-Type: application/json" \\
+    -d "{\\"query\\": \\"$query\\"}" &
+done
+wait
+echo "All requests completed"`;
+      }
+      return base;
+    }
+
+    function genPython(tool, body, useCase) {
+      const bodyStr = JSON.stringify(body, null, 4).replace(/\n/g, '\n    ');
+      if (useCase === 'basic') {
+        return `import requests
+
+API_KEY = "your_arch_api_key"  # or os.environ["ARCH_API_KEY"]
+
+response = requests.post(
+    "https://archtools.dev/v1/tools/${tool}",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    },
+    json=${bodyStr}
+)
+
+data = response.json()
+print(data)`;
+      }
+      if (useCase === 'error-handling') {
+        return `import requests
+import os
+import sys
+
+API_KEY = os.environ.get("ARCH_API_KEY")
+if not API_KEY:
+    print("Error: ARCH_API_KEY not set")
+    sys.exit(1)
+
+try:
+    response = requests.post(
+        "https://archtools.dev/v1/tools/${tool}",
+        headers={
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json=${bodyStr},
+        timeout=30
+    )
+    response.raise_for_status()
+    data = response.json()
+    print(data)
+
+except requests.exceptions.HTTPError as e:
+    if response.status_code == 402:
+        print("Insufficient credits. Top up at archtools.dev/dashboard")
+    elif response.status_code == 429:
+        print("Rate limited. Wait and retry.")
+    else:
+        print(f"HTTP error: {e}")
+except requests.exceptions.Timeout:
+    print("Request timed out. Try again.")
+except Exception as e:
+    print(f"Error: {e}")`;
+      }
+      // async
+      return `import asyncio
+import aiohttp
+import os
+
+API_KEY = os.environ["ARCH_API_KEY"]
+BASE = "https://archtools.dev/v1/tools"
+HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+async def call_tool(session, tool, body):
+    async with session.post(
+        f"{BASE}/{tool}",
+        headers=HEADERS,
+        json=body
+    ) as resp:
+        return await resp.json()
+
+async def main():
+    async with aiohttp.ClientSession() as session:
+        tasks = [
+            call_tool(session, "${tool}", ${JSON.stringify(body)}),
+            call_tool(session, "${tool}", ${JSON.stringify(body)}),
+        ]
+        results = await asyncio.gather(*tasks)
+        for r in results:
+            print(r)
+
+asyncio.run(main())`;
+    }
+
+    function genNode(tool, body, useCase) {
+      const bodyStr = JSON.stringify(body, null, 2).replace(/\n/g, '\n  ');
+      if (useCase === 'basic') {
+        return `const API_KEY = process.env.ARCH_API_KEY;
+
+const response = await fetch(
+  "https://archtools.dev/v1/tools/${tool}",
+  {
+    method: "POST",
+    headers: {
+      "Authorization": \`Bearer \${API_KEY}\`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(${bodyStr})
+  }
+);
+
+const data = await response.json();
+console.log(data);`;
+      }
+      if (useCase === 'error-handling') {
+        return `const API_KEY = process.env.ARCH_API_KEY;
+if (!API_KEY) throw new Error("ARCH_API_KEY not set");
+
+async function callTool(tool, body) {
+  const response = await fetch(
+    \`https://archtools.dev/v1/tools/\${tool}\`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": \`Bearer \${API_KEY}\`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 402) {
+      throw new Error("Insufficient credits");
+    }
+    if (response.status === 429) {
+      throw new Error("Rate limited — wait and retry");
+    }
+    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+  }
+
+  return response.json();
+}
+
+try {
+  const data = await callTool("${tool}", ${bodyStr});
+  console.log(data);
+} catch (err) {
+  console.error("Error:", err.message);
+}`;
+      }
+      // async/batch
+      return `const API_KEY = process.env.ARCH_API_KEY;
+
+async function callTool(tool, body) {
+  const res = await fetch(
+    \`https://archtools.dev/v1/tools/\${tool}\`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": \`Bearer \${API_KEY}\`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+  return res.json();
+}
+
+// Run multiple calls in parallel
+const results = await Promise.all([
+  callTool("${tool}", ${JSON.stringify(body)}),
+  callTool("${tool}", ${JSON.stringify(body)}),
+]);
+
+results.forEach((r, i) => {
+  console.log(\`Result \${i + 1}:\`, r);
+});`;
+    }
+
+    function copyCode() {
+      const code = document.getElementById('codeOutput').textContent;
+      const btn = document.getElementById('copyBtn');
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    // Init
+    generateCode();
+  </script>
+</body>
+</html>

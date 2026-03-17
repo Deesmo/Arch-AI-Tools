@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Use Case Templates — Arch Tools</title>
+  <meta name="description" content="Real-world use case templates with working code. Build research agents, content pipelines, competitor monitors, and crypto dashboards with Arch Tools.">
+  <meta property="og:title" content="Use Case Templates — Arch Tools">
+  <meta property="og:description" content="Copy-paste templates for real-world AI workflows. Research agents, content pipelines, monitoring, and more.">
+  <meta property="og:url" content="https://archtools.dev/use-cases">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <link rel="canonical" href="https://archtools.dev/use-cases">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;--border:#1C1A3A;--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;--red:#ef4444;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:960px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+      --grad:linear-gradient(135deg,#FF9010,#FF2896 50%,#8844FF);
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.12) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.08) 0%,transparent 55%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);}
+    .nav-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo-mark{width:32px;height:32px;flex-shrink:0;}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;}
+    .hamburger svg{width:24px;height:24px;stroke:var(--text);stroke-width:2;stroke-linecap:round;}
+    .mobile-menu{display:none;flex-direction:column;gap:6px;padding:12px 24px 16px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.97);}
+    .mobile-menu a{color:var(--muted);text-decoration:none;font-size:14px;font-family:var(--mono);padding:8px 0;}
+    .mobile-menu.open{display:flex;}
+    @media(max-width:768px){.nav-links{display:none!important;}.hamburger{display:block;}.nav-inner{padding:0 20px;}}
+
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:768px){.wrap{padding:0 20px;}}
+
+    .hero{text-align:center;padding:48px 0 16px;}
+    .hero h1{font-family:var(--display);font-size:clamp(28px,4vw,42px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;}
+    .grad{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{color:var(--muted);font-size:15px;max-width:520px;margin:0 auto;}
+
+    /* USE CASE CARDS */
+    .use-case{
+      border:1px solid var(--border);border-radius:20px;
+      background:rgba(255,255,255,0.015);padding:0;margin-bottom:32px;overflow:hidden;
+      transition:border-color 0.3s;
+    }
+    .use-case:hover{border-color:rgba(255,255,255,0.12);}
+
+    .uc-header{
+      padding:32px 32px 24px;cursor:pointer;display:flex;align-items:flex-start;gap:20px;
+    }
+    .uc-icon{
+      width:52px;height:52px;border-radius:14px;display:grid;place-items:center;
+      font-size:24px;flex-shrink:0;
+    }
+    .uc-meta{flex:1;}
+    .uc-meta h2{font-family:var(--display);font-size:22px;font-weight:700;margin-bottom:6px;}
+    .uc-meta p{color:var(--muted);font-size:14px;line-height:1.6;}
+    .uc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .uc-tag{
+      font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:6px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--dimmer);
+    }
+    .uc-expand{
+      color:var(--dimmer);font-size:20px;transition:transform 0.3s;flex-shrink:0;margin-top:4px;
+    }
+    .use-case.open .uc-expand{transform:rotate(180deg);}
+
+    .uc-body{
+      display:none;padding:0 32px 32px;border-top:1px solid rgba(255,255,255,0.04);
+    }
+    .use-case.open .uc-body{display:block;animation:fadeIn 0.25s ease;}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+    /* PIPELINE FLOW */
+    .pipeline{display:flex;align-items:center;gap:0;margin:20px 0;flex-wrap:wrap;}
+    .pipe-step{
+      display:flex;align-items:center;gap:8px;padding:10px 16px;
+      border:1px solid var(--border);border-radius:10px;background:rgba(0,0,0,0.3);
+      font-family:var(--mono);font-size:12px;
+    }
+    .pipe-step .num{
+      width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+      font-size:10px;font-weight:700;background:rgba(136,68,255,0.15);color:var(--indigo2);
+    }
+    .pipe-arrow{color:var(--dimmer);font-size:16px;margin:0 4px;}
+
+    /* LANG TABS */
+    .uc-tabs{display:flex;gap:6px;margin:20px 0 0;}
+    .uc-tab{
+      font-family:var(--mono);font-size:11px;padding:6px 14px;border-radius:8px 8px 0 0;
+      cursor:pointer;color:var(--dimmer);border:1px solid transparent;border-bottom:none;
+      background:none;transition:all 0.15s;
+    }
+    .uc-tab.active{background:rgba(136,68,255,0.12);border-color:var(--border2);color:var(--indigo2);}
+
+    .code-block{border:1px solid var(--border2);border-radius:0 12px 12px 12px;background:rgba(0,0,0,0.5);overflow:hidden;position:relative;}
+    .code-block pre{padding:20px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,0.68);line-height:1.8;overflow-x:auto;white-space:pre;}
+    .copy-btn{
+      position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);
+      padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;
+      cursor:pointer;font-family:var(--mono);transition:all 0.15s;
+    }
+    .copy-btn:hover{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);}
+    .copy-btn.copied{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:var(--green);}
+
+    /* CREDITS ESTIMATE */
+    .credits-est{
+      display:inline-flex;align-items:center;gap:6px;margin-top:16px;
+      font-family:var(--mono);font-size:12px;color:var(--green);
+      background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);
+      padding:8px 16px;border-radius:8px;
+    }
+
+    /* TOOL LINKS */
+    .tool-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+    .tool-link{
+      font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:8px;
+      background:rgba(136,68,255,0.08);border:1px solid rgba(136,68,255,0.2);
+      color:var(--indigo2);text-decoration:none;transition:all 0.15s;
+    }
+    .tool-link:hover{background:rgba(136,68,255,0.15);color:var(--text);}
+
+    /* CTA */
+    .cta-box{
+      text-align:center;margin:48px 0 0;padding:40px;
+      border:1px solid var(--border);border-radius:20px;
+      background:linear-gradient(135deg,rgba(136,68,255,0.05),rgba(255,40,150,0.05));
+    }
+    .cta-box h2{font-family:var(--display);font-size:28px;font-weight:800;margin-bottom:10px;}
+    .cta-box p{color:var(--muted);font-size:15px;margin-bottom:20px;}
+    .btn-primary{
+      display:inline-flex;align-items:center;gap:8px;
+      background:linear-gradient(135deg,var(--amber),var(--pink));
+      color:#fff;padding:14px 28px;border-radius:10px;
+      font-family:var(--mono);font-size:14px;font-weight:500;
+      text-decoration:none;transition:opacity 0.2s,transform 0.2s;
+    }
+    .btn-primary:hover{opacity:0.88;transform:translateY(-2px);}
+
+    footer{border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:64px;}
+    footer a{color:rgba(255,255,255,0.45);text-decoration:none;}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="/">
+        <svg class="logo-mark" viewBox="0 10 100 90" overflow="visible"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+        Arch Tools
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/docs">Docs</a>
+        <a href="/playground">Playground</a>
+        <a href="/getting-started">Get Started</a>
+        <a href="/signup" class="nav-cta">Get API Key</a>
+      </div>
+      <button class="hamburger" onclick="document.querySelector('.mobile-menu').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div class="mobile-menu">
+      <a href="/">Home</a><a href="/docs">Docs</a><a href="/playground">Playground</a>
+      <a href="/getting-started">Get Started</a><a href="/signup" style="color:var(--amber);">Get API Key →</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div class="hero">
+      <h1>Use Case <span class="grad">Templates</span></h1>
+      <p>Real-world workflows with working code. Copy a template, swap in your API key, and you're live.</p>
+    </div>
+
+    <!-- USE CASE 1: Research Agent -->
+    <div class="use-case" id="uc-research">
+      <div class="uc-header" onclick="toggleUC('uc-research')">
+        <div class="uc-icon" style="background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.25);">🔬</div>
+        <div class="uc-meta">
+          <h2>Build a Research Agent</h2>
+          <p>Combine web search, summarization, and fact-checking into an autonomous research pipeline. Feed it a topic, get a verified report.</p>
+          <div class="uc-tags">
+            <span class="uc-tag">search-web</span>
+            <span class="uc-tag">summarize</span>
+            <span class="uc-tag">fact-check</span>
+            <span class="uc-tag">research-report</span>
+          </div>
+        </div>
+        <div class="uc-expand">▾</div>
+      </div>
+      <div class="uc-body">
+        <div class="pipeline">
+          <div class="pipe-step"><div class="num">1</div> search-web</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">2</div> summarize</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">3</div> fact-check</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">4</div> research-report</div>
+        </div>
+
+        <div class="uc-tabs">
+          <div class="uc-tab active" onclick="switchUCTab(this,'python')">Python</div>
+          <div class="uc-tab" onclick="switchUCTab(this,'node')">Node.js</div>
+        </div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+          <pre class="uc-code" data-python='import requests
+import os
+
+API_KEY = os.environ["ARCH_API_KEY"]
+BASE = "https://archtools.dev/v1/tools"
+HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+def research(topic):
+    # Step 1: Search the web for sources
+    search = requests.post(f"{BASE}/search-web", headers=HEADERS,
+        json={"query": topic, "num_results": 10}).json()
+
+    # Step 2: Scrape and summarize top results
+    summaries = []
+    for result in search.get("results", [])[:5]:
+        summary = requests.post(f"{BASE}/summarize", headers=HEADERS,
+            json={"text": result.get("snippet", ""),
+                  "style": "bullets"}).json()
+        summaries.append({
+            "source": result["url"],
+            "summary": summary.get("summary", "")
+        })
+
+    # Step 3: Fact-check key claims
+    combined = "\n".join(s["summary"] for s in summaries)
+    verified = requests.post(f"{BASE}/fact-check", headers=HEADERS,
+        json={"claim": combined[:500]}).json()
+
+    # Step 4: Generate final report
+    report = requests.post(f"{BASE}/research-report", headers=HEADERS,
+        json={"topic": topic, "depth": "comprehensive"}).json()
+
+    return {
+        "report": report.get("report"),
+        "sources": len(summaries),
+        "fact_check": verified.get("verdict"),
+    }
+
+result = research("AI impact on healthcare in 2026")
+print(result["report"])' data-node='const API_KEY = process.env.ARCH_API_KEY;
+const BASE = "https://archtools.dev/v1/tools";
+const HEADERS = {
+  "Authorization": `Bearer ${API_KEY}`,
+  "Content-Type": "application/json"
+};
+
+async function callTool(tool, body) {
+  const res = await fetch(`${BASE}/${tool}`, {
+    method: "POST", headers: HEADERS,
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function research(topic) {
+  // Step 1: Search the web
+  const search = await callTool("search-web", {
+    query: topic, num_results: 10
+  });
+
+  // Step 2: Summarize top results
+  const summaries = await Promise.all(
+    search.results.slice(0, 5).map(r =>
+      callTool("summarize", {
+        text: r.snippet, style: "bullets"
+      })
+    )
+  );
+
+  // Step 3: Fact-check key claims
+  const combined = summaries
+    .map(s => s.summary).join("\n").slice(0, 500);
+  const verified = await callTool("fact-check", {
+    claim: combined
+  });
+
+  // Step 4: Generate final report
+  const report = await callTool("research-report", {
+    topic, depth: "comprehensive"
+  });
+
+  return {
+    report: report.report,
+    sources: summaries.length,
+    factCheck: verified.verdict,
+  };
+}
+
+const result = await research("AI impact on healthcare in 2026");
+console.log(result.report);'></pre>
+        </div>
+
+        <div class="credits-est">⚡ ~55 credits per run (search 5 + summarize×5 50 + fact-check 10 + report 15)</div>
+
+        <div class="tool-links">
+          <a href="/playground#search-web" class="tool-link">search-web →</a>
+          <a href="/playground#summarize" class="tool-link">summarize →</a>
+          <a href="/playground#fact-check" class="tool-link">fact-check →</a>
+          <a href="/playground#research-report" class="tool-link">research-report →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- USE CASE 2: Content Pipeline -->
+    <div class="use-case" id="uc-content">
+      <div class="uc-header" onclick="toggleUC('uc-content')">
+        <div class="uc-icon" style="background:rgba(255,144,16,0.1);border:1px solid rgba(255,144,16,0.25);">✍️</div>
+        <div class="uc-meta">
+          <h2>Create a Content Pipeline</h2>
+          <p>Generate images, write copy, and draft social posts — all from a single topic input. Automate your content calendar.</p>
+          <div class="uc-tags">
+            <span class="uc-tag">ai-generate</span>
+            <span class="uc-tag">image-generate</span>
+            <span class="uc-tag">summarize</span>
+            <span class="uc-tag">sentiment-analysis</span>
+          </div>
+        </div>
+        <div class="uc-expand">▾</div>
+      </div>
+      <div class="uc-body">
+        <div class="pipeline">
+          <div class="pipe-step"><div class="num">1</div> ai-generate</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">2</div> image-generate</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">3</div> summarize</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">4</div> sentiment check</div>
+        </div>
+
+        <div class="uc-tabs">
+          <div class="uc-tab active" onclick="switchUCTab(this,'python')">Python</div>
+          <div class="uc-tab" onclick="switchUCTab(this,'node')">Node.js</div>
+        </div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+          <pre class="uc-code" data-python='import requests
+import os
+
+API_KEY = os.environ["ARCH_API_KEY"]
+BASE = "https://archtools.dev/v1/tools"
+H = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+
+def content_pipeline(topic):
+    # Step 1: Generate a blog post
+    article = requests.post(f"{BASE}/ai-generate", headers=H,
+        json={
+            "prompt": f"Write a 500-word blog post about: {topic}",
+            "mode": "smart",
+            "max_tokens": 800
+        }).json()
+
+    # Step 2: Generate a featured image
+    image = requests.post(f"{BASE}/image-generate", headers=H,
+        json={
+            "prompt": f"Blog header image for: {topic}, modern flat design",
+            "size": "1024x1024"
+        }).json()
+
+    # Step 3: Create social media snippets
+    social = requests.post(f"{BASE}/summarize", headers=H,
+        json={
+            "text": article.get("text", ""),
+            "style": "social_media",
+            "max_length": 280
+        }).json()
+
+    # Step 4: Check tone
+    tone = requests.post(f"{BASE}/sentiment-analysis", headers=H,
+        json={"text": article.get("text", "")}).json()
+
+    return {
+        "article": article.get("text"),
+        "image_url": image.get("url"),
+        "tweet": social.get("summary"),
+        "tone": tone.get("sentiment"),
+    }
+
+result = content_pipeline("Why AI agents need micropayments")
+print(f"Article: {len(result[&apos;article&apos;])} chars")
+print(f"Image: {result[&apos;image_url&apos;]}")
+print(f"Tweet: {result[&apos;tweet&apos;]}")
+print(f"Tone: {result[&apos;tone&apos;]}")' data-node='const API_KEY = process.env.ARCH_API_KEY;
+const BASE = "https://archtools.dev/v1/tools";
+const H = {
+  "Authorization": `Bearer ${API_KEY}`,
+  "Content-Type": "application/json"
+};
+
+async function call(tool, body) {
+  const r = await fetch(`${BASE}/${tool}`, {
+    method: "POST", headers: H,
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function contentPipeline(topic) {
+  // Step 1: Generate blog post
+  const article = await call("ai-generate", {
+    prompt: `Write a 500-word blog post about: ${topic}`,
+    mode: "smart", max_tokens: 800
+  });
+
+  // Step 2 & 3: Run in parallel
+  const [image, social, tone] = await Promise.all([
+    call("image-generate", {
+      prompt: `Blog header for: ${topic}, modern flat design`,
+      size: "1024x1024"
+    }),
+    call("summarize", {
+      text: article.text,
+      style: "social_media", max_length: 280
+    }),
+    call("sentiment-analysis", {
+      text: article.text
+    })
+  ]);
+
+  return {
+    article: article.text,
+    imageUrl: image.url,
+    tweet: social.summary,
+    tone: tone.sentiment,
+  };
+}
+
+const result = await contentPipeline("Why AI agents need micropayments");
+console.log("Article:", result.article.length, "chars");
+console.log("Image:", result.imageUrl);
+console.log("Tweet:", result.tweet);'></pre>
+        </div>
+
+        <div class="credits-est">⚡ ~53 credits per run (ai-generate 20 + image 15 + summarize 10 + sentiment 8)</div>
+
+        <div class="tool-links">
+          <a href="/playground#ai-generate" class="tool-link">ai-generate →</a>
+          <a href="/playground#image-generate" class="tool-link">image-generate →</a>
+          <a href="/playground#summarize" class="tool-link">summarize →</a>
+          <a href="/playground#sentiment-analysis" class="tool-link">sentiment-analysis →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- USE CASE 3: Competitor Monitor -->
+    <div class="use-case" id="uc-monitor">
+      <div class="uc-header" onclick="toggleUC('uc-monitor')">
+        <div class="uc-icon" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.25);">📡</div>
+        <div class="uc-meta">
+          <h2>Monitor Competitors</h2>
+          <p>Track competitor websites for changes, analyze sentiment around their brand, and get automated alerts when something shifts.</p>
+          <div class="uc-tags">
+            <span class="uc-tag">web-scrape</span>
+            <span class="uc-tag">sentiment-analysis</span>
+            <span class="uc-tag">news-search</span>
+            <span class="uc-tag">ai-generate</span>
+          </div>
+        </div>
+        <div class="uc-expand">▾</div>
+      </div>
+      <div class="uc-body">
+        <div class="pipeline">
+          <div class="pipe-step"><div class="num">1</div> web-scrape</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">2</div> news-search</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">3</div> sentiment</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">4</div> ai-generate alert</div>
+        </div>
+
+        <div class="uc-tabs">
+          <div class="uc-tab active" onclick="switchUCTab(this,'python')">Python</div>
+          <div class="uc-tab" onclick="switchUCTab(this,'node')">Node.js</div>
+        </div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+          <pre class="uc-code" data-python='import requests
+import os
+import json
+
+API_KEY = os.environ["ARCH_API_KEY"]
+BASE = "https://archtools.dev/v1/tools"
+H = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+
+COMPETITORS = [
+    {"name": "Acme Corp", "url": "https://acme.com", "keywords": "acme corp"},
+    {"name": "Beta Inc", "url": "https://beta.io", "keywords": "beta inc AI"},
+]
+
+def monitor_competitor(competitor):
+    # Step 1: Scrape their homepage for changes
+    page = requests.post(f"{BASE}/web-scrape", headers=H,
+        json={"url": competitor["url"], "format": "markdown"}).json()
+
+    # Step 2: Search recent news
+    news = requests.post(f"{BASE}/news-search", headers=H,
+        json={
+            "query": competitor["keywords"],
+            "max_results": 5,
+            "language": "en"
+        }).json()
+
+    # Step 3: Analyze sentiment of news coverage
+    headlines = " | ".join(
+        a.get("title", "") for a in news.get("articles", [])
+    )
+    sentiment = requests.post(f"{BASE}/sentiment-analysis", headers=H,
+        json={"text": headlines}).json() if headlines else None
+
+    # Step 4: Generate alert summary
+    alert = requests.post(f"{BASE}/ai-generate", headers=H,
+        json={
+            "prompt": f"""Competitor brief for {competitor["name"]}:
+Website changes: {page.get("text", "")[:300]}
+Recent news: {headlines}
+Sentiment: {sentiment.get("sentiment") if sentiment else "N/A"}
+Write a 3-bullet executive summary of notable changes.""",
+            "mode": "fast", "max_tokens": 200
+        }).json()
+
+    return {
+        "competitor": competitor["name"],
+        "sentiment": sentiment.get("sentiment") if sentiment else None,
+        "news_count": len(news.get("articles", [])),
+        "alert": alert.get("text"),
+    }
+
+# Run for all competitors
+for comp in COMPETITORS:
+    result = monitor_competitor(comp)
+    print(f"\n--- {result[&apos;competitor&apos;]} ---")
+    print(f"Sentiment: {result[&apos;sentiment&apos;]}")
+    print(f"News articles: {result[&apos;news_count&apos;]}")
+    print(result["alert"])' data-node='const API_KEY = process.env.ARCH_API_KEY;
+const BASE = "https://archtools.dev/v1/tools";
+const H = {
+  "Authorization": `Bearer ${API_KEY}`,
+  "Content-Type": "application/json"
+};
+
+async function call(tool, body) {
+  const r = await fetch(`${BASE}/${tool}`, {
+    method: "POST", headers: H,
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+const COMPETITORS = [
+  { name: "Acme Corp", url: "https://acme.com", keywords: "acme corp" },
+  { name: "Beta Inc", url: "https://beta.io", keywords: "beta inc AI" },
+];
+
+async function monitorCompetitor(comp) {
+  // Steps 1-2 in parallel
+  const [page, news] = await Promise.all([
+    call("web-scrape", { url: comp.url, format: "markdown" }),
+    call("news-search", {
+      query: comp.keywords, max_results: 5, language: "en"
+    })
+  ]);
+
+  const headlines = news.articles
+    ?.map(a => a.title).join(" | ") || "";
+
+  // Step 3: Sentiment
+  const sentiment = headlines
+    ? await call("sentiment-analysis", { text: headlines })
+    : null;
+
+  // Step 4: Generate alert
+  const alert = await call("ai-generate", {
+    prompt: `Competitor brief for ${comp.name}:
+Website: ${page.text?.slice(0, 300)}
+News: ${headlines}
+Sentiment: ${sentiment?.sentiment || "N/A"}
+Write a 3-bullet executive summary.`,
+    mode: "fast", max_tokens: 200
+  });
+
+  return {
+    competitor: comp.name,
+    sentiment: sentiment?.sentiment,
+    newsCount: news.articles?.length || 0,
+    alert: alert.text,
+  };
+}
+
+for (const comp of COMPETITORS) {
+  const r = await monitorCompetitor(comp);
+  console.log(`\n--- ${r.competitor} ---`);
+  console.log(`Sentiment: ${r.sentiment}`);
+  console.log(r.alert);
+}'></pre>
+        </div>
+
+        <div class="credits-est">⚡ ~36 credits per competitor (scrape 5 + news 3 + sentiment 8 + ai-generate 20)</div>
+
+        <div class="tool-links">
+          <a href="/playground#web-scrape" class="tool-link">web-scrape →</a>
+          <a href="/playground#news-search" class="tool-link">news-search →</a>
+          <a href="/playground#sentiment-analysis" class="tool-link">sentiment-analysis →</a>
+          <a href="/playground#ai-generate" class="tool-link">ai-generate →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- USE CASE 4: Crypto Dashboard -->
+    <div class="use-case" id="uc-crypto">
+      <div class="uc-header" onclick="toggleUC('uc-crypto')">
+        <div class="uc-icon" style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);">📊</div>
+        <div class="uc-meta">
+          <h2>Build a Crypto Dashboard</h2>
+          <p>Pull real-time prices, market sentiment, and news for any token. Power a dashboard or trading bot with live data.</p>
+          <div class="uc-tags">
+            <span class="uc-tag">crypto-price</span>
+            <span class="uc-tag">crypto-news</span>
+            <span class="uc-tag">crypto-sentiment</span>
+            <span class="uc-tag">crypto-fear-greed</span>
+          </div>
+        </div>
+        <div class="uc-expand">▾</div>
+      </div>
+      <div class="uc-body">
+        <div class="pipeline">
+          <div class="pipe-step"><div class="num">1</div> crypto-price</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">2</div> crypto-sentiment</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">3</div> crypto-news</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-step"><div class="num">4</div> fear-greed</div>
+        </div>
+
+        <div class="uc-tabs">
+          <div class="uc-tab active" onclick="switchUCTab(this,'python')">Python</div>
+          <div class="uc-tab" onclick="switchUCTab(this,'node')">Node.js</div>
+        </div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+          <pre class="uc-code" data-python='import requests
+import os
+
+API_KEY = os.environ["ARCH_API_KEY"]
+BASE = "https://archtools.dev/v1/tools"
+H = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+
+TOKENS = ["BTC", "ETH", "SOL"]
+
+def crypto_dashboard(tokens):
+    dashboard = {"tokens": [], "market": {}}
+
+    for symbol in tokens:
+        # Price + sentiment in sequence (cheap calls)
+        price = requests.post(f"{BASE}/crypto-price", headers=H,
+            json={"symbol": symbol}).json()
+
+        sentiment = requests.post(f"{BASE}/crypto-sentiment", headers=H,
+            json={"symbol": symbol}).json()
+
+        news = requests.post(f"{BASE}/crypto-news", headers=H,
+            json={"query": symbol, "max_results": 3}).json()
+
+        dashboard["tokens"].append({
+            "symbol": symbol,
+            "price": price.get("price"),
+            "change_24h": price.get("change_24h"),
+            "sentiment": sentiment.get("sentiment"),
+            "sentiment_score": sentiment.get("score"),
+            "top_news": [a.get("title") for a in news.get("articles", [])[:3]],
+        })
+
+    # Market-wide fear & greed
+    fg = requests.post(f"{BASE}/crypto-fear-greed", headers=H,
+        json={}).json()
+    dashboard["market"] = {
+        "fear_greed": fg.get("value"),
+        "label": fg.get("label"),
+    }
+
+    return dashboard
+
+data = crypto_dashboard(TOKENS)
+for t in data["tokens"]:
+    print(f"{t[&apos;symbol&apos;]}: ${t[&apos;price&apos;]:,.2f} ({t[&apos;change_24h&apos;]:+.1f}%) — {t[&apos;sentiment&apos;]}")
+print(f"\nMarket: {data[&apos;market&apos;][&apos;label&apos;]} ({data[&apos;market&apos;][&apos;fear_greed&apos;]})")' data-node='const API_KEY = process.env.ARCH_API_KEY;
+const BASE = "https://archtools.dev/v1/tools";
+const H = {
+  "Authorization": `Bearer ${API_KEY}`,
+  "Content-Type": "application/json"
+};
+
+async function call(tool, body) {
+  const r = await fetch(`${BASE}/${tool}`, {
+    method: "POST", headers: H,
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+const TOKENS = ["BTC", "ETH", "SOL"];
+
+async function cryptoDashboard(tokens) {
+  // Fetch all token data in parallel
+  const tokenData = await Promise.all(
+    tokens.map(async (symbol) => {
+      const [price, sentiment, news] = await Promise.all([
+        call("crypto-price", { symbol }),
+        call("crypto-sentiment", { symbol }),
+        call("crypto-news", { query: symbol, max_results: 3 }),
+      ]);
+      return {
+        symbol,
+        price: price.price,
+        change24h: price.change_24h,
+        sentiment: sentiment.sentiment,
+        sentimentScore: sentiment.score,
+        topNews: news.articles?.slice(0, 3).map(a => a.title),
+      };
+    })
+  );
+
+  // Market fear & greed
+  const fg = await call("crypto-fear-greed", {});
+
+  return {
+    tokens: tokenData,
+    market: { fearGreed: fg.value, label: fg.label },
+  };
+}
+
+const data = await cryptoDashboard(TOKENS);
+data.tokens.forEach(t => {
+  console.log(`${t.symbol}: $${t.price.toLocaleString()} (${t.change24h > 0 ? "+" : ""}${t.change24h}%) — ${t.sentiment}`);
+});
+console.log(`\nMarket: ${data.market.label} (${data.market.fearGreed})`);'></pre>
+        </div>
+
+        <div class="credits-est">⚡ ~16 credits per run (3 tokens × 5 cr each + fear-greed 1)</div>
+
+        <div class="tool-links">
+          <a href="/playground#crypto-price" class="tool-link">crypto-price →</a>
+          <a href="/playground#crypto-sentiment" class="tool-link">crypto-sentiment →</a>
+          <a href="/playground#crypto-news" class="tool-link">crypto-news →</a>
+          <a href="/playground#crypto-fear-greed" class="tool-link">crypto-fear-greed →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-box">
+      <h2>Ready to Build?</h2>
+      <p>Get 250 free credits and start building with 61 tools in minutes.</p>
+      <a href="/signup" class="btn-primary">Get Your API Key →</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      © 2026 MCMetaverse LLC · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/docs">Docs</a>
+    </div>
+  </footer>
+
+  <script>
+    // Toggle use case expand
+    function toggleUC(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('open');
+    }
+
+    // Switch code tab within a use case
+    function switchUCTab(tabEl, lang) {
+      const parent = tabEl.closest('.uc-body');
+      parent.querySelectorAll('.uc-tab').forEach(t => t.classList.remove('active'));
+      tabEl.classList.add('active');
+      const pre = parent.querySelector('.uc-code');
+      pre.textContent = pre.dataset[lang];
+    }
+
+    // Copy code block
+    function copyBlock(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    // Init: show Python by default
+    document.querySelectorAll('.uc-code').forEach(pre => {
+      pre.textContent = pre.dataset.python;
+    });
+
+    // Auto-open first use case
+    document.getElementById('uc-research').classList.add('open');
+  </script>
+</body>
+</html>
