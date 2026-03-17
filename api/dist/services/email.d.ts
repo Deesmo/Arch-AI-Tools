@@ -8,5 +8,17 @@ export declare function sendLowCreditAlert(to: string, creditsRemaining: number,
 export declare function sendPurchaseConfirmation(to: string, credits: number, label: string, newBalance: number): Promise<void>;
 export declare function sendAdminAlert(subject: string, body: string): Promise<void>;
 export declare function sendMonthlyRefreshEmail(to: string, credits: number, newBalance: number): Promise<void>;
+export declare function sendFeatureAnnouncement(to: string, opts: {
+    headline: string;
+    body: string;
+    ctaLabel?: string;
+    ctaUrl?: string;
+}): Promise<boolean>;
+export declare function sendX402PaymentReceipt(to: string, opts: {
+    toolName: string;
+    amountUsdc: string;
+    txHash: string;
+    network: string;
+}): Promise<void>;
 export declare function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void>;
 //# sourceMappingURL=email.d.ts.map

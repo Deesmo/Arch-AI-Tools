@@ -270,6 +270,11 @@ app.get("/status", (_req, res) => res.sendFile(path.join(__dirname, '../public/s
 app.get("/stats", (_req, res) => res.sendFile(path.join(__dirname, '../public/stats.html')));
 app.get("/facilitator", (_req, res) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
 app.get("/webhooks", (_req, res) => res.sendFile(path.join(__dirname, '../public/webhooks.html')));
+app.get("/developers", (_req, res) => res.sendFile(path.join(__dirname, '../public/developers.html')));
+app.get("/sdks", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdks.html')));
+app.get("/v1/changelog.rss", (_req, res) => {
+    res.type("application/rss+xml").sendFile(path.join(__dirname, '../public/changelog.rss'));
+});
 // /success — Stripe post-checkout success page
 app.get("/success", (_req, res) => {
     res.type("text/html").send(`<!DOCTYPE html>
