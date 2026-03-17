@@ -38,6 +38,9 @@ export declare const config: {
         network: string;
         facilitatorUrl: string;
     };
+    facilitator: {
+        feePercent: number;
+    };
     rateLimits: {
         free: number;
         pro: number;

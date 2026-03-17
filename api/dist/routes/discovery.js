@@ -351,6 +351,148 @@ router.get("/llms.txt", (_req, res) => {
 router.get("/openapi.json", (_req, res) => {
     res.json(OPENAPI_STUB);
 });
+// GET /llms-full.txt — complete documentation for AI
+router.get("/llms-full.txt", (_req, res) => {
+    const fs = require("fs");
+    const path = require("path");
+    try {
+        const content = fs.readFileSync(path.join(__dirname, "../../public/llms-full.txt"), "utf8");
+        res.type("text/plain").send(content);
+    }
+    catch {
+        res.type("text/plain").send("See https://archtools.dev/llms.txt");
+    }
+});
+// GET /.well-known/agent.json — A2A Agent Card (Google Agent2Agent protocol)
+router.get("/.well-known/agent.json", (_req, res) => {
+    const fs = require("fs");
+    const path = require("path");
+    try {
+        const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/agent.json"), "utf8"));
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.json(content);
+    }
+    catch {
+        res.status(404).json({ error: "agent card not found" });
+    }
+});
+// GET /.well-known/agent-card.json — alias for A2A Agent Card
+router.get("/.well-known/agent-card.json", (_req, res) => {
+    const fs = require("fs");
+    const path = require("path");
+    try {
+        const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/agent.json"), "utf8"));
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.json(content);
+    }
+    catch {
+        res.status(404).json({ error: "agent card not found" });
+    }
+});
+// GET /.well-known/agents.json — Wildcard AI agents.json spec
+router.get("/.well-known/agents.json", (_req, res) => {
+    const fs = require("fs");
+    const path = require("path");
+    try {
+        const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/agents.json"), "utf8"));
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.json(content);
+    }
+    catch {
+        res.status(404).json({ error: "agents.json not found" });
+    }
+});
+// GET /.well-known/mcp.json — MCP server discovery
+router.get("/.well-known/mcp.json", (_req, res) => {
+    const fs = require("fs");
+    const path = require("path");
+    try {
+        const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/mcp.json"), "utf8"));
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.json(content);
+    }
+    catch {
+        res.status(404).json({ error: "mcp.json not found" });
+    }
+});
+// GET /v1/discover — unified discovery endpoint (all tools + pricing + payment in one call)
+router.get("/v1/discover", async (_req, res) => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore — `active` exists in prod schema; local client may be stale
+        const tools = await prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+        const toolList = tools.map((t) => ({
+            name: t.name,
+            description: t.description ?? TOOL_DESCRIPTIONS[t.name] ?? "",
+            endpoint: `${API_BASE}/v1/tools/${t.name}`,
+            method: "POST",
+            credits: t.credits ?? 5,
+            category: t.category ?? "utility",
+        }));
+        res.json({
+            ok: true,
+            name: "Arch Tools",
+            description: "58 production-ready API tools for AI agents. Pay with API key or USDC (x402).",
+            version: "1.10.0",
+            baseUrl: API_BASE,
+            tools: toolList,
+            totalTools: toolList.length,
+            authentication: {
+                apiKey: { header: "Authorization", format: "Bearer YOUR_API_KEY" },
+                x402: { discovery: `${API_BASE}/.well-known/x402` },
+                oauth: { authorize: `${API_BASE}/oauth/authorize`, token: `${API_BASE}/oauth/token` },
+            },
+            pricing: {
+                freeCredits: 100,
+                packs: [
+                    { name: "Starter", credits: 10000, price: "$9" },
+                    { name: "Pro", credits: 60000, price: "$49" },
+                    { name: "Business", credits: 250000, price: "$199" },
+                ],
+            },
+            discovery: {
+                openapi: `${API_BASE}/openapi.json`,
+                llms_txt: `${API_BASE}/llms.txt`,
+                llms_full_txt: `${API_BASE}/llms-full.txt`,
+                agent_card: `${API_BASE}/.well-known/agent.json`,
+                agents_json: `${API_BASE}/.well-known/agents.json`,
+                mcp_json: `${API_BASE}/.well-known/mcp.json`,
+                ai_plugin: `${API_BASE}/.well-known/ai-plugin.json`,
+                x402: `${API_BASE}/.well-known/x402`,
+                schemas: {
+                    openai: `${API_BASE}/schemas/openai-tools.json`,
+                    anthropic: `${API_BASE}/schemas/anthropic-tools.json`,
+                    gemini: `${API_BASE}/schemas/gemini-tools.json`,
+                },
+            },
+            mcp: {
+                sse: "https://arch-tools-mcp.onrender.com/sse",
+                http: "https://arch-tools-mcp.onrender.com/mcp",
+                registry: "io.github.Deesmo/arch-tools-mcp",
+            },
+        });
+    }
+    catch {
+        // Fallback with static tool list
+        const toolList = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
+            name,
+            description,
+            endpoint: `${API_BASE}/v1/tools/${name}`,
+            method: "POST",
+            credits: 5,
+            category: "utility",
+        }));
+        res.json({
+            ok: true,
+            name: "Arch Tools",
+            description: "58 production-ready API tools for AI agents.",
+            version: "1.10.0",
+            baseUrl: API_BASE,
+            tools: toolList,
+            totalTools: toolList.length,
+        });
+    }
+});
 // ─── Tool descriptions for x402 discovery ────────────────────────────────────
 const TOOL_DESCRIPTIONS = {
     "validate-data": "Validate JSON against a JSON Schema",

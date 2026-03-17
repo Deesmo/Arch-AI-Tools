@@ -17,7 +17,8 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
-import { verifyPayment, settlePayment, decodePayment, calculateFee, getSupportedNetworks, } from "../services/facilitator.js";
+import { verifyPayment, settlePayment, decodePayment, calculateProviderPayout, getDefaultFeePercent, getSupportedNetworks, } from "../services/facilitator.js";
+import { requireAdmin } from "../middleware/auth.js";
 const router = Router();
 /**
  * Authenticate a facilitator provider via API key.
@@ -149,13 +150,16 @@ router.post("/settle", requireFacilitatorAuth, async (req, res) => {
         const provider = req.facilitatorProvider;
         // Settle on-chain
         const result = await settlePayment(payment, paymentDetails);
-        // Calculate and record fee
-        const feeAmount = calculateFee(paymentDetails.maxAmountRequired, provider.feePercent);
+        // Calculate fee — use provider-specific fee or env default
+        const effectiveFeePercent = provider.feePercent > 0 ? provider.feePercent : getDefaultFeePercent();
+        const { fee: feeAmount, payout: providerPayout } = calculateProviderPayout(paymentDetails.maxAmountRequired, effectiveFeePercent);
         const amountFloat = parseFloat(paymentDetails.maxAmountRequired) / 1_000_000; // USDC has 6 decimals
         const feeFloat = parseFloat(feeAmount) / 1_000_000;
+        const payoutFloat = parseFloat(providerPayout) / 1_000_000;
         if (result.success) {
             // Update the payment record
             const decoded = decodePayment(payment);
+            const today = new Date().toISOString().slice(0, 10);
             await prisma.facilitatorPayment.updateMany({
                 where: {
                     providerId: provider.id,
@@ -173,8 +177,9 @@ router.post("/settle", requireFacilitatorAuth, async (req, res) => {
             const existing = await prisma.facilitatorPayment.findFirst({
                 where: { providerId: provider.id, paymentPayload: payment },
             });
+            let paymentRecordId = existing?.id;
             if (!existing) {
-                await prisma.facilitatorPayment.create({
+                const created = await prisma.facilitatorPayment.create({
                     data: {
                         providerId: provider.id,
                         paymentPayload: payment,
@@ -189,7 +194,23 @@ router.post("/settle", requireFacilitatorAuth, async (req, res) => {
                         verifiedAt: new Date(),
                         settledAt: new Date(),
                     },
-                }).catch((err) => console.error("[facilitator] Failed to create payment record:", err));
+                }).catch((err) => { console.error("[facilitator] Failed to create payment record:", err); return null; });
+                paymentRecordId = created?.id;
+            }
+            // Record granular fee record for revenue tracking
+            if (paymentRecordId) {
+                await prisma.facilitatorFeeRecord.create({
+                    data: {
+                        providerId: provider.id,
+                        paymentId: paymentRecordId,
+                        settlementAmount: paymentDetails.maxAmountRequired,
+                        feeAmount,
+                        feePercent: effectiveFeePercent,
+                        providerPayout,
+                        network: paymentDetails.network,
+                        date: today,
+                    },
+                }).catch((err) => console.error("[facilitator] Failed to create fee record:", err));
             }
             // Update provider stats
             await prisma.facilitatorProvider.update({
@@ -223,9 +244,13 @@ router.post("/settle", requireFacilitatorAuth, async (req, res) => {
             error: result.errorMessage || undefined,
             fee: {
                 amount: feeAmount,
-                percent: provider.feePercent,
+                percent: effectiveFeePercent,
                 token: "USDC",
             },
+            providerPayout: result.success ? {
+                amount: providerPayout,
+                amountUsdc: payoutFloat.toFixed(6),
+            } : undefined,
         });
     }
     catch (err) {
@@ -282,7 +307,7 @@ router.post("/register", async (req, res) => {
                 webhookUrl: webhookUrl || null,
                 networks: requestedNetworks,
                 endpoints: endpoints || null,
-                feePercent: 1.0, // Default 1% fee
+                feePercent: getDefaultFeePercent(), // Default from FACILITATOR_FEE_PERCENT env (2.5%)
             },
         });
         res.status(201).json({
@@ -408,6 +433,93 @@ router.get("/dashboard", requireFacilitatorAuth, async (req, res) => {
     }
     catch (err) {
         console.error("[facilitator] Dashboard error:", err);
+        res.status(500).json({ ok: false, error: "internal_error" });
+    }
+});
+// ─── GET /revenue — Admin: Total facilitator fee revenue ──────────────────────
+router.get("/revenue", requireAdmin, async (_req, res) => {
+    try {
+        const period = _req.query.period ?? "30d";
+        const daysBack = period === "7d" ? 7 : period === "90d" ? 90 : period === "all" ? 3650 : 30;
+        const cutoff = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+        // Aggregate fee records
+        const feeRecords = await prisma.facilitatorFeeRecord.findMany({
+            where: { createdAt: { gte: cutoff } },
+            orderBy: { createdAt: "desc" },
+        });
+        // By day
+        const byDay = {};
+        // By provider
+        const byProvider = {};
+        let totalFees = 0;
+        let totalSettlements = 0;
+        for (const r of feeRecords) {
+            const feeUsdc = parseFloat(r.feeAmount) / 1_000_000;
+            const settlementUsdc = parseFloat(r.settlementAmount) / 1_000_000;
+            totalFees += feeUsdc;
+            totalSettlements += settlementUsdc;
+            if (!byDay[r.date])
+                byDay[r.date] = { fees: 0, settlements: 0, count: 0 };
+            byDay[r.date].fees += feeUsdc;
+            byDay[r.date].settlements += settlementUsdc;
+            byDay[r.date].count += 1;
+            if (!byProvider[r.providerId])
+                byProvider[r.providerId] = { fees: 0, settlements: 0, count: 0 };
+            byProvider[r.providerId].fees += feeUsdc;
+            byProvider[r.providerId].settlements += settlementUsdc;
+            byProvider[r.providerId].count += 1;
+        }
+        // Enrich provider names
+        const providerIds = Object.keys(byProvider);
+        if (providerIds.length > 0) {
+            const providers = await prisma.facilitatorProvider.findMany({
+                where: { id: { in: providerIds } },
+                select: { id: true, name: true },
+            });
+            for (const p of providers) {
+                if (byProvider[p.id])
+                    byProvider[p.id].name = p.name;
+            }
+        }
+        // Also get lifetime totals from provider records (fallback if no fee records yet)
+        const lifetimeTotals = await prisma.facilitatorProvider.aggregate({
+            _sum: { totalFees: true, totalRevenue: true, totalPayments: true },
+        });
+        res.json({
+            ok: true,
+            period,
+            revenue: {
+                total_fees_usdc: Math.round(totalFees * 1e6) / 1e6,
+                total_settlements_usdc: Math.round(totalSettlements * 1e6) / 1e6,
+                total_transactions: feeRecords.length,
+                effective_rate: totalSettlements > 0 ? Math.round((totalFees / totalSettlements) * 10000) / 100 : 0,
+            },
+            lifetime: {
+                total_fees_usdc: Math.round((lifetimeTotals._sum.totalFees ?? 0) * 1e6) / 1e6,
+                total_settled_usdc: Math.round((lifetimeTotals._sum.totalRevenue ?? 0) * 1e6) / 1e6,
+                total_payments: lifetimeTotals._sum.totalPayments ?? 0,
+            },
+            by_day: Object.entries(byDay)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([date, data]) => ({
+                date,
+                fees_usdc: Math.round(data.fees * 1e6) / 1e6,
+                settlements_usdc: Math.round(data.settlements * 1e6) / 1e6,
+                transactions: data.count,
+            })),
+            by_provider: Object.entries(byProvider)
+                .sort(([, a], [, b]) => b.fees - a.fees)
+                .map(([id, data]) => ({
+                provider_id: id,
+                name: data.name ?? "unknown",
+                fees_usdc: Math.round(data.fees * 1e6) / 1e6,
+                settlements_usdc: Math.round(data.settlements * 1e6) / 1e6,
+                transactions: data.count,
+            })),
+        });
+    }
+    catch (err) {
+        console.error("[facilitator] Revenue error:", err);
         res.status(500).json({ ok: false, error: "internal_error" });
     }
 });

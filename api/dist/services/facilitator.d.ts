@@ -66,7 +66,14 @@ export declare function releaseNonce(nonce: string, providerId: string): Promise
 export declare function decodePayment(paymentB64: string): PaymentPayload | null;
 export declare function verifyPayment(paymentB64: string, paymentDetails: VerifyRequest["paymentDetails"], providerId: string): Promise<VerifyResponse>;
 export declare function settlePayment(paymentB64: string, paymentDetails: SettleRequest["paymentDetails"]): Promise<SettleResponse>;
+/** Default fee from env (FACILITATOR_FEE_PERCENT), falls back to 2.5% */
+export declare function getDefaultFeePercent(): number;
 export declare function calculateFee(amountAtomic: string, feePercent: number): string;
+/** Calculate what the provider receives after fee deduction */
+export declare function calculateProviderPayout(amountAtomic: string, feePercent: number): {
+    fee: string;
+    payout: string;
+};
 export declare function getSupportedNetworks(): Array<{
     network: string;
     name: string;

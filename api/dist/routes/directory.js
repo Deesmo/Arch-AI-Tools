@@ -16,6 +16,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { prisma } from "../lib/prisma.js";
+import { requireAdmin } from "../middleware/auth.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = Router();
@@ -45,14 +47,35 @@ function saveDirectory(data) {
     fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), "utf-8");
 }
 // ─── GET /api/v1/x402/directory — Full catalog ───────────────────────────────
-router.get("/", (_req, res) => {
+router.get("/", async (_req, res) => {
     const data = loadDirectory();
     const activeServices = data.services.filter(s => s.status === "active");
-    // Sort: featured first, then by total_endpoints desc
+    // Merge premium listing status from DB
+    try {
+        const activeListings = await prisma.directoryListing.findMany({
+            where: { status: "active", tier: { in: ["featured", "verified"] } },
+        });
+        const listingMap = new Map(activeListings.map(l => [l.serviceId, l]));
+        for (const svc of activeServices) {
+            const listing = listingMap.get(svc.id);
+            if (listing) {
+                if (listing.tier === "featured")
+                    svc.featured = true;
+                if (listing.tier === "verified")
+                    svc.verified = true;
+            }
+        }
+    }
+    catch { /* DB unavailable — use JSON defaults */ }
+    // Sort: featured first, then verified, then by total_endpoints desc
     activeServices.sort((a, b) => {
         if (a.featured && !b.featured)
             return -1;
         if (!a.featured && b.featured)
+            return 1;
+        if (a.verified && !b.verified)
+            return -1;
+        if (!a.verified && b.verified)
             return 1;
         return b.total_endpoints - a.total_endpoints;
     });
@@ -286,6 +309,232 @@ router.post("/submit", (req, res) => {
         message: "Submission received! Your service will be reviewed by our team and added to the directory once approved.",
         submission_id: submission.id,
         status: "pending",
+    });
+});
+// ─── POST /api/v1/x402/directory/upgrade — Request featured/verified status ──
+const TIER_PRICING = {
+    featured: 99, // $99/month
+    verified: 49, // $49/month
+};
+router.post("/upgrade", async (req, res) => {
+    const { service_id, tier, contact_email } = req.body;
+    if (!service_id || !tier || !contact_email) {
+        res.status(400).json({
+            ok: false,
+            error: "missing_fields",
+            message: "Required: service_id, tier (featured|verified), contact_email",
+        });
+        return;
+    }
+    if (!["featured", "verified"].includes(tier)) {
+        res.status(400).json({
+            ok: false,
+            error: "invalid_tier",
+            message: "tier must be 'featured' or 'verified'",
+        });
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email)) {
+        res.status(400).json({ ok: false, error: "invalid_email", message: "Invalid email address" });
+        return;
+    }
+    // Verify service exists in directory
+    const data = loadDirectory();
+    const service = data.services.find(s => s.id === service_id);
+    if (!service) {
+        res.status(404).json({
+            ok: false,
+            error: "service_not_found",
+            message: `No directory service found with id '${service_id}'`,
+        });
+        return;
+    }
+    try {
+        // Check for existing active listing
+        const existing = await prisma.directoryListing.findFirst({
+            where: { serviceId: service_id, tier, status: { in: ["active", "pending"] } },
+        });
+        if (existing) {
+            res.status(409).json({
+                ok: false,
+                error: "already_exists",
+                message: `Service already has ${existing.status} ${tier} listing`,
+                listing_id: existing.id,
+            });
+            return;
+        }
+        const listing = await prisma.directoryListing.create({
+            data: {
+                serviceId: service_id,
+                serviceName: service.name,
+                contactEmail: contact_email.trim().toLowerCase(),
+                tier,
+                monthlyPrice: TIER_PRICING[tier] ?? 0,
+                status: "pending",
+            },
+        });
+        res.status(201).json({
+            ok: true,
+            message: `Upgrade request submitted! Your ${tier} listing will be reviewed by our team.`,
+            listing: {
+                id: listing.id,
+                service_id: listing.serviceId,
+                service_name: listing.serviceName,
+                tier: listing.tier,
+                monthly_price_usd: listing.monthlyPrice,
+                status: listing.status,
+            },
+            pricing: {
+                featured: "$99/month — top of search results + directory page",
+                verified: "$49/month — checkmark badge on your listing",
+            },
+        });
+    }
+    catch (err) {
+        console.error("[directory] Upgrade error:", err);
+        res.status(500).json({ ok: false, error: "internal_error" });
+    }
+});
+// ─── GET /api/v1/x402/directory/listings — Admin: view all listing requests ──
+router.get("/listings", requireAdmin, async (_req, res) => {
+    try {
+        const status = _req.query.status;
+        const where = status ? { status } : {};
+        const listings = await prisma.directoryListing.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+        });
+        const revenue = listings
+            .filter(l => l.status === "active")
+            .reduce((sum, l) => sum + l.monthlyPrice, 0);
+        res.json({
+            ok: true,
+            listings: listings.map(l => ({
+                id: l.id,
+                service_id: l.serviceId,
+                service_name: l.serviceName,
+                contact_email: l.contactEmail,
+                tier: l.tier,
+                monthly_price_usd: l.monthlyPrice,
+                status: l.status,
+                approved_at: l.approvedAt?.toISOString() ?? null,
+                expires_at: l.expiresAt?.toISOString() ?? null,
+                created_at: l.createdAt.toISOString(),
+            })),
+            summary: {
+                total: listings.length,
+                pending: listings.filter(l => l.status === "pending").length,
+                active: listings.filter(l => l.status === "active").length,
+                monthly_revenue_usd: revenue,
+            },
+        });
+    }
+    catch (err) {
+        console.error("[directory] Listings error:", err);
+        res.status(500).json({ ok: false, error: "internal_error" });
+    }
+});
+// ─── POST /api/v1/x402/directory/listings/:id/approve — Admin: approve listing
+router.post("/listings/:id/approve", requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const listingId = String(id);
+        const listing = await prisma.directoryListing.findUnique({ where: { id: listingId } });
+        if (!listing) {
+            res.status(404).json({ ok: false, error: "not_found", message: "Listing not found" });
+            return;
+        }
+        if (listing.status !== "pending") {
+            res.status(400).json({ ok: false, error: "invalid_status", message: `Listing is ${listing.status}, not pending` });
+            return;
+        }
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30); // 30-day cycle
+        const updated = await prisma.directoryListing.update({
+            where: { id: listingId },
+            data: {
+                status: "active",
+                approvedBy: "admin",
+                approvedAt: new Date(),
+                expiresAt,
+            },
+        });
+        // Also update the JSON directory file
+        const data = loadDirectory();
+        const service = data.services.find(s => s.id === listing.serviceId);
+        if (service) {
+            if (listing.tier === "featured")
+                service.featured = true;
+            if (listing.tier === "verified")
+                service.verified = true;
+            saveDirectory(data);
+        }
+        res.json({
+            ok: true,
+            message: `Listing approved — ${listing.serviceName} is now ${listing.tier}`,
+            listing: {
+                id: updated.id,
+                service_name: updated.serviceName,
+                tier: updated.tier,
+                status: updated.status,
+                expires_at: updated.expiresAt?.toISOString(),
+            },
+        });
+    }
+    catch (err) {
+        console.error("[directory] Approve error:", err);
+        res.status(500).json({ ok: false, error: "internal_error" });
+    }
+});
+// ─── POST /api/v1/x402/directory/listings/:id/reject — Admin: reject listing ─
+router.post("/listings/:id/reject", requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const listingId = String(id);
+        const listing = await prisma.directoryListing.findUnique({ where: { id: listingId } });
+        if (!listing) {
+            res.status(404).json({ ok: false, error: "not_found" });
+            return;
+        }
+        await prisma.directoryListing.update({
+            where: { id: listingId },
+            data: { status: "rejected" },
+        });
+        res.json({
+            ok: true,
+            message: `Listing rejected${reason ? `: ${reason}` : ""}`,
+        });
+    }
+    catch (err) {
+        console.error("[directory] Reject error:", err);
+        res.status(500).json({ ok: false, error: "internal_error" });
+    }
+});
+// ─── GET /api/v1/x402/directory/tiers — Public tier info ─────────────────────
+router.get("/tiers", (_req, res) => {
+    res.json({
+        ok: true,
+        tiers: [
+            {
+                tier: "free",
+                price_usd: 0,
+                features: ["Listed in directory", "Basic search visibility", "Service detail page"],
+            },
+            {
+                tier: "verified",
+                price_usd: 49,
+                period: "monthly",
+                features: ["Everything in Free", "✓ Verified checkmark badge", "Trust signal for agents", "Priority in search results"],
+            },
+            {
+                tier: "featured",
+                price_usd: 99,
+                period: "monthly",
+                features: ["Everything in Verified", "⭐ Top of directory & search results", "Featured banner on listing", "Homepage showcase rotation"],
+            },
+        ],
+        upgrade_url: "/api/v1/x402/directory/upgrade",
     });
 });
 export default router;
