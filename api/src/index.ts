@@ -34,6 +34,7 @@ import chatRouter from "./routes/chat.js";
 import directoryRouter from "./routes/directory.js";
 import walletRouter from "./routes/wallet.js";
 import pricingRouter from "./routes/pricing.js";
+import playgroundRouter from "./routes/playground.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
@@ -218,6 +219,9 @@ app.use("/api/v1/x402/directory", directoryRouter);
 // x402 Pricing API (public, no auth)
 app.use("/api/v1/x402/pricing", pricingRouter);
 
+// x402 Playground API (public, no auth — demo flow)
+app.use("/api/v1/x402/playground", playgroundRouter);
+
 // Wallet provisioning (AgentKit)
 app.use("/v1/wallet", walletRouter);
 
@@ -262,6 +266,7 @@ app.get("/blog", (_req: Request, res: Response) => res.sendFile(path.join(__dirn
 app.get("/blog/:slug", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/sdk", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/fund.html')));
+app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/playground.html')));
 
 // /success — Stripe post-checkout success page
 app.get("/success", (_req: Request, res: Response) => {
