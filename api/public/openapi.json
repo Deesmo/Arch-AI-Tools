@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arch Tools API",
-    "version": "1.7.0",
-    "description": "50 production-ready API tools for AI agents and developers. Web scraping, AI generation, image creation, audio transcription, crypto data, email, domain checks, and more.",
+    "version": "1.10.0",
+    "description": "53 production-ready AI tools via MCP with x402 USDC payments on Base L2",
     "contact": {
       "url": "https://archtools.dev",
       "email": "support@archtools.dev"
@@ -29,12 +29,12 @@
     }
   },
   "paths": {
-    "/v1/tools/web-scrape": {
+    "/v1/tools/validate-data": {
       "post": {
-        "operationId": "webScrape",
-        "summary": "Scrape a webpage and return its content as markdown or HTML",
+        "operationId": "validate_data",
+        "summary": "Validate JSON against a JSON Schema",
         "tags": [
-          "Web"
+          "Utility"
         ],
         "requestBody": {
           "required": true,
@@ -43,25 +43,15 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "url"
+                  "data",
+                  "schema"
                 ],
                 "properties": {
-                  "url": {
-                    "type": "string",
-                    "description": "URL to scrape"
+                  "data": {
+                    "type": "object"
                   },
-                  "format": {
-                    "type": "string",
-                    "enum": [
-                      "markdown",
-                      "html",
-                      "text"
-                    ],
-                    "default": "markdown"
-                  },
-                  "selector": {
-                    "type": "string",
-                    "description": "CSS selector to extract specific element"
+                  "schema": {
+                    "type": "object"
                   }
                 }
               }
@@ -70,554 +60,20 @@
         },
         "responses": {
           "200": {
-            "description": "Scraped content"
-          }
-        }
-      }
-    },
-    "/v1/tools/ai-generate": {
-      "post": {
-        "operationId": "aiGenerate",
-        "summary": "Generate text using AI models (Claude, GPT-4, Grok, Gemini)",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "prompt"
-                ],
-                "properties": {
-                  "prompt": {
-                    "type": "string",
-                    "description": "The prompt or question"
-                  },
-                  "model": {
-                    "type": "string",
-                    "enum": [
-                      "claude",
-                      "gpt4",
-                      "grok",
-                      "gemini"
-                    ],
-                    "default": "claude",
-                    "description": "AI model to use"
-                  },
-                  "system": {
-                    "type": "string",
-                    "description": "System prompt / persona"
-                  },
-                  "max_tokens": {
-                    "type": "integer",
-                    "default": 1024
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Generated text"
-          }
-        }
-      }
-    },
-    "/v1/tools/design-create": {
-      "post": {
-        "operationId": "designCreate",
-        "summary": "Generate images from text prompts using DALL-E 3",
-        "tags": [
-          "Image"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "prompt"
-                ],
-                "properties": {
-                  "prompt": {
-                    "type": "string",
-                    "description": "Image description"
-                  },
-                  "size": {
-                    "type": "string",
-                    "enum": [
-                      "1024x1024",
-                      "1792x1024",
-                      "1024x1792"
-                    ],
-                    "default": "1024x1024"
-                  },
-                  "quality": {
-                    "type": "string",
-                    "enum": [
-                      "standard",
-                      "hd"
-                    ],
-                    "default": "standard"
-                  },
-                  "style": {
-                    "type": "string",
-                    "enum": [
-                      "vivid",
-                      "natural"
-                    ],
-                    "default": "vivid"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Image URL"
-          }
-        }
-      }
-    },
-    "/v1/tools/ocr-extract": {
-      "post": {
-        "operationId": "ocrExtract",
-        "summary": "Extract text from images using OCR",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "image_url": {
-                    "type": "string",
-                    "description": "Public URL of the image"
-                  },
-                  "image_base64": {
-                    "type": "string",
-                    "description": "Base64-encoded image (alternative to image_url)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted text"
-          }
-        }
-      }
-    },
-    "/v1/tools/extract-pdf": {
-      "post": {
-        "operationId": "extractPdf",
-        "summary": "Extract text and content from PDF documents",
-        "tags": [
-          "AI"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "pdf_url": {
-                    "type": "string",
-                    "description": "Public URL of the PDF"
-                  },
-                  "pdf_base64": {
-                    "type": "string",
-                    "description": "Base64-encoded PDF (alternative to pdf_url)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted PDF content"
-          }
-        }
-      }
-    },
-    "/v1/tools/transcribe-audio": {
-      "post": {
-        "operationId": "transcribeAudio",
-        "summary": "Transcribe audio files to text using OpenAI Whisper",
-        "tags": [
-          "Audio"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "audio_url"
-                ],
-                "properties": {
-                  "audio_url": {
-                    "type": "string",
-                    "description": "Public URL of the audio file (MP3, WAV, M4A, OGG)"
-                  },
-                  "language": {
-                    "type": "string",
-                    "description": "ISO-639-1 language code (auto-detected if omitted)"
-                  },
-                  "prompt": {
-                    "type": "string",
-                    "description": "Context hint for better accuracy"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Transcript text"
-          }
-        }
-      }
-    },
-    "/v1/tools/text-to-speech": {
-      "post": {
-        "operationId": "textToSpeech",
-        "summary": "Convert text to natural speech audio via ElevenLabs",
-        "tags": [
-          "Audio"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text to convert (max 5,000 chars)"
-                  },
-                  "voice_id": {
-                    "type": "string",
-                    "description": "ElevenLabs voice ID",
-                    "default": "EXAVITQu4vr4xnSDxMaL"
-                  },
-                  "model_id": {
-                    "type": "string",
-                    "description": "ElevenLabs model ID (default: eleven_turbo_v2_5)"
-                  },
-                  "stability": {
-                    "type": "number",
-                    "description": "Voice stability 0-1 (default: 0.42)"
-                  },
-                  "similarity_boost": {
-                    "type": "number",
-                    "description": "Voice similarity boost 0-1 (default: 0.82)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Base64 MP3 audio"
-          }
-        }
-      }
-    },
-    "/v1/tools/crypto-price": {
-      "post": {
-        "operationId": "cryptoPrice",
-        "summary": "Get current cryptocurrency price",
-        "tags": [
-          "Crypto"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "symbol"
-                ],
-                "properties": {
-                  "symbol": {
-                    "type": "string",
-                    "description": "CoinGecko coin ID (e.g. bitcoin, ethereum, solana)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Current price and market data"
-          }
-        }
-      }
-    },
-    "/v1/tools/crypto-news": {
-      "post": {
-        "operationId": "cryptoNews",
-        "summary": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine",
-        "tags": [
-          "Crypto"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "symbol": {
-                    "type": "string",
-                    "description": "Filter by coin symbol (e.g. BTC, ETH)"
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "default": 10,
-                    "maximum": 20
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "News articles"
-          }
-        }
-      }
-    },
-    "/v1/tools/email-send": {
-      "post": {
-        "operationId": "emailSend",
-        "summary": "Send transactional email via Resend",
-        "tags": [
-          "Communication"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "to",
-                  "subject",
-                  "body"
-                ],
-                "properties": {
-                  "to": {
-                    "type": "string",
-                    "description": "Recipient email address"
-                  },
-                  "subject": {
-                    "type": "string"
-                  },
-                  "body": {
-                    "type": "string",
-                    "description": "Plain text email body"
-                  },
-                  "html": {
-                    "type": "string",
-                    "description": "HTML email body (alternative to body)"
-                  },
-                  "from": {
-                    "type": "string",
-                    "description": "Sender (default: no-reply@archtools.dev)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Message ID"
-          }
-        }
-      }
-    },
-    "/v1/tools/domain-check": {
-      "post": {
-        "operationId": "domainCheck",
-        "summary": "Check if a domain is available or registered via RDAP",
-        "tags": [
-          "Utilities"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "domain"
-                ],
-                "properties": {
-                  "domain": {
-                    "type": "string",
-                    "description": "Domain name (e.g. example.com)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Registration status, expiry, nameservers"
-          }
-        }
-      }
-    },
-    "/v1/tools/qr-code": {
-      "post": {
-        "operationId": "qrCode",
-        "summary": "Generate a QR code",
-        "tags": [
-          "Utilities"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Text or URL to encode"
-                  },
-                  "size": {
-                    "type": "integer",
-                    "default": 200
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Base64 PNG QR code"
-          }
-        }
-      }
-    },
-    "/v1/tools/search-web": {
-      "post": {
-        "operationId": "searchWeb",
-        "summary": "Search the web and return results",
-        "tags": [
-          "Web"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "query"
-                ],
-                "properties": {
-                  "query": {
-                    "type": "string"
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "default": 10,
-                    "maximum": 20
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Search results"
-          }
-        }
-      }
-    },
-    "/v1/tools/timezone-convert": {
-      "post": {
-        "operationId": "timezoneConvert",
-        "summary": "Convert time between timezones",
-        "tags": [
-          "Utilities"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "datetime",
-                  "from_tz",
-                  "to_tz"
-                ],
-                "properties": {
-                  "datetime": {
-                    "type": "string",
-                    "description": "ISO 8601 datetime to convert (e.g. 2024-01-15T14:30:00)"
-                  },
-                  "from_tz": {
-                    "type": "string",
-                    "description": "Source IANA timezone (e.g. America/New_York)"
-                  },
-                  "to_tz": {
-                    "type": "string",
-                    "description": "Target IANA timezone (e.g. Europe/London)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Converted time"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
     },
     "/v1/tools/generate-hash": {
       "post": {
-        "operationId": "generateHash",
-        "summary": "Hash text using SHA256, MD5, SHA512, etc.",
+        "operationId": "generate_hash",
+        "summary": "Generate cryptographic hashes",
         "tags": [
-          "Utilities"
+          "Utility"
         ],
         "requestBody": {
           "required": true,
@@ -626,10 +82,10 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "text"
+                  "input"
                 ],
                 "properties": {
-                  "text": {
+                  "input": {
                     "type": "string"
                   },
                   "algorithm": {
@@ -637,10 +93,8 @@
                     "enum": [
                       "sha256",
                       "sha512",
-                      "md5",
-                      "sha1"
-                    ],
-                    "default": "sha256"
+                      "md5"
+                    ]
                   }
                 }
               }
@@ -649,17 +103,62 @@
         },
         "responses": {
           "200": {
-            "description": "Hashed value"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/qr-code": {
+      "post": {
+        "operationId": "qr_code",
+        "summary": "Generate QR codes (PNG or SVG)",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "png",
+                      "svg"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
     },
     "/v1/tools/convert-format": {
       "post": {
-        "operationId": "convertFormat",
-        "summary": "Convert data between JSON, YAML, CSV, TOML, and XML formats",
+        "operationId": "convert_format",
+        "summary": "Convert between JSON, YAML, CSV, XML",
         "tags": [
-          "Utilities"
+          "Utility"
         ],
         "requestBody": {
           "required": true,
@@ -674,30 +173,13 @@
                 ],
                 "properties": {
                   "input": {
-                    "type": "string",
-                    "description": "The content to convert (serialized as a string)"
+                    "type": "string"
                   },
                   "from": {
-                    "type": "string",
-                    "enum": [
-                      "json",
-                      "yaml",
-                      "csv",
-                      "xml",
-                      "toml"
-                    ],
-                    "description": "Source format"
+                    "type": "string"
                   },
                   "to": {
-                    "type": "string",
-                    "enum": [
-                      "json",
-                      "yaml",
-                      "csv",
-                      "xml",
-                      "toml"
-                    ],
-                    "description": "Target format"
+                    "type": "string"
                   }
                 }
               }
@@ -706,17 +188,20 @@
         },
         "responses": {
           "200": {
-            "description": "Converted content"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
     },
-    "/v1/tools/webhook-send": {
+    "/v1/tools/transform-text": {
       "post": {
-        "operationId": "webhookSend",
-        "summary": "POST a JSON payload to any webhook URL",
+        "operationId": "transform_text",
+        "summary": "Transform text (10 modes)",
         "tags": [
-          "Utilities"
+          "Utility"
         ],
         "requestBody": {
           "required": true,
@@ -725,31 +210,645 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "webhook_url",
-                  "payload"
+                  "text",
+                  "mode"
                 ],
                 "properties": {
-                  "webhook_url": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/extract-metadata": {
+      "post": {
+        "operationId": "extract_metadata",
+        "summary": "Extract OG tags, word count, links",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/web-scrape": {
+      "post": {
+        "operationId": "web_scrape",
+        "summary": "Scrape any public URL",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "selector": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/extract-page": {
+      "post": {
+        "operationId": "extract_page",
+        "summary": "Clean text and metadata from any webpage",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/search-web": {
+      "post": {
+        "operationId": "search_web",
+        "summary": "Web search with structured results",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/rss-parse": {
+      "post": {
+        "operationId": "rss_parse",
+        "summary": "Parse RSS/Atom feeds into JSON",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/ip-lookup": {
+      "post": {
+        "operationId": "ip_lookup",
+        "summary": "Geo, ISP, VPN/proxy detection",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ip"
+                ],
+                "properties": {
+                  "ip": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/whois-lookup": {
+      "post": {
+        "operationId": "whois_lookup",
+        "summary": "Domain registration, expiry, nameservers",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/email-verify": {
+      "post": {
+        "operationId": "email_verify",
+        "summary": "MX check + disposable domain detection",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/phone-validate": {
+      "post": {
+        "operationId": "phone_validate",
+        "summary": "E.164 format, type, country code",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/currency-convert": {
+      "post": {
+        "operationId": "currency_convert",
+        "summary": "170+ currencies with live rates",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "from",
+                  "to"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/timezone-convert": {
+      "post": {
+        "operationId": "timezone_convert",
+        "summary": "Convert datetime between IANA timezones",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "datetime",
+                  "from",
+                  "to"
+                ],
+                "properties": {
+                  "datetime": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/generate-uuid": {
+      "post": {
+        "operationId": "generate_uuid",
+        "summary": "Generate UUIDs, tokens, API-key strings",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/diff-text": {
+      "post": {
+        "operationId": "diff_text",
+        "summary": "Structured diff in multiple formats",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text1",
+                  "text2"
+                ],
+                "properties": {
+                  "text1": {
+                    "type": "string"
+                  },
+                  "text2": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/readability-score": {
+      "post": {
+        "operationId": "readability_score",
+        "summary": "Flesch-Kincaid readability and grade level",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/language-detect": {
+      "post": {
+        "operationId": "language_detect",
+        "summary": "Detect language with confidence score",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/sentiment-analysis": {
+      "post": {
+        "operationId": "sentiment_analysis",
+        "summary": "Sentiment + emotion detection",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/summarize": {
+      "post": {
+        "operationId": "summarize",
+        "summary": "Summarize in 5 styles",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "style": {
                     "type": "string",
-                    "description": "The webhook endpoint URL to POST to"
-                  },
-                  "payload": {
-                    "type": "object",
-                    "description": "JSON body to send in the POST request"
-                  },
-                  "headers": {
-                    "type": "object",
-                    "description": "Optional custom headers to include"
-                  },
-                  "method": {
-                    "type": "string",
-                    "description": "HTTP method (default: POST)",
                     "enum": [
-                      "GET",
-                      "POST",
-                      "PUT",
-                      "PATCH",
-                      "DELETE"
+                      "paragraph",
+                      "bullets",
+                      "tldr",
+                      "headline",
+                      "executive"
                     ]
                   }
                 }
@@ -759,17 +858,469 @@
         },
         "responses": {
           "200": {
-            "description": "Webhook response status and body"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/extract-entities": {
+      "post": {
+        "operationId": "extract_entities",
+        "summary": "NER: people, orgs, locations, dates, money",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/regex-generate": {
+      "post": {
+        "operationId": "regex_generate",
+        "summary": "Generate regex from plain English",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "description"
+                ],
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/pii-detect": {
+      "post": {
+        "operationId": "pii_detect",
+        "summary": "Detect and optionally redact PII",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "redact": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/web-search": {
+      "post": {
+        "operationId": "web_search",
+        "summary": "Real-time web search with AI answer",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/ai-generate": {
+      "post": {
+        "operationId": "ai_generate",
+        "summary": "AI text generation via Claude",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "max_tokens": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/ocr-extract": {
+      "post": {
+        "operationId": "ocr_extract",
+        "summary": "Extract text from images",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/browser-task": {
+      "post": {
+        "operationId": "browser_task",
+        "summary": "Headless browser automation via Playwright",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "actions"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "actions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/extract-pdf": {
+      "post": {
+        "operationId": "extract_pdf",
+        "summary": "Extract text from a PDF",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/screenshot-capture": {
+      "post": {
+        "operationId": "screenshot_capture",
+        "summary": "Capture screenshot of any URL",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/html-to-markdown": {
+      "post": {
+        "operationId": "html_to_markdown",
+        "summary": "Convert HTML to Markdown",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "html"
+                ],
+                "properties": {
+                  "html": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/url-shorten": {
+      "post": {
+        "operationId": "url_shorten",
+        "summary": "Shorten a URL",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/webhook-send": {
+      "post": {
+        "operationId": "webhook_send",
+        "summary": "Send webhook POST request",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "payload"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
     },
     "/v1/tools/jsonpath-query": {
       "post": {
-        "operationId": "jsonpathQuery",
-        "summary": "Run a JSONPath expression against a JSON object",
+        "operationId": "jsonpath_query",
+        "summary": "Query JSON with JSONPath",
         "tags": [
-          "Utilities"
+          "Utility"
         ],
         "requestBody": {
           "required": true,
@@ -783,12 +1334,10 @@
                 ],
                 "properties": {
                   "data": {
-                    "type": "object",
-                    "description": "The JSON object to query"
+                    "type": "object"
                   },
                   "path": {
-                    "type": "string",
-                    "description": "JSONPath expression, e.g. $.store.book[*].title"
+                    "type": "string"
                   }
                 }
               }
@@ -797,17 +1346,691 @@
         },
         "responses": {
           "200": {
-            "description": "Matching values from the JSONPath query"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/image-generate": {
+      "post": {
+        "operationId": "image_generate",
+        "summary": "Generate images from text prompts",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/barcode-generate": {
+      "post": {
+        "operationId": "barcode_generate",
+        "summary": "Generate barcodes",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/workflow-agent": {
+      "post": {
+        "operationId": "workflow_agent",
+        "summary": "Multi-step AI workflow agent",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "task"
+                ],
+                "properties": {
+                  "task": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/crypto-price": {
+      "post": {
+        "operationId": "crypto_price",
+        "summary": "Get cryptocurrency price",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "coin"
+                ],
+                "properties": {
+                  "coin": {
+                    "type": "string"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/crypto-ohlcv": {
+      "post": {
+        "operationId": "crypto_ohlcv",
+        "summary": "Crypto OHLCV candlestick data",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "coin"
+                ],
+                "properties": {
+                  "coin": {
+                    "type": "string"
+                  },
+                  "days": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/crypto-market-cap": {
+      "post": {
+        "operationId": "crypto_market_cap",
+        "summary": "Crypto market cap rankings",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/crypto-fear-greed": {
+      "post": {
+        "operationId": "crypto_fear_greed",
+        "summary": "Crypto Fear & Greed Index",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/crypto-sentiment": {
+      "post": {
+        "operationId": "crypto_sentiment",
+        "summary": "Crypto market sentiment analysis",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "coin"
+                ],
+                "properties": {
+                  "coin": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/crypto-news": {
+      "post": {
+        "operationId": "crypto_news",
+        "summary": "Latest crypto news",
+        "tags": [
+          "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
     },
     "/v1/tools/token-lookup": {
       "post": {
-        "operationId": "tokenLookup",
-        "summary": "Search CoinGecko for a token by name or ticker symbol",
+        "operationId": "token_lookup",
+        "summary": "Token info lookup",
         "tags": [
           "Crypto"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/ai-oracle": {
+      "post": {
+        "operationId": "ai_oracle",
+        "summary": "Premium reasoning with structured analysis",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "question"
+                ],
+                "properties": {
+                  "question": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "fast",
+                      "smart",
+                      "deep"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/session-create": {
+      "post": {
+        "operationId": "session_create",
+        "summary": "Create a managed conversation session",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "system_prompt": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/session-message": {
+      "post": {
+        "operationId": "session_message",
+        "summary": "Send message in conversation session",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "session_id",
+                  "message"
+                ],
+                "properties": {
+                  "session_id": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/text-to-speech": {
+      "post": {
+        "operationId": "text_to_speech",
+        "summary": "Convert text to audio via ElevenLabs",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "voice": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/transcribe-audio": {
+      "post": {
+        "operationId": "transcribe_audio",
+        "summary": "Transcribe audio to text via Whisper",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "language": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/email-send": {
+      "post": {
+        "operationId": "email_send",
+        "summary": "Send transactional emails via Resend",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "to",
+                  "subject",
+                  "body"
+                ],
+                "properties": {
+                  "to": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "html": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/design-create": {
+      "post": {
+        "operationId": "design_create",
+        "summary": "Generate images via DALL-E 3",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": [
+                      "1024x1024",
+                      "1792x1024",
+                      "1024x1792"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/domain-check": {
+      "post": {
+        "operationId": "domain_check",
+        "summary": "Check domain availability via RDAP",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/news-search": {
+      "post": {
+        "operationId": "news_search",
+        "summary": "Search real-time news articles",
+        "tags": [
+          "Ai"
         ],
         "requestBody": {
           "required": true,
@@ -820,8 +2043,10 @@
                 ],
                 "properties": {
                   "query": {
-                    "type": "string",
-                    "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)"
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer"
                   }
                 }
               }
@@ -830,17 +2055,20 @@
         },
         "responses": {
           "200": {
-            "description": "Token metadata including CoinGecko ID"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
     },
-    "/v1/tools/ip-lookup": {
+    "/v1/tools/research-report": {
       "post": {
-        "operationId": "ipLookup",
-        "summary": "Look up geolocation and ISP info for an IP address",
+        "operationId": "research_report",
+        "summary": "Generate structured research report",
         "tags": [
-          "Utilities"
+          "Ai"
         ],
         "requestBody": {
           "required": true,
@@ -848,10 +2076,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "topic"
+                ],
                 "properties": {
-                  "ip": {
-                    "type": "string",
-                    "description": "IP address (uses caller's IP if omitted)"
+                  "topic": {
+                    "type": "string"
                   }
                 }
               }
@@ -860,7 +2090,230 @@
         },
         "responses": {
           "200": {
-            "description": "Geolocation and ISP data"
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/fact-check": {
+      "post": {
+        "operationId": "fact_check",
+        "summary": "Verify claims against web sources",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "claim"
+                ],
+                "properties": {
+                  "claim": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/video-generate": {
+      "post": {
+        "operationId": "video_generate",
+        "summary": "AI video generation via Runway Gen-3",
+        "tags": [
+          "Ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "duration": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/image-remove-bg": {
+      "post": {
+        "operationId": "image_remove_bg",
+        "summary": "Remove background from image",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image_url"
+                ],
+                "properties": {
+                  "image_url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/email-find": {
+      "post": {
+        "operationId": "email_find",
+        "summary": "Find email for person at company",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "company"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "company": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/semantic-search": {
+      "post": {
+        "operationId": "semantic_search",
+        "summary": "Neural web search via Exa AI",
+        "tags": [
+          "Web"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "num_results": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
+          }
+        }
+      }
+    },
+    "/v1/tools/social-post": {
+      "post": {
+        "operationId": "social_post",
+        "summary": "Post tweet to X/Twitter",
+        "tags": [
+          "Utility"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "402": {
+            "description": "Payment Required \u2014 x402 USDC payment needed"
           }
         }
       }
