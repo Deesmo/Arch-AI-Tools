@@ -253,6 +253,8 @@ app.get("/pricing", (_req, res) => res.sendFile(path.join(__dirname, '../public/
 app.get("/getting-started", (_req, res) => res.redirect(301, "/docs/getting-started"));
 // /terms — convenience redirect to static terms page
 app.get("/terms", (_req, res) => res.redirect(301, "/terms.html"));
+// /links — Linktree-style page
+app.get("/links", (_req, res) => res.redirect(301, "/links.html"));
 // /privacy and /legal — convenience redirects to canonical sub-paths
 app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
