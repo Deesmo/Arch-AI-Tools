@@ -20,7 +20,8 @@ const transport = process.env.MCP_TRANSPORT || "stdio"; // "stdio" or "sse"
 // Render-safe: prefer PORT when running as a web service
 const ssePort = Number(process.env.PORT || process.env.MCP_SSE_PORT || 3001);
 
-if (!apiKey) throw new Error("Missing ARCH_API_KEY");
+// API key validated at runtime in createServer(), not at module load
+// This allows Smithery sandbox scanning without credentials
 
 type ToolDef = {
   name: string;
@@ -410,3 +411,18 @@ async function main() {
 }
 
 main().catch(console.error);
+
+// Smithery sandbox export — allows scanning without real credentials
+export async function createSandboxServer() {
+  // Set a dummy key so createServer doesn't fail during scan
+  process.env.ARCH_API_KEY = process.env.ARCH_API_KEY || "sandbox_scan_key";
+  return createServer();
+}
+
+// Default export for Smithery hosted deployment
+export default async function(opts?: { config?: { apiKey?: string; baseUrl?: string }; session?: any; env?: any }) {
+  if (opts?.config?.apiKey) process.env.ARCH_API_KEY = opts.config.apiKey;
+  if (opts?.config?.baseUrl) process.env.ARCH_API_BASE_URL = opts.config.baseUrl;
+  if (opts?.env?.ARCH_API_KEY) process.env.ARCH_API_KEY = opts.env.ARCH_API_KEY;
+  return createServer();
+}

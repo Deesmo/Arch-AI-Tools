@@ -136,7 +136,14 @@ router.post("/seed-tools", requireAdmin, async (_req, res) => {
         try {
             const existing = await prisma.tool.findUnique({ where: { name: t.name } });
             if (existing) {
-                results.push({ name: t.name, status: "already_exists" });
+                // Ensure tool is active and enabled
+                if (!existing.active) {
+                    await prisma.$executeRaw(Prisma.sql `UPDATE "Tool" SET active = true, enabled = true WHERE name = ${t.name}`);
+                    results.push({ name: t.name, status: "activated" });
+                }
+                else {
+                    results.push({ name: t.name, status: "already_exists" });
+                }
             }
             else {
                 // DB has extra NOT NULL columns not in Prisma schema — use raw SQL
