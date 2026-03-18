@@ -37,7 +37,7 @@ export const config = {
     // Only use wallet address if it looks like a real Ethereum/Base address (0x + 40 hex chars)
     walletAddress: /^0x[a-fA-F0-9]{40}$/.test(process.env.WALLET_ADDRESS ?? "") ? (process.env.WALLET_ADDRESS ?? "") : "",
     network: process.env.X402_NETWORK ?? "base",
-    facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://api.cdp.coinbase.com/platform/v2/x402",
+    facilitatorUrl: process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator",
   },
   facilitator: {
     feePercent: parseFloat(process.env.FACILITATOR_FEE_PERCENT ?? "2.5"),

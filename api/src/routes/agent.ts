@@ -134,7 +134,7 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
         where: { agentId: agent.id },
         orderBy: { createdAt: "desc" },
         take: 10,
-        select: { credits: true, amountCents: true, createdAt: true, label: true },
+        select: { credits: true, amountCents: true, createdAt: true },
       }).catch(() => []),
       request_id: reqId(),
     });
@@ -207,7 +207,7 @@ router.delete("/keys/:prefix", requireAuth, async (req: AuthedRequest, res: Resp
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   
   // For now, can only revoke own current key prefix
-  if (!agent.apiKey?.startsWith(prefix)) {
+  if (!agent.apiKey?.startsWith(String(prefix))) {
     res.status(403).json({ ok: false, error: "forbidden", message: "Can only revoke your own key", request_id: reqId() });
     return;
   }

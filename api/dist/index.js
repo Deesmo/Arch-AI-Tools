@@ -260,6 +260,7 @@ app.get("/dashboard", (req, res) => {
 // /pricing — full pricing page
 app.get("/pricing", (_req, res) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
 // /getting-started — convenience redirect to docs sub-path
+app.get("/langchain-guide", (_req, res) => res.sendFile(path.join(__dirname, '../public/langchain-guide.html')));
 app.get("/byok", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/byok.html')));
 app.get("/quickstart", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/quickstart.html')));
 app.get("/getting-started", (_req, res) => res.redirect(301, "/docs/getting-started"));
@@ -288,6 +289,7 @@ app.get("/admin", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/
 app.get("/sitemap.xml", (_req, res) => res.sendFile(path.join(__dirname, '../public/sitemap.xml')));
 app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../public/robots.txt')));
 app.get("/x402-guide", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
+app.get("/langchain-guide", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/langchain-guide.html')));
 app.get("/refer", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/refer.html')));
 app.get("/landing-b", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/landing-b.html')));
 app.get("/changelog-tonight", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/changelog-tonight.html')));

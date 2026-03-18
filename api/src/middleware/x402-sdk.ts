@@ -99,7 +99,7 @@ export function initX402Sdk(): boolean {
   }
 
   try {
-    const facilitatorUrl = config.x402.facilitatorUrl || "https://api.cdp.coinbase.com/platform/v2/x402";
+    const facilitatorUrl = config.x402.facilitatorUrl || "https://x402.org/facilitator";
     const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl });
 
     const network = config.x402.network === "base-sepolia"

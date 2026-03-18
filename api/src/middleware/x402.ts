@@ -134,6 +134,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: chainId,
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Base)`,
@@ -150,6 +151,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:1",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Ethereum)`,
@@ -166,6 +168,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:42161",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Arbitrum)`,
@@ -182,6 +185,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:137",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Polygon)`,
@@ -198,6 +202,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:10",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Optimism)`,
@@ -214,6 +219,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:43114",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Avalanche)`,
@@ -231,6 +237,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "solana:mainnet",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Solana)`,
@@ -248,6 +255,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "cosmos:noble-1",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Noble/Cosmos)`,
@@ -265,6 +273,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "algorand:mainnet",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Algorand)`,
@@ -283,6 +292,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "stellar:pubnet",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Stellar)`,
@@ -300,6 +310,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "sui:mainnet",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Sui)`,
@@ -316,6 +327,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:130",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Unichain)`,
@@ -332,6 +344,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:143",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Monad)`,
@@ -349,6 +362,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "polkadot:asset-hub",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Polkadot)`,
@@ -366,6 +380,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "aptos:mainnet",
+      amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
       description: `Arch Tools — ${toolName} (USDC on Aptos)`,
@@ -393,6 +408,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:1",
+      amount: ethWei,
       maxAmountRequired: ethWei,
       resource,
       description: `Arch Tools — ${toolName} (native ETH on Ethereum)`,
@@ -406,6 +422,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:8453",
+      amount: ethWei,
       maxAmountRequired: ethWei,
       resource,
       description: `Arch Tools — ${toolName} (native ETH on Base)`,
@@ -431,6 +448,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:56",
+      amount: bnbWei,
       maxAmountRequired: bnbWei,
       resource,
       description: `Arch Tools — ${toolName} (native BNB on BNB Chain)`,
@@ -456,6 +474,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "near:mainnet",
+      amount: yoctoNear,
       maxAmountRequired: yoctoNear,
       resource,
       description: `Arch Tools — ${toolName} (NEAR token)`,
@@ -481,6 +500,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "solana:mainnet",
+      amount: lamports,
       maxAmountRequired: lamports,
       resource,
       description: `Arch Tools — ${toolName} (native SOL)`,
@@ -506,6 +526,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:8453",
+      amount: solAtomic,
       maxAmountRequired: solAtomic,
       resource,
       description: `Arch Tools — ${toolName} (SOL on Base)`,
@@ -531,6 +552,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "bittensor:finney",
+      amount: taoRao,
       maxAmountRequired: taoRao,
       resource,
       description: `Arch Tools — ${toolName} (TAO on Bittensor)`,
@@ -556,6 +578,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
     accepts.push({
       scheme: "exact",
       network: "eip155:1",
+      amount: uniAtomic,
       maxAmountRequired: uniAtomic,
       resource,
       description: `Arch Tools — ${toolName} (UNI on Ethereum)`,
@@ -583,7 +606,8 @@ function buildPaymentRequired(toolName: string, price: string): object {
         accepts.push({
           scheme: "exact",
           network,
-          maxAmountRequired: amountAtomic,
+          amount: amountAtomic,
+      maxAmountRequired: amountAtomic,
           resource,
           description: `Arch Tools — ${toolName} (USDT on ${chain.charAt(0).toUpperCase() + chain.slice(1)})`,
           mimeType: "application/json",
@@ -630,6 +654,11 @@ function buildPaymentRequired(toolName: string, price: string): object {
 
   return {
     x402Version: 1,
+    resource: {
+      url: resource,
+      description: `Arch Tools — ${toolName}`,
+      mimeType: "application/json",
+    },
     accepts: filteredAccepts,
     error: "PAYMENT-REQUIRED",
   };
@@ -676,29 +705,64 @@ async function checkAndStoreNonce(nonce: string): Promise<boolean> {
   return result === "OK"; // "OK" = new nonce stored; null = already existed (replay)
 }
 
-async function verifyPayment(paymentHeader: string, toolName: string): Promise<boolean> {
-  if (!config.x402.facilitatorUrl) return false;
+async function verifyPayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ isValid: boolean; payer?: string }> {
+  if (!config.x402.facilitatorUrl) return { isValid: false };
   try {
+    // Decode the base64 payment header into a PaymentPayload object
+    let paymentPayload: object;
+    try {
+      paymentPayload = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf-8"));
+    } catch {
+      // If not valid base64 JSON, wrap as raw payload
+      paymentPayload = { raw: paymentHeader };
+    }
+
     const res = await axios.post(
       `${config.x402.facilitatorUrl}/verify`,
-      { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` },
-      { timeout: 8000 }
+      {
+        x402Version: 1,
+        paymentPayload,
+        paymentRequirements,
+      },
+      {
+        timeout: 8000,
+        headers: { "Content-Type": "application/json" },
+      }
     );
-    return res.data?.isValid === true;
+    return { isValid: res.data?.isValid === true, payer: res.data?.payer };
   } catch {
-    return false;
+    return { isValid: false };
   }
 }
 
-async function settlePayment(paymentHeader: string, toolName: string): Promise<string | null> {
+async function settlePayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ transaction?: string; network?: string; payer?: string } | null> {
   if (!config.x402.facilitatorUrl) return null;
   try {
+    // Decode the base64 payment header into a PaymentPayload object
+    let paymentPayload: object;
+    try {
+      paymentPayload = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf-8"));
+    } catch {
+      paymentPayload = { raw: paymentHeader };
+    }
+
     const res = await axios.post(
       `${config.x402.facilitatorUrl}/settle`,
-      { payment: paymentHeader, resource: `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}` },
-      { timeout: 10000 }
+      {
+        x402Version: 1,
+        paymentPayload,
+        paymentRequirements,
+      },
+      {
+        timeout: 10000,
+        headers: { "Content-Type": "application/json" },
+      }
     );
-    return res.data?.txHash ?? null;
+    return {
+      transaction: res.data?.transaction ?? res.data?.txHash ?? undefined,
+      network: res.data?.network ?? undefined,
+      payer: res.data?.payer ?? undefined,
+    };
   } catch {
     return null;
   }
@@ -720,6 +784,12 @@ export function x402Middleware(toolName: string) {
     // v2: check Payment-Signature (primary), fall back to X-Payment (legacy)
     const paymentHeader = (req.headers["payment-signature"] ?? req.headers["x-payment"]) as string | undefined;
 
+    // If the SDK already handled payment, skip custom middleware
+    if ((req as Request & { x402SdkPaid?: boolean }).x402SdkPaid) {
+      next();
+      return;
+    }
+
     // No payment header — check if they have a valid API key with credits
     if (!paymentHeader) {
       const authHeader = req.headers.authorization;
@@ -730,43 +800,52 @@ export function x402Middleware(toolName: string) {
         return;
       }
 
-      // Return 402 Payment Required
+      // Return 402 Payment Required with proper headers per x402 spec
       const price = X402_PRICES[toolName] ?? "0.005";
+      const paymentRequired = buildPaymentRequired(toolName, price);
+      const paymentRequiredB64 = Buffer.from(JSON.stringify(paymentRequired)).toString("base64");
       res.status(402)
         .header("Content-Type", "application/json")
-        .header("Access-Control-Expose-Headers", "Payment-Required, Payment-Signature, Payment-Response, X-Payment, X-Payment-Response")
-        .json(buildPaymentRequired(toolName, price));
+        .header("PAYMENT-REQUIRED", paymentRequiredB64)
+        .header("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, Payment-Required, PAYMENT-SIGNATURE, Payment-Signature, PAYMENT-RESPONSE, Payment-Response, X-Payment, X-Payment-Response")
+        .json(paymentRequired);
       return;
     }
 
-    // Security: extract and deduplicate nonce to prevent replay attacks.
-    // A valid x402 payment header MUST include a `nonce` field.
+    // Optional nonce-based replay protection (non-standard but useful).
+    // Do NOT reject payments that omit a nonce — the spec doesn't require one.
     const nonce = extractNonce(paymentHeader);
-    if (!nonce) {
-      res.status(402).json({
-        ok: false,
-        error: "payment_nonce_missing",
-        message: "x402 payment header must include a unique nonce field to prevent replay attacks.",
-      });
-      return;
+    if (nonce) {
+      const isNewNonce = await checkAndStoreNonce(nonce);
+      if (!isNewNonce) {
+        res.status(402).json({
+          ok: false,
+          error: "payment_replay_detected",
+          message: "x402 nonce has already been used. Each payment must have a unique nonce.",
+        });
+        return;
+      }
     }
 
-    const isNewNonce = await checkAndStoreNonce(nonce);
-    if (!isNewNonce) {
-      res.status(402).json({
-        ok: false,
-        error: "payment_replay_detected",
-        message: "x402 nonce has already been used. Each payment must have a unique nonce.",
-      });
-      return;
-    }
+    // Build the payment requirements for verify/settle calls
+    const price = X402_PRICES[toolName] ?? "0.005";
+    const chainId = config.x402.network === "base" ? "eip155:8453" : "eip155:84532";
+    const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
+    const paymentRequirements = {
+      scheme: "exact",
+      network: chainId,
+      asset: USDC_CONTRACTS["base"] ?? USDC_CONTRACTS[config.x402.network],
+      amount: amountAtomic,
+      payTo: config.x402.walletAddress,
+      maxTimeoutSeconds: 60,
+      extra: { name: "USD Coin", version: "2" },
+    };
 
-    // Payment header present — verify with facilitator
-    const isValid = await verifyPayment(paymentHeader, toolName);
-    if (!isValid) {
-      // Nonce was already stored — clean it up on verification failure so the agent
-      // can retry with the same nonce after fixing their payment header.
-      if (redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+    // Payment header present — verify with facilitator using spec-compliant format
+    const verifyResult = await verifyPayment(paymentHeader, toolName, paymentRequirements);
+    if (!verifyResult.isValid) {
+      // Clean up nonce on verification failure so agent can retry
+      if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
       res.status(402).json({
         ok: false,
         error: "payment_invalid",
@@ -775,9 +854,8 @@ export function x402Middleware(toolName: string) {
       return;
     }
 
-    // Settle payment
-    const txHash = await settlePayment(paymentHeader, toolName);
-    const price = X402_PRICES[toolName] ?? "0.005";
+    // Settle payment using spec-compliant format
+    const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
 
     // Log the x402 payment
     try {
@@ -785,7 +863,7 @@ export function x402Middleware(toolName: string) {
         data: {
           toolName,
           amountUsdc: price,
-          txHash: txHash ?? undefined,
+          txHash: settleResult?.transaction ?? undefined,
           network: config.x402.network,
           status: "settled",
         },
@@ -797,13 +875,14 @@ export function x402Middleware(toolName: string) {
     // Mark request as x402-paid so tool handler can skip credit check
     (req as Request & { x402Paid?: boolean }).x402Paid = true;
 
-    // v2: include Payment-Response header with settlement details
-    res.setHeader("Payment-Response", JSON.stringify({
+    // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 spec
+    const settleResponse = {
       success: true,
-      txHash: txHash ?? undefined,
-      network: config.x402.network,
-      amountUsdc: price,
-    }));
+      transaction: settleResult?.transaction ?? "",
+      network: settleResult?.network ?? chainId,
+      payer: settleResult?.payer ?? verifyResult.payer ?? "",
+    };
+    res.setHeader("PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResponse)).toString("base64"));
 
     // Log x402 tool call to ApiRequest for admin stats visibility
     try {

@@ -16,6 +16,7 @@ export async function deductCredits(req, res, toolName, cost) {
             message: `This tool costs ${cost} credits. You have ${agent.credits}. Buy more at https://archtools.dev/pricing`,
             credits_remaining: agent.credits,
             credits_needed: cost,
+            upgrade_url: "https://archtools.dev/pricing",
             request_id: crypto.randomUUID(),
         });
         return false;
@@ -30,6 +31,12 @@ export async function deductCredits(req, res, toolName, cost) {
     });
     // Update agent object in-place for use in handler
     agent.credits -= cost;
+    // Set credit tracking response headers (TASK 7: X-Credits-Remaining)
+    res.setHeader("X-Credits-Remaining", agent.credits.toString());
+    res.setHeader("X-Credits-Used", cost.toString());
+    if (agent.credits < 20) {
+        res.setHeader("X-Upgrade-URL", "https://archtools.dev/pricing");
+    }
     // Low credit alert (non-blocking)
     if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
         prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })

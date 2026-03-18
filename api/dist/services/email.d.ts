@@ -23,4 +23,6 @@ export declare function sendX402PaymentReceipt(to: string, opts: {
 export declare function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void>;
 export declare function sendDay3FollowupEmail(to: string, agentId: string, creditsRemaining: number): Promise<void>;
 export declare function sendDay7ReengagementEmail(to: string, creditsRemaining: number): Promise<void>;
+export declare function sendEmail80PctAlert(to: string, creditsRemaining: number, agentId: string): Promise<void>;
+export declare function sendCreditsDepletedAlert(to: string, agentId: string): Promise<void>;
 //# sourceMappingURL=email.d.ts.map
