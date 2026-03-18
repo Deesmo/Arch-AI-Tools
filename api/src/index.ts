@@ -402,6 +402,38 @@ app.use((_req: Request, res: Response) => {
 });
 
 // ─── Error handler ───────────────────────────────────────────────────────────
+// x402 Payment Gate Health Check — public, no auth
+// Returns whether the payment gate is working correctly
+app.get("/v1/health/x402", async (_req: Request, res: Response) => {
+  try {
+    // Self-test: call a tool endpoint without auth and check for 402
+    const testUrl = `http://localhost:${process.env.PORT ?? 10000}/v1/tools/generate-hash`;
+    const r = await fetch(testUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "gate-test" }),
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => null);
+    
+    const gateWorking = r?.status === 402;
+    const status = gateWorking ? "ok" : "BROKEN";
+    
+    res.status(gateWorking ? 200 : 503).json({
+      ok: gateWorking,
+      gate_status: status,
+      expected_status: 402,
+      actual_status: r?.status ?? "error",
+      message: gateWorking 
+        ? "x402 payment gate is working correctly — unauthenticated requests return 402"
+        : "CRITICAL: x402 payment gate is BROKEN — unauthenticated requests are not returning 402",
+      checked_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(503).json({ ok: false, gate_status: "ERROR", message: String(err) });
+  }
+});
+
+
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled error:", err);
   res.status(500).json({

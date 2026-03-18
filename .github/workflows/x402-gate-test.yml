@@ -1,0 +1,53 @@
+name: x402 Payment Gate Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run every hour to catch silent regressions
+    - cron: '0 * * * *'
+
+jobs:
+  x402-gate:
+    name: Verify x402 Payment Gate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Wait for deploy to stabilize
+        run: sleep 60
+        if: github.event_name == 'push'
+      
+      - name: Test x402 gate (must return 402, not 200)
+        run: |
+          echo "Testing x402 payment gate..."
+          
+          # Test that unauthenticated request returns 402
+          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST https://arch-ai-tools.onrender.com/v1/tools/generate-hash \
+            -H "Content-Type: application/json" \
+            -d '{"text":"ci-gate-test"}')
+          
+          echo "Response status: $STATUS"
+          echo "Response body: $(cat /tmp/response.json)"
+          
+          if [ "$STATUS" = "402" ]; then
+            echo "✅ x402 gate is WORKING correctly"
+            exit 0
+          elif [ "$STATUS" = "200" ]; then
+            echo "🚨 CRITICAL: x402 gate is BROKEN — returning 200 instead of 402"
+            echo "This means unauthenticated requests bypass payment and auth."
+            echo "Check X402_SDK_ENABLED env var and x402-sdk.ts middleware."
+            exit 1
+          else
+            echo "⚠️ Unexpected status $STATUS — gate may be broken"
+            exit 1
+          fi
+      
+      - name: Test health endpoint
+        run: |
+          STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" \
+            https://arch-ai-tools.onrender.com/v1/health/x402)
+          echo "Health check status: $STATUS"
+          cat /tmp/health.json
