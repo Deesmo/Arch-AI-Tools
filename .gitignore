@@ -1,2 +1,6 @@
 .mcpregistry_*
 node_modules/
+sdk/typescript/.npmrc
+sdk/python/dist/
+sdk/python/*.egg-info/
+sdk/typescript/dist/
