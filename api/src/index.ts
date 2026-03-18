@@ -326,6 +326,7 @@ app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__di
 app.get("/analytics", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
 app.get("/admin.html", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
 app.get("/admin", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
 app.get("/refer", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/refer.html')));
 app.get("/landing-b", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/landing-b.html')));
 app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/usage.html')));
