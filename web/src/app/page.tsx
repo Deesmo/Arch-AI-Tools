@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-// ─── Tool categories (38 tools across 13 categories) ─────
+// ─── Tool categories (58 tools across 13 categories) ─────
 const TOOL_CATEGORIES = [
   { cat: 'Data',          tools: 'validate · convert · diff · JSONPath',     icon: '⬡' },
   { cat: 'Text',          tools: 'transform · summarize · readability',       icon: '≋' },
@@ -103,7 +103,7 @@ function AnimatedCodeBlock() {
 
       <div className="flex items-center justify-between text-xs text-white/40 px-1 pt-1">
         <div className="flex items-center gap-3">
-          <span className="text-emerald-400/70">38 tools</span>
+          <span className="text-emerald-400/70">58 tools</span>
           <span>·</span>
           <span>screenshot · image gen · webhook · barcode</span>
           <span>·</span>
@@ -259,7 +259,7 @@ export default function HomePage() {
             <div>
               <span className="text-sm text-white/70 font-medium">Single MCP server URL: </span>
               <code className="text-sm font-mono text-cyan-300/80">https://archtools.dev/mcp</code>
-              <span className="text-sm text-white/40"> — paste this into any MCP client to unlock all 38 tools instantly.</span>
+              <span className="text-sm text-white/40"> — paste this into any MCP client to unlock all 58 tools instantly.</span>
             </div>
           </div>
         </div>
@@ -339,7 +339,7 @@ export default function HomePage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
             <div className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">
-              38 tools across 13 categories
+              58 tools across 13 categories
             </div>
             <div className="grid grid-cols-2 gap-2">
               {TOOL_CATEGORIES.map(({ cat, tools, icon }) => (
@@ -362,7 +362,7 @@ export default function HomePage() {
               {[
                 { n: '01', label: 'Sign up',      sub: 'Magic-link email verification. No credit card required.' },
                 { n: '02', label: 'Get API key',  sub: 'Keys are hashed, scoped, and revocable from your dashboard.' },
-                { n: '03', label: 'Call 38 tools', sub: '500 free credits to start. Screenshot, image gen, webhooks and more.' },
+                { n: '03', label: 'Call 58 tools', sub: '100 free credits to start. Screenshot, image gen, webhooks and more.' },
               ].map(({ n, label, sub }) => (
                 <div key={n} className="rounded-xl border border-white/10 bg-black/20 px-4 py-4 flex gap-4 items-start">
                   <span className="font-mono text-xs text-white/20 pt-0.5 shrink-0">{n}</span>
@@ -387,7 +387,7 @@ export default function HomePage() {
           <div className="flex flex-col gap-1">
             <p className="text-[11px] text-white/30 font-mono tracking-widest uppercase">SDKs</p>
             <h2 className="text-xl font-semibold text-white">Python and Node.js SDKs included</h2>
-            <p className="text-sm text-white/50">One import, all 38 tools. No per-tool wiring required.</p>
+            <p className="text-sm text-white/50">One import, all 58 tools. No per-tool wiring required.</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {/* Python */}

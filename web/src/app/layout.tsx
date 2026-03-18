@@ -4,12 +4,12 @@ import { Navbar } from '@/components/navbar'
 import { PostHogProvider } from '@/components/PostHogProvider'
 
 export const metadata: Metadata = {
-  title: 'Arch Tools — Infrastructure for AI Agents',
-  description: '30 production-ready API tools for developers and AI agents. Authentication, credit billing, workflows, MCP, and x402 USDC payments built in.',
+  title: 'Arch Tools — Patent-Pending x402 API Infrastructure for AI Agents',
+  description: '58 production-ready API tools for AI agents. Patent-pending agent auth, x402 USDC payments on 15+ chains, and MCP-compatible. 100 free credits on signup.',
   keywords: 'API tools, AI agents, MCP, workflow engine, web scraping, sentiment analysis, developer tools',
   openGraph: {
-    title: 'Arch Tools — Infrastructure for AI Agents',
-    description: '30 production-ready API tools with auth, billing, and MCP support.',
+    title: 'Arch Tools — Patent-Pending x402 API Infrastructure for AI Agents',
+    description: '58 API tools for AI agents with patent-pending auth + x402 USDC payments.',
     url: 'https://archtools.dev',
     siteName: 'Arch Tools',
     type: 'website',
