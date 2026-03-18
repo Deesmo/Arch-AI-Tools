@@ -44,6 +44,12 @@ export default function DashboardPage() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [revoked, setRevoked] = useState<Set<string>>(new Set())
+
+  // Auto-load from localStorage on mount
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('arch_api_key') : null
+    if (saved) { setApiKey(saved); load(saved) }
+  }, [])
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function load(key = apiKey) {
@@ -52,6 +58,7 @@ export default function DashboardPage() {
     try {
       const res = await apiFetch('/v1/agent/dashboard', { apiKey: key })
       setData(res)
+      if (typeof window !== 'undefined') window.localStorage.setItem('arch_api_key', key)
     } catch (e: any) {
       setErr(e?.data?.detail || e?.message || 'Failed to load')
       setData(null)
