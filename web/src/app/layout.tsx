@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/navbar'
+import { PostHogProvider } from '@/components/PostHogProvider'
 
 export const metadata: Metadata = {
   title: 'Arch Tools — Infrastructure for AI Agents',
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="scroll-smooth">
       <body className="min-h-screen antialiased">
+        <PostHogProvider>
         <Navbar />
         <main className="mx-auto max-w-6xl px-6 pb-24">{children}</main>
         <footer className="border-t border-white/[0.07] mt-8">
@@ -48,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </footer>
+        </PostHogProvider>
       </body>
     </html>
   )
