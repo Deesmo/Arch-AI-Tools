@@ -161,8 +161,8 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
         const endpoint = `/v1/tools/${t.name}`;
         const now = new Date().toISOString();
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO "Tool" (id, name, description, endpoint, method, credits, category, active, enabled, "createdAt", "updatedAt", version)
-          VALUES (${id}, ${t.name}, ${t.description}, ${endpoint}, 'POST', ${t.credits}, ${t.category}, true, true, ${now}::timestamp, ${now}::timestamp, '1.0.0')
+          INSERT INTO "Tool" (id, name, description, endpoint, method, credits, category, active, "createdAt", "updatedAt", version)
+          VALUES (${id}, ${t.name}, ${t.description}, ${endpoint}, 'POST', ${t.credits}, ${t.category}, true, ${now}::timestamp, ${now}::timestamp, '1.0.0')
         `);
         results.push({ name: t.name, status: "created" });
       }
