@@ -38,7 +38,7 @@ router.get("/health", async (_req, res) => {
     // Check DB connection
     let dbStatus = "error";
     let dbLatencyMs = 0;
-    let toolCount = 58;
+    let toolCount = 64;
     let agentCount = 0;
     try {
         const dbStart = Date.now();
@@ -97,7 +97,7 @@ router.get("/health", async (_req, res) => {
         service: "arch-tools-api",
         version: "1.10.0",
         uptime_seconds: statusData.uptime_seconds,
-        tools: toolCount || 58,
+        tools: toolCount || 64,
         agents: agentCount,
         dependencies: {
             database: { status: dbStatus, latency_ms: dbLatencyMs },
@@ -312,7 +312,7 @@ router.get("/.well-known/x402", (_req, res) => {
     }));
     res.json({
         name: "Arch Tools",
-        description: "The first API platform built for autonomous agent payments. 58 production tools, USDC on 15+ chains via x402 or Stripe.",
+        description: "The first API platform built for autonomous agent payments. 64 production tools, USDC on 15+ chains via x402 or Stripe.",
         url: BASE_URL,
         api_base: API_BASE,
         version: "1",
@@ -445,7 +445,7 @@ router.get("/v1/discover", async (_req, res) => {
         res.json({
             ok: true,
             name: "Arch Tools",
-            description: "58 production-ready API tools for AI agents. Pay with API key or USDC (x402).",
+            description: "64 production-ready API tools for AI agents. Pay with API key or USDC (x402).",
             version: "1.10.0",
             baseUrl: API_BASE,
             tools: toolList,
@@ -498,7 +498,7 @@ router.get("/v1/discover", async (_req, res) => {
         res.json({
             ok: true,
             name: "Arch Tools",
-            description: "58 production-ready API tools for AI agents.",
+            description: "64 production-ready API tools for AI agents.",
             version: "1.10.0",
             baseUrl: API_BASE,
             tools: toolList,
@@ -572,7 +572,7 @@ const TOOL_DESCRIPTIONS = {
 };
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 58 production-ready tools. One key. USDC on 15+ chains via x402 or Stripe.
+> 64 production-ready tools. One key. USDC on 15+ chains via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -597,7 +597,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:        60,000 credits — $49   ($0.00082/credit)
   Business Pack:  250,000 credits — $199  ($0.00080/credit)
 
-## All Tools (58 total)
+## All Tools (64 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20 credits) — Text generation via Claude Sonnet
@@ -616,12 +616,17 @@ POST /v1/tools/research-report      (15 credits) — Generate a structured resea
 POST /v1/tools/fact-check           (10 credits) — Verify claims against real-time web sources
 POST /v1/tools/semantic-search      (8 credits)  — Neural/semantic web search via Exa AI
 
-### Media
+### Media & Audio
+POST /v1/tools/text-to-speech       (10 credits) — Convert text to natural-sounding audio via ElevenLabs
+POST /v1/tools/transcribe-audio     (12 credits) — Transcribe audio files to text via OpenAI Whisper
 POST /v1/tools/video-generate       (50 credits) — AI video generation from text prompts via Runway Gen-3
+POST /v1/tools/design-create        (30 credits) — Generate images from text prompts via DALL-E 3
 POST /v1/tools/image-remove-bg      (10 credits) — Remove background from any image via RemoveBG
 
-### Social
+### Social & Communication
 POST /v1/tools/social-post          (5 credits)  — Post a tweet to X/Twitter
+POST /v1/tools/email-send           (3 credits)  — Send transactional emails via Resend
+POST /v1/tools/email-find           (5 credits)  — Find email address for a person at a company via Hunter.io
 
 ### Web
 POST /v1/tools/web-scrape           (5 credits)  — Scrape any public URL with optional CSS selector
@@ -663,9 +668,10 @@ POST /v1/tools/diff-text            (2 credits)  — Structured diff: unified, w
 POST /v1/tools/ip-lookup            (2 credits)  — Geo, ISP, VPN/proxy detection
 POST /v1/tools/whois-lookup         (3 credits)  — Domain registration and expiry via RDAP
 
-### Validation
+### Domain & Validation
+POST /v1/tools/domain-check         (2 credits)  — Check if a domain is available via RDAP
+POST /v1/tools/check-domain         (2 credits)  — Domain availability check (alias)
 POST /v1/tools/email-verify         (3 credits)  — MX check + disposable domain detection
-POST /v1/tools/email-find           (5 credits)  — Find email address for a person at a company via Hunter.io
 POST /v1/tools/phone-validate       (2 credits)  — E.164 format, type, country code
 
 ### Security
@@ -700,7 +706,7 @@ Privacy: ${BASE_URL}/privacy.html
 `;
 const OPENAPI_STUB = {
     openapi: "3.0.3",
-    info: { title: "Arch Tools API", version: "1.10.0", description: "58 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on 15+ chains.", contact: { name: "Arch Tools", url: BASE_URL } },
+    info: { title: "Arch Tools API", version: "1.10.0", description: "64 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on 15+ chains.", contact: { name: "Arch Tools", url: BASE_URL } },
     servers: [{ url: API_BASE }],
     tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
     components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
@@ -708,8 +714,8 @@ const OPENAPI_STUB = {
 const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
     name,
     description,
-    credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 5, "transcribe-audio": 8, "email-send": 3, "design-create": 15, "domain-check": 2, "ai-oracle": 25, "session-create": 5, "session-message": 20, "news-search": 3, "research-report": 15, "fact-check": 10 }).find(([k]) => k === name)?.[1] ?? 5,
-    category: ["ai-generate", "ocr-extract", "sentiment-analysis", "summarize", "extract-entities", "regex-generate", "pii-detect", "web-search", "language-detect", "ai-oracle", "session-message", "research-report", "fact-check"].includes(name) ? "ai" : ["web-scrape", "search-web", "extract-page", "browser-task", "rss-parse", "news-search"].includes(name) ? "web" : "utility",
+    credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 10, "transcribe-audio": 12, "email-send": 3, "design-create": 30, "domain-check": 2, "ai-oracle": 25, "session-create": 5, "session-message": 20, "news-search": 3, "research-report": 15, "fact-check": 10, "video-generate": 50, "image-remove-bg": 10, "email-find": 5, "semantic-search": 8, "social-post": 5 }).find(([k]) => k === name)?.[1] ?? 5,
+    category: ["ai-generate", "ocr-extract", "sentiment-analysis", "summarize", "extract-entities", "regex-generate", "pii-detect", "web-search", "language-detect", "ai-oracle", "session-create", "session-message", "research-report", "fact-check", "semantic-search", "workflow-agent"].includes(name) ? "ai" : ["web-scrape", "search-web", "extract-page", "browser-task", "rss-parse", "news-search"].includes(name) ? "web" : ["video-generate", "design-create", "image-remove-bg", "text-to-speech", "transcribe-audio", "image-generate", "generate-image"].includes(name) ? "media" : ["social-post", "email-send", "email-find"].includes(name) ? "communication" : ["crypto-price", "crypto-market-cap", "crypto-ohlcv", "crypto-sentiment", "crypto-news", "crypto-fear-greed", "token-lookup"].includes(name) ? "crypto" : "utility",
     active: true,
     endpoint: `/v1/tools/${name}`,
     method: "POST",

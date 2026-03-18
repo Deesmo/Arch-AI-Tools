@@ -2,11 +2,13 @@
   "serverInfo": {
     "name": "Arch Tools",
     "version": "1.10.0",
-    "description": "53 production-ready API tools for AI agents. Web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation, audio transcription, text-to-speech, email, NLP, and more. Pay with Stripe credits or autonomous USDC via x402."
+    "description": "64 production-ready API tools for AI agents. Web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation, audio transcription, text-to-speech, email, NLP, and more. Pay with Stripe credits or autonomous USDC via x402."
   },
   "authentication": {
     "required": true,
-    "schemes": ["apiKey"]
+    "schemes": [
+      "apiKey"
+    ]
   },
   "transport": [
     {
@@ -19,58 +21,214 @@
     }
   ],
   "tools": [
-    { "name": "ai-generate", "description": "AI-powered text generation using Claude/GPT-4/Grok/Gemini" },
-    { "name": "web-scrape", "description": "Scrape and extract content from websites with CSS selectors" },
-    { "name": "search-web", "description": "Search the web and return structured results" },
-    { "name": "extract-page", "description": "Fetch a webpage and return clean text/markdown" },
-    { "name": "screenshot-capture", "description": "Capture screenshots of any public URL" },
-    { "name": "crypto-price", "description": "Real-time price, market cap, and volume for any cryptocurrency" },
-    { "name": "crypto-market-cap", "description": "Top N cryptocurrencies by market cap" },
-    { "name": "crypto-news", "description": "Latest crypto news headlines" },
-    { "name": "crypto-sentiment", "description": "Community sentiment and social stats for any crypto" },
-    { "name": "crypto-ohlcv", "description": "OHLCV candlestick data for any crypto" },
-    { "name": "crypto-fear-greed", "description": "Crypto Fear & Greed Index" },
-    { "name": "token-lookup", "description": "Search for any token by name or ticker" },
-    { "name": "generate-image", "description": "Generate images from text prompts via DALL-E 3" },
-    { "name": "image-generate", "description": "Generate SVG images via Claude" },
-    { "name": "ocr-extract", "description": "Extract text from images using AI vision" },
-    { "name": "transcribe-audio", "description": "Transcribe audio to text via Whisper" },
-    { "name": "text-to-speech", "description": "Convert text to natural audio via ElevenLabs" },
-    { "name": "send-email", "description": "Send transactional emails via Resend" },
-    { "name": "email-verify", "description": "Deep email validation with MX and disposable detection" },
-    { "name": "sentiment-analysis", "description": "Analyze text sentiment with emotion detection" },
-    { "name": "extract-entities", "description": "Named entity recognition: people, orgs, locations, dates" },
-    { "name": "language-detect", "description": "Detect language with confidence score" },
-    { "name": "summarize", "description": "Summarize text in multiple styles" },
-    { "name": "fact-check", "description": "Verify claims with evidence and confidence scores" },
-    { "name": "research-report", "description": "Generate structured research reports with citations" },
-    { "name": "news-search", "description": "Search recent news articles on any topic" },
-    { "name": "rss-parse", "description": "Parse RSS/Atom feeds into structured JSON" },
-    { "name": "generate-hash", "description": "Generate cryptographic hashes (SHA-256, MD5, etc.)" },
-    { "name": "generate-uuid", "description": "Generate UUIDs, ULIDs, nanoids" },
-    { "name": "qr-code", "description": "Generate QR codes from text or URLs" },
-    { "name": "barcode-generate", "description": "Generate barcodes as SVG" },
-    { "name": "url-shorten", "description": "Shorten URLs via TinyURL" },
-    { "name": "convert-format", "description": "Convert between JSON, YAML, CSV, XML" },
-    { "name": "transform-text", "description": "Transform text: uppercase, slug, camelCase, etc." },
-    { "name": "diff-text", "description": "Compare two texts and return differences" },
-    { "name": "regex-generate", "description": "Generate regex from plain English" },
-    { "name": "readability-score", "description": "Compute Flesch-Kincaid readability metrics" },
-    { "name": "html-to-markdown", "description": "Convert HTML to clean Markdown" },
-    { "name": "validate-data", "description": "Validate JSON against a JSON Schema" },
-    { "name": "jsonpath-query", "description": "Run JSONPath expressions against JSON" },
-    { "name": "pii-detect", "description": "Detect and redact PII in text" },
-    { "name": "extract-metadata", "description": "Extract metadata from URLs (OG tags, headers)" },
-    { "name": "extract-pdf", "description": "Extract text and tables from PDFs" },
-    { "name": "check-domain", "description": "Check domain availability via RDAP" },
-    { "name": "whois-lookup", "description": "WHOIS/RDAP lookup for domain registration info" },
-    { "name": "ip-lookup", "description": "Geolocate IP addresses — country, city, ISP, VPN detection" },
-    { "name": "phone-validate", "description": "Parse and validate phone numbers" },
-    { "name": "currency-convert", "description": "Convert between 170+ currencies" },
-    { "name": "timezone-convert", "description": "Convert datetimes between timezones" },
-    { "name": "webhook-send", "description": "POST JSON payloads to any webhook URL" },
-    { "name": "browser-task", "description": "Headless browser automation via Playwright" },
-    { "name": "workflow-agent", "description": "Multi-step autonomous AI agent pipeline" }
+    {
+      "name": "ai-generate",
+      "description": "AI-powered text generation using Claude/GPT-4/Grok/Gemini"
+    },
+    {
+      "name": "web-scrape",
+      "description": "Scrape and extract content from websites with CSS selectors"
+    },
+    {
+      "name": "search-web",
+      "description": "Search the web and return structured results"
+    },
+    {
+      "name": "extract-page",
+      "description": "Fetch a webpage and return clean text/markdown"
+    },
+    {
+      "name": "screenshot-capture",
+      "description": "Capture screenshots of any public URL"
+    },
+    {
+      "name": "crypto-price",
+      "description": "Real-time price, market cap, and volume for any cryptocurrency"
+    },
+    {
+      "name": "crypto-market-cap",
+      "description": "Top N cryptocurrencies by market cap"
+    },
+    {
+      "name": "crypto-news",
+      "description": "Latest crypto news headlines"
+    },
+    {
+      "name": "crypto-sentiment",
+      "description": "Community sentiment and social stats for any crypto"
+    },
+    {
+      "name": "crypto-ohlcv",
+      "description": "OHLCV candlestick data for any crypto"
+    },
+    {
+      "name": "crypto-fear-greed",
+      "description": "Crypto Fear & Greed Index"
+    },
+    {
+      "name": "token-lookup",
+      "description": "Search for any token by name or ticker"
+    },
+    {
+      "name": "generate-image",
+      "description": "Generate images from text prompts via DALL-E 3"
+    },
+    {
+      "name": "image-generate",
+      "description": "Generate SVG images via Claude"
+    },
+    {
+      "name": "ocr-extract",
+      "description": "Extract text from images using AI vision"
+    },
+    {
+      "name": "transcribe-audio",
+      "description": "Transcribe audio to text via Whisper"
+    },
+    {
+      "name": "text-to-speech",
+      "description": "Convert text to natural audio via ElevenLabs"
+    },
+    {
+      "name": "send-email",
+      "description": "Send transactional emails via Resend"
+    },
+    {
+      "name": "email-verify",
+      "description": "Deep email validation with MX and disposable detection"
+    },
+    {
+      "name": "sentiment-analysis",
+      "description": "Analyze text sentiment with emotion detection"
+    },
+    {
+      "name": "extract-entities",
+      "description": "Named entity recognition: people, orgs, locations, dates"
+    },
+    {
+      "name": "language-detect",
+      "description": "Detect language with confidence score"
+    },
+    {
+      "name": "summarize",
+      "description": "Summarize text in multiple styles"
+    },
+    {
+      "name": "fact-check",
+      "description": "Verify claims with evidence and confidence scores"
+    },
+    {
+      "name": "research-report",
+      "description": "Generate structured research reports with citations"
+    },
+    {
+      "name": "news-search",
+      "description": "Search recent news articles on any topic"
+    },
+    {
+      "name": "rss-parse",
+      "description": "Parse RSS/Atom feeds into structured JSON"
+    },
+    {
+      "name": "generate-hash",
+      "description": "Generate cryptographic hashes (SHA-256, MD5, etc.)"
+    },
+    {
+      "name": "generate-uuid",
+      "description": "Generate UUIDs, ULIDs, nanoids"
+    },
+    {
+      "name": "qr-code",
+      "description": "Generate QR codes from text or URLs"
+    },
+    {
+      "name": "barcode-generate",
+      "description": "Generate barcodes as SVG"
+    },
+    {
+      "name": "url-shorten",
+      "description": "Shorten URLs via TinyURL"
+    },
+    {
+      "name": "convert-format",
+      "description": "Convert between JSON, YAML, CSV, XML"
+    },
+    {
+      "name": "transform-text",
+      "description": "Transform text: uppercase, slug, camelCase, etc."
+    },
+    {
+      "name": "diff-text",
+      "description": "Compare two texts and return differences"
+    },
+    {
+      "name": "regex-generate",
+      "description": "Generate regex from plain English"
+    },
+    {
+      "name": "readability-score",
+      "description": "Compute Flesch-Kincaid readability metrics"
+    },
+    {
+      "name": "html-to-markdown",
+      "description": "Convert HTML to clean Markdown"
+    },
+    {
+      "name": "validate-data",
+      "description": "Validate JSON against a JSON Schema"
+    },
+    {
+      "name": "jsonpath-query",
+      "description": "Run JSONPath expressions against JSON"
+    },
+    {
+      "name": "pii-detect",
+      "description": "Detect and redact PII in text"
+    },
+    {
+      "name": "extract-metadata",
+      "description": "Extract metadata from URLs (OG tags, headers)"
+    },
+    {
+      "name": "extract-pdf",
+      "description": "Extract text and tables from PDFs"
+    },
+    {
+      "name": "check-domain",
+      "description": "Check domain availability via RDAP"
+    },
+    {
+      "name": "whois-lookup",
+      "description": "WHOIS/RDAP lookup for domain registration info"
+    },
+    {
+      "name": "ip-lookup",
+      "description": "Geolocate IP addresses \u2014 country, city, ISP, VPN detection"
+    },
+    {
+      "name": "phone-validate",
+      "description": "Parse and validate phone numbers"
+    },
+    {
+      "name": "currency-convert",
+      "description": "Convert between 170+ currencies"
+    },
+    {
+      "name": "timezone-convert",
+      "description": "Convert datetimes between timezones"
+    },
+    {
+      "name": "webhook-send",
+      "description": "POST JSON payloads to any webhook URL"
+    },
+    {
+      "name": "browser-task",
+      "description": "Headless browser automation via Playwright"
+    },
+    {
+      "name": "workflow-agent",
+      "description": "Multi-step autonomous AI agent pipeline"
+    }
   ],
   "resources": [
     {
@@ -91,7 +249,7 @@
     },
     {
       "name": "analyze-url",
-      "description": "Comprehensive URL analysis — content, metadata, screenshot, summary"
+      "description": "Comprehensive URL analysis \u2014 content, metadata, screenshot, summary"
     }
   ]
 }

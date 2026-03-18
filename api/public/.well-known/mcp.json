@@ -1,6 +1,6 @@
 {
   "name": "arch-tools-mcp",
-  "description": "53 AI tools for agents: web scraping, AI generation, crypto data, NLP, media, and more. Pay with Stripe or USDC via x402.",
+  "description": "64 AI tools for agents: web scraping, AI generation, crypto data, NLP, media, and more. Pay with Stripe or USDC via x402.",
   "version": "1.10.0",
   "homepage": "https://archtools.dev",
   "repository": "https://github.com/Deesmo/Arch-AI-Tools",
@@ -24,7 +24,7 @@
     "type": "bearer",
     "header": "Authorization"
   },
-  "toolCount": 58,
+  "toolCount": 64,
   "categories": [
     "web-scraping",
     "ai-generation",

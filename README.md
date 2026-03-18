@@ -1,6 +1,6 @@
 # Arch AI Tools
 
-**53 production-ready API tools for AI agents** — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation (DALL-E 3), audio transcription, text-to-speech, email, domain lookup, and more.
+**64 production-ready API tools for AI agents** — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation (DALL-E 3), audio transcription, text-to-speech, email, domain lookup, and more.
 
 [![Smithery](https://smithery.ai/badge/mcmetaverse/arch-tools)](https://smithery.ai/server/mcmetaverse/arch-tools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -62,7 +62,7 @@ No installation required — works with any MCP-compatible client that supports 
 
 ---
 
-## All 53 Tools
+## All 64 Tools
 
 ### 🤖 AI & Generation
 | Tool | Description | Credits |
@@ -79,6 +79,17 @@ No installation required — works with any MCP-compatible client that supports 
 | `fact-check` | Verify claims with confidence scores and evidence | 10 |
 | `research-report` | Multi-source research with citations | 15 |
 | `workflow-agent` | Multi-step autonomous AI agent pipeline | 20 |
+| `ai-oracle` | Premium reasoning with structured analysis and confidence | 25 |
+| `session-create` | Create a managed conversation session | 5 |
+| `session-message` | Send a message in a conversation session | 20 |
+| `semantic-search` | Neural/semantic web search via Exa AI | 8 |
+
+### 🎨 Media & Design
+| Tool | Description | Credits |
+|------|-------------|---------|
+| `design-create` | Image generation via DALL-E 3 | 30 |
+| `video-generate` | AI video generation via Runway Gen-3 | 50 |
+| `image-remove-bg` | Remove background from any image via RemoveBG | 10 |
 
 ### 🌐 Web & Scraping
 | Tool | Description | Credits |
@@ -124,13 +135,17 @@ No installation required — works with any MCP-compatible client that supports 
 ### 📧 Communication
 | Tool | Description | Credits |
 |------|-------------|---------|
-| `send-email` | Transactional email via Resend | 5 |
+| `send-email` | Transactional email via Resend (alias) | 5 |
+| `email-send` | Transactional email via Resend | 3 |
 | `email-verify` | Deep validation: syntax, MX, disposable detection | 3 |
+| `email-find` | Find email for a person at a company via Hunter.io | 5 |
+| `social-post` | Post a tweet to X/Twitter via API v2 | 5 |
 
 ### 🔍 Lookup & Validation
 | Tool | Description | Credits |
 |------|-------------|---------|
-| `check-domain` | Domain availability via RDAP | 3 |
+| `check-domain` | Domain availability via RDAP (alias) | 3 |
+| `domain-check` | Domain availability check via RDAP | 2 |
 | `whois-lookup` | WHOIS registration info and nameservers | 3 |
 | `ip-lookup` | IP geolocation, ISP, VPN detection | 3 |
 | `phone-validate` | Phone parsing, E.164 format, carrier type | 2 |

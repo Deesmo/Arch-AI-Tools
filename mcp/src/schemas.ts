@@ -405,6 +405,106 @@ export const TOOL_SCHEMAS: Record<string, object> = {
     required: ["task"]
   }
 };
+// New tools added 2026-03-17
+TOOL_SCHEMAS["ai-oracle"] = {
+  type: "object",
+  properties: {
+    question: { type: "string", description: "The question or problem to analyze with deep reasoning" },
+    context: { type: "string", description: "Optional context to inform the analysis" },
+    reasoning_depth: { type: "string", description: "Reasoning depth: 'standard' or 'deep' (default: standard)" }
+  },
+  required: ["question"]
+};
+TOOL_SCHEMAS["design-create"] = {
+  type: "object",
+  properties: {
+    prompt: { type: "string", description: "Text description of the image to generate via DALL-E 3" },
+    size: { type: "string", description: "Image size: 1024x1024, 1792x1024, 1024x1792 (default: 1024x1024)" },
+    quality: { type: "string", description: "Quality: standard or hd (default: standard)" },
+    style: { type: "string", description: "Style: vivid or natural (default: vivid)" },
+    n: { type: "number", description: "Number of images (default: 1, max: 1)" }
+  },
+  required: ["prompt"]
+};
+TOOL_SCHEMAS["domain-check"] = {
+  type: "object",
+  properties: {
+    domain: { type: "string", description: "Domain name to check availability (e.g. example.com)" }
+  },
+  required: ["domain"]
+};
+TOOL_SCHEMAS["email-find"] = {
+  type: "object",
+  properties: {
+    domain: { type: "string", description: "Company domain to search (e.g. example.com)" },
+    first_name: { type: "string", description: "Person's first name" },
+    last_name: { type: "string", description: "Person's last name" }
+  },
+  required: ["domain"]
+};
+TOOL_SCHEMAS["email-send"] = {
+  type: "object",
+  properties: {
+    to: { type: "string", description: "Recipient email address" },
+    subject: { type: "string", description: "Email subject line" },
+    body: { type: "string", description: "Email body (plain text)" },
+    html: { type: "string", description: "Email body (HTML)" },
+    from: { type: "string", description: "Sender email (default: no-reply@archtools.dev)" }
+  },
+  required: ["to", "subject"]
+};
+TOOL_SCHEMAS["image-remove-bg"] = {
+  type: "object",
+  properties: {
+    image_url: { type: "string", description: "URL of the image to remove background from" },
+    size: { type: "string", description: "Output size: auto, preview, hd (default: auto)" }
+  },
+  required: ["image_url"]
+};
+TOOL_SCHEMAS["semantic-search"] = {
+  type: "object",
+  properties: {
+    query: { type: "string", description: "Semantic search query (natural language)" },
+    num_results: { type: "number", description: "Number of results (default: 5, max: 20)" },
+    type: { type: "string", description: "Search type: neural or keyword (default: neural)" }
+  },
+  required: ["query"]
+};
+TOOL_SCHEMAS["session-create"] = {
+  type: "object",
+  properties: {
+    namespace: { type: "string", description: "Session namespace (e.g. 'customer-support', 'code-review')" },
+    system_prompt: { type: "string", description: "Optional system prompt for the conversation" },
+    model: { type: "string", description: "AI model: claude-sonnet-4-6, claude-opus-4-6, gpt-4o, etc." }
+  },
+  required: ["namespace"]
+};
+TOOL_SCHEMAS["session-message"] = {
+  type: "object",
+  properties: {
+    session_id: { type: "string", description: "Session ID from session-create" },
+    message: { type: "string", description: "Message to send in the conversation" }
+  },
+  required: ["session_id", "message"]
+};
+TOOL_SCHEMAS["social-post"] = {
+  type: "object",
+  properties: {
+    text: { type: "string", description: "Tweet text (max 280 characters)" },
+    reply_to: { type: "string", description: "Tweet ID to reply to (optional)" }
+  },
+  required: ["text"]
+};
+TOOL_SCHEMAS["video-generate"] = {
+  type: "object",
+  properties: {
+    prompt: { type: "string", description: "Text description of the video to generate" },
+    duration: { type: "number", description: "Video duration in seconds: 5 or 10 (default: 5)" },
+    aspect_ratio: { type: "string", description: "Aspect ratio: 16:9, 9:16, 1:1 (default: 16:9)" }
+  },
+  required: ["prompt"]
+};
+
 // New tools added 2026-03-09
 TOOL_SCHEMAS["news-search"] = {
   type: "object",

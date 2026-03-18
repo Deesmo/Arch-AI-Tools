@@ -56,14 +56,16 @@ async function invokeTool(toolName: string, input: any) {
 
 // ─── Annotation helpers ──────────────────────────────────────────────────────
 const WRITE_TOOLS = new Set([
-  "send-email", "generate-image", "text-to-speech", "browser-task",
-  "transcribe-audio", "image-generate", "webhook-send"
+  "send-email", "email-send", "generate-image", "text-to-speech", "browser-task",
+  "transcribe-audio", "image-generate", "webhook-send", "design-create",
+  "social-post", "video-generate", "image-remove-bg", "session-create", "session-message"
 ]);
 const OPEN_WORLD_TOOLS = new Set([
   "web-scrape", "web-search", "search-web", "rss-parse",
   "crypto-price", "crypto-news", "crypto-market-cap", "crypto-fear-greed",
   "crypto-ohlcv", "crypto-sentiment", "whois-lookup", "check-domain",
-  "extract-metadata", "extract-page"
+  "extract-metadata", "extract-page", "domain-check", "news-search",
+  "semantic-search", "email-find", "research-report", "fact-check"
 ]);
 
 function buildToolEntry(t: ToolDef) {
@@ -89,7 +91,7 @@ const RESOURCES = [
   {
     uri: "arch://tools/catalog",
     name: "Arch AI Tools Catalog",
-    description: "Complete catalog of all 53 available Arch AI Tools with descriptions, categories, and credit costs",
+    description: "Complete catalog of all 64 available Arch AI Tools with descriptions, categories, and credit costs",
     mimeType: "application/json"
   },
   {
@@ -102,7 +104,7 @@ const RESOURCES = [
 
 const QUICKSTART_MD = `# Arch AI Tools — Quick Start
 
-Connect to 53 powerful AI tools via MCP.
+Connect to 64 powerful AI tools via MCP.
 
 ## Authentication
 All tools require an \`x-api-key\` header with your Arch API key.
