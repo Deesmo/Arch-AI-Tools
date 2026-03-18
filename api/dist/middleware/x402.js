@@ -166,11 +166,11 @@ function buildPaymentRequired(toolName, price) {
             extra: { name: "USD Coin", version: "2" },
         });
     }
-    // Option 4: USDC on Polygon (same EVM wallet)
+    // Option 4: USDC on Polygon (same EVM wallet) — CDP supported via eip155:137
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "polygon",
+            network: "eip155:137",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -588,14 +588,10 @@ function buildPaymentRequired(toolName, price) {
     // USDT options — Tether (higher market cap than USDC, widely held by trading agents)
     const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
     if (usdtWallet) {
+        // CDP supports USDT via Permit2 on Base and Polygon only (CAIP-2 format required)
         const usdtNetworks = [
-            { network: "ethereum", chain: "ethereum" }, // $40B USDT — largest EVM pool
-            { network: "bsc", chain: "bsc" }, // BSC USDT — $15B+ pool
-            { network: "arbitrum", chain: "arbitrum" },
-            { network: "polygon", chain: "polygon" },
-            { network: "optimism", chain: "optimism" },
-            { network: "avalanche", chain: "avalanche" },
-            { network: "base", chain: "base" },
+            { network: "eip155:8453", chain: "base" }, // USDT on Base ✅ CDP supported
+            { network: "eip155:137", chain: "polygon" }, // USDT on Polygon ✅ CDP supported
         ];
         for (const { network, chain } of usdtNetworks) {
             if (USDT_CONTRACTS[chain]) {
@@ -622,7 +618,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "base",
+            network: "eip155:8453",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -649,16 +645,15 @@ function buildPaymentRequired(toolName, price) {
     // CDP supports: Base, Polygon, Solana — for ERC-20 tokens (USDC via EIP-3009, any ERC-20 via Permit2).
     // CDP does NOT support: Avalanche, Ethereum mainnet, Arbitrum, Optimism, native ETH, native SOL, or any non-ERC-20.
     // Source: https://docs.cdp.coinbase.com/x402/network-support
+    // CDP supports ONLY these exact network identifiers. Named aliases (e.g. "base", "polygon") are NOT
+    // used here intentionally — they would also match native ETH/SOL options that CDP cannot handle.
+    // All CDP-supported options in buildPaymentRequired use CAIP-2 format (eip155:*) or "solana".
     const CDP_SUPPORTED_NETWORKS = new Set([
-        "eip155:8453", // Base mainnet ✅
-        "base", // Base mainnet (named alias) ✅
+        "eip155:8453", // Base mainnet ✅ (USDC, USDT via Permit2)
         "eip155:84532", // Base Sepolia (testnet) ✅
-        "base-sepolia", // Base Sepolia (named alias) ✅
-        "eip155:137", // Polygon mainnet ✅
-        "polygon", // Polygon mainnet (named alias) ✅
+        "eip155:137", // Polygon mainnet ✅ (USDC, USDT via Permit2)
         "eip155:80002", // Polygon Amoy (testnet) ✅
-        "polygon-amoy", // Polygon Amoy (named alias) ✅
-        "solana", // Solana mainnet ✅
+        "solana", // Solana mainnet ✅ (USDC SPL)
         "solana-devnet", // Solana devnet ✅
     ]);
     // Filter to only CDP-supported networks and normalize "solana:mainnet" → "solana"
