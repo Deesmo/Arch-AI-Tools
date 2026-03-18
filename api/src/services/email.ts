@@ -362,3 +362,41 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   `);
   await sendEmail(to, subject, html);
 }
+
+// ─── Day-3 Follow-up Email ───────────────────────────────────────────────────
+export async function sendDay3FollowupEmail(to: string, agentId: string, creditsRemaining: number): Promise<void> {
+  const subject = "Quick tip from Arch Tools — your most-used tools";
+  const html = layout(subject, `
+    <p>Three days in. Here's a quick tip on getting more out of Arch Tools.</p>
+    <p>The tools developers use most:</p>
+    <div class="stats">
+      <div class="stat"><span>Most popular</span>ai-generate (Claude, GPT, Grok)</div>
+      <div class="stat"><span>Fastest</span>generate-hash, generate-uuid</div>
+      <div class="stat"><span>Most powerful</span>web-scrape + ai-generate chained</div>
+    </div>
+    <p>You have <strong>${creditsRemaining} credits</strong> remaining. Run them through the playground to see the full x402 payment flow in action.</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/playground">Try the x402 Playground →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0,14)}… · Unsubscribe: reply with "stop"</p>
+  `);
+  await sendEmail(to, subject, html);
+}
+
+// ─── Day-7 Re-engagement Email ───────────────────────────────────────────────
+export async function sendDay7ReengagementEmail(to: string, creditsRemaining: number): Promise<void> {
+  const subject = "Still building with Arch Tools?";
+  const html = layout(subject, `
+    <p>A week in. Just checking — are you getting value from Arch Tools?</p>
+    <p>If you haven't tried x402 payments yet, here's what they unlock:</p>
+    <div class="stats">
+      <div class="stat"><span>For agents</span>Pay per-call with USDC, no API key needed</div>
+      <div class="stat"><span>Chains</span>Base, Ethereum, Solana, Polygon + 12 more</div>
+      <div class="stat"><span>Cost</span>As low as $0.001 per call</div>
+    </div>
+    <p>You have <strong>${creditsRemaining} credits</strong> left. When they run out, your agents can keep going via x402 without any human intervention.</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/playground">Test x402 Payments →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Reply "stop" to unsubscribe.</p>
+  `);
+  await sendEmail(to, subject, html);
+}
