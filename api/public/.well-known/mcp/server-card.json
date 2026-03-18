@@ -2,7 +2,7 @@
   "serverInfo": {
     "name": "Arch Tools",
     "version": "1.10.0",
-    "description": "58 production-ready API tools for AI agents. Web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation, audio transcription, text-to-speech, email, NLP, and more. Pay with Stripe credits or autonomous USDC via x402."
+    "description": "53 production-ready API tools for AI agents. Web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation, audio transcription, text-to-speech, email, NLP, and more. Pay with Stripe credits or autonomous USDC via x402."
   },
   "authentication": {
     "required": true,
