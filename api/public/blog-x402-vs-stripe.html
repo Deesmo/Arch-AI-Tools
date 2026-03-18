@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>x402 vs Stripe: Agent Payment Comparison — Arch Tools</title><meta name="description" content="A head-to-head comparison of x402 USDC crypto payments vs Stripe for AI agent billing."><link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"DM Sans",system-ui,sans-serif;background:#07061A;color:rgba(255,255,255,0.92);line-height:1.7;padding:0 24px}h1,h2{font-family:"Syne",system-ui,sans-serif}.nav{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(7,6,26,0.9);position:sticky;top:0;z-index:100;margin:0 -24px}.nav a{text-decoration:none;color:inherit}.logo{font-weight:700;font-size:15px}.main{max-width:760px;margin:56px auto;padding-bottom:100px}.muted{color:rgba(255,255,255,0.55)}pre,code{font-family:"JetBrains Mono",monospace;font-size:13px;background:rgba(255,255,255,0.07);padding:2px 7px;border-radius:4px;color:#22d3ee}pre{padding:20px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow-x:auto;margin:18px 0}h2{font-size:20px;margin:32px 0 12px}p{margin-bottom:14px;color:rgba(255,255,255,0.82)}.cta{background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;padding:11px 24px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block;margin-top:32px}table{width:100%;border-collapse:collapse;font-size:13px;margin:18px 0}th,td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);text-align:left}th{color:rgba(255,255,255,0.5);font-size:11px;text-transform:uppercase}.win{color:#34d399}</style></head><body>
+<nav class="nav"><a href="/" class="logo">Arch Tools</a><a href="/signin" style="background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;padding:7px 14px;border-radius:8px;font-size:12px">Get 100 free credits</a></nav>
+<div class="main">
+<p class="muted" style="font-size:12px;margin-bottom:12px">← <a href="/" style="color:rgba(255,255,255,0.55);text-decoration:none">Home</a> · March 18, 2026 · 6 min read</p>
+<h1 style="font-size:36px;font-weight:800;letter-spacing:-0.03em;margin-bottom:16px">x402 vs Stripe: Agent Payment Comparison</h1>
+<p class="muted" style="font-size:17px;margin-bottom:40px">Both Stripe and x402 handle payments for AI tool usage. But they were designed for very different worlds.</p>
+<h2>TL;DR</h2>
+<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:20px;margin:16px 0">
+<p><strong>Stripe</strong> is gold standard for human-facing SaaS billing. <strong>x402</strong> is purpose-built for autonomous agent payments. If your users are humans, use Stripe. If your users are AI agents, use x402. Arch Tools uses both.</p>
+</div>
+<h2>The Comparison</h2>
+<table><thead><tr><th>Feature</th><th style="color:#93c5fd">x402 / USDC</th><th style="color:#c4b5fd">Stripe</th><th>Winner</th></tr></thead><tbody>
+<tr><td>Agent autonomy</td><td>Full — no human in the loop</td><td>Requires pre-funded balance</td><td class="win">x402</td></tr>
+<tr><td>Settlement speed</td><td>&lt;2 seconds on Base L2</td><td>2-7 business days</td><td class="win">x402</td></tr>
+<tr><td>Minimum transaction</td><td>/bin/sh.0001 (fractions of a cent)</td><td>/bin/sh.50 effective minimum</td><td class="win">x402</td></tr>
+<tr><td>Fees per transaction</td><td>~/bin/sh.001 gas on Base</td><td>2.9% + /bin/sh.30</td><td class="win">x402</td></tr>
+<tr><td>Global availability</td><td>Permissionless, any country</td><td>Restricted in many countries</td><td class="win">x402</td></tr>
+<tr><td>Per-call pricing</td><td>Native — HTTP 402 headers</td><td>Requires credit system layer</td><td class="win">x402</td></tr>
+<tr><td>Dispute handling</td><td>No chargebacks (final)</td><td>Chargeback protection</td><td style="color:#f9a8d4">Stripe</td></tr>
+<tr><td>Consumer UX</td><td>Unfamiliar for humans</td><td>Excellent consumer UX</td><td style="color:#f9a8d4">Stripe</td></tr>
+</tbody></table>
+<h2>When to Use x402</h2>
+<p>Use x402 when your API is called by AI agents, autonomous scripts, or anything that runs without a human present. The agent gets a 402 response, pays with on-chain USDC, and retries — all in under 2 seconds with no human involved.</p>
+<h2>When to Use Stripe</h2>
+<p>Use Stripe when your customers are humans who pay monthly subscriptions, need invoices, or expect the familiar card checkout experience.</p>
+<h2>What Arch Tools Does</h2>
+<p>Both. Humans pay via Stripe subscriptions. AI agents pay via x402 on-chain. Same 58 tools, two payment paths.</p>
+<a href="/playground" class="cta">Try x402 in the Playground →</a>
+</div></body></html>
