@@ -411,10 +411,19 @@ async function claudeJson<T = any>(
 }
 
 // ─── ai-generate ───
+// Supports mode parameter: "fast" | "smart" (default) | "deep"
+// If model is explicitly provided, it overrides mode.
+const AI_MODE_MAP: Record<string, string> = {
+  fast:  "claude-haiku-4-5-20251001",
+  smart: "claude-sonnet-4-6",
+  deep:  "claude-opus-4-6",
+};
+
 export async function aiGenerate(payload: any) {
-  const { prompt, model = "claude-sonnet-4-6", max_tokens = 1000, system } = payload || {};
+  const { prompt, model: explicitModel, mode, max_tokens = 1000, system } = payload || {};
   if (!prompt || typeof prompt !== "string") return { ok: false, error: "missing_prompt" };
   if (prompt.length > MAX_AI_PROMPT_CHARS) return { ok: false, error: "prompt_too_long", max: MAX_AI_PROMPT_CHARS };
+  const model = explicitModel ?? AI_MODE_MAP[mode ?? "smart"] ?? "claude-sonnet-4-6";
   if (model && !ALLOWED_AI_MODELS.includes(String(model))) return { ok: false, error: "unsupported_model", allowed: ALLOWED_AI_MODELS };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

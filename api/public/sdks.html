@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SDKs &amp; Libraries — Arch Tools</title>
+  <meta name="description" content="Official Arch Tools SDKs for Python and TypeScript. Install with pip or npm and start building in seconds." />
+  <meta property="og:title" content="SDKs & Libraries — Arch Tools" />
+  <meta property="og:description" content="Official Python and TypeScript SDKs for Arch Tools API. One-line install, full type safety." />
+  <meta property="og:url" content="https://archtools.dev/sdks" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://archtools.dev/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="https://archtools.dev/sdks" />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888; --purple: #8844FF;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.12) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.08) 0%,transparent 55%);
+    }
+    h1, h2, h3, h4 { font-family: 'Syne', system-ui, sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      background: rgba(7,6,26,0.95); position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); text-decoration: none; }
+    .at-nav-links a.active { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+
+    /* CONTAINER */
+    .container { max-width: 900px; margin: 0 auto; padding: 48px 24px 96px; }
+
+    /* HERO */
+    .hero { text-align: center; margin-bottom: 56px; }
+    .hero h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 12px; }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 15px; color: var(--muted); max-width: 520px; margin: 0 auto; }
+
+    /* SDK CARD */
+    .sdk-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 36px 32px; margin-bottom: 32px; position: relative; overflow: hidden;
+    }
+    .sdk-card::before {
+      content: ''; position: absolute; top: -60px; right: -60px; width: 160px; height: 160px;
+      pointer-events: none;
+    }
+    .sdk-card.python::before { background: radial-gradient(circle, rgba(52,211,153,0.1) 0%, transparent 70%); }
+    .sdk-card.typescript::before { background: radial-gradient(circle, rgba(34,211,238,0.1) 0%, transparent 70%); }
+    .sdk-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+    .sdk-header h2 { font-size: 1.3rem; font-weight: 800; margin: 0; }
+    .sdk-badge {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 10px;
+      border-radius: 6px; letter-spacing: 0.04em;
+    }
+    .sdk-badge.stable { background: rgba(52,211,153,0.15); color: var(--green); }
+    .sdk-badge.beta { background: rgba(255,176,48,0.15); color: var(--orange); }
+    .sdk-meta { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .sdk-meta span { margin-right: 16px; }
+    .sdk-meta code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px; }
+    .sdk-desc { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 20px; }
+
+    /* INSTALL BOX */
+    .install-box {
+      display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+    }
+    .install-box code {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); flex: 1;
+    }
+    .install-box .copy-btn {
+      position: static; background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+      color: var(--muted); font-size: 11px; padding: 5px 12px; border-radius: 6px;
+      cursor: pointer; font-family: inherit; transition: all 0.12s; flex-shrink: 0;
+    }
+    .install-box .copy-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+
+    /* CODE BLOCK */
+    pre {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 12px;
+      padding: 18px 20px; overflow-x: auto; margin: 0 0 16px; position: relative;
+    }
+    pre code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.85); background: none !important; padding: 0 !important; }
+    .code-wrap { position: relative; }
+    .code-copy {
+      position: absolute; top: 10px; right: 12px; background: rgba(255,255,255,0.08);
+      border: 1px solid var(--border); color: var(--muted); font-size: 11px;
+      padding: 4px 10px; border-radius: 6px; cursor: pointer; font-family: inherit;
+      transition: all 0.12s; z-index: 2;
+    }
+    .code-copy:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+
+    /* FEATURES LIST */
+    .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+    .feature {
+      display: flex; align-items: start; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.7);
+    }
+    .feature .check { color: var(--green); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    /* LINKS ROW */
+    .sdk-links { display: flex; gap: 16px; flex-wrap: wrap; }
+    .sdk-link {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+      color: var(--accent); padding: 6px 14px; border: 1px solid rgba(34,211,238,0.3);
+      border-radius: 8px; transition: all 0.15s; text-decoration: none;
+    }
+    .sdk-link:hover { background: rgba(34,211,238,0.08); text-decoration: none; }
+
+    /* SECTION */
+    .section { margin-bottom: 48px; }
+    .section h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+    .section > p { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+    /* FRAMEWORK CARDS */
+    .fw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+    .fw-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; transition: border-color 0.2s;
+    }
+    .fw-card:hover { border-color: rgba(255,255,255,0.18); }
+    .fw-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .fw-card p { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .fw-card code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; display: block; }
+
+    /* CHANGELOG */
+    .changelog-mini { margin-top: 20px; }
+    .changelog-entry { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .changelog-entry:last-child { border-bottom: none; }
+    .changelog-ver { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); font-weight: 600; }
+    .changelog-date { font-size: 11px; color: var(--muted); margin-left: 8px; }
+    .changelog-note { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+    /* FOOTER */
+    .footer { border-top: 1px solid var(--border); padding: 32px 0; text-align: center; color: var(--muted); font-size: 12px; }
+    .footer a { color: var(--accent); }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.6rem; }
+      .features { grid-template-columns: 1fr; }
+      .fw-grid { grid-template-columns: 1fr; }
+      .at-nav-links a:not(.at-nav-cta) { display: none; }
+      .container { padding: 32px 16px 64px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="at-nav">
+    <a href="/" class="at-nav-logo">
+      <div class="at-logo-mark"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="an"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#ag)" filter="url(#an)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div>
+      <span class="at-logo-name">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/">Home</a>
+      <a href="/docs">Docs</a>
+      <a href="/developers">Developers</a>
+      <a href="/sdks" class="active">SDKs</a>
+      <a href="/signup" class="at-nav-cta">Get API Key</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- HERO -->
+    <div class="hero">
+      <h1>Official <span>SDKs</span></h1>
+      <p>Type-safe clients for Python and TypeScript. Install in one command, access all 64 tools.</p>
+    </div>
+
+    <!-- PYTHON SDK -->
+    <div class="sdk-card python">
+      <div class="sdk-header">
+        <h2>🐍 Python SDK</h2>
+        <span class="sdk-badge stable">Stable</span>
+      </div>
+      <div class="sdk-meta">
+        <span>Version: <code>1.4.0</code></span>
+        <span>Python 3.8+</span>
+        <span>License: MIT</span>
+      </div>
+      <p class="sdk-desc">Full-featured Python client with sync and async support, automatic retries, x402 payment handling, and comprehensive type hints.</p>
+
+      <div class="install-box">
+        <code>pip install arch-tools</code>
+        <button class="copy-btn" onclick="copyText(this, 'pip install arch-tools')">Copy</button>
+      </div>
+
+      <div class="code-wrap">
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-python">from arch_tools import ArchTools
+
+client = ArchTools(api_key="YOUR_API_KEY")
+
+# Web search
+results = client.tools.web_search(query="AI agent frameworks", max_results=5)
+for r in results:
+    print(f"{r.title}: {r.url}")
+
+# Image generation
+image = client.tools.image_generate(prompt="A futuristic cityscape at dawn")
+print(f"Image URL: {image.url}")
+
+# Async support
+import asyncio
+
+async def main():
+    async with ArchTools(api_key="YOUR_API_KEY") as client:
+        result = await client.tools.summarize(url="https://example.com/article")
+        print(result.summary)
+
+asyncio.run(main())</code></pre>
+      </div>
+
+      <div class="features">
+        <div class="feature"><span class="check">✓</span> Sync &amp; async (asyncio) support</div>
+        <div class="feature"><span class="check">✓</span> Automatic retry with exponential backoff</div>
+        <div class="feature"><span class="check">✓</span> Full type hints (mypy compatible)</div>
+        <div class="feature"><span class="check">✓</span> x402 USDC payment handling</div>
+        <div class="feature"><span class="check">✓</span> Streaming responses for AI tools</div>
+        <div class="feature"><span class="check">✓</span> Request/response logging</div>
+      </div>
+
+      <div class="sdk-links">
+        <a href="https://pypi.org/project/arch-tools/" class="sdk-link">📦 PyPI</a>
+        <a href="https://github.com/AiArchTools/arch-tools-python" class="sdk-link">⚙️ GitHub</a>
+        <a href="/docs#python-sdk" class="sdk-link">📖 Docs</a>
+      </div>
+
+      <div class="changelog-mini">
+        <div class="changelog-entry">
+          <span class="changelog-ver">v1.4.0</span><span class="changelog-date">March 17, 2026</span>
+          <div class="changelog-note">Added x402 payment support, new tools: video-generate, semantic-search, social-post</div>
+        </div>
+        <div class="changelog-entry">
+          <span class="changelog-ver">v1.3.0</span><span class="changelog-date">March 15, 2026</span>
+          <div class="changelog-note">Async client, streaming responses, retry improvements</div>
+        </div>
+        <div class="changelog-entry">
+          <span class="changelog-ver">v1.2.0</span><span class="changelog-date">March 10, 2026</span>
+          <div class="changelog-note">Added 12 new tool methods, improved error handling</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TYPESCRIPT SDK -->
+    <div class="sdk-card typescript">
+      <div class="sdk-header">
+        <h2>🟦 TypeScript Client</h2>
+        <span class="sdk-badge stable">Stable</span>
+      </div>
+      <div class="sdk-meta">
+        <span>Version: <code>1.4.0</code></span>
+        <span>Node 18+ / Bun / Deno</span>
+        <span>License: MIT</span>
+      </div>
+      <p class="sdk-desc">Zero-dependency TypeScript client with full type inference, tree-shakeable exports, and native fetch. Works everywhere — Node.js, Bun, Deno, and browsers.</p>
+
+      <div class="install-box">
+        <code>npm install @arch-tools/client</code>
+        <button class="copy-btn" onclick="copyText(this, 'npm install @arch-tools/client')">Copy</button>
+      </div>
+
+      <div class="code-wrap">
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        <pre><code class="language-typescript">import { ArchTools } from "@arch-tools/client";
+
+const client = new ArchTools({ apiKey: "YOUR_API_KEY" });
+
+// Web search
+const results = await client.tools.webSearch({
+  query: "AI agent frameworks",
+  maxResults: 5,
+});
+results.forEach((r) =&gt; console.log(`${r.title}: ${r.url}`));
+
+// Image generation
+const image = await client.tools.imageGenerate({
+  prompt: "A futuristic cityscape at dawn",
+});
+console.log(`Image URL: ${image.url}`);
+
+// With x402 payments (no API key needed)
+const x402Client = new ArchTools({ x402: { walletKey: "YOUR_PRIVATE_KEY" } });
+const data = await x402Client.tools.cryptoPrice({ symbol: "BTC" });</code></pre>
+      </div>
+
+      <div class="features">
+        <div class="feature"><span class="check">✓</span> Full TypeScript type inference</div>
+        <div class="feature"><span class="check">✓</span> Zero dependencies (native fetch)</div>
+        <div class="feature"><span class="check">✓</span> Tree-shakeable ESM exports</div>
+        <div class="feature"><span class="check">✓</span> x402 USDC wallet integration</div>
+        <div class="feature"><span class="check">✓</span> Node.js, Bun, Deno, Browser</div>
+        <div class="feature"><span class="check">✓</span> Automatic retry &amp; rate limit handling</div>
+      </div>
+
+      <div class="sdk-links">
+        <a href="https://www.npmjs.com/package/@arch-tools/client" class="sdk-link">📦 npm</a>
+        <a href="https://github.com/AiArchTools/arch-tools-ts" class="sdk-link">⚙️ GitHub</a>
+        <a href="/docs#typescript-sdk" class="sdk-link">📖 Docs</a>
+      </div>
+
+      <div class="changelog-mini">
+        <div class="changelog-entry">
+          <span class="changelog-ver">v1.4.0</span><span class="changelog-date">March 17, 2026</span>
+          <div class="changelog-note">x402 wallet support, new tool types, Bun/Deno compat</div>
+        </div>
+        <div class="changelog-entry">
+          <span class="changelog-ver">v1.3.0</span><span class="changelog-date">March 15, 2026</span>
+          <div class="changelog-note">Tree-shakeable ESM, streaming, improved error types</div>
+        </div>
+        <div class="changelog-entry">
+          <span class="changelog-ver">v1.2.0</span><span class="changelog-date">March 10, 2026</span>
+          <div class="changelog-note">Added all 64 tool methods, request interceptors</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAMEWORK INTEGRATIONS -->
+    <div class="section">
+      <h2>Framework Quick-Starts</h2>
+      <p>Drop Arch Tools into your existing AI framework in minutes.</p>
+      <div class="fw-grid">
+        <div class="fw-card">
+          <h3>🦜 LangChain</h3>
+          <p>Use Arch Tools as a LangChain tool provider. All 64 tools available as LangChain <code>Tool</code> objects.</p>
+          <code>pip install arch-tools[langchain]</code>
+        </div>
+        <div class="fw-card">
+          <h3>🚢 CrewAI</h3>
+          <p>Equip CrewAI agents with Arch Tools. Pre-built tool wrappers for research, web scraping, and analysis.</p>
+          <code>pip install arch-tools[crewai]</code>
+        </div>
+        <div class="fw-card">
+          <h3>🤖 AutoGen</h3>
+          <p>Register Arch Tools with AutoGen agents for autonomous multi-step workflows.</p>
+          <code>pip install arch-tools[autogen]</code>
+        </div>
+        <div class="fw-card">
+          <h3>⚡ MCP Server</h3>
+          <p>Use Arch Tools as an MCP (Model Context Protocol) tool server for Claude, Cursor, and other MCP clients.</p>
+          <code>npx @arch-tools/mcp-server</code>
+        </div>
+        <div class="fw-card">
+          <h3>🔌 REST / OpenAPI</h3>
+          <p>Import our <a href="/.well-known/openapi.json">OpenAPI spec</a> into Postman, Insomnia, or any HTTP client.</p>
+          <code>GET /.well-known/openapi.json</code>
+        </div>
+        <div class="fw-card">
+          <h3>💰 x402 Protocol</h3>
+          <p>Pay per API call with USDC. No API key needed — just a wallet on any of 15 supported networks.</p>
+          <code>npm install x402-axios</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <p>&copy; 2026 Arch Tools. <a href="/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · <a href="/security">Security</a> · <a href="/developers">Developer Portal</a></p>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script>
+    function copyText(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
+    }
+    function copyCode(btn) {
+      const code = btn.parentElement.querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCP Setup Guide — Connect AI Agents in 60 Seconds | Arch Tools</title>
+  <meta name="description" content="Connect Arch Tools to Claude Desktop, Cursor, Windsurf, VS Code, and ChatGPT in 60 seconds. Copy-paste ready MCP configurations." />
+  <meta property="og:title" content="MCP Setup Guide — Arch Tools" />
+  <meta property="og:description" content="Connect Arch Tools to your AI agent in 60 seconds. Copy-paste ready configs for Claude, Cursor, Windsurf, VS Code, and ChatGPT." />
+  <meta property="og:image" content="https://archtools.dev/og-image.png" />
+  <meta property="og:url" content="https://archtools.dev/mcp-setup" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="MCP Setup Guide — Arch Tools" />
+  <meta name="twitter:description" content="Connect Arch Tools to your AI agent in 60 seconds." />
+  <meta name="twitter:image" content="https://archtools.dev/og-image.png" />
+  <meta name="keywords" content="MCP setup, Claude Desktop MCP, Cursor MCP, Windsurf MCP, VS Code MCP, ChatGPT actions, model context protocol, AI agent setup" />
+  <link rel="canonical" href="https://archtools.dev/mcp-setup" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #030308;
+      --bg2: #080810;
+      --card: #0c0c16;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --text: #f0f0f6;
+      --muted: #6b6b80;
+      --accent: #00e5b0;
+      --accent2: #0066ff;
+      --accent3: #aa44ff;
+      --grad: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+
+    .topline { height: 2px; background: linear-gradient(90deg, transparent 0%, var(--accent) 20%, var(--accent2) 55%, var(--accent3) 80%, transparent 100%); }
+
+    .nav { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .nav-logo img { height: 32px; width: 32px; }
+    .nav-logo span { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active { color: var(--accent); }
+    .nav-links .btn-sm { background: var(--accent); color: #030308; padding: 8px 16px; border-radius: 8px; font-weight: 600; }
+
+    .hero { text-align: center; padding: 60px 24px 48px; max-width: 900px; margin: 0 auto; }
+    .hero-badge { display: inline-block; background: rgba(0,229,176,0.08); color: var(--accent); font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(0,229,176,0.2); margin-bottom: 20px; letter-spacing: 0.5px; }
+    .hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
+    .hero h1 .grad { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { color: var(--muted); font-size: 18px; max-width: 640px; margin: 0 auto; }
+
+    .content { max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
+
+    /* Tab navigation */
+    .tabs { display: flex; gap: 0; margin-bottom: 32px; border-bottom: 1px solid var(--border2); overflow-x: auto; }
+    .tab { padding: 14px 24px; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Setup card */
+    .setup-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+    .setup-card h2 { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .setup-card > p { color: var(--muted); margin-bottom: 24px; }
+
+    .step { margin-bottom: 24px; }
+    .step-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--accent); color: #030308; border-radius: 50%; font-weight: 700; font-size: 14px; margin-right: 8px; flex-shrink: 0; }
+    .step h3 { display: flex; align-items: center; font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+    .step p { color: var(--muted); font-size: 14px; margin-bottom: 10px; padding-left: 36px; }
+
+    .code-block { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 8px 0 16px 36px; position: relative; overflow-x: auto; }
+    .code-block pre { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); line-height: 1.6; white-space: pre; margin: 0; }
+    .code-block .copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 12px; font-family: inherit; transition: all 0.2s; }
+    .code-block .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .code-block .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+
+    .file-path { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.04); padding: 4px 10px; border-radius: 6px; display: inline-block; margin-left: 36px; margin-bottom: 4px; }
+
+    .note { background: rgba(0,229,176,0.05); border: 1px solid rgba(0,229,176,0.15); border-radius: 10px; padding: 14px 16px; margin: 12px 0 16px 36px; font-size: 13px; color: var(--muted); }
+    .note strong { color: var(--accent); }
+    .note a { color: var(--accent2); text-decoration: none; }
+    .note a:hover { text-decoration: underline; }
+
+    .warning { background: rgba(255,180,0,0.05); border: 1px solid rgba(255,180,0,0.15); border-radius: 10px; padding: 14px 16px; margin: 12px 0 16px 36px; font-size: 13px; color: var(--muted); }
+    .warning strong { color: #ffb400; }
+
+    /* Quick start selector */
+    .quick-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 32px; }
+    .pick-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .pick-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .pick-card.active { border-color: var(--accent); }
+    .pick-card .icon { font-size: 2rem; margin-bottom: 8px; }
+    .pick-card .label { font-weight: 600; font-size: 14px; }
+    .pick-card .sub { color: var(--muted); font-size: 11px; margin-top: 4px; }
+
+    .footer { text-align: center; padding: 40px 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .tabs { gap: 0; }
+      .tab { padding: 10px 14px; font-size: 13px; }
+      .code-block { margin-left: 0; }
+      .step p, .note, .warning, .file-path { margin-left: 0; padding-left: 12px; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">
+      <img src="/arch-icon.svg" alt="Arch Tools" />
+      <span>Arch Tools</span>
+    </a>
+    <div class="nav-links">
+      <a href="/docs">Docs</a>
+      <a href="/mcp-marketplace">MCP Servers</a>
+      <a href="/mcp-setup" class="active">Setup Guide</a>
+      <a href="/directory">x402 Directory</a>
+      <a href="/dashboard" class="btn-sm">Dashboard</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">⚡ 60-SECOND SETUP</div>
+    <h1>Connect Arch Tools to Your <span class="grad">AI Agent</span></h1>
+    <p>Copy-paste ready configurations for every major MCP client. Get 58 production tools in your AI agent in under a minute.</p>
+  </section>
+
+  <section class="content">
+
+    <!-- Quick pick -->
+    <div class="quick-pick">
+      <div class="pick-card active" onclick="switchTab('claude')">
+        <div class="icon">🤖</div>
+        <div class="label">Claude Desktop</div>
+        <div class="sub">Anthropic's app</div>
+      </div>
+      <div class="pick-card" onclick="switchTab('cursor')">
+        <div class="icon">⚡</div>
+        <div class="label">Cursor</div>
+        <div class="sub">AI code editor</div>
+      </div>
+      <div class="pick-card" onclick="switchTab('windsurf')">
+        <div class="icon">🏄</div>
+        <div class="label">Windsurf</div>
+        <div class="sub">Codeium editor</div>
+      </div>
+      <div class="pick-card" onclick="switchTab('vscode')">
+        <div class="icon">💻</div>
+        <div class="label">VS Code</div>
+        <div class="sub">Continue / Copilot</div>
+      </div>
+      <div class="pick-card" onclick="switchTab('chatgpt')">
+        <div class="icon">🧠</div>
+        <div class="label">ChatGPT</div>
+        <div class="sub">OpenAI Actions</div>
+      </div>
+    </div>
+
+    <!-- Claude Desktop -->
+    <div class="tab-content active" id="tab-claude">
+      <div class="setup-card">
+        <h2>🤖 Claude Desktop</h2>
+        <p>Connect Arch Tools to Claude Desktop by adding an MCP server config.</p>
+
+        <div class="step">
+          <h3><span class="step-num">1</span>Get your API key</h3>
+          <p>Sign up at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a> and grab your API key from the dashboard.</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">2</span>Open your Claude config file</h3>
+          <div class="file-path">macOS: ~/Library/Application Support/Claude/claude_desktop_config.json</div>
+          <div class="file-path">Windows: %APPDATA%\Claude\claude_desktop_config.json</div>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">3</span>Add the Arch Tools server</h3>
+          <p>Paste this into the <code>mcpServers</code> section:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["arch-tools-mcp"],
+      "env": {
+        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">4</span>Restart Claude Desktop</h3>
+          <p>Quit and reopen Claude Desktop. You'll see the Arch Tools 🔌 icon in the bottom-left — 58 tools ready to go.</p>
+        </div>
+
+        <div class="note">
+          <strong>💡 Tip:</strong> Use the SSE transport for real-time streaming results:<br>
+          Replace <code>"command": "npx"</code> with <code>"url": "https://archtools.dev/mcp/sse"</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cursor -->
+    <div class="tab-content" id="tab-cursor">
+      <div class="setup-card">
+        <h2>⚡ Cursor</h2>
+        <p>Add Arch Tools as an MCP server in Cursor's settings.</p>
+
+        <div class="step">
+          <h3><span class="step-num">1</span>Get your API key</h3>
+          <p>Sign up at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a> and grab your API key from the dashboard.</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">2</span>Open Cursor MCP settings</h3>
+          <p>Go to <strong>Cursor Settings → MCP</strong> or create/edit <code>.cursor/mcp.json</code> in your project root.</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">3</span>Add the config</h3>
+          <div class="file-path">.cursor/mcp.json</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["arch-tools-mcp"],
+      "env": {
+        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">4</span>Verify</h3>
+          <p>Open a new Composer (Cmd+I) and type "search the web for..." — Cursor will use Arch Tools automatically.</p>
+        </div>
+
+        <div class="note">
+          <strong>💡 Tip:</strong> For project-level setup, commit <code>.cursor/mcp.json</code> to your repo so your whole team gets Arch Tools.
+        </div>
+      </div>
+    </div>
+
+    <!-- Windsurf -->
+    <div class="tab-content" id="tab-windsurf">
+      <div class="setup-card">
+        <h2>🏄 Windsurf</h2>
+        <p>Add Arch Tools to Windsurf (Codeium) via the MCP configuration.</p>
+
+        <div class="step">
+          <h3><span class="step-num">1</span>Get your API key</h3>
+          <p>Sign up at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a> and grab your API key from the dashboard.</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">2</span>Open MCP config</h3>
+          <p>Go to <strong>Windsurf Settings → MCP Servers</strong> or create <code>~/.codeium/windsurf/mcp_config.json</code></p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">3</span>Add the config</h3>
+          <div class="file-path">~/.codeium/windsurf/mcp_config.json</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["arch-tools-mcp"],
+      "env": {
+        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">4</span>Restart Windsurf</h3>
+          <p>Restart the editor and Cascade will pick up the MCP tools automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS Code -->
+    <div class="tab-content" id="tab-vscode">
+      <div class="setup-card">
+        <h2>💻 VS Code (Continue / GitHub Copilot)</h2>
+        <p>Add Arch Tools to VS Code via Continue extension or GitHub Copilot MCP support.</p>
+
+        <div class="step">
+          <h3><span class="step-num">1</span>Get your API key</h3>
+          <p>Sign up at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a> and grab your API key from the dashboard.</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">2</span>Option A: Continue Extension</h3>
+          <p>Edit your Continue config at <code>~/.continue/config.json</code>:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["arch-tools-mcp"]
+        },
+        "env": {
+          "ARCH_TOOLS_API_KEY": "your-api-key-here"
+        }
+      }
+    ]
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">3</span>Option B: GitHub Copilot (VS Code 1.99+)</h3>
+          <p>Add to your VS Code <code>settings.json</code>:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>{
+  "github.copilot.chat.mcp.servers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["arch-tools-mcp"],
+      "env": {
+        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">4</span>Reload VS Code</h3>
+          <p>Reload the window (Cmd+Shift+P → "Reload Window") and the tools will be available in your AI chat.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ChatGPT -->
+    <div class="tab-content" id="tab-chatgpt">
+      <div class="setup-card">
+        <h2>🧠 ChatGPT (Custom Actions)</h2>
+        <p>Connect Arch Tools to a Custom GPT via OpenAPI Actions.</p>
+
+        <div class="step">
+          <h3><span class="step-num">1</span>Get your API key</h3>
+          <p>Sign up at <a href="/signup" style="color:var(--accent)">archtools.dev/signup</a> and grab your API key from the dashboard.</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">2</span>Create or edit a Custom GPT</h3>
+          <p>In ChatGPT, go to <strong>Explore GPTs → Create</strong> (or edit an existing GPT).</p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">3</span>Add an Action</h3>
+          <p>Click "Create new action" and paste this OpenAPI schema URL:</p>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>https://archtools.dev/.well-known/openapi.json</pre>
+          </div>
+          <p>Under Authentication, select <strong>"API Key"</strong>, header name <code>Authorization</code>, value: <code>Bearer your-api-key-here</code></p>
+        </div>
+
+        <div class="step">
+          <h3><span class="step-num">4</span>Test it</h3>
+          <p>Ask your Custom GPT to "search the web for the latest AI news" — it'll call Arch Tools automatically.</p>
+        </div>
+
+        <div class="warning">
+          <strong>⚠️ Note:</strong> ChatGPT Actions use REST, not MCP protocol. All 58 tools work but you won't get streaming/resources features. For full MCP support, use Claude Desktop, Cursor, or Windsurf.
+        </div>
+      </div>
+    </div>
+
+    <!-- Generic npx setup -->
+    <div class="setup-card">
+      <h2>🔌 Universal: Any MCP Client</h2>
+      <p>Works with any MCP-compatible client that supports stdio transport.</p>
+
+      <div class="step">
+        <h3><span class="step-num">1</span>One-line install</h3>
+        <p>No global install needed — npx handles everything:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>ARCH_TOOLS_API_KEY=your-key npx arch-tools-mcp</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3><span class="step-num">2</span>Or use SSE (HTTP) transport</h3>
+        <p>For clients that support HTTP-based MCP connections:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+<pre>Server URL: https://archtools.dev/mcp/sse
+Headers:
+  Authorization: Bearer your-api-key-here</pre>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>📖 Need help?</strong> Check the <a href="/docs">full API docs</a>, browse the <a href="/mcp-marketplace">MCP Marketplace</a>, or reach out at <a href="https://x.com/AiArchTools">@AiArchTools</a>.
+      </div>
+    </div>
+
+    <!-- What you get -->
+    <div class="setup-card" style="text-align:center">
+      <h2 style="justify-content:center">🎉 What You Get</h2>
+      <p>58 production-ready tools in a single MCP connection:</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:20px;text-align:left">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 16px">
+          <div style="font-weight:600;margin-bottom:4px">🔍 Web Search</div>
+          <div style="color:var(--muted);font-size:13px">Search the web with AI-optimized results</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 16px">
+          <div style="font-weight:600;margin-bottom:4px">🖼️ Image Generation</div>
+          <div style="color:var(--muted);font-size:13px">Generate images with DALL-E, Flux, SD</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 16px">
+          <div style="font-weight:600;margin-bottom:4px">📊 Crypto Prices</div>
+          <div style="color:var(--muted);font-size:13px">Real-time crypto market data</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 16px">
+          <div style="font-weight:600;margin-bottom:4px">✅ Fact Check</div>
+          <div style="color:var(--muted);font-size:13px">Verify claims with citations</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 16px">
+          <div style="font-weight:600;margin-bottom:4px">📝 Research Reports</div>
+          <div style="color:var(--muted);font-size:13px">Deep-dive research on any topic</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px 16px">
+          <div style="font-weight:600;margin-bottom:4px">💰 x402 Payments</div>
+          <div style="color:var(--muted);font-size:13px">Autonomous crypto micropayments</div>
+        </div>
+      </div>
+      <div style="margin-top:24px">
+        <a href="/docs" style="color:var(--accent);font-weight:600;text-decoration:none">See all 58 tools →</a>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="footer">
+    <p>© 2026 <a href="/">Arch Tools</a> · <a href="/mcp-marketplace">MCP Marketplace</a> · <a href="/docs">API Docs</a> · <a href="/directory">x402 Directory</a> · <a href="https://x.com/AiArchTools" target="_blank">@AiArchTools</a></p>
+  </footer>
+
+  <script>
+    function switchTab(id) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.pick-card').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    function copyCode(btn) {
+      const pre = btn.parentElement.querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = '✅ Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -4,14 +4,15 @@ import { stripe } from "../lib/stripe.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId } from "../utils/credits.js";
 import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
+import { fireWebhookEvent } from "../services/webhooks.js";
 
 const router = Router();
 
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
-  { credits: 10000,  amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { credits: 60000,  amount: 4900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
-  { credits: 250000, amount: 19900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
+  { credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
+  { credits: 30000,  amount: 4900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { credits: 200000, amount: 19900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
@@ -20,8 +21,8 @@ const SUBSCRIPTION_PLANS = [
     id: "starter-monthly",
     label: "Starter",
     billing: "monthly",
-    credits_per_month: 600,
-    amount: 900,     // $9/mo
+    credits_per_month: 15000,
+    amount: 1900,    // $19/mo
     // Security: price IDs must be set via environment variables — no hardcoded fallbacks.
     // Set STRIPE_PRICE_SUB_STARTER_MONTHLY in your environment. See .env.example.
     priceId: process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY ?? "",
@@ -30,46 +31,46 @@ const SUBSCRIPTION_PLANS = [
     id: "pro-monthly",
     label: "Pro",
     billing: "monthly",
-    credits_per_month: 3000,
-    amount: 2900,    // $29/mo
+    credits_per_month: 50000,
+    amount: 4900,    // $49/mo
     priceId: process.env.STRIPE_PRICE_SUB_PRO_MONTHLY ?? "",
   },
   {
     id: "business-monthly",
     label: "Business",
     billing: "monthly",
-    credits_per_month: 12000,
-    amount: 8900,    // $89/mo
+    credits_per_month: 200000,
+    amount: 14900,   // $149/mo
     priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY ?? "",
   },
   {
     id: "starter-annual",
     label: "Starter",
     billing: "annual",
-    credits_per_month: 600,
-    credits_per_year: 7200,
-    amount: 8100,    // $81/yr = $6.75/mo (25% off)
-    amount_monthly_equiv: 675,
+    credits_per_month: 15000,
+    credits_per_year: 180000,
+    amount: 18900,   // $189/yr = $15.75/mo (17% off)
+    amount_monthly_equiv: 1575,
     priceId: process.env.STRIPE_PRICE_SUB_STARTER_ANNUAL ?? "",
   },
   {
     id: "pro-annual",
     label: "Pro",
     billing: "annual",
-    credits_per_month: 3000,
-    credits_per_year: 36000,
-    amount: 26100,   // $261/yr = $21.75/mo (25% off)
-    amount_monthly_equiv: 2175,
+    credits_per_month: 50000,
+    credits_per_year: 600000,
+    amount: 48800,   // $488/yr = $40.67/mo (17% off)
+    amount_monthly_equiv: 4067,
     priceId: process.env.STRIPE_PRICE_SUB_PRO_ANNUAL ?? "",
   },
   {
     id: "business-annual",
     label: "Business",
     billing: "annual",
-    credits_per_month: 12000,
-    credits_per_year: 144000,
-    amount: 80100,   // $801/yr = $66.75/mo (25% off)
-    amount_monthly_equiv: 6675,
+    credits_per_month: 200000,
+    credits_per_year: 2400000,
+    amount: 148400,  // $1484/yr = $123.67/mo (17% off)
+    amount_monthly_equiv: 12367,
     priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_ANNUAL ?? "",
   },
 ];
@@ -93,7 +94,7 @@ router.get("/plans", (_req: Request, res: Response): void => {
       credits_per_month: p.credits_per_month,
       price_usd: p.amount / 100,
       price_monthly_equiv: p.billing === "annual" ? ((p as { amount_monthly_equiv?: number }).amount_monthly_equiv ?? p.amount) / 100 : p.amount / 100,
-      savings_vs_monthly: p.billing === "annual" ? "25%" : null,
+      savings_vs_monthly: p.billing === "annual" ? "17%" : null,
       auto_renew: true,
       credits_refresh: "monthly",
     })),
@@ -214,6 +215,13 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: credits } } }),
         ]);
         console.log(`[billing] One-time: +${credits} credits to agent ${agentId}`);
+        // Fire webhook event (non-blocking)
+        fireWebhookEvent("payment.received", agentId, {
+          type: "one_time",
+          credits_added: credits,
+          amount_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+          stripe_session_id: stripeId,
+        }).catch(() => {});
         try {
           const agentRecord = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true, credits: true } });
           if (agentRecord?.email) {
@@ -239,6 +247,14 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId } }),
         ]);
         console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
+        // Fire webhook event (non-blocking)
+        fireWebhookEvent("payment.received", agentId, {
+          type: "subscription",
+          plan: planId,
+          credits_added: creditsPerMonth,
+          amount_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+          stripe_session_id: stripeId,
+        }).catch(() => {});
         try {
           const agentRecord2 = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } });
           const amountUsd2 = ((session.amount_total ?? 0) / 100).toFixed(2);
@@ -278,6 +294,13 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth } } }),
       ]);
       console.log(`[billing] Renewal: +${creditsPerMonth} credits to agent ${agentId}`);
+      // Fire webhook event (non-blocking)
+      fireWebhookEvent("payment.received", agentId, {
+        type: "renewal",
+        credits_added: creditsPerMonth,
+        amount_usd: ((invoice.amount_paid ?? 0) / 100).toFixed(2),
+        subscription_id: subscriptionId,
+      }).catch(() => {});
       const agentRenewal = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } }).catch(() => null);
       const renewalAmount = ((invoice.amount_paid ?? 0) / 100).toFixed(2);
       sendAdminAlert(

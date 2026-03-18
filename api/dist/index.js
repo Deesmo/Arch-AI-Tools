@@ -27,9 +27,25 @@ import seoRouter from "./routes/seo.js";
 import legalRouter from "./routes/legal.js";
 import oauthRouter from "./routes/oauth.js";
 import authRouter, { verifySession } from "./routes/auth.js";
+import chatRouter from "./routes/chat.js";
+import directoryRouter from "./routes/directory.js";
+import walletRouter from "./routes/wallet.js";
+import pricingRouter from "./routes/pricing.js";
+import playgroundRouter from "./routes/playground.js";
+import x402PaymentsRouter from "./routes/x402-payments.js";
+import facilitatorRouter from "./routes/facilitator.js";
+import agentsRouter from "./routes/agents.js";
+import webhooksRouter from "./routes/webhooks.js";
+import mcpMarketplaceRouter from "./routes/mcp-marketplace.js";
+// x402 SDK (official Coinbase @x402/express integration)
+import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
+// Analytics
+import { analyticsMiddleware } from "./middleware/analytics.js";
+import analyticsRouter from "./routes/analytics.js";
+import statsRouter from "./routes/stats.js";
 const app = express();
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
@@ -38,12 +54,12 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // landing page inline scripts
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // landing page inline scripts + Chart.js CDN
             "script-src-attr": ["'unsafe-inline'"], // allow inline event handlers (onclick etc)
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com"],
+            connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com"],
         },
     },
     crossOriginEmbedderPolicy: false, // needed for fonts/CDN
@@ -82,7 +98,18 @@ const registerLimiter = rateLimit({
     message: { ok: false, error: "rate_limited", message: "Too many registration attempts. Try again in 1 hour." },
 });
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(cors({
+    origin: config.corsOrigin,
+    credentials: true,
+    exposedHeaders: [
+        "Payment-Required",
+        "Payment-Signature",
+        "Payment-Response",
+        "X-Payment",
+        "X-Payment-Response",
+        "X-Payment-Required",
+    ],
+}));
 app.use(morgan("combined"));
 app.use(globalLimiter);
 // Stripe webhook needs raw body — must come before express.json()
@@ -95,15 +122,18 @@ app.use((req, _res, next) => {
     req.headers["x-request-id"] = req.headers["x-request-id"] ?? crypto.randomUUID();
     next();
 });
+// ─── Analytics middleware (response timing + metrics) ─────────────────────────
+app.use(analyticsMiddleware);
 // ─── Favicon — redirect to SVG icon ──────────────────────────────────────────
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
     if (err)
-        res.redirect(301, '/arch-icon.svg');
+        res.redirect(301, '/arch-icon.svg?v=2');
 }));
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
+    dotfiles: 'ignore',
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
@@ -111,8 +141,21 @@ app.use(express.static(path.join(__dirname, "../public"), {
         else if (filePath.match(/\.(png|jpg|svg|ico|webp)$/)) {
             res.setHeader('Cache-Control', 'public, max-age=86400');
         }
+        else if (filePath.endsWith('.json') && filePath.includes('.well-known')) {
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Content-Type', 'application/json');
+        }
     }
 }));
+// ─── .well-known/glama.json — Glama ownership verification ──────────────
+app.get("/.well-known/glama.json", (_req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.json({
+        "$schema": "https://glama.ai/mcp/schemas/server.json",
+        "maintainers": ["Deesmo"]
+    });
+});
 // ─── og-image.png — serve actual PNG from public directory ──────────────
 app.get("/og-image.png", (_req, res) => {
     res.setHeader("Content-Type", "image/png");
@@ -122,6 +165,28 @@ app.get("/og-image.png", (_req, res) => {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 // Discovery & health (no auth)
 app.use("/", discoveryRouter);
+// /api/discovery — alias for /v1/tools (agent-friendly discovery endpoint)
+app.get("/api/discovery", async (_req, res) => {
+    try {
+        // Forward internally to the /v1/tools handler via fetch-self
+        const { prisma } = await import("./lib/prisma.js");
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore — `active` exists in prod schema
+        const tools = await prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+        const mapped = tools.map((t) => ({
+            name: t.name,
+            description: t.description ?? "",
+            endpoint: `/v1/tools/${t.name}`,
+            method: "POST",
+            credits: t.credits ?? 5,
+            category: t.category ?? "utility",
+        }));
+        res.json({ ok: true, tools: mapped });
+    }
+    catch {
+        res.json({ ok: true, tools: [] });
+    }
+});
 // SEO free tool pages + no-auth API endpoints
 app.use("/tools", seoRouter);
 app.use("/v1/tools", seoRouter); // Free endpoint proxies
@@ -131,6 +196,10 @@ app.use("/v1/agent/register", registerLimiter);
 app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
+// x402 SDK middleware — applies official Coinbase x402 protocol to all tool routes
+// When enabled (X402_SDK_ENABLED=true), handles payment verification/settlement
+// via the official facilitator before requests reach the tool handlers
+app.use("/v1/tools", x402SdkMiddleware);
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);
 // Billing
@@ -139,11 +208,34 @@ app.use("/webhooks", billingRouter);
 // Admin
 app.use("/v1/admin", adminRouter);
 app.use("/admin", adminRouter);
+// Analytics (admin-only API + public stats)
+app.use("/api/v1/analytics", analyticsRouter);
+app.use("/api/v1/stats", statsRouter);
+// x402 Service Directory
+app.use("/api/v1/x402/directory", directoryRouter);
+// x402 Pricing API (public, no auth)
+app.use("/api/v1/x402/pricing", pricingRouter);
+// x402 Playground API (public, no auth — demo flow)
+app.use("/api/v1/x402/playground", playgroundRouter);
+// x402 Payment receipts & history
+app.use("/api/v1/x402", x402PaymentsRouter);
+// Facilitator-as-a-Service — let other API providers use Arch Tools as their x402 facilitator
+app.use("/api/v1/facilitator", facilitatorRouter);
+// Agent Identity (KYA — Know Your Agent)
+app.use("/api/v1/agents", agentsRouter);
+// Webhooks — event notification system
+app.use("/api/v1/webhooks", webhooksRouter);
+// MCP Server Marketplace — curated MCP server directory
+app.use("/api/v1/mcp", mcpMarketplaceRouter);
+// Wallet provisioning (AgentKit)
+app.use("/v1/wallet", walletRouter);
 // Workflows
 app.use("/v1/workflows", workflowsRouter);
 // Legal
 app.use("/legal", legalRouter);
 app.use("/auth", authRouter);
+// Chat widget (public, rate-limited server-side proxy)
+app.use("/api/chat", chatRouter);
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req, res) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML));
 app.get("/login", (_req, res) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(LOGIN_HTML));
@@ -155,16 +247,41 @@ app.get("/dashboard", (req, res) => {
     return res.type("text/html").send(DASHBOARD_HTML);
 });
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
-// /pricing — referenced in Stripe cancel_url and nav links
-app.get("/pricing", (_req, res) => res.redirect("/#pricing"));
+// /pricing — full pricing page
+app.get("/pricing", (_req, res) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
+// /getting-started — convenience redirect to docs sub-path
+app.get("/getting-started", (_req, res) => res.redirect(301, "/docs/getting-started"));
+// /terms — convenience redirect to static terms page
+app.get("/terms", (_req, res) => res.redirect(301, "/terms.html"));
+// /links — Linktree-style page
+app.get("/links", (_req, res) => res.redirect(301, "/links.html"));
 // /privacy and /legal — convenience redirects to canonical sub-paths
 app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
+app.get("/changelog", (_req, res) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
+app.get("/directory", (_req, res) => res.sendFile(path.join(__dirname, '../public/directory.html')));
 app.get("/docs", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
+app.get("/docs/getting-started", (_req, res) => res.sendFile(path.join(__dirname, '../public/getting-started.html')));
 app.get("/docs/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/blog", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/blog/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/sdk", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
+app.get("/fund", (_req, res) => res.sendFile(path.join(__dirname, '../public/fund.html')));
+app.get("/playground", (_req, res) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/agents", (_req, res) => res.sendFile(path.join(__dirname, '../public/agents.html')));
+app.get("/analytics", (_req, res) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/usage", (_req, res) => res.sendFile(path.join(__dirname, '../public/usage.html')));
+app.get("/status", (_req, res) => res.sendFile(path.join(__dirname, '../public/status.html')));
+app.get("/stats", (_req, res) => res.sendFile(path.join(__dirname, '../public/stats.html')));
+app.get("/facilitator", (_req, res) => res.sendFile(path.join(__dirname, '../public/facilitator.html')));
+app.get("/webhooks", (_req, res) => res.sendFile(path.join(__dirname, '../public/webhooks.html')));
+app.get("/developers", (_req, res) => res.sendFile(path.join(__dirname, '../public/developers.html')));
+app.get("/mcp-marketplace", (_req, res) => res.sendFile(path.join(__dirname, '../public/mcp-marketplace.html')));
+app.get("/mcp-setup", (_req, res) => res.sendFile(path.join(__dirname, '../public/mcp-setup.html')));
+app.get("/sdks", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdks.html')));
+app.get("/v1/changelog.rss", (_req, res) => {
+    res.type("application/rss+xml").sendFile(path.join(__dirname, '../public/changelog.rss'));
+});
 // /success — Stripe post-checkout success page
 app.get("/success", (_req, res) => {
     res.type("text/html").send(`<!DOCTYPE html>
@@ -191,6 +308,10 @@ app.get("/success", (_req, res) => {
 </body>
 </html>`);
 });
+// x402 SDK status endpoint
+app.get("/v1/x402/status", (_req, res) => {
+    res.json({ ok: true, x402_sdk: getX402SdkStatus() });
+});
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
     res.status(404).json({
@@ -215,6 +336,9 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
     console.error("FATAL: ADMIN_KEY must be set to a secure value in production. Exiting.");
     process.exit(1);
 }
+// Initialize x402 SDK (official Coinbase protocol support)
+initX402Sdk();
+// x402 SDK status endpoint (for admin/health checks)
 app.listen(config.port, () => {
     console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
     console.log(`   ENV: ${config.nodeEnv}`);

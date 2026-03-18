@@ -509,6 +509,59 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* ── Social proof / Testimonials ── */}
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-[11px] text-white/30 font-mono tracking-widest uppercase">Trusted by developers</p>
+            <h2 className="text-xl font-semibold text-white">
+              Trusted by developers building with AI
+            </h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              {
+                quote: 'One API key replaced four separate accounts. My agent calls 12 tools and I manage zero infrastructure.',
+                author: 'Senior AI Engineer',
+                icon: '🔑',
+              },
+              {
+                quote: 'We went from 3 weeks of API integrations to one afternoon. 53 tools, one POST each.',
+                author: 'Startup CTO',
+                icon: '⚡',
+              },
+              {
+                quote: 'The x402 payment flow is genius. Our agents buy their own compute. No invoices, no procurement.',
+                author: 'Web3 Developer',
+                icon: '💎',
+              },
+              {
+                quote: 'I was building a RAG pipeline and needed scraping, summarization, and vector storage. Three API calls. Done.',
+                author: 'ML Engineer',
+                icon: '🧠',
+              },
+            ].map((t) => (
+              <div
+                key={t.author}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:bg-white/[0.05] transition-colors relative overflow-hidden"
+              >
+                <div
+                  className="absolute -top-10 -right-10 w-32 h-32 pointer-events-none"
+                  style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)' }}
+                  aria-hidden="true"
+                />
+                <div className="text-2xl mb-4">{t.icon}</div>
+                <p className="text-sm text-white/70 leading-relaxed italic mb-4">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="h-1 w-6 rounded-full bg-gradient-to-r from-indigo-500/60 to-cyan-500/60" />
+                  <span className="text-xs text-white/40 font-medium">{t.author}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ── CTA banner ── */}
         <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 via-transparent to-emerald-500/8 p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

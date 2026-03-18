@@ -25,7 +25,7 @@ const SESSION_TTL_JWT = "7d"; // must match SESSION_TTL_MS
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  sameSite: "lax" as const,
   maxAge: SESSION_TTL_MS,
   path: "/",
 };
@@ -151,8 +151,11 @@ router.post("/set-password", async (req: Request, res: Response): Promise<void> 
 
 // ─── GET /auth/logout ──────────────────────────────────────────────────────────
 router.get("/logout", (_req: Request, res: Response): void => {
-  res.clearCookie(COOKIE_NAME, { path: "/" });
-  res.redirect("/");
+  // Clear with exact same options as COOKIE_OPTS to ensure browser removes it
+  res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
+  // Belt-and-suspenders: also set to empty with maxAge 0
+  res.cookie(COOKIE_NAME, "", { ...COOKIE_OPTS, maxAge: 0 });
+  res.redirect("/login");
 });
 
 // ─── GET /auth/me ─────────────────────────────────────────────────────────────
@@ -232,7 +235,7 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Arch Tools — Reset Password</title>
-  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}

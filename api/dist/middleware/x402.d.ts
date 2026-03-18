@@ -13,6 +13,7 @@
  * Official package: npm install x402-express (swap this in for production if preferred)
  */
 import { Request, Response, NextFunction } from "express";
+export declare const TOOL_OUTPUT_SCHEMAS: Record<string, any>;
 export declare const X402_PRICES: Record<string, string>;
 /**
  * x402 middleware — attach to any tool route.

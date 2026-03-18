@@ -186,8 +186,17 @@ export async function sendVerificationEmail(args: { to: string; verifyUrl: strin
 }
 
 // ─── 2. Welcome Email ───
-export async function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number): Promise<void> {
+export async function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number, referralCode?: string): Promise<void> {
   const subject = "Welcome to Arch Tools — Your API key is ready";
+
+  const referralSection = referralCode ? `
+    <hr class="divider">
+    <h3 style="font-size:16px;font-weight:700;color:#F0EEFF;margin-bottom:8px;">🎁 Share & Earn More Credits</h3>
+    <p>Give friends <strong>500 free credits</strong> when they sign up with your referral code — and you get <strong>500 credits</strong> too!</p>
+    <div class="key-box" style="font-size:16px;text-align:center;letter-spacing:1px;color:#FF9010;">${referralCode}</div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/refer.html" style="background:linear-gradient(135deg,#AA77FF,#FF2896);">Share your referral link →</a></div>
+  ` : "";
+
   const html = layout(subject, `
     <p>You're in. Here's your API key — <strong>copy it now and store it somewhere safe. It cannot be retrieved again.</strong></p>
     <div class="key-warning">Save this key now — it won't be shown again after you close this email.</div>
@@ -197,13 +206,15 @@ export async function sendWelcomeEmail(to: string, agentId: string, apiKey: stri
       <div class="stat"><span>Plan</span>Free</div>
       <div class="stat"><span>Agent ID</span>${agentId.slice(0, 14)}…</div>
     </div>
+    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 38 AI tools — enough to really put Arch Tools through its paces.</p>
     <p>Use your key in any HTTP request:</p>
     <div class="key-box" style="font-size:13px;">x-api-key: ${apiKey.slice(0, 12)}…</div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Read the docs →</a></div>
+    ${referralSection}
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Credits never expire. When you're ready to scale, grab a credit pack at <a href="${SITE}/#pricing">archtools.dev/pricing</a>.</p>
   `);
-  const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\nDocs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
+  const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\n${referralCode ? `Your referral code: ${referralCode}\nShare it and you both get 500 bonus credits!\n\n` : ""}Docs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
   await sendEmail(to, subject, html, text);
 }
 
@@ -286,7 +297,61 @@ export async function sendMonthlyRefreshEmail(to: string, credits: number, newBa
   await sendEmail(to, subject, html);
 }
 
-// ─── 7. Password Reset ───
+// ─── 7. Feature Announcement (broadcast) ───
+export async function sendFeatureAnnouncement(to: string, opts: {
+  headline: string;
+  body: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+}): Promise<boolean> {
+  const { headline, body: bodyText, ctaLabel, ctaUrl } = opts;
+  const subject = `🚀 ${headline} — Arch Tools`;
+
+  // Convert newlines in body to <br> for HTML
+  const htmlBody = bodyText.replace(/\n/g, "<br>");
+  const cta = ctaLabel && ctaUrl
+    ? `<div class="btn-wrap"><a class="btn" href="${ctaUrl}">${ctaLabel} →</a></div>`
+    : "";
+
+  const html = layout(subject, `
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:12px;color:#F0EEFF;">${headline}</h2>
+    <p>${htmlBody}</p>
+    ${cta}
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">You're receiving this because you signed up at archtools.dev. <a href="${SITE}">Visit dashboard →</a></p>
+  `);
+  const text = `${headline}\n\n${bodyText}\n\n${ctaUrl ? `Learn more: ${ctaUrl}` : `Visit: ${SITE}`}`;
+  return sendEmail(to, subject, html, text);
+}
+
+// ─── 8. x402 Payment Receipt ───
+export async function sendX402PaymentReceipt(to: string, opts: {
+  toolName: string;
+  amountUsdc: string;
+  txHash: string;
+  network: string;
+}): Promise<void> {
+  const { toolName, amountUsdc, txHash, network } = opts;
+  const subject = `✅ x402 payment confirmed — ${toolName}`;
+  const explorerUrl = network === "base"
+    ? `https://basescan.org/tx/${txHash}`
+    : `https://etherscan.io/tx/${txHash}`;
+  const html = layout(subject, `
+    <div class="alert-success">✅ Your x402 payment for <strong>${toolName}</strong> has been verified and settled.</div>
+    <table class="info-table">
+      <tr><td>Tool</td><td>${toolName}</td></tr>
+      <tr><td>Amount</td><td>${amountUsdc} USDC</td></tr>
+      <tr><td>Network</td><td>${network}</td></tr>
+      <tr><td>Transaction</td><td><a href="${explorerUrl}" style="color:#AA77FF;">${txHash.slice(0, 10)}…${txHash.slice(-8)}</a></td></tr>
+    </table>
+    <div class="btn-wrap"><a class="btn" href="${explorerUrl}">View on Explorer →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">This receipt confirms a one-time x402 protocol payment. No subscription — pay only when you call.</p>
+  `);
+  await sendEmail(to, subject, html);
+}
+
+// ─── 9. Password Reset ───
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
   const subject = "Reset your Arch Tools password";
   const html = layout(subject, `

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — Arch Tools</title>
+  <meta name="description" content="Frequently asked questions about Arch Tools API platform, x402 crypto payments, pricing, supported chains, and agent identity." />
+  <meta property="og:title" content="FAQ — Arch Tools" />
+  <meta property="og:description" content="Common questions about Arch Tools: x402 payments, pricing, supported chains, API keys, and agent identity." />
+  <meta property="og:url" content="https://archtools.dev/faq" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://archtools.dev/og-image.png" />
+  <link rel="canonical" href="https://archtools.dev/faq" />
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#07061A;--border:rgba(255,255,255,0.10);--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.55);--grad:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);--amber:#FF9010;--card:rgba(255,255,255,0.05);}
+    html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+    .at-nav{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.88);backdrop-filter:blur(16px);position:sticky;top:0;z-index:100;}
+    .at-nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text);}
+    .at-logo-mark{width:32px;height:32px;border-radius:8px;background:var(--bg);border:1px solid rgba(255,144,16,0.4);display:flex;align-items:center;justify-content:center;}
+    .at-nav-brand{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+    .at-nav-links{display:flex;align-items:center;gap:24px;font-size:13px;}
+    .at-nav-links a{color:var(--muted);text-decoration:none;transition:color 0.15s;}
+    .at-nav-links a:hover{color:var(--text);}
+    .at-nav-cta{background:var(--grad);color:#fff !important;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px !important;}
+    @media(max-width:640px){.at-nav-links a:not(.at-nav-cta){display:none;}.at-nav-brand{font-size:14px;}}
+    .container{max-width:760px;margin:0 auto;padding:60px 24px 80px;}
+    .container h1{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;margin-bottom:8px;}
+    .subtitle{font-size:14px;color:var(--muted);margin-bottom:48px;}
+    .back{display:inline-flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;font-size:14px;margin-bottom:40px;}
+    .back:hover{opacity:0.8;}
+    .faq-section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;color:var(--amber);margin:40px 0 20px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+    .faq-item{margin-bottom:16px;border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden;}
+    .faq-q{padding:18px 24px;font-weight:500;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background 0.15s;}
+    .faq-q:hover{background:rgba(255,255,255,0.03);}
+    .faq-q::after{content:'+';font-size:20px;color:var(--amber);font-weight:700;transition:transform 0.2s;flex-shrink:0;margin-left:16px;}
+    .faq-item.open .faq-q::after{content:'−';}
+    .faq-a{max-height:0;overflow:hidden;transition:max-height 0.3s ease;padding:0 24px;}
+    .faq-item.open .faq-a{max-height:600px;padding:0 24px 18px;}
+    .faq-a p,.faq-a li{color:rgba(255,255,255,0.72);font-size:14px;line-height:1.7;margin-bottom:8px;}
+    .faq-a ul{padding-left:18px;margin:8px 0;}
+    .faq-a a{color:var(--amber);text-decoration:none;}
+    .faq-a a:hover{text-decoration:underline;}
+    .faq-a code{font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;}
+    .at-footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-size:12px;color:var(--muted);}
+    .at-footer a{color:var(--muted);text-decoration:none;margin:0 8px;}
+    .at-footer a:hover{color:var(--text);}
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="at-nav">
+    <a class="at-nav-logo" href="/">
+      <div class="at-logo-mark">
+        <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav-fq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-fq"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-fq)" filter="url(#arch-neon-nav-fq)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+      </div>
+      <span class="at-nav-brand">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/">Home</a>
+      <a href="/docs">Docs</a>
+      <a href="/directory">Directory</a>
+      <a href="/signup" class="at-nav-cta">Get API Key →</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+      <a class="back" href="/">← Back to Arch Tools</a>
+      <h1>Frequently Asked Questions</h1>
+      <p class="subtitle">Everything you need to know about Arch Tools, x402 payments, and the agent ecosystem.</p>
+
+      <!-- General -->
+      <div class="faq-section-title">General</div>
+
+      <div class="faq-item">
+        <div class="faq-q">What is Arch Tools?</div>
+        <div class="faq-a">
+          <p>Arch Tools is a pay-per-use API platform offering 53+ developer tools and AI agent utilities. It includes web scraping, AI text generation, image generation, audio transcription, text-to-speech, crypto data, and more — all accessible via a single API key.</p>
+          <p>Arch Tools is the first API platform to natively support <strong>x402 crypto payments</strong>, enabling AI agents to autonomously pay for API access without human intervention.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">How do I get an API key?</div>
+        <div class="faq-a">
+          <p>Sign up at <a href="/signup">archtools.dev/signup</a> with your email address. You'll receive an API key immediately. Every new account comes with <strong>250 free credits</strong> to get started.</p>
+          <p>Pass your key in the <code>x-api-key</code> header with every request, or use x402 payments for keyless access.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Is there a free tier?</div>
+        <div class="faq-a">
+          <p>Yes. Every account receives <strong>250 free credits</strong> on signup — no credit card required. This is enough to try dozens of API calls across different tools.</p>
+          <p>Free tier rate limits: 30 requests/minute, 500 requests/day.</p>
+        </div>
+      </div>
+
+      <!-- Pricing -->
+      <div class="faq-section-title">Pricing &amp; Credits</div>
+
+      <div class="faq-item">
+        <div class="faq-q">What's the pricing?</div>
+        <div class="faq-a">
+          <p>Arch Tools uses a credit-based system. Each tool costs a specific number of credits per call (1–30 credits depending on the tool). You can get credits three ways:</p>
+          <ul>
+            <li><strong>Free:</strong> 250 credits on signup</li>
+            <li><strong>Subscriptions:</strong> Developer ($19/mo), Pro ($49/mo), Business ($149/mo), Enterprise (custom)</li>
+            <li><strong>One-time packs:</strong> 5,000 credits ($9), 30,000 credits ($49), 200,000 credits ($199)</li>
+            <li><strong>x402 crypto:</strong> Pay per request with USDC — no subscription needed</li>
+          </ul>
+          <p>See the <a href="/#pricing">pricing section</a> on our homepage for full details.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Can I get a refund?</div>
+        <div class="faq-a">
+          <p>Credits and subscription payments are non-refundable except where required by applicable law. Crypto payments via x402 are final once confirmed on-chain — blockchain transactions cannot be reversed.</p>
+          <p>See our <a href="/refund">Refund Policy</a> for full details.</p>
+        </div>
+      </div>
+
+      <!-- x402 Payments -->
+      <div class="faq-section-title">x402 Crypto Payments</div>
+
+      <div class="faq-item">
+        <div class="faq-q">What is x402?</div>
+        <div class="faq-a">
+          <p>x402 is an open payment protocol that enables machines and AI agents to pay for internet resources using cryptocurrency. It's named after HTTP status code 402 ("Payment Required").</p>
+          <p>When an AI agent hits an x402-enabled API, it receives a 402 response with payment instructions. The agent sends a crypto payment, includes the transaction proof in a retry, and gets access — all automatically, with no human in the loop.</p>
+          <p>Arch Tools is the first API platform with native x402 support, meaning your agents can pay for any of our 53+ tools with USDC.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">How do I pay with crypto?</div>
+        <div class="faq-a">
+          <p>Two options:</p>
+          <ul>
+            <li><strong>x402 auto-pay:</strong> Your AI agent handles it automatically. When it gets a 402 response, it signs a USDC payment and retries. No human action needed.</li>
+            <li><strong>Fund your account:</strong> Visit the <a href="/fund">Fund page</a> to send USDC to your account wallet. Credits are added automatically upon confirmation.</li>
+          </ul>
+          <p>Both methods use USDC stablecoin (pegged 1:1 to USD) so there's no price volatility.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What chains are supported?</div>
+        <div class="faq-a">
+          <p>Arch Tools supports USDC payments on <strong>15 blockchain networks</strong>:</p>
+          <ul>
+            <li><strong>Primary:</strong> Base, Ethereum, Arbitrum, Optimism, Polygon</li>
+            <li><strong>Also supported:</strong> Avalanche, BNB Chain, Celo, Fantom, Gnosis, Linea, Mantle, Scroll, zkSync Era, and Polygon zkEVM</li>
+          </ul>
+          <p>We recommend <strong>Base</strong> for the lowest fees (typically &lt; $0.01 per transaction). See the <a href="/fund">Fund page</a> for network-specific details.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Do I need a wallet to use Arch Tools?</div>
+        <div class="faq-a">
+          <p>Only if you want to pay with crypto. You can also pay with a credit card via Stripe for subscriptions and credit packs.</p>
+          <p>If you do want to use x402 payments, our <a href="/fund">Fund page</a> includes a guided wallet onboarding flow to help you get set up.</p>
+        </div>
+      </div>
+
+      <!-- Agent Identity -->
+      <div class="faq-section-title">Agent Identity (KYA)</div>
+
+      <div class="faq-item">
+        <div class="faq-q">How does agent identity work?</div>
+        <div class="faq-a">
+          <p>Agent Identity (Know Your Agent) is a reputation and verification system for AI agents. It works like a credit score for machines:</p>
+          <ul>
+            <li><strong>Identity:</strong> Link your API key to a wallet address for verifiable on-chain identity</li>
+            <li><strong>Reputation:</strong> Build a score based on payment history, usage patterns, error rates, and account age</li>
+            <li><strong>Trust tiers:</strong> Higher reputation unlocks better rate limits and access to premium services in the directory</li>
+          </ul>
+          <p>Learn more on the <a href="/agents">Agent Identity page</a>.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Can I dispute my reputation score?</div>
+        <div class="faq-a">
+          <p>Yes. If you believe your score is inaccurate, email <a href="mailto:support@archtools.dev">support@archtools.dev</a> with details. We'll review the underlying metrics and respond within 14 business days.</p>
+          <p>Reputation scores are computed algorithmically from objective data — they are not manually adjusted or biased.</p>
+        </div>
+      </div>
+
+      <!-- Facilitator -->
+      <div class="faq-section-title">Facilitator-as-a-Service</div>
+
+      <div class="faq-item">
+        <div class="faq-q">What is Facilitator-as-a-Service?</div>
+        <div class="faq-a">
+          <p>If you run your own API, Arch Tools can handle x402 payment processing for you. We act as the payment facilitator — verifying transactions, managing wallets, and settling funds — so you can focus on building your service.</p>
+          <p>Visit the <a href="/facilitator">Facilitator page</a> for integration details and pricing.</p>
+        </div>
+      </div>
+
+      <!-- Technical -->
+      <div class="faq-section-title">Technical</div>
+
+      <div class="faq-item">
+        <div class="faq-q">What SDKs are available?</div>
+        <div class="faq-a">
+          <p>We offer official SDKs for 5 platforms:</p>
+          <ul>
+            <li><strong>JavaScript/TypeScript:</strong> <code>@archtools/sdk</code> — full client with retry logic and TypeScript types</li>
+            <li><strong>Python:</strong> <code>archtools</code> — complete client with type hints and exponential backoff</li>
+            <li><strong>LangChain:</strong> Drop-in tool provider for LangChain agents</li>
+            <li><strong>CrewAI:</strong> Native integration for CrewAI multi-agent workflows</li>
+            <li><strong>OpenAI Agents:</strong> Compatible with the OpenAI Agents SDK function-calling interface</li>
+          </ul>
+          <p>See the <a href="/integrations">Integrations page</a> for installation guides and code examples.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What's the Bring Your Own Key (BYOK) feature?</div>
+        <div class="faq-a">
+          <p>BYOK lets you provide your own API keys for supported third-party providers (Anthropic, OpenAI, xAI, Google, Brave Search, Tavily, Exa). Requests are routed through your accounts, giving you more control over costs and rate limits.</p>
+          <p>BYOK usage is still subject to Arch Tools' acceptable use policies.</p>
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="faq-section-title">Still have questions?</div>
+
+      <div class="faq-item">
+        <div class="faq-q">How do I get support?</div>
+        <div class="faq-a">
+          <p>Reach us at:</p>
+          <ul>
+            <li><strong>General support:</strong> <a href="mailto:support@archtools.dev">support@archtools.dev</a></li>
+            <li><strong>Privacy/data requests:</strong> <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a></li>
+            <li><strong>Abuse reports:</strong> <a href="mailto:abuse@archtools.dev">abuse@archtools.dev</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="at-footer">
+    <span>© 2026 Arch Tools · MCMetaverse LLC</span>
+    <span>
+      <a href="/legal/privacy">Privacy</a>
+      <a href="/legal/terms">Terms</a>
+      <a href="/docs">Docs</a>
+      <a href="mailto:support@archtools.dev">Contact</a>
+    </span>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.faq-q').forEach(q => {
+      q.addEventListener('click', () => {
+        const item = q.parentElement;
+        const wasOpen = item.classList.contains('open');
+        // Close all
+        document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+        // Toggle clicked
+        if (!wasOpen) item.classList.add('open');
+      });
+    });
+  </script>
+</body>
+</html>

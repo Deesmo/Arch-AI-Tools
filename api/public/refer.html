@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Arch Tools — Share & Earn Free Credits</title>
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="Share Arch Tools with friends. You both get 500 free API credits.">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Syne,sans-serif;background:#07061A;color:rgba(255,255,255,0.9);min-height:100vh;}
+    a{color:#FF9010;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* Nav */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;color:#fff;text-decoration:none}
+    .nav-links{display:flex;gap:20px;font-size:14px;}
+    .nav-links a{color:rgba(255,255,255,0.6);transition:color .2s}
+    .nav-links a:hover{color:#fff;text-decoration:none}
+
+    /* Hero */
+    .hero{text-align:center;padding:80px 24px 48px;max-width:700px;margin:0 auto;}
+    .hero-badge{display:inline-block;background:rgba(255,144,16,0.12);border:1px solid rgba(255,144,16,0.3);border-radius:99px;padding:6px 16px;font-size:13px;font-weight:600;color:#FF9010;margin-bottom:20px;}
+    .hero h1{font-size:clamp(32px,5vw,48px);font-weight:800;line-height:1.15;margin-bottom:16px;background:linear-gradient(135deg,#FF9010,#FF2896);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{font-size:18px;color:rgba(255,255,255,0.55);line-height:1.6;max-width:520px;margin:0 auto;}
+
+    /* Referral Link Box */
+    .ref-section{max-width:560px;margin:0 auto 48px;padding:0 24px;}
+    .ref-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px 24px;text-align:center;}
+    .ref-box .label{font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;}
+    .ref-link-wrap{display:flex;gap:8px;margin-bottom:16px;}
+    .ref-link{flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:14px 16px;font-family:'Courier New',monospace;font-size:14px;color:#AA77FF;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .copy-btn{background:linear-gradient(135deg,#FF9010,#FF2896);border:none;border-radius:10px;padding:14px 24px;color:#fff;font-family:Syne,sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+    .copy-btn:hover{opacity:0.9}
+    .copy-btn.copied{background:#34d399}
+    .ref-code{font-size:13px;color:rgba(255,255,255,0.4);margin-top:8px;}
+    .ref-code strong{color:#FF9010}
+    .login-prompt{font-size:14px;color:rgba(255,255,255,0.5);margin-top:12px;}
+    .login-prompt a{font-weight:600}
+
+    /* How It Works */
+    .how{max-width:700px;margin:0 auto 64px;padding:0 24px;}
+    .how h2{font-size:24px;font-weight:800;text-align:center;margin-bottom:32px;}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+    .step{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px 20px;text-align:center;}
+    .step-num{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#FF9010,#FF2896);display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin-bottom:12px;}
+    .step h3{font-size:15px;font-weight:700;margin-bottom:8px;}
+    .step p{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.5;}
+
+    /* Rewards */
+    .rewards{max-width:560px;margin:0 auto 64px;padding:0 24px;}
+    .rewards h2{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px;}
+    .reward-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .reward-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px;text-align:center;}
+    .reward-card .emoji{font-size:32px;margin-bottom:8px;}
+    .reward-card .amount{font-size:28px;font-weight:800;background:linear-gradient(135deg,#FF9010,#FF2896);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px;}
+    .reward-card .desc{font-size:13px;color:rgba(255,255,255,0.5);}
+
+    /* Leaderboard */
+    .leaderboard{max-width:560px;margin:0 auto 64px;padding:0 24px;}
+    .leaderboard h2{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px;}
+    .lb-table{width:100%;border-collapse:collapse;}
+    .lb-table th{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);}
+    .lb-table td{padding:12px;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .lb-table tr:first-child td{color:#FFD700;}
+    .lb-rank{font-weight:800;color:#FF9010;width:40px;}
+    .lb-credits{color:#AA77FF;font-family:'Courier New',monospace;}
+    .lb-empty{text-align:center;padding:32px;color:rgba(255,255,255,0.3);font-size:14px;}
+
+    /* Stats */
+    .my-stats{max-width:560px;margin:0 auto 64px;padding:0 24px;display:none;}
+    .my-stats h2{font-size:24px;font-weight:800;text-align:center;margin-bottom:24px;}
+    .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .stat-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;text-align:center;}
+    .stat-card .val{font-size:28px;font-weight:800;color:#FF9010;}
+    .stat-card .lbl{font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;}
+
+    /* CTA */
+    .cta{text-align:center;padding:48px 24px 80px;}
+    .cta h2{font-size:24px;font-weight:800;margin-bottom:12px;}
+    .cta p{font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:24px;}
+    .cta-btn{display:inline-block;background:linear-gradient(135deg,#FF9010,#FF2896);color:#fff;padding:15px 32px;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;transition:opacity .2s}
+    .cta-btn:hover{opacity:0.9;text-decoration:none}
+
+    /* Footer */
+    .footer{border-top:1px solid rgba(255,255,255,0.06);padding:24px 32px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25);}
+    .footer a{color:rgba(255,255,255,0.4)}
+
+    @media(max-width:600px){
+      .steps{grid-template-columns:1fr;}
+      .reward-cards{grid-template-columns:1fr;}
+      .stat-grid{grid-template-columns:1fr;}
+      .ref-link-wrap{flex-direction:column;}
+      .nav-links{gap:12px;font-size:13px;}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.08)"/><path d="M16 6L28 26H4L16 6Z" fill="none" stroke="#FF9010" stroke-width="2" stroke-linejoin="round"/></svg>
+    Arch Tools
+  </a>
+  <div class="nav-links">
+    <a href="/docs.html">Docs</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/dashboard" id="nav-dash-link">Dashboard</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">🎁 Referral Program</div>
+  <h1>Share Arch Tools, Get Free Credits</h1>
+  <p>Invite friends to Arch Tools. When they sign up with your link, <strong>you both get 500 free API credits</strong>. No limits.</p>
+</section>
+
+<section class="ref-section">
+  <div class="ref-box" id="ref-box">
+    <div class="label">Your Referral Link</div>
+    <div id="ref-authenticated" style="display:none;">
+      <div class="ref-link-wrap">
+        <div class="ref-link" id="ref-link"></div>
+        <button class="copy-btn" id="copy-btn" onclick="copyLink()">Copy</button>
+      </div>
+      <div class="ref-code">Your code: <strong id="ref-code-display"></strong></div>
+    </div>
+    <div id="ref-guest">
+      <p class="login-prompt">
+        <a href="/signup">Sign up</a> or <a href="/login">log in</a> to get your referral link
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="how">
+  <h2>How It Works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Share Your Link</h3>
+      <p>Copy your unique referral link and share it with friends, colleagues, or your community.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>They Sign Up</h3>
+      <p>When someone creates an account using your link, they start with 1,000 credits + 500 bonus.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>You Both Earn</h3>
+      <p>You get 500 credits added to your account instantly. Unlimited referrals, unlimited credits.</p>
+    </div>
+  </div>
+</section>
+
+<section class="rewards">
+  <h2>What You Get</h2>
+  <div class="reward-cards">
+    <div class="reward-card">
+      <div class="emoji">👤</div>
+      <div class="amount">+500</div>
+      <div class="desc">Credits for you (per referral)</div>
+    </div>
+    <div class="reward-card">
+      <div class="emoji">🤝</div>
+      <div class="amount">+500</div>
+      <div class="desc">Credits for your friend</div>
+    </div>
+  </div>
+</section>
+
+<section class="my-stats" id="my-stats">
+  <h2>Your Referral Stats</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="val" id="stat-referrals">0</div>
+      <div class="lbl">Referrals</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="stat-credits">0</div>
+      <div class="lbl">Credits Earned</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="stat-code">—</div>
+      <div class="lbl">Your Code</div>
+    </div>
+  </div>
+</section>
+
+<section class="leaderboard">
+  <h2>🏆 Top Referrers</h2>
+  <table class="lb-table" id="lb-table">
+    <thead><tr><th>#</th><th>Name</th><th>Referrals</th><th>Credits</th></tr></thead>
+    <tbody id="lb-body">
+      <tr><td colspan="4" class="lb-empty">Be the first on the leaderboard!</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="cta">
+  <h2>Ready to start earning?</h2>
+  <p>Sign up free, get 1,000 credits, and start sharing.</p>
+  <a href="/signup" class="cta-btn">Get Started Free →</a>
+</section>
+
+<div class="footer">
+  <a href="/">Arch Tools</a> · <a href="/docs.html">Docs</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+  <br>© 2025 Arch Tools. All rights reserved.
+</div>
+
+<script>
+  const SITE = window.location.origin;
+
+  // Check if user is logged in
+  async function init() {
+    try {
+      const r = await fetch('/auth/me', { credentials: 'include' });
+      if (r.ok) {
+        // User is logged in — fetch their referral code
+        document.getElementById('ref-guest').style.display = 'none';
+        document.getElementById('ref-authenticated').style.display = 'block';
+        document.getElementById('my-stats').style.display = 'block';
+
+        const codeRes = await fetch('/api/v1/referral/code', { credentials: 'include' });
+        if (codeRes.ok) {
+          const data = await codeRes.json();
+          document.getElementById('ref-link').textContent = data.referral_link;
+          document.getElementById('ref-code-display').textContent = data.code;
+        }
+
+        // Fetch stats
+        const statsRes = await fetch('/api/v1/referral/stats', { credentials: 'include' });
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          document.getElementById('stat-referrals').textContent = stats.total_referrals;
+          document.getElementById('stat-credits').textContent = stats.total_credits_earned.toLocaleString();
+          document.getElementById('stat-code').textContent = stats.referral_code || '—';
+        }
+      }
+    } catch {}
+
+    // Fetch leaderboard (public)
+    try {
+      const lbRes = await fetch('/api/v1/referral/leaderboard');
+      if (lbRes.ok) {
+        const lb = await lbRes.json();
+        if (lb.leaderboard && lb.leaderboard.length > 0) {
+          const tbody = document.getElementById('lb-body');
+          tbody.innerHTML = lb.leaderboard.map(l =>
+            `<tr>
+              <td class="lb-rank">${l.rank}</td>
+              <td>${l.name}</td>
+              <td>${l.referrals}</td>
+              <td class="lb-credits">${l.credits_earned.toLocaleString()}</td>
+            </tr>`
+          ).join('');
+        }
+      }
+    } catch {}
+  }
+
+  function copyLink() {
+    const link = document.getElementById('ref-link').textContent;
+    navigator.clipboard.writeText(link).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  init();
+</script>
+
+</body>
+</html>

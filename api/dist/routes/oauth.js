@@ -15,7 +15,7 @@ const CONSENT_PAGE = (clientName, scope, clientId, redirectUri, state, codeChall
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connect to ${clientName} — Arch Tools</title>
-  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{background:#07061A;color:#E0DFF5;font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}

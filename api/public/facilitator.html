@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Facilitator-as-a-Service — Arch Tools</title>
+  <meta name="description" content="Use Arch Tools as your x402 facilitator. Accept crypto payments in your API without running blockchain infrastructure.">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root {
+      --bg: #07061A;
+      --surface: #0c0c16;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0f0f6;
+      --muted: #8b8ba6;
+      --accent: #00e5b0;
+      --accent-dim: rgba(0,229,176,0.12);
+      --code-bg: #111122;
+      --warning: #f5a623;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.7; }
+
+    .container { max-width:900px; margin:0 auto; padding:40px 24px 80px; }
+
+    /* Header */
+    .hero { text-align:center; margin-bottom:56px; padding-top:32px; }
+    .badge { display:inline-block; background:var(--accent-dim); color:var(--accent); padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600; letter-spacing:0.5px; margin-bottom:16px; }
+    h1 { font-size:clamp(2rem,5vw,3rem); font-weight:800; margin-bottom:12px; }
+    h1 span { color:var(--accent); }
+    .subtitle { font-size:18px; color:var(--muted); max-width:600px; margin:0 auto 28px; }
+    .cta-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .btn { display:inline-block; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:700; font-size:15px; transition:transform 0.15s; }
+    .btn:hover { transform:translateY(-1px); }
+    .btn-primary { background:var(--accent); color:var(--bg); }
+    .btn-secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+
+    /* Sections */
+    h2 { font-size:1.5rem; font-weight:700; margin:48px 0 16px; padding-top:16px; border-top:1px solid var(--border); }
+    h3 { font-size:1.1rem; font-weight:600; margin:28px 0 12px; color:var(--accent); }
+    p { color:var(--muted); margin-bottom:16px; }
+    ul { color:var(--muted); margin-bottom:16px; padding-left:24px; }
+    li { margin-bottom:8px; }
+    strong { color:var(--text); }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    /* Code blocks */
+    pre { background:var(--code-bg); border:1px solid var(--border); border-radius:10px; padding:20px; overflow-x:auto; margin:16px 0 24px; font-size:14px; line-height:1.6; }
+    code { font-family:'SF Mono','Fira Code',Consolas,monospace; color:#d4d4d4; }
+    .inline-code { background:var(--code-bg); border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:13px; }
+
+    /* Table */
+    table { width:100%; border-collapse:collapse; margin:16px 0 24px; }
+    th,td { padding:12px 16px; text-align:left; border-bottom:1px solid var(--border); font-size:14px; }
+    th { color:var(--accent); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; }
+    td { color:var(--muted); }
+
+    /* Flow diagram */
+    .flow { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; margin:20px 0; }
+    .flow-step { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .flow-step:last-child { margin-bottom:0; }
+    .flow-num { background:var(--accent); color:var(--bg); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+    .flow-text { color:var(--muted); font-size:14px; }
+    .flow-arrow { margin-left:13px; color:var(--accent); font-size:12px; margin-bottom:4px; }
+
+    /* Cards */
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; margin:20px 0; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; }
+    .card h4 { color:var(--text); font-size:1rem; margin-bottom:8px; }
+    .card p { font-size:14px; margin-bottom:0; }
+
+    /* Warning */
+    .warning { background:rgba(245,166,35,0.08); border:1px solid rgba(245,166,35,0.2); border-radius:8px; padding:16px 20px; margin:16px 0; }
+    .warning p { color:var(--warning); margin:0; font-size:14px; }
+
+    /* Nav */
+    .nav { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
+    .nav a { color:var(--muted); font-size:14px; font-weight:500; }
+    .nav a:hover { color:var(--accent); text-decoration:none; }
+    .nav .logo { font-weight:700; font-size:18px; color:var(--text); }
+
+    @media (max-width:600px) {
+      .container { padding:24px 16px 60px; }
+      pre { padding:14px; font-size:12px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="logo">⚡ Arch Tools</a>
+  <a href="/docs">Docs</a>
+  <a href="/directory">Directory</a>
+  <a href="/pricing">Pricing</a>
+  <a href="/facilitator" style="color:var(--accent)">Facilitator</a>
+</nav>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="badge">NEW — Facilitator-as-a-Service</div>
+    <h1>Accept <span>x402 Payments</span><br>Without Infrastructure</h1>
+    <p class="subtitle">Use Arch Tools as your x402 facilitator. We verify payments, settle on-chain, and handle gas — so you can focus on building your API.</p>
+    <div class="cta-row">
+      <a href="#quickstart" class="btn btn-primary">Get Started →</a>
+      <a href="#pricing" class="btn btn-secondary">View Pricing</a>
+    </div>
+  </div>
+
+  <!-- What is a Facilitator -->
+  <h2>What is a Facilitator?</h2>
+  <p>In the <a href="https://x402.org" target="_blank">x402 protocol</a>, a <strong>facilitator</strong> is a service that verifies and settles crypto payments on behalf of API servers. Instead of running your own blockchain nodes and implementing payment verification, you delegate that to us.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🔍 Verify Payments</h4>
+      <p>We validate signatures, check balances, prevent replay attacks, and confirm the payment meets your requirements.</p>
+    </div>
+    <div class="card">
+      <h4>⛓️ Settle On-Chain</h4>
+      <p>We submit the payment transaction to the blockchain, pay gas fees, and wait for confirmation. You get the funds.</p>
+    </div>
+    <div class="card">
+      <h4>⛽ Gas Sponsorship</h4>
+      <p>Neither you nor your customers need to hold native tokens. We handle gas costs, included in our fee.</p>
+    </div>
+    <div class="card">
+      <h4>📊 Provider Dashboard</h4>
+      <p>Track your payments, revenue, top endpoints, and fees in real-time through our API.</p>
+    </div>
+  </div>
+
+  <!-- How It Works -->
+  <h2>How It Works</h2>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-text"><strong>Client</strong> requests your API endpoint</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><strong>Your server</strong> returns HTTP 402 with payment requirements</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-text"><strong>Client</strong> signs a USDC payment and retries with X-Payment header</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-text"><strong>Your server</strong> sends the payment to <code>POST archtools.dev/api/v1/facilitator/verify</code></div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">5</div><div class="flow-text"><strong>Arch Tools</strong> verifies the signature, checks balance, prevents replay</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">6</div><div class="flow-text"><strong>Your server</strong> fulfills the request, then calls <code>POST /api/v1/facilitator/settle</code></div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-num">7</div><div class="flow-text"><strong>Arch Tools</strong> submits the tx on-chain, pays gas, USDC goes to your wallet</div></div>
+  </div>
+
+  <!-- Quickstart -->
+  <h2 id="quickstart">Quickstart</h2>
+
+  <h3>1. Register as a Provider</h3>
+  <pre><code>curl -X POST https://archtools.dev/api/v1/facilitator/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My API",
+    "email": "dev@myapi.com",
+    "walletAddress": "0xYourWalletAddress",
+    "networks": ["eip155:8453"]
+  }'</code></pre>
+  <p>Save the <span class="inline-code">apiKey</span> from the response — it's only shown once.</p>
+
+  <h3>2. Verify Payments</h3>
+  <p>When a client sends an x402 payment to your API, forward it to us for verification:</p>
+  <pre><code>curl -X POST https://archtools.dev/api/v1/facilitator/verify \
+  -H "Authorization: Bearer fac_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payment": "&lt;base64-encoded-payment-payload&gt;",
+    "paymentDetails": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "maxAmountRequired": "1000",
+      "resource": "https://myapi.com/v1/endpoint",
+      "payTo": "0xYourWalletAddress",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    }
+  }'</code></pre>
+
+  <h3>3. Settle Payments</h3>
+  <p>After fulfilling the request, settle the payment on-chain:</p>
+  <pre><code>curl -X POST https://archtools.dev/api/v1/facilitator/settle \
+  -H "Authorization: Bearer fac_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payment": "&lt;base64-encoded-payment-payload&gt;",
+    "paymentDetails": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "maxAmountRequired": "1000",
+      "resource": "https://myapi.com/v1/endpoint",
+      "payTo": "0xYourWalletAddress",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    }
+  }'</code></pre>
+
+  <h3>4. Check Your Dashboard</h3>
+  <pre><code>curl https://archtools.dev/api/v1/facilitator/dashboard \
+  -H "Authorization: Bearer fac_your_api_key"</code></pre>
+
+  <!-- Express.js Integration -->
+  <h2>Express.js Integration Example</h2>
+  <pre><code>import express from "express";
+import axios from "axios";
+
+const FACILITATOR_URL = "https://archtools.dev/api/v1/facilitator";
+const FACILITATOR_KEY = process.env.ARCH_FACILITATOR_KEY;
+const MY_WALLET = process.env.MY_WALLET_ADDRESS;
+
+// Middleware: check for x402 payment
+async function x402Middleware(req, res, next) {
+  const payment = req.headers["x-payment"];
+
+  if (!payment) {
+    // Return 402 Payment Required
+    return res.status(402).json({
+      x402Version: 1,
+      accepts: [{
+        scheme: "exact",
+        network: "eip155:8453",
+        maxAmountRequired: "1000", // 0.001 USDC
+        resource: `https://myapi.com${req.path}`,
+        payTo: MY_WALLET,
+        asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        maxTimeoutSeconds: 60,
+      }],
+    });
+  }
+
+  // Verify payment with Arch Tools
+  const { data } = await axios.post(`${FACILITATOR_URL}/verify`, {
+    payment,
+    paymentDetails: {
+      scheme: "exact",
+      network: "eip155:8453",
+      maxAmountRequired: "1000",
+      resource: `https://myapi.com${req.path}`,
+      payTo: MY_WALLET,
+      asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    },
+  }, {
+    headers: { Authorization: `Bearer ${FACILITATOR_KEY}` },
+  });
+
+  if (!data.isValid) {
+    return res.status(402).json({ error: "payment_invalid", reason: data.invalidReason });
+  }
+
+  // Payment verified — proceed with request
+  req.x402Payment = payment;
+  next();
+}
+
+// After fulfilling request, settle payment
+async function settleAfterResponse(req) {
+  if (!req.x402Payment) return;
+  await axios.post(`${FACILITATOR_URL}/settle`, {
+    payment: req.x402Payment,
+    paymentDetails: {
+      scheme: "exact",
+      network: "eip155:8453",
+      maxAmountRequired: "1000",
+      resource: `https://myapi.com${req.path}`,
+      payTo: MY_WALLET,
+      asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    },
+  }, {
+    headers: { Authorization: `Bearer ${FACILITATOR_KEY}` },
+  });
+}
+
+const app = express();
+app.use(express.json());
+
+app.post("/v1/my-tool", x402Middleware, async (req, res) => {
+  // Do your thing
+  const result = { ok: true, data: "Hello, paying customer!" };
+  res.json(result);
+
+  // Settle in background (don't block response)
+  settleAfterResponse(req).catch(console.error);
+});
+
+app.listen(3000);</code></pre>
+
+  <!-- API Reference -->
+  <h2>API Reference</h2>
+
+  <h3>POST /api/v1/facilitator/register</h3>
+  <p>Register as a new facilitator provider. No auth required.</p>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td>name</td><td>string</td><td>✅</td><td>Your API/company name</td></tr>
+    <tr><td>email</td><td>string</td><td>✅</td><td>Contact email</td></tr>
+    <tr><td>walletAddress</td><td>string</td><td>✅</td><td>EVM wallet for receiving payments (0x...)</td></tr>
+    <tr><td>webhookUrl</td><td>string</td><td>—</td><td>URL for payment event webhooks</td></tr>
+    <tr><td>networks</td><td>string[]</td><td>—</td><td>Networks to enable (default: ["eip155:8453"])</td></tr>
+    <tr><td>endpoints</td><td>object</td><td>—</td><td>Your endpoints and pricing</td></tr>
+  </table>
+
+  <h3>POST /api/v1/facilitator/verify</h3>
+  <p>Verify an x402 payment. Requires facilitator API key.</p>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td>payment</td><td>string</td><td>Base64-encoded x402 payment payload</td></tr>
+    <tr><td>paymentDetails.scheme</td><td>string</td><td>"exact"</td></tr>
+    <tr><td>paymentDetails.network</td><td>string</td><td>Chain ID (e.g. "eip155:8453")</td></tr>
+    <tr><td>paymentDetails.maxAmountRequired</td><td>string</td><td>Minimum amount in atomic units</td></tr>
+    <tr><td>paymentDetails.resource</td><td>string</td><td>URL of the resource being paid for</td></tr>
+    <tr><td>paymentDetails.payTo</td><td>string</td><td>Your wallet address</td></tr>
+    <tr><td>paymentDetails.asset</td><td>string</td><td>Token contract address</td></tr>
+  </table>
+
+  <h3>POST /api/v1/facilitator/settle</h3>
+  <p>Settle a verified payment on-chain. Same request body as verify.</p>
+
+  <h3>GET /api/v1/facilitator/dashboard</h3>
+  <p>Get your payment stats, revenue, and recent transactions. Requires facilitator API key.</p>
+
+  <h3>GET /api/v1/facilitator/networks</h3>
+  <p>List all supported networks. No auth required.</p>
+
+  <h3>GET /api/v1/facilitator/health</h3>
+  <p>Check facilitator service status. No auth required.</p>
+
+  <!-- Supported Networks -->
+  <h2>Supported Networks</h2>
+  <table>
+    <tr><th>Network</th><th>Chain ID</th><th>Token</th><th>Settlement Time</th></tr>
+    <tr><td>Base</td><td>eip155:8453</td><td>USDC</td><td>~2 seconds</td></tr>
+    <tr><td>Ethereum</td><td>eip155:1</td><td>USDC</td><td>~12 seconds</td></tr>
+    <tr><td>Arbitrum</td><td>eip155:42161</td><td>USDC</td><td>~2 seconds</td></tr>
+    <tr><td>Polygon</td><td>eip155:137</td><td>USDC</td><td>~2 seconds</td></tr>
+    <tr><td>Optimism</td><td>eip155:10</td><td>USDC</td><td>~2 seconds</td></tr>
+    <tr><td>Avalanche</td><td>eip155:43114</td><td>USDC</td><td>~2 seconds</td></tr>
+    <tr><td>Base Sepolia (testnet)</td><td>eip155:84532</td><td>USDC</td><td>~2 seconds</td></tr>
+  </table>
+
+  <!-- Pricing -->
+  <h2 id="pricing">Pricing</h2>
+  <p>Simple, transparent pricing. We take a small percentage of each settled payment.</p>
+  <table>
+    <tr><th>Tier</th><th>Monthly Payments</th><th>Fee</th></tr>
+    <tr><td><strong>Free</strong></td><td>Up to 100</td><td>0% (try it free)</td></tr>
+    <tr><td><strong>Growth</strong></td><td>101 – 10,000</td><td>1.0%</td></tr>
+    <tr><td><strong>Scale</strong></td><td>10,001 – 100,000</td><td>0.5%</td></tr>
+    <tr><td><strong>Enterprise</strong></td><td>100,000+</td><td>Custom (contact us)</td></tr>
+  </table>
+  <p>Gas fees are included — we pay for settlement. No hidden costs.</p>
+
+  <div class="warning">
+    <p>⚠️ <strong>Beta:</strong> This service is in beta. Settlement is available on Base mainnet. Other networks are in verification-only mode during beta. <a href="mailto:support@archtools.dev">Contact us</a> for enterprise needs.</p>
+  </div>
+
+  <!-- Why Arch Tools -->
+  <h2>Why Use Arch Tools as Your Facilitator?</h2>
+  <ul>
+    <li><strong>Zero infrastructure</strong> — No blockchain nodes, no gas management, no key custody</li>
+    <li><strong>Multi-network</strong> — Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche</li>
+    <li><strong>Battle-tested</strong> — Built on the same x402 infrastructure that powers Arch Tools' own 50+ API endpoints</li>
+    <li><strong>Replay protection</strong> — Redis-backed nonce deduplication + on-chain nonce verification</li>
+    <li><strong>EIP-3009 native</strong> — Full transferWithAuthorization support for gasless USDC payments</li>
+    <li><strong>Real-time dashboard</strong> — Track every payment, fee, and settlement via API</li>
+    <li><strong>x402 compliant</strong> — 100% compatible with the <a href="https://x402.org" target="_blank">x402 protocol spec</a></li>
+  </ul>
+
+  <div style="text-align:center;margin-top:48px;">
+    <a href="#quickstart" class="btn btn-primary">Start Building →</a>
+  </div>
+
+</div>
+
+</body>
+</html>

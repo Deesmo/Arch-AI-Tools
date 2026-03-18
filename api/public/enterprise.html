@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Arch Tools for Enterprise — White-Label x402 Infrastructure</title>
+  <meta name="description" content="White-label x402 payment infrastructure for enterprise. Custom API marketplaces, dedicated facilitator, SLA guarantees, volume pricing.">
+  <meta property="og:title" content="Arch Tools for Enterprise">
+  <meta property="og:description" content="White-label x402 payment infrastructure. Custom API marketplace for your organization.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://archtools.dev/enterprise">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Arch Tools for Enterprise">
+  <meta name="twitter:description" content="White-label x402 payment infrastructure for your organization.">
+  <link rel="canonical" href="https://archtools.dev/enterprise">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Arch Tools for Enterprise",
+    "description": "White-label x402 payment infrastructure for enterprise organizations.",
+    "url": "https://archtools.dev/enterprise",
+    "publisher": {"@type": "Organization", "name": "Arch Tools", "url": "https://archtools.dev"}
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;
+      --border:rgba(255,255,255,0.08);--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:960px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.18) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.12) 0%,transparent 55%),
+        radial-gradient(ellipse 70% 60% at 50% 90%,rgba(24,96,255,0.10) 0%,transparent 65%);
+      color:var(--text);line-height:1.7;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:768px){.wrap{padding:0 16px;}}
+    a{color:var(--indigo2);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);backdrop-filter:blur(20px);}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:var(--max);margin:0 auto;padding:0 32px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);letter-spacing:-0.3px;}
+    .logo span{color:var(--purple);}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;font-size:13px;font-family:var(--mono);text-decoration:none;}
+    @media(max-width:768px){.nav-inner{padding:0 16px;}.nav-links{display:none!important;}}
+
+    .hero{padding:72px 0 56px;text-align:center;}
+    .badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;background:rgba(255,144,16,0.08);border:1px solid rgba(255,144,16,0.2);padding:4px 12px;border-radius:20px;}
+    h1{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:20px;}
+    .grad{background:linear-gradient(135deg,var(--amber) 0%,var(--pink) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto 32px;line-height:1.7;}
+    h2{font-family:var(--display);font-size:clamp(24px,3.5vw,36px);font-weight:700;margin:56px 0 16px;letter-spacing:-0.5px;}
+    h3{font-family:var(--display);font-size:20px;font-weight:700;margin:32px 0 12px;}
+    p{color:var(--muted);font-size:16px;line-height:1.7;margin-bottom:20px;}
+    strong{color:var(--text);}
+
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin:32px 0 48px;}
+    .feature-card{background:rgba(28,26,58,0.3);border:1px solid var(--border);border-radius:16px;padding:28px 24px;transition:border-color 0.2s;}
+    .feature-card:hover{border-color:var(--amber);}
+    .feature-card .icon{font-size:28px;margin-bottom:12px;}
+    .feature-card h3{margin-top:0;font-size:18px;}
+    .feature-card p{font-size:14px;margin-bottom:0;}
+
+    .sla-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:32px 0 48px;}
+    .sla-card{text-align:center;padding:28px 20px;background:rgba(28,26,58,0.3);border:1px solid var(--border);border-radius:16px;}
+    .sla-num{font-family:var(--display);font-size:clamp(28px,3vw,42px);font-weight:800;line-height:1;}
+    .sla-num.green{color:var(--green);}
+    .sla-num.amber{color:var(--amber);}
+    .sla-num.purple{color:var(--purple);}
+    .sla-num.pink{color:var(--pink);}
+    .sla-label{font-size:14px;color:var(--muted);margin-top:8px;font-family:var(--mono);}
+
+    .logos-section{text-align:center;margin:64px 0;padding:40px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+    .logos-section h3{color:var(--dimmer);font-size:14px;text-transform:uppercase;letter-spacing:2px;font-family:var(--mono);margin-bottom:24px;}
+    .logo-row{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;opacity:0.35;}
+    .logo-placeholder{width:120px;height:40px;border:1px dashed var(--dimmer);border-radius:8px;display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--dimmer);}
+
+    .contact-section{max-width:560px;margin:48px auto 80px;}
+    .contact-section h2{text-align:center;}
+    .contact-section>p{text-align:center;}
+    .form-group{margin-bottom:20px;}
+    .form-group label{display:block;font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:6px;}
+    .form-group input,.form-group textarea,.form-group select{width:100%;background:rgba(28,26,58,0.5);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-family:var(--body);font-size:15px;outline:none;transition:border-color 0.2s;}
+    .form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--purple);}
+    .form-group textarea{resize:vertical;min-height:100px;}
+    .form-group select{appearance:none;cursor:pointer;}
+    .form-group select option{background:var(--bg);color:var(--text);}
+    .submit-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;font-size:16px;font-weight:600;font-family:var(--mono);cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;}
+    .submit-btn:hover{transform:translateY(-1px);box-shadow:0 6px 32px rgba(255,144,16,0.4);}
+
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;transition:transform 0.15s,box-shadow 0.15s;font-family:var(--mono);}
+    .btn:hover{transform:translateY(-1px);text-decoration:none;}
+    .btn-primary{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;box-shadow:0 4px 24px rgba(255,144,16,0.3);}
+    .btn-secondary{background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);color:var(--indigo2);}
+    .cta-section{background:rgba(136,68,255,0.07);border:1px solid rgba(136,68,255,0.25);border-radius:16px;padding:48px;text-align:center;margin:64px 0 80px;}
+    .cta-section h2{color:var(--text);margin:0 0 12px;}
+    .cta-section p{margin-bottom:24px;max-width:500px;margin-left:auto;margin-right:auto;}
+    .btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+    footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;}
+    footer p{color:var(--dimmer);font-size:13px;font-family:var(--mono);}
+    footer a{color:var(--muted);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+
+    @media(max-width:768px){.hero{padding:48px 0 40px;}.cta-section{padding:32px 20px;}.contact-section{margin:32px auto 60px;}}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/"><div style="width:32px;height:32px;border-radius:8px;background:#07061A;border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center;"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div> Arch<span>Tools</span></a>
+    <ul class="nav-links">
+      <li><a href="/directory">Directory</a></li>
+      <li><a href="/white-label">White Label</a></li>
+      <li><a href="/investor">Investors</a></li>
+    </ul>
+    <a class="nav-cta" href="#contact">Contact Sales →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="badge">🏢 Enterprise</div>
+    <h1>Arch Tools for <span class="grad">Enterprise</span></h1>
+    <p>The first white-label x402 payment infrastructure. Deploy a custom API marketplace for your organization — with your branding, your rules, and autonomous agent payments built in.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="#contact">Contact Sales →</a>
+      <a class="btn btn-secondary" href="/white-label">See White-Label Plans</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU GET -->
+<div class="wrap">
+  <h2>What You Get</h2>
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">🏗️</div>
+      <h3>White-Label x402 Infrastructure</h3>
+      <p>Full x402 payment stack running under your brand. Your agents pay your APIs with your facilitator — no Arch Tools branding visible to your customers.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🛒</div>
+      <h3>Custom API Marketplace</h3>
+      <p>Your own curated directory of API services. Choose from our catalog of 112+ services or bring your own. Full control over pricing, access, and visibility.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤖</div>
+      <h3>Dedicated Facilitator</h3>
+      <p>Your own x402 facilitator instance with your branding, your domain, your wallet. Process agent-to-API payments at scale with sub-second settlement.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h3>Analytics Dashboard</h3>
+      <p>Real-time usage, revenue, and agent activity metrics. See which APIs your agents use, how much they spend, and where to optimize.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔐</div>
+      <h3>Enterprise Security</h3>
+      <p>SOC 2 Type II compliance path, SSO/SAML integration, role-based access control, audit logs, and data residency options.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔌</div>
+      <h3>MCP Server Access</h3>
+      <p>Full access to 55+ MCP servers — or deploy custom MCP endpoints for your internal tools. Your agents get native tool integration out of the box.</p>
+    </div>
+  </div>
+
+  <!-- SLA -->
+  <h2>SLA Guarantees</h2>
+  <div class="sla-grid">
+    <div class="sla-card">
+      <div class="sla-num green">99.9%</div>
+      <div class="sla-label">Uptime SLA</div>
+    </div>
+    <div class="sla-card">
+      <div class="sla-num amber">&lt;200ms</div>
+      <div class="sla-label">Facilitator Latency</div>
+    </div>
+    <div class="sla-card">
+      <div class="sla-num purple">24/7</div>
+      <div class="sla-label">Dedicated Support</div>
+    </div>
+    <div class="sla-card">
+      <div class="sla-num pink">1hr</div>
+      <div class="sla-label">Critical Response</div>
+    </div>
+  </div>
+
+  <!-- VOLUME PRICING -->
+  <h2>Volume Pricing</h2>
+  <p>Enterprise pricing scales with your usage. The more your agents transact, the lower your per-transaction cost.</p>
+  <div class="features" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+    <div class="feature-card" style="text-align:center;">
+      <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--green);margin-bottom:8px;">Standard</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:16px;">Up to 10K tx/month</div>
+      <div style="font-family:var(--display);font-size:36px;font-weight:800;color:var(--text);">2.5%</div>
+      <p style="margin-top:8px;">per transaction</p>
+    </div>
+    <div class="feature-card" style="text-align:center;border-color:var(--amber);">
+      <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--amber);margin-bottom:8px;">Growth</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:16px;">10K–100K tx/month</div>
+      <div style="font-family:var(--display);font-size:36px;font-weight:800;color:var(--text);">1.5%</div>
+      <p style="margin-top:8px;">per transaction</p>
+    </div>
+    <div class="feature-card" style="text-align:center;">
+      <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--purple);margin-bottom:8px;">Enterprise</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:16px;">100K+ tx/month</div>
+      <div style="font-family:var(--display);font-size:36px;font-weight:800;color:var(--text);">Custom</div>
+      <p style="margin-top:8px;">negotiated rate</p>
+    </div>
+  </div>
+
+  <!-- CLIENT LOGOS -->
+  <div class="logos-section">
+    <h3>Trusted By</h3>
+    <div class="logo-row">
+      <div class="logo-placeholder">Your Logo</div>
+      <div class="logo-placeholder">Your Logo</div>
+      <div class="logo-placeholder">Your Logo</div>
+      <div class="logo-placeholder">Your Logo</div>
+      <div class="logo-placeholder">Your Logo</div>
+    </div>
+  </div>
+
+  <!-- CONTACT FORM -->
+  <div class="contact-section" id="contact">
+    <h2>Talk to Sales</h2>
+    <p>Tell us about your organization and we'll put together a custom proposal.</p>
+    <form action="https://formsubmit.co/support@archtools.dev" method="POST">
+      <input type="hidden" name="_subject" value="Enterprise Inquiry — Arch Tools">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_next" value="https://archtools.dev/enterprise?sent=1">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" name="name" placeholder="Jane Smith" required>
+      </div>
+      <div class="form-group">
+        <label>Work Email</label>
+        <input type="email" name="email" placeholder="jane@company.com" required>
+      </div>
+      <div class="form-group">
+        <label>Company</label>
+        <input type="text" name="company" placeholder="Acme Corp" required>
+      </div>
+      <div class="form-group">
+        <label>Estimated Monthly Transactions</label>
+        <select name="volume" required>
+          <option value="" disabled selected>Select range</option>
+          <option value="<1K">&lt; 1,000</option>
+          <option value="1K-10K">1,000 – 10,000</option>
+          <option value="10K-100K">10,000 – 100,000</option>
+          <option value="100K+">100,000+</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>What are you looking for?</label>
+        <textarea name="message" placeholder="Tell us about your use case, team size, and what you need from an x402 infrastructure partner..." required></textarea>
+      </div>
+      <button type="submit" class="submit-btn">Send Inquiry →</button>
+    </form>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <p>© 2026 Arch Tools · <a href="/">Home</a> · <a href="/white-label">White Label</a> · <a href="/investor">Investors</a> · <a href="/docs">Docs</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://x.com/AiArchTools">@AiArchTools</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

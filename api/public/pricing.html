@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Pricing — Arch Tools</title>
+  <meta name="description" content="Arch Tools pricing: tool usage credits, x402 micropayments, facilitator fees, and premium directory listings.">
+  <link rel="canonical" href="https://archtools.dev/pricing">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#07061A;color:#f0f0f6;line-height:1.6}
+    a{color:#00e5b0;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .container{max-width:1100px;margin:0 auto;padding:0 24px}
+    
+    /* Nav */
+    nav{padding:20px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    nav .container{display:flex;align-items:center;justify-content:space-between}
+    .logo{font-size:20px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px}
+    .logo img{height:28px}
+    .nav-links{display:flex;gap:24px;font-size:14px}
+    .nav-links a{color:#8b8ba6}
+    .nav-links a:hover{color:#00e5b0;text-decoration:none}
+
+    /* Hero */
+    .hero{text-align:center;padding:80px 0 48px}
+    .hero h1{font-size:2.8rem;font-weight:800;margin-bottom:16px;background:linear-gradient(135deg,#fff 0%,#00e5b0 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{font-size:1.15rem;color:#8b8ba6;max-width:640px;margin:0 auto}
+
+    /* Section */
+    .section{padding:48px 0}
+    .section h2{font-size:1.8rem;font-weight:700;margin-bottom:8px;color:#fff}
+    .section .subtitle{color:#8b8ba6;margin-bottom:32px;font-size:1rem}
+
+    /* Pricing grid */
+    .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-bottom:48px}
+    .pricing-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:32px;position:relative;transition:border-color .2s}
+    .pricing-card:hover{border-color:rgba(0,229,176,.3)}
+    .pricing-card.featured{border-color:#00e5b0;box-shadow:0 0 40px rgba(0,229,176,.1)}
+    .pricing-card .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#00e5b0;color:#07061A;font-size:12px;font-weight:700;padding:4px 16px;border-radius:20px;text-transform:uppercase}
+    .pricing-card h3{font-size:1.3rem;margin-bottom:4px}
+    .pricing-card .price{font-size:2.2rem;font-weight:800;color:#00e5b0;margin:16px 0 8px}
+    .pricing-card .price span{font-size:.9rem;color:#8b8ba6;font-weight:400}
+    .pricing-card .desc{color:#8b8ba6;font-size:.9rem;margin-bottom:20px}
+    .pricing-card ul{list-style:none;margin-bottom:24px}
+    .pricing-card ul li{padding:6px 0;font-size:.9rem;color:#c8c8d8}
+    .pricing-card ul li::before{content:'✓';color:#00e5b0;margin-right:8px;font-weight:700}
+    .btn{display:inline-block;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;text-align:center;transition:all .2s}
+    .btn-primary{background:#00e5b0;color:#07061A}
+    .btn-primary:hover{background:#00c89a;text-decoration:none}
+    .btn-outline{border:1px solid rgba(255,255,255,.15);color:#fff}
+    .btn-outline:hover{border-color:#00e5b0;color:#00e5b0;text-decoration:none}
+
+    /* Fee schedule table */
+    .fee-table{width:100%;border-collapse:collapse;margin:24px 0}
+    .fee-table th,.fee-table td{padding:14px 20px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+    .fee-table th{color:#8b8ba6;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+    .fee-table td{font-size:.95rem}
+    .fee-table tr:hover td{background:rgba(0,229,176,.03)}
+    .fee-highlight{color:#00e5b0;font-weight:600}
+
+    /* Footer */
+    footer{border-top:1px solid rgba(255,255,255,.06);padding:32px 0;text-align:center;color:#55556a;font-size:.85rem}
+
+    @media(max-width:640px){
+      .hero h1{font-size:2rem}
+      .pricing-grid{grid-template-columns:1fr}
+      .nav-links{display:none}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="/" class="logo"><img src="/arch-icon.svg?v=2" alt="Arch Tools">Arch Tools</a>
+      <div class="nav-links">
+        <a href="/docs">Docs</a>
+        <a href="/directory">Directory</a>
+        <a href="/facilitator">Facilitator</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Hero -->
+    <div class="hero">
+      <h1>Simple, Transparent Pricing</h1>
+      <p>Pay only for what you use. No subscriptions, no hidden fees. Credits, x402 micropayments, or both.</p>
+    </div>
+
+    <!-- Tool Usage Pricing -->
+    <div class="section">
+      <h2>🛠️ Tool Usage</h2>
+      <p class="subtitle">58 AI-powered tools — pay per call with credits or x402 USDC micropayments</p>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h3>Free Tier</h3>
+          <div class="price">$0<span>/month</span></div>
+          <p class="desc">Get started with 100 free credits monthly</p>
+          <ul>
+            <li>100 credits/month (auto-refill)</li>
+            <li>Access to all 58 tools</li>
+            <li>60 requests/minute</li>
+            <li>Community support</li>
+          </ul>
+          <a href="/signup" class="btn btn-outline" style="width:100%">Get Started Free</a>
+        </div>
+        <div class="pricing-card featured">
+          <div class="badge">Most Popular</div>
+          <h3>x402 Pay-Per-Use</h3>
+          <div class="price">$0.005<span>– $0.50/call</span></div>
+          <p class="desc">Pay with USDC on Base — no account needed</p>
+          <ul>
+            <li>No signup required</li>
+            <li>Pay exactly per call</li>
+            <li>USDC on Base (low gas)</li>
+            <li>300 requests/minute</li>
+            <li>Priority processing</li>
+          </ul>
+          <a href="/fund" class="btn btn-primary" style="width:100%">Fund & Start</a>
+        </div>
+        <div class="pricing-card">
+          <h3>Credit Packs</h3>
+          <div class="price">$5<span>– $100</span></div>
+          <p class="desc">Buy credits via Stripe — use them on any tool</p>
+          <ul>
+            <li>$5 = 500 credits</li>
+            <li>$20 = 2,200 credits (+10%)</li>
+            <li>$50 = 6,000 credits (+20%)</li>
+            <li>$100 = 13,000 credits (+30%)</li>
+            <li>Credits never expire</li>
+          </ul>
+          <a href="/dashboard" class="btn btn-outline" style="width:100%">Buy Credits</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Facilitator Fees -->
+    <div class="section">
+      <h2>🔗 Facilitator-as-a-Service</h2>
+      <p class="subtitle">Use Arch Tools as your x402 payment facilitator — we handle verification & settlement</p>
+      <table class="fee-table">
+        <thead>
+          <tr>
+            <th>What</th>
+            <th>Fee</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Payment Verification</td>
+            <td class="fee-highlight">Free</td>
+            <td>Signature, nonce, balance, expiry checks — no charge</td>
+          </tr>
+          <tr>
+            <td>Payment Settlement</td>
+            <td class="fee-highlight">2.5%</td>
+            <td>Deducted from settled amount; provider receives 97.5%</td>
+          </tr>
+          <tr>
+            <td>Supported Networks</td>
+            <td>7 chains</td>
+            <td>Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Base Sepolia</td>
+          </tr>
+          <tr>
+            <td>Settlement Token</td>
+            <td>USDC</td>
+            <td>EIP-3009 transferWithAuthorization</td>
+          </tr>
+          <tr>
+            <td>Provider Dashboard</td>
+            <td class="fee-highlight">Free</td>
+            <td>Real-time payment stats, daily revenue, top resources</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="color:#8b8ba6;font-size:.9rem;margin-top:16px">
+        <a href="/facilitator">Register as a provider →</a> — get your API key and start processing payments in minutes.
+      </p>
+    </div>
+
+    <!-- Directory Listings -->
+    <div class="section">
+      <h2>📂 Directory Listings</h2>
+      <p class="subtitle">Get your x402 service discovered by AI agents in the largest x402 directory (112+ services)</p>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h3>Free Listing</h3>
+          <div class="price">$0</div>
+          <p class="desc">Submit your service and get listed</p>
+          <ul>
+            <li>Listed in directory catalog</li>
+            <li>Searchable by category & chain</li>
+            <li>Service detail page</li>
+            <li>API endpoint discovery</li>
+          </ul>
+          <a href="/api/v1/x402/directory/submit" class="btn btn-outline" style="width:100%">Submit Service</a>
+        </div>
+        <div class="pricing-card">
+          <h3>✓ Verified</h3>
+          <div class="price">$49<span>/month</span></div>
+          <p class="desc">Build trust with AI agents</p>
+          <ul>
+            <li>Everything in Free</li>
+            <li>✓ Verified checkmark badge</li>
+            <li>Priority in search results</li>
+            <li>Trust signal for agent routing</li>
+          </ul>
+          <a href="/directory" class="btn btn-outline" style="width:100%">Get Verified</a>
+        </div>
+        <div class="pricing-card featured">
+          <div class="badge">Best Visibility</div>
+          <h3>⭐ Featured</h3>
+          <div class="price">$99<span>/month</span></div>
+          <p class="desc">Maximum exposure to AI agents</p>
+          <ul>
+            <li>Everything in Verified</li>
+            <li>Top of directory & search</li>
+            <li>Featured banner on listing</li>
+            <li>Homepage showcase rotation</li>
+          </ul>
+          <a href="/directory" class="btn btn-primary" style="width:100%">Get Featured</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 Arch Tools. All prices in USD. x402 payments in USDC.</p>
+      <p style="margin-top:8px"><a href="/docs">Docs</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a></p>
+    </div>
+  </footer>
+</body>
+</html>

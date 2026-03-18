@@ -1,0 +1,169 @@
+import { Router } from "express";
+import { requireAuth } from "../middleware/auth.js";
+import { config } from "../config.js";
+import { logger } from "../lib/logger.js";
+const router = Router();
+// ─── In-memory wallet store (swap for DB table when Prisma schema is updated) ─
+// Maps agentId → wallet info
+const walletStore = new Map();
+// ─── POST /v1/wallet/provision ────────────────────────────────────────────────
+// Creates a new CDP wallet for an authenticated agent.
+// @coinbase/cdp-sdk v1.45 installed. @coinbase/agentkit requires separate install.
+router.post("/provision", requireAuth, async (req, res) => {
+    const agentId = req.agent?.id;
+    if (!agentId) {
+        res.status(401).json({ ok: false, error: "unauthorized" });
+        return;
+    }
+    // Check if agent already has a wallet
+    const existing = walletStore.get(agentId);
+    if (existing) {
+        res.status(409).json({
+            ok: false,
+            error: "wallet_exists",
+            message: "Agent already has a provisioned wallet.",
+            wallet: {
+                address: existing.address,
+                network: existing.network,
+                label: existing.label,
+            },
+        });
+        return;
+    }
+    // Validate CDP config is present
+    if (!config.cdp.apiKeyId || !config.cdp.apiKeySecret) {
+        logger.error("CDP API keys not configured — cannot provision wallet");
+        res.status(503).json({
+            ok: false,
+            error: "cdp_not_configured",
+            message: "Wallet provisioning is not yet available. CDP keys not configured.",
+        });
+        return;
+    }
+    const body = req.body;
+    const label = body.label?.slice(0, 64) ?? `agent-${agentId.slice(0, 8)}`;
+    try {
+        // Dynamic import so the server doesn't crash if @coinbase/agentkit isn't installed yet
+        // @ts-ignore — @coinbase/agentkit not yet installed
+        const { CdpEvmWalletProvider } = await import("@coinbase/agentkit");
+        const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
+            apiKeyId: config.cdp.apiKeyId,
+            apiKeySecret: config.cdp.apiKeySecret,
+            networkId: "base",
+        });
+        const address = walletProvider.getAddress();
+        const walletRecord = {
+            address,
+            network: "base",
+            label,
+            createdAt: new Date().toISOString(),
+        };
+        // Store wallet association
+        walletStore.set(agentId, walletRecord);
+        logger.info({ agentId, address, network: "base" }, "Wallet provisioned for agent");
+        res.status(201).json({
+            ok: true,
+            wallet: {
+                address,
+                network: "base",
+                label,
+            },
+        });
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        logger.error({ agentId, error: message }, "Failed to provision CDP wallet");
+        // Distinguish "module not installed" from actual CDP errors
+        if (message.includes("Cannot find module") || message.includes("ERR_MODULE_NOT_FOUND")) {
+            res.status(503).json({
+                ok: false,
+                error: "dependency_missing",
+                message: "Wallet provisioning requires @coinbase/agentkit. Run npm install first.",
+            });
+            return;
+        }
+        res.status(500).json({
+            ok: false,
+            error: "wallet_provision_failed",
+            message: "Failed to create wallet. Please try again later.",
+        });
+    }
+});
+// ─── GET /v1/wallet/status ────────────────────────────────────────────────────
+// Returns wallet address + USDC balance for the authenticated agent.
+router.get("/status", requireAuth, async (req, res) => {
+    const agentId = req.agent?.id;
+    if (!agentId) {
+        res.status(401).json({ ok: false, error: "unauthorized" });
+        return;
+    }
+    const wallet = walletStore.get(agentId);
+    if (!wallet) {
+        res.status(404).json({
+            ok: false,
+            error: "no_wallet",
+            message: "No wallet provisioned for this agent. POST /v1/wallet/provision to create one.",
+        });
+        return;
+    }
+    try {
+        // Try to fetch on-chain USDC balance via CDP SDK
+        const { CdpClient } = await import("@coinbase/cdp-sdk");
+        const cdp = new CdpClient({
+            apiKeyId: config.cdp.apiKeyId,
+            apiKeySecret: config.cdp.apiKeySecret,
+        });
+        // USDC on Base contract address
+        const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+        // Attempt to read balance — if CDP SDK doesn't support this directly,
+        // fall back to returning wallet info without balance
+        let usdcBalance = "unknown";
+        try {
+            const balance = await cdp.evm.listTokenBalances({
+                address: wallet.address,
+                token: USDC_BASE,
+                network: "base",
+            });
+            usdcBalance = balance?.toString() ?? "0";
+        }
+        catch {
+            // Balance lookup not available or failed — return what we have
+            usdcBalance = "unavailable";
+        }
+        res.json({
+            ok: true,
+            wallet: {
+                address: wallet.address,
+                network: wallet.network,
+                label: wallet.label,
+                createdAt: wallet.createdAt,
+                usdc_balance: usdcBalance,
+            },
+        });
+    }
+    catch (err) {
+        // If CDP SDK not installed, return wallet info without balance
+        const message = err instanceof Error ? err.message : "Unknown error";
+        if (message.includes("Cannot find module") || message.includes("ERR_MODULE_NOT_FOUND")) {
+            res.json({
+                ok: true,
+                wallet: {
+                    address: wallet.address,
+                    network: wallet.network,
+                    label: wallet.label,
+                    createdAt: wallet.createdAt,
+                    usdc_balance: "unavailable (cdp-sdk not installed)",
+                },
+            });
+            return;
+        }
+        logger.error({ agentId, error: message }, "Failed to fetch wallet status");
+        res.status(500).json({
+            ok: false,
+            error: "status_check_failed",
+            message: "Could not retrieve wallet status.",
+        });
+    }
+});
+export default router;
+//# sourceMappingURL=wallet.js.map

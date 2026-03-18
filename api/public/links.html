@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arch Tools — Links</title>
+  <meta name="description" content="Everything Arch Tools in one place. AI-powered API tools, x402 payments, MCP servers.">
+  <meta property="og:title" content="Arch Tools — Links">
+  <meta property="og:description" content="Everything Arch Tools in one place.">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: #040810;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 48px 20px 60px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #e0e8f0;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(0, 255, 136, 0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Avatar / Logo */
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00d4ff22, #00ff8822);
+      border: 2px solid #00d4ff44;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+      overflow: hidden;
+    }
+
+    .avatar img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+    }
+
+    .name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .bio {
+      font-size: 13px;
+      color: #5a7a9a;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 320px;
+      margin-bottom: 8px;
+    }
+
+    .bio strong {
+      color: #00d4ff;
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #2a4a6a;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      width: 100%;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Link buttons */
+    .link-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      text-decoration: none;
+      color: #e0e8f0;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .link-btn:hover {
+      background: rgba(0, 212, 255, 0.08);
+      border-color: rgba(0, 212, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .link-btn.featured {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 255, 136, 0.06));
+      border-color: rgba(0, 212, 255, 0.25);
+    }
+
+    .link-btn.featured:hover {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(0, 255, 136, 0.12));
+      border-color: rgba(0, 212, 255, 0.5);
+    }
+
+    .btn-icon {
+      font-size: 22px;
+      width: 36px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .btn-text {
+      flex: 1;
+    }
+
+    .btn-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e0e8f0;
+      display: block;
+    }
+
+    .btn-sub {
+      font-size: 11px;
+      color: #3a6a8a;
+      display: block;
+      margin-top: 1px;
+    }
+
+    .btn-arrow {
+      font-size: 14px;
+      color: #2a4a6a;
+      flex-shrink: 0;
+    }
+
+    /* Badge */
+    .badge {
+      font-size: 9px;
+      font-weight: 700;
+      background: #00d4ff22;
+      color: #00d4ff;
+      border: 1px solid #00d4ff44;
+      border-radius: 4px;
+      padding: 2px 6px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .badge.green {
+      background: #00ff8822;
+      color: #00ff88;
+      border-color: #00ff8844;
+    }
+
+    /* Social row */
+    .social-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .social-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      text-decoration: none;
+      color: #5a7a9a;
+      font-size: 11px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .social-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #e0e8f0;
+      transform: translateY(-1px);
+    }
+
+    .social-btn .icon { font-size: 18px; }
+
+    /* Stats strip */
+    .stats-strip {
+      display: flex;
+      gap: 0;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .stat-item {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .stat-item:last-child { border-right: none; }
+
+    .stat-num {
+      font-size: 15px;
+      font-weight: 700;
+      color: #00d4ff;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: #2a4a6a;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* Footer */
+    .footer {
+      font-size: 11px;
+      color: #1a3a5a;
+      margin-top: 16px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Avatar -->
+    <div class="avatar">
+      <img src="/arch-icon.svg" alt="Arch Tools">
+    </div>
+
+    <div class="name">Arch Tools</div>
+    <div class="bio">
+      <strong>116 AI-powered API tools</strong> with x402 crypto payments.<br>
+      Build smarter agents. Pay per use on Base.
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-strip">
+      <div class="stat-item">
+        <span class="stat-num">116</span>
+        <span class="stat-label">Tools</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">58</span>
+        <span class="stat-label">Services</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">1K</span>
+        <span class="stat-label">Free Credits</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">x402</span>
+        <span class="stat-label">Payments</span>
+      </div>
+    </div>
+
+    <!-- Primary CTA -->
+    <a href="https://archtools.dev" class="link-btn featured">
+      <div class="btn-icon">🚀</div>
+      <div class="btn-text">
+        <span class="btn-title">Get Started Free</span>
+        <span class="btn-sub">1,000 free credits • No credit card</span>
+      </div>
+      <span class="badge green">Free</span>
+    </a>
+
+    <div class="section-label">Explore</div>
+
+    <a href="https://archtools.dev/directory" class="link-btn">
+      <div class="btn-icon">🗂️</div>
+      <div class="btn-text">
+        <span class="btn-title">Tool Directory</span>
+        <span class="btn-sub">Browse all 116 AI tools</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </a>
+
+    <a href="https://archtools.dev/docs.html" class="link-btn">
+      <div class="btn-icon">📚</div>
+      <div class="btn-text">
+        <span class="btn-title">API Documentation</span>
+        <span class="btn-sub">Full reference + code examples</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </a>
+
+    <a href="https://archtools.dev/playground.html" class="link-btn">
+      <div class="btn-icon">⚡</div>
+      <div class="btn-text">
+        <span class="btn-title">Live Playground</span>
+        <span class="btn-sub">Test any tool in your browser</span>
+      </div>
+      <span class="badge">Try it</span>
+    </a>
+
+    <a href="https://archtools.dev/mcp-marketplace.html" class="link-btn">
+      <div class="btn-icon">🤖</div>
+      <div class="btn-text">
+        <span class="btn-title">MCP Marketplace</span>
+        <span class="btn-sub">Model Context Protocol servers</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </a>
+
+    <div class="section-label">For Builders</div>
+
+    <a href="https://archtools.dev/fund.html" class="link-btn">
+      <div class="btn-icon">💰</div>
+      <div class="btn-text">
+        <span class="btn-title">x402 Grant Fund</span>
+        <span class="btn-sub">Get funded to build on Base</span>
+      </div>
+      <span class="badge">Grants</span>
+    </a>
+
+    <a href="https://archtools.dev/wallets.html" class="link-btn">
+      <div class="btn-icon">🔐</div>
+      <div class="btn-text">
+        <span class="btn-title">Crypto Wallet Setup</span>
+        <span class="btn-sub">Accept x402 USDC payments</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </a>
+
+    <a href="https://archtools.dev/enterprise.html" class="link-btn">
+      <div class="btn-icon">🏢</div>
+      <div class="btn-text">
+        <span class="btn-title">Enterprise</span>
+        <span class="btn-sub">White-label + custom contracts</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </a>
+
+    <div class="section-label">Follow Us</div>
+
+    <!-- Social row -->
+    <div class="social-row">
+      <a href="https://twitter.com/archtools_dev" class="social-btn" target="_blank">
+        <span class="icon">𝕏</span>
+        <span>Twitter</span>
+      </a>
+      <a href="https://github.com/Deesmo" class="social-btn" target="_blank">
+        <span class="icon">🐙</span>
+        <span>GitHub</span>
+      </a>
+      <a href="https://reddit.com/u/ArchTools" class="social-btn" target="_blank">
+        <span class="icon">🔴</span>
+        <span>Reddit</span>
+      </a>
+      <a href="https://archtools.dev/blog.html" class="social-btn" target="_blank">
+        <span class="icon">✍️</span>
+        <span>Blog</span>
+      </a>
+    </div>
+
+    <div class="footer">© 2026 Arch Tools · archtools.dev</div>
+  </div>
+</body>
+</html>

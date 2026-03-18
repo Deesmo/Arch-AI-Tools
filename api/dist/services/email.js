@@ -271,7 +271,47 @@ export async function sendMonthlyRefreshEmail(to, credits, newBalance) {
   `);
     await sendEmail(to, subject, html);
 }
-// ─── 7. Password Reset ───
+// ─── 7. Feature Announcement (broadcast) ───
+export async function sendFeatureAnnouncement(to, opts) {
+    const { headline, body: bodyText, ctaLabel, ctaUrl } = opts;
+    const subject = `🚀 ${headline} — Arch Tools`;
+    // Convert newlines in body to <br> for HTML
+    const htmlBody = bodyText.replace(/\n/g, "<br>");
+    const cta = ctaLabel && ctaUrl
+        ? `<div class="btn-wrap"><a class="btn" href="${ctaUrl}">${ctaLabel} →</a></div>`
+        : "";
+    const html = layout(subject, `
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:12px;color:#F0EEFF;">${headline}</h2>
+    <p>${htmlBody}</p>
+    ${cta}
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">You're receiving this because you signed up at archtools.dev. <a href="${SITE}">Visit dashboard →</a></p>
+  `);
+    const text = `${headline}\n\n${bodyText}\n\n${ctaUrl ? `Learn more: ${ctaUrl}` : `Visit: ${SITE}`}`;
+    return sendEmail(to, subject, html, text);
+}
+// ─── 8. x402 Payment Receipt ───
+export async function sendX402PaymentReceipt(to, opts) {
+    const { toolName, amountUsdc, txHash, network } = opts;
+    const subject = `✅ x402 payment confirmed — ${toolName}`;
+    const explorerUrl = network === "base"
+        ? `https://basescan.org/tx/${txHash}`
+        : `https://etherscan.io/tx/${txHash}`;
+    const html = layout(subject, `
+    <div class="alert-success">✅ Your x402 payment for <strong>${toolName}</strong> has been verified and settled.</div>
+    <table class="info-table">
+      <tr><td>Tool</td><td>${toolName}</td></tr>
+      <tr><td>Amount</td><td>${amountUsdc} USDC</td></tr>
+      <tr><td>Network</td><td>${network}</td></tr>
+      <tr><td>Transaction</td><td><a href="${explorerUrl}" style="color:#AA77FF;">${txHash.slice(0, 10)}…${txHash.slice(-8)}</a></td></tr>
+    </table>
+    <div class="btn-wrap"><a class="btn" href="${explorerUrl}">View on Explorer →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">This receipt confirms a one-time x402 protocol payment. No subscription — pay only when you call.</p>
+  `);
+    await sendEmail(to, subject, html);
+}
+// ─── 9. Password Reset ───
 export async function sendPasswordResetEmail(to, resetUrl) {
     const subject = "Reset your Arch Tools password";
     const html = layout(subject, `

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Get Started in 60 Seconds — Arch Tools</title>
+  <meta name="description" content="Go from zero to your first AI-powered API call in under 60 seconds. Interactive step-by-step onboarding guide.">
+  <meta property="og:title" content="Get Started in 60 Seconds — Arch Tools">
+  <meta property="og:description" content="Go from zero to your first AI tool call in under 60 seconds.">
+  <meta property="og:url" content="https://archtools.dev/getting-started">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://archtools.dev/getting-started">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --amber:#FF9010;--pink:#FF2896;--purple:#8844FF;--blue:#1860FF;
+      --bg:#07061A;--border:#1C1A3A;--border2:#2A2850;
+      --indigo2:#AA77FF;--cyan:#22d3ee;--green:#34d399;--red:#ef4444;
+      --text:#F0EEFF;--muted:#8A85B0;--dimmer:#4A4570;
+      --max:800px;--mono:'JetBrains Mono',monospace;
+      --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;
+      --grad:linear-gradient(135deg,#FF9010,#FF2896 50%,#8844FF);
+    }
+    html{scroll-behavior:smooth;background:#07061A;overflow-x:hidden;}
+    body{
+      font-family:var(--body);background:var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 10%,rgba(136,68,255,0.12) 0%,transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,40,150,0.08) 0%,transparent 55%);
+      color:var(--text);line-height:1.6;overflow-x:hidden;
+    }
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(136,68,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(136,68,255,0.04) 1px,transparent 1px);
+      background-size:48px 48px;pointer-events:none;z-index:0;
+    }
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.95);}
+    .nav-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-0.3px;}
+    .logo-mark{width:32px;height:32px;flex-shrink:0;}
+    .nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+    .nav-links a{text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px;font-family:var(--mono);transition:color 0.15s,background 0.15s;}
+    .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+    .nav-links a.active{color:var(--text);}
+    .nav-cta{background:linear-gradient(135deg,var(--amber),var(--pink))!important;color:#fff!important;padding:7px 16px!important;border-radius:8px!important;font-weight:500;}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;}
+    .hamburger svg{width:24px;height:24px;stroke:var(--text);stroke-width:2;stroke-linecap:round;}
+    .mobile-menu{display:none;flex-direction:column;gap:6px;padding:12px 24px 16px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.97);}
+    .mobile-menu a{color:var(--muted);text-decoration:none;font-size:14px;font-family:var(--mono);padding:8px 0;}
+    .mobile-menu.open{display:flex;}
+    @media(max-width:768px){.nav-links{display:none!important;}.hamburger{display:block;}.nav-inner{padding:0 20px;}}
+
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 32px;position:relative;z-index:1;}
+    @media(max-width:768px){.wrap{padding:0 20px;}}
+
+    /* HERO */
+    .hero{text-align:center;padding:56px 0 20px;}
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(136,68,255,0.1);border:1px solid rgba(136,68,255,0.3);
+      border-radius:100px;padding:8px 16px;font-size:13px;font-family:var(--mono);
+      color:var(--indigo2);margin-bottom:20px;
+    }
+    .hero h1{font-family:var(--display);font-size:clamp(32px,5vw,48px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:12px;}
+    .grad{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero p{color:var(--muted);font-size:16px;max-width:520px;margin:0 auto;}
+
+    /* PROGRESS TRACKER */
+    .progress-bar{display:flex;align-items:center;justify-content:center;gap:0;margin:40px 0 48px;padding:0 16px;}
+    .prog-step{display:flex;align-items:center;gap:0;cursor:pointer;}
+    .prog-dot{
+      width:36px;height:36px;border-radius:50%;
+      border:2px solid var(--border2);background:transparent;
+      display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;
+      color:var(--dimmer);transition:all 0.3s;position:relative;flex-shrink:0;
+    }
+    .prog-dot.active{border-color:var(--purple);color:var(--text);background:rgba(136,68,255,0.15);box-shadow:0 0 20px rgba(136,68,255,0.3);}
+    .prog-dot.done{border-color:var(--green);color:var(--green);background:rgba(52,211,153,0.1);}
+    .prog-line{width:40px;height:2px;background:var(--border2);transition:background 0.3s;}
+    .prog-line.done{background:var(--green);}
+    @media(max-width:640px){.prog-line{width:20px;}.prog-dot{width:30px;height:30px;font-size:11px;}}
+
+    /* STEPS */
+    .step-section{display:none;animation:fadeUp 0.3s ease;}
+    .step-section.active{display:block;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+    .step-card{
+      border:1px solid var(--border);border-radius:20px;
+      background:rgba(255,255,255,0.02);padding:36px 32px;margin-bottom:24px;
+    }
+    .step-num{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+    .step-card h2{font-family:var(--display);font-size:24px;font-weight:700;margin-bottom:8px;}
+    .step-card p{color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.7;}
+    .step-card p strong{color:var(--text);}
+
+    /* CODE BLOCKS */
+    .code-block{position:relative;border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,0.5);overflow:hidden;margin:16px 0;}
+    .code-lang{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--dimmer);letter-spacing:1px;text-transform:uppercase;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .code-block pre{overflow-x:auto;padding:18px;font-family:var(--mono);font-size:12.5px;color:rgba(255,255,255,0.7);line-height:1.8;white-space:pre;}
+    .copy-btn{
+      position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);
+      padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;
+      cursor:pointer;font-family:var(--mono);transition:all 0.15s;
+    }
+    .copy-btn:hover{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);}
+    .copy-btn.copied{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:var(--green);}
+
+    /* API KEY INPUT */
+    .key-input-wrap{display:flex;gap:10px;margin:16px 0;}
+    .key-input{
+      flex:1;background:rgba(0,0,0,0.4);border:1px solid var(--border2);
+      border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:13px;
+      color:var(--text);outline:none;transition:border-color 0.2s;
+    }
+    .key-input:focus{border-color:var(--purple);}
+    .key-input::placeholder{color:var(--dimmer);}
+    .key-save-btn{
+      background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff;
+      border:none;border-radius:10px;padding:12px 20px;font-family:var(--mono);
+      font-size:12px;font-weight:600;cursor:pointer;transition:opacity 0.15s;white-space:nowrap;
+    }
+    .key-save-btn:hover{opacity:0.85;}
+
+    /* STEP NAV BUTTONS */
+    .step-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);}
+    .btn-next,.btn-prev{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:12px 24px;border-radius:10px;font-family:var(--mono);
+      font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;border:none;
+    }
+    .btn-next{background:linear-gradient(135deg,var(--amber),var(--pink));color:#fff;}
+    .btn-next:hover{opacity:0.85;transform:translateY(-1px);}
+    .btn-prev{background:transparent;border:1px solid var(--border2);color:var(--muted);}
+    .btn-prev:hover{border-color:var(--purple);color:var(--text);}
+    .btn-done-check{
+      display:inline-flex;align-items:center;gap:6px;
+      background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);
+      color:var(--green);padding:8px 16px;border-radius:8px;
+      font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;
+    }
+    .btn-done-check:hover{background:rgba(52,211,153,0.18);}
+    .btn-done-check.checked{background:rgba(52,211,153,0.2);border-color:var(--green);}
+
+    /* MODE GRID */
+    .modes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0;}
+    .mode-card{border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;background:rgba(0,0,0,0.2);transition:border-color 0.2s;}
+    .mode-card:hover{border-color:rgba(255,255,255,0.15);}
+    .mode-icon{font-size:24px;margin-bottom:6px;}
+    .mode-name{font-family:var(--mono);font-size:13px;font-weight:600;margin-bottom:2px;}
+    .mode-desc{font-size:11px;color:var(--dimmer);}
+    @media(max-width:640px){.modes-grid{grid-template-columns:1fr;}}
+
+    /* RESPONSE PREVIEW */
+    .response-preview{border:1px solid rgba(52,211,153,0.2);border-radius:12px;background:rgba(52,211,153,0.03);padding:18px;margin:16px 0;}
+    .response-preview .label{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .response-preview pre{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,0.6);line-height:1.7;overflow-x:auto;}
+
+    /* LINKS */
+    a.inline-link{color:var(--indigo2);text-decoration:underline;text-underline-offset:2px;}
+    a.inline-link:hover{color:var(--text);}
+
+    /* NEXT STEPS BOX */
+    .next-box{border:1px solid var(--border);border-radius:20px;background:linear-gradient(135deg,rgba(136,68,255,0.04),rgba(52,211,153,0.04));padding:32px;margin:48px 0 0;}
+    .next-box h3{font-family:var(--display);font-size:20px;font-weight:700;margin-bottom:16px;}
+    .next-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+    .next-link{
+      display:flex;align-items:center;gap:10px;padding:14px 16px;
+      border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,0.2);
+      color:var(--muted);text-decoration:none;font-size:14px;font-family:var(--body);
+      transition:all 0.15s;
+    }
+    .next-link:hover{border-color:rgba(255,255,255,0.2);color:var(--text);transform:translateY(-1px);}
+    .next-link .icon{font-size:18px;}
+
+    /* CONFETTI */
+    .confetti-overlay{position:fixed;inset:0;pointer-events:none;z-index:9999;}
+
+    /* FOOTER */
+    footer{border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:64px;}
+    footer a{color:rgba(255,255,255,0.45);text-decoration:none;}
+    footer a:hover{color:rgba(255,255,255,0.65);}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="/">
+        <svg class="logo-mark" viewBox="0 10 100 90" overflow="visible"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient></defs><path fill="url(#ag)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+        Arch Tools
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/docs">Docs</a>
+        <a href="/playground">Playground</a>
+        <a href="/changelog">Changelog</a>
+        <a href="/getting-started" class="active">Get Started</a>
+        <a href="/signup" class="nav-cta">Get API Key</a>
+      </div>
+      <button class="hamburger" onclick="document.querySelector('.mobile-menu').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div class="mobile-menu">
+      <a href="/">Home</a>
+      <a href="/docs">Docs</a>
+      <a href="/playground">Playground</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/getting-started">Get Started</a>
+      <a href="/signup" style="color:var(--amber);">Get API Key →</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-badge">⚡ Interactive Guide</div>
+      <h1>Get Started in <span class="grad">60 Seconds</span></h1>
+      <p>Five steps from zero to your first AI-powered API call. Your progress is saved automatically.</p>
+    </div>
+
+    <!-- PROGRESS TRACKER -->
+    <div class="progress-bar" id="progressBar">
+      <div class="prog-step" onclick="goToStep(0)"><div class="prog-dot active" data-step="0">1</div></div>
+      <div class="prog-line" data-line="0"></div>
+      <div class="prog-step" onclick="goToStep(1)"><div class="prog-dot" data-step="1">2</div></div>
+      <div class="prog-line" data-line="1"></div>
+      <div class="prog-step" onclick="goToStep(2)"><div class="prog-dot" data-step="2">3</div></div>
+      <div class="prog-line" data-line="2"></div>
+      <div class="prog-step" onclick="goToStep(3)"><div class="prog-dot" data-step="3">4</div></div>
+      <div class="prog-line" data-line="3"></div>
+      <div class="prog-step" onclick="goToStep(4)"><div class="prog-dot" data-step="4">5</div></div>
+    </div>
+
+    <!-- STEP 1: Create Account -->
+    <div class="step-section active" data-step="0">
+      <div class="step-card">
+        <div class="step-num">Step 1 of 5</div>
+        <h2>Create Your Account</h2>
+        <p>Sign up for free and get <strong>250 credits</strong> immediately — enough for dozens of API calls across all 61 tools. No credit card required.</p>
+        <a href="/signup" class="btn-next" style="display:inline-flex;text-decoration:none;margin-bottom:16px;">Create Account →</a>
+        <p style="font-size:12px;color:var(--dimmer);">Already have an account? <a href="/dashboard" class="inline-link">Go to Dashboard</a></p>
+        <div class="step-nav">
+          <div></div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-done-check" onclick="markDone(0)">✓ I've signed up</button>
+            <button class="btn-next" onclick="nextStep()">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Get API Key -->
+    <div class="step-section" data-step="1">
+      <div class="step-card">
+        <div class="step-num">Step 2 of 5</div>
+        <h2>Get Your API Key</h2>
+        <p>After signing in, your API key appears on the <a href="/dashboard" class="inline-link">Dashboard</a>. It starts with <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--indigo2);">arch_</code>. Paste it below to personalize the examples in this guide.</p>
+        <div class="key-input-wrap">
+          <input type="text" class="key-input" id="apiKeyInput" placeholder="arch_your_api_key_here" autocomplete="off" spellcheck="false">
+          <button class="key-save-btn" onclick="saveApiKey()">Save Key</button>
+        </div>
+        <p id="keyStatus" style="font-size:12px;color:var(--dimmer);margin-top:4px;"></p>
+        <div class="code-block">
+          <div class="code-lang">bash</div>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre># Save as an environment variable
+export ARCH_API_KEY="<span class="key-placeholder">arch_your_key_here</span>"</pre>
+        </div>
+        <div class="step-nav">
+          <button class="btn-prev" onclick="prevStep()">← Back</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-done-check" onclick="markDone(1)">✓ Got my key</button>
+            <button class="btn-next" onclick="nextStep()">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: First Call -->
+    <div class="step-section" data-step="2">
+      <div class="step-card">
+        <div class="step-num">Step 3 of 5</div>
+        <h2>Make Your First Call</h2>
+        <p>Let's hit the <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;">search-web</code> endpoint — the simplest way to see Arch Tools in action. <strong>5 credits per call.</strong></p>
+        <div class="code-block">
+          <div class="code-lang">bash</div>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>curl -X POST https://archtools.dev/v1/tools/search-web \
+  -H "Authorization: Bearer <span class="key-placeholder">$ARCH_API_KEY</span>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "latest AI news", "num_results": 3}'</pre>
+        </div>
+        <div class="response-preview">
+          <div class="label"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span> Example Response</div>
+          <pre>{
+  "results": [
+    {
+      "title": "OpenAI Launches GPT-5 With...",
+      "url": "https://example.com/gpt5",
+      "snippet": "OpenAI today announced..."
+    }
+  ],
+  "credits_used": 5,
+  "credits_remaining": 245
+}</pre>
+        </div>
+        <p>Try it now — paste the curl command into your terminal. You should see real search results come back instantly.</p>
+        <div class="step-nav">
+          <button class="btn-prev" onclick="prevStep()">← Back</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-done-check" onclick="markDone(2)">✓ It works!</button>
+            <button class="btn-next" onclick="nextStep()">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Explore Tools -->
+    <div class="step-section" data-step="3">
+      <div class="step-card">
+        <div class="step-num">Step 4 of 5</div>
+        <h2>Explore the Playground</h2>
+        <p>The <a href="/playground" class="inline-link">Playground</a> lets you test all 61 tools interactively — pick a tool, tweak parameters, and see live results with generated code snippets.</p>
+        <div class="modes-grid">
+          <div class="mode-card">
+            <div class="mode-icon">🔍</div>
+            <div class="mode-name" style="color:var(--cyan);">Search & Web</div>
+            <div class="mode-desc">12 tools · scrape, search, extract</div>
+          </div>
+          <div class="mode-card">
+            <div class="mode-icon">🧠</div>
+            <div class="mode-name" style="color:var(--indigo2);">AI & ML</div>
+            <div class="mode-desc">15 tools · generate, summarize, analyze</div>
+          </div>
+          <div class="mode-card">
+            <div class="mode-icon">📊</div>
+            <div class="mode-name" style="color:var(--amber);">Crypto & Finance</div>
+            <div class="mode-desc">8 tools · prices, sentiment, news</div>
+          </div>
+        </div>
+        <p>Or jump straight to the <a href="/quickstart" class="inline-link">Quick-Start Code Generator</a> to get a working code snippet in Python, Node.js, or curl for any tool.</p>
+        <a href="/playground" class="btn-next" style="display:inline-flex;text-decoration:none;margin-top:8px;">Open Playground →</a>
+        <div class="step-nav">
+          <button class="btn-prev" onclick="prevStep()">← Back</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-done-check" onclick="markDone(3)">✓ Explored</button>
+            <button class="btn-next" onclick="nextStep()">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Set Up MCP -->
+    <div class="step-section" data-step="4">
+      <div class="step-card">
+        <div class="step-num">Step 5 of 5</div>
+        <h2>Connect via MCP</h2>
+        <p>Add all 61 tools to <strong>Claude Desktop</strong>, <strong>Cursor</strong>, or <strong>Windsurf</strong> as native MCP tools. Paste this into your editor's MCP config:</p>
+        <div class="code-block">
+          <div class="code-lang">json · mcp config</div>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>{
+  "mcpServers": {
+    "archtools": {
+      "url": "https://arch-tools-mcp.onrender.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <span class="key-placeholder">YOUR_API_KEY</span>"
+      }
+    }
+  }
+}</pre>
+        </div>
+        <p>For detailed setup instructions, see the <a href="/mcp-setup" class="inline-link">full MCP setup guide</a>.</p>
+        <div class="step-nav">
+          <button class="btn-prev" onclick="prevStep()">← Back</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-done-check" onclick="markDone(4)">✓ All done!</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUCCESS STATE (shown when all done) -->
+    <div class="step-section" id="successSection" style="display:none;">
+      <div class="step-card" style="text-align:center;border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.03);">
+        <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+        <h2 style="color:var(--green);">You're All Set!</h2>
+        <p style="max-width:400px;margin:0 auto;">You've completed the onboarding. Now go build something incredible with 61 tools at your fingertips.</p>
+        <div style="margin-top:20px;">
+          <button class="btn-prev" onclick="resetProgress()" style="font-size:12px;">↺ Start Over</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHAT'S NEXT -->
+    <div class="next-box">
+      <h3>What's Next?</h3>
+      <div class="next-grid">
+        <a href="/quickstart" class="next-link"><span class="icon">⚡</span> Quick-Start Code Generator</a>
+        <a href="/use-cases" class="next-link"><span class="icon">💡</span> Use Case Templates</a>
+        <a href="/docs" class="next-link"><span class="icon">📖</span> Full API Reference</a>
+        <a href="/sdks" class="next-link"><span class="icon">📦</span> SDKs & Libraries</a>
+        <a href="/directory" class="next-link"><span class="icon">🗂</span> Tool Directory</a>
+        <a href="/changelog" class="next-link"><span class="icon">📋</span> Changelog</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      © 2026 MCMetaverse LLC · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/docs">Docs</a>
+    </div>
+  </footer>
+
+  <div class="confetti-overlay" id="confetti"></div>
+
+  <script>
+    // State
+    let currentStep = 0;
+    const TOTAL_STEPS = 5;
+    let completedSteps = new Set();
+    const STORAGE_KEY = 'arch_onboarding';
+    const API_KEY_STORAGE = 'arch_api_key_onboarding';
+
+    // Load saved state
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const state = JSON.parse(saved);
+          currentStep = state.currentStep || 0;
+          completedSteps = new Set(state.completedSteps || []);
+        }
+        const savedKey = localStorage.getItem(API_KEY_STORAGE);
+        if (savedKey) {
+          document.getElementById('apiKeyInput').value = savedKey;
+          updateKeyPlaceholders(savedKey);
+        }
+      } catch(e) {}
+      render();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          currentStep,
+          completedSteps: [...completedSteps]
+        }));
+      } catch(e) {}
+    }
+
+    function saveApiKey() {
+      const input = document.getElementById('apiKeyInput');
+      const key = input.value.trim();
+      const status = document.getElementById('keyStatus');
+      if (!key) {
+        status.textContent = 'Please enter your API key.';
+        status.style.color = 'var(--red)';
+        return;
+      }
+      if (!key.startsWith('arch_')) {
+        status.textContent = 'API keys start with "arch_". Check your dashboard.';
+        status.style.color = 'var(--amber)';
+        return;
+      }
+      localStorage.setItem(API_KEY_STORAGE, key);
+      updateKeyPlaceholders(key);
+      status.textContent = '✓ Key saved! Examples updated with your key.';
+      status.style.color = 'var(--green)';
+    }
+
+    function updateKeyPlaceholders(key) {
+      document.querySelectorAll('.key-placeholder').forEach(el => {
+        el.textContent = key;
+        el.style.color = 'var(--green)';
+      });
+    }
+
+    function goToStep(step) {
+      if (step < 0 || step >= TOTAL_STEPS) return;
+      currentStep = step;
+      saveState();
+      render();
+    }
+
+    function nextStep() {
+      if (currentStep < TOTAL_STEPS - 1) {
+        currentStep++;
+        saveState();
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 0) {
+        currentStep--;
+        saveState();
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function markDone(step) {
+      completedSteps.add(step);
+      saveState();
+      // Check if all done
+      if (completedSteps.size === TOTAL_STEPS) {
+        showSuccess();
+      } else {
+        // Auto-advance if not on last step
+        if (step < TOTAL_STEPS - 1) {
+          currentStep = step + 1;
+          saveState();
+        }
+        render();
+      }
+    }
+
+    function showSuccess() {
+      document.querySelectorAll('.step-section').forEach(s => s.style.display = 'none');
+      document.getElementById('successSection').style.display = 'block';
+      render();
+      launchConfetti();
+    }
+
+    function resetProgress() {
+      currentStep = 0;
+      completedSteps.clear();
+      saveState();
+      document.getElementById('successSection').style.display = 'none';
+      render();
+    }
+
+    function render() {
+      // Update dots
+      document.querySelectorAll('.prog-dot').forEach(dot => {
+        const step = parseInt(dot.dataset.step);
+        dot.classList.remove('active', 'done');
+        if (completedSteps.has(step)) {
+          dot.classList.add('done');
+          dot.innerHTML = '✓';
+        } else if (step === currentStep) {
+          dot.classList.add('active');
+          dot.innerHTML = step + 1;
+        } else {
+          dot.innerHTML = step + 1;
+        }
+      });
+
+      // Update lines
+      document.querySelectorAll('.prog-line').forEach(line => {
+        const idx = parseInt(line.dataset.line);
+        line.classList.toggle('done', completedSteps.has(idx));
+      });
+
+      // Show current step
+      if (completedSteps.size < TOTAL_STEPS) {
+        document.querySelectorAll('.step-section[data-step]').forEach(section => {
+          const step = parseInt(section.dataset.step);
+          section.classList.toggle('active', step === currentStep);
+          section.style.display = step === currentStep ? 'block' : 'none';
+        });
+      }
+
+      // Update done buttons
+      document.querySelectorAll('.btn-done-check').forEach(btn => {
+        const step = parseInt(btn.closest('.step-section')?.dataset?.step);
+        if (completedSteps.has(step)) {
+          btn.classList.add('checked');
+        }
+      });
+    }
+
+    function copyCode(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre');
+      const text = pre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    function launchConfetti() {
+      const overlay = document.getElementById('confetti');
+      const colors = ['#FF9010', '#FF2896', '#8844FF', '#34d399', '#22d3ee', '#FFB030'];
+      for (let i = 0; i < 80; i++) {
+        const piece = document.createElement('div');
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const left = Math.random() * 100;
+        const delay = Math.random() * 0.5;
+        const size = 4 + Math.random() * 6;
+        const rotation = Math.random() * 360;
+        Object.assign(piece.style, {
+          position: 'absolute',
+          left: left + '%',
+          top: '-10px',
+          width: size + 'px',
+          height: size * (0.4 + Math.random() * 0.6) + 'px',
+          background: color,
+          borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+          transform: `rotate(${rotation}deg)`,
+          animation: `confettiFall ${1.5 + Math.random() * 2}s ${delay}s ease-out forwards`,
+          opacity: '0.9',
+        });
+        overlay.appendChild(piece);
+      }
+      setTimeout(() => { overlay.innerHTML = ''; }, 4000);
+    }
+
+    // Confetti keyframe
+    const style = document.createElement('style');
+    style.textContent = `@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}`;
+    document.head.appendChild(style);
+
+    // Init
+    loadState();
+  </script>
+</body>
+</html>

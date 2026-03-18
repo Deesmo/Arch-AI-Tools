@@ -26,6 +26,18 @@ model Agent {
   lastSeenAt   DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+
+  // ─── Agent Identity (KYA — Know Your Agent) ──────────────────────────────
+  description     String?                          // what this agent does
+  walletAddress   String?      @map("wallet_address")  // primary wallet for x402 payments
+  callbackUrl     String?      @map("callback_url")    // webhook for async notifications
+  reputationScore Int          @default(50) @map("reputation_score")  // 0-100
+  badge           String       @default("none")    // none | bronze | silver | gold | diamond
+  errorCount      Int          @default(0) @map("error_count")
+  successCount    Int          @default(0) @map("success_count")
+  totalSpentUsdc  Float        @default(0) @map("total_spent_usdc")
+  isPublic        Boolean      @default(true) @map("is_public")  // show on leaderboard/profile
+
   // back-references — required for Prisma v5 relations
   apiRequests  ApiRequest[]
   purchases    Purchase[]
@@ -157,4 +169,157 @@ model X402Payment {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+  @@index([txHash])
+  @@index([toolName])
+  @@index([agentId])
+}
+
+// ─── Facilitator-as-a-Service ─────────────────────────────────────────────────
+// API providers register with Arch Tools to use us as their x402 facilitator.
+// We verify payments, settle on-chain, and take a small fee.
+
+model FacilitatorProvider {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  apiKey          String   @unique @map("api_key")       // Provider's facilitator API key
+  apiKeyHash      String?  @map("api_key_hash")           // bcrypt hash for secure comparison
+  walletAddress   String   @map("wallet_address")         // Provider's wallet for settlement
+  webhookUrl      String?  @map("webhook_url")            // Optional webhook for payment events
+  feePercent      Float    @default(1.0)                   // Arch Tools fee (% of each tx)
+  networks        String[] @default(["eip155:8453"])       // Supported networks
+  endpoints       Json?                                     // Provider's registered endpoints + pricing
+  active          Boolean  @default(true)
+  totalPayments   Int      @default(0) @map("total_payments")
+  totalRevenue    Float    @default(0) @map("total_revenue")     // Total USDC settled for provider
+  totalFees       Float    @default(0) @map("total_fees")        // Total fees collected by Arch Tools
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  payments        FacilitatorPayment[]
+
+  @@index([apiKey])
+  @@index([email])
+}
+
+model FacilitatorPayment {
+  id              String   @id @default(cuid())
+  providerId      String   @map("provider_id")
+  provider        FacilitatorProvider @relation(fields: [providerId], references: [id])
+  paymentPayload  String   @map("payment_payload") @db.Text  // Base64-encoded x402 payment
+  resource        String                                        // The resource URL being paid for
+  amount          String                                        // Amount in token atomic units
+  token           String   @default("USDC")                     // Token symbol
+  network         String   @default("eip155:8453")              // Chain ID
+  payerAddress    String?  @map("payer_address")                // Extracted from payment payload
+  txHash          String?  @map("tx_hash")                      // On-chain settlement tx hash
+  feeAmount       String?  @map("fee_amount")                   // Fee charged by Arch Tools
+  status          String   @default("pending")                   // pending | verified | settled | failed
+  verifiedAt      DateTime? @map("verified_at")
+  settledAt       DateTime? @map("settled_at")
+  errorMessage    String?  @map("error_message")
+  createdAt       DateTime @default(now())
+
+  @@index([providerId])
+  @@index([status])
+  @@index([txHash])
+  @@index([createdAt])
+}
+
+// ─── Webhooks ─────────────────────────────────────────────────────────────────
+// Customers register webhook URLs to receive event notifications (payment.received, etc.)
+
+model Webhook {
+  id          String   @id @default(cuid())
+  agentId     String   @map("agent_id")
+  url         String                              // HTTPS endpoint to POST events to
+  secret      String                              // HMAC-SHA256 signing secret
+  events      String[]                            // subscribed event types
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deliveries  WebhookDelivery[]
+
+  @@index([agentId])
+  @@index([active])
+}
+
+model WebhookDelivery {
+  id          String   @id @default(cuid())
+  webhookId   String   @map("webhook_id")
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String                              // e.g. payment.received
+  payload     Json                                // full event payload sent
+  status      String   @default("pending")        // pending | delivered | failed
+  httpStatus  Int?     @map("http_status")        // response status code
+  attempts    Int      @default(0)
+  lastError   String?  @map("last_error")
+  deliveredAt DateTime? @map("delivered_at")
+  createdAt   DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([event])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─── Facilitator Fee Records ──────────────────────────────────────────────────
+// Granular per-settlement fee tracking for the revenue dashboard
+
+model FacilitatorFeeRecord {
+  id              String   @id @default(cuid())
+  providerId      String   @map("provider_id")
+  paymentId       String   @map("payment_id")
+  settlementAmount String  @map("settlement_amount")       // Total USDC settled (atomic)
+  feeAmount       String   @map("fee_amount")              // Fee deducted (atomic)
+  feePercent      Float    @map("fee_percent")             // Fee % at time of settlement
+  providerPayout  String   @map("provider_payout")         // Amount forwarded to provider (atomic)
+  network         String   @default("eip155:8453")
+  date            String                                    // YYYY-MM-DD for daily rollup
+  createdAt       DateTime @default(now())
+
+  @@index([providerId])
+  @@index([date])
+  @@index([createdAt])
+}
+
+// ─── Referrals ────────────────────────────────────────────────────────────────
+// Track referral codes and rewards between users
+
+model Referral {
+  id             String   @id @default(cuid())
+  referrerId     String   @map("referrer_id")       // Agent who shared the code
+  referredId     String?  @map("referred_id")        // Agent who signed up with the code
+  code           String   @unique                     // e.g. "ARCH-abc123"
+  status         String   @default("pending")         // pending | completed | expired
+  rewardCredits  Int      @default(500) @map("reward_credits")
+  createdAt      DateTime @default(now())
+  completedAt    DateTime? @map("completed_at")
+
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([code])
+}
+
+// ─── Directory Premium Listings ───────────────────────────────────────────────
+// Premium directory listing upgrades (featured / verified tiers)
+
+model DirectoryListing {
+  id              String   @id @default(cuid())
+  serviceId       String   @map("service_id")              // References x402-directory.json service ID
+  serviceName     String   @map("service_name")
+  contactEmail    String   @map("contact_email")
+  tier            String   @default("free")                 // free | verified | featured
+  monthlyPrice    Float    @default(0) @map("monthly_price") // USD per month
+  status          String   @default("pending")              // pending | active | expired | rejected
+  approvedBy      String?  @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  expiresAt       DateTime? @map("expires_at")
+  stripeSubId     String?  @map("stripe_sub_id")           // Stripe subscription (future)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([serviceId, tier])
+  @@index([serviceId])
+  @@index([tier])
+  @@index([status])
 }

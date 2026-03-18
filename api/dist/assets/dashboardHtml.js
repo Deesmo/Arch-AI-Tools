@@ -5,7 +5,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arch Tools — Dashboard</title>
   <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
-  <link rel="icon" href="/arch-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -82,23 +82,47 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       .at-nav-links .at-nav-cta { display:none; }
     }
     @media (max-width:400px) { .stats-grid { grid-template-columns:1fr; } }
+    /* HAMBURGER */
+    .hamburger { display:none; background:none; border:none; cursor:pointer; padding:6px; }
+    .hamburger svg { width:24px; height:24px; stroke:var(--text); stroke-width:2; stroke-linecap:round; }
+    .mobile-menu { display:none; flex-direction:column; gap:6px; padding:12px 24px 16px; border-bottom:1px solid var(--border); background:rgba(7,6,26,0.95); }
+    .mobile-menu a { color:var(--muted); text-decoration:none; font-size:14px; padding:8px 0; }
+    .mobile-menu a:hover { color:var(--text); }
+    .mobile-menu.open { display:flex; }
+    @media (max-width:768px) {
+      .at-nav-links { display:none; }
+      .hamburger { display:block; }
+    }
   </style>
 </head>
 <body>
   <nav class="at-nav">
     <a class="at-nav-logo" href="/">
       <div class="at-logo-mark">
-        <svg width="18" height="18" viewBox="0 0 180 180" fill="none"><defs><linearGradient id="ng" x1="90" y1="20" x2="90" y2="160" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFB030"/><stop offset="42%" stop-color="#FF1888"/><stop offset="100%" stop-color="#5522FF"/></linearGradient></defs><path d="M90 22 L154 150 H128 L90 78 L52 150 H26 Z" fill="url(#ng)"/><rect x="62" y="118" width="56" height="20" rx="4" fill="url(#ng)" opacity="0.6"/></svg>
+        <svg viewBox="0 10 100 90" overflow="visible" width="28" height="28"><defs><linearGradient id="arch-grad-nav-db" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-db"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-db)" filter="url(#arch-neon-nav-db)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
       </div>
       <span class="at-logo-name">Arch Tools</span>
     </a>
     <div class="at-nav-links">
       <a href="/">Home</a>
-      <a href="/dashboard" style="color:var(--text)!important">Dashboard</a>
       <a href="/docs">Docs</a>
-      <a href="/signup" class="at-nav-cta">Get API Key →</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/signup" class="at-nav-cta">Get API Key</a>
+      <a href="#" id="nav-signout" onclick="doSignOut();return false;" style="color:#f87171;font-size:13px;">Sign Out</a>
     </div>
+    <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </nav>
+  <div id="mobile-menu" class="mobile-menu">
+    <a href="/">Home</a>
+    <a href="/docs">Docs</a>
+    <a href="/changelog">Changelog</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/signup">Get API Key</a>
+    <a href="#" onclick="doSignOut();return false;" style="color:#f87171;">Sign Out</a>
+  </div>
 
   <div class="page">
     <div class="page-title">Dashboard</div>
@@ -181,6 +205,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   </div>
 
   <script>
+    function doSignOut() {
+      localStorage.clear();
+      window.location.href = "/auth/logout";
+    }
+
     var fullKey = "";
     var keyVisible = false;
 
@@ -292,48 +321,44 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
 
     // Auto-load: deferred to ensure page is fully ready
-    window.addEventListener("DOMContentLoaded", function() {
-      setTimeout(async function() {
-        var params = new URLSearchParams(window.location.search);
-        var qKey = params.get("key");
-        if (qKey && qKey.startsWith("arch_")) {
-          document.getElementById("key-input").value = qKey;
-          localStorage.setItem("arch_api_key", qKey);
-          history.replaceState({}, "", "/dashboard");
-          await loadDashboard();
-          return;
-        }
-        // Try session cookie via /auth/api-key
-        try {
-          var meResp = await fetch("/auth/me", { credentials: "include" });
-          if (meResp.ok) {
-            var me = await meResp.json();
-            if (me.ok) {
-              var keyResp = await fetch("/auth/api-key", { credentials: "include" });
-              if (keyResp.ok) {
-                var kd = await keyResp.json();
-                if (kd.ok && kd.api_key) {
-                  document.getElementById("key-input").value = kd.api_key;
-                  localStorage.setItem("arch_api_key", kd.api_key);
-                  await loadDashboard();
-                  var navLinks = document.querySelector(".at-nav-links");
-                  if (navLinks) navLinks.innerHTML += '<a href="/auth/logout" style="color:#f87171;font-size:13px;">Sign out</a>';
-                  return;
-                }
+    setTimeout(async function() {
+      var params = new URLSearchParams(window.location.search);
+      var qKey = params.get("key");
+      if (qKey && qKey.startsWith("arch_")) {
+        document.getElementById("key-input").value = qKey;
+        localStorage.setItem("arch_api_key", qKey);
+        history.replaceState({}, "", "/dashboard");
+        await loadDashboard();
+        return;
+      }
+      // Try session cookie via /auth/api-key
+      try {
+        var meResp = await fetch("/auth/me", { credentials: "include" });
+        if (meResp.ok) {
+          var me = await meResp.json();
+          if (me.ok) {
+            var keyResp = await fetch("/auth/api-key", { credentials: "include" });
+            if (keyResp.ok) {
+              var kd = await keyResp.json();
+              if (kd.ok && kd.api_key) {
+                document.getElementById("key-input").value = kd.api_key;
+                localStorage.setItem("arch_api_key", kd.api_key);
+                await loadDashboard();
+                return;
               }
             }
           }
-        } catch(_) {}
-        // Fall back to localStorage
-        var saved = localStorage.getItem("arch_api_key");
-        if (saved) {
-          document.getElementById("key-input").value = saved;
-          await loadDashboard();
-        } else {
-          window.location.href = '/login?next=/dashboard';
         }
-      }, 0);
-    });
+      } catch(_) {}
+      // Fall back to localStorage
+      var saved = localStorage.getItem("arch_api_key");
+      if (saved) {
+        document.getElementById("key-input").value = saved;
+        await loadDashboard();
+      } else {
+        window.location.href = '/login?next=/dashboard';
+      }
+    }, 0);
 
     async function setPassword() {
       var pw = (document.getElementById("new-password").value || "").trim();
@@ -361,6 +386,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       }
     }
   </script>
+<!-- Arch Tools Chat Widget --><style>#arch-chat-bubble{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);border:none;cursor:pointer;z-index:99999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(85,34,255,0.4);transition:transform .2s,box-shadow .2s}#arch-chat-bubble:hover{transform:scale(1.1);box-shadow:0 6px 32px rgba(85,34,255,0.6)}#arch-chat-bubble svg{width:28px;height:28px;fill:#fff}#arch-chat-window{position:fixed;bottom:92px;right:24px;width:380px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 120px);background:#0c0b1e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:99999;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 48px rgba(0,0,0,0.6);font-family:'JetBrains Mono',monospace}#arch-chat-window.open{display:flex}#arch-chat-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,rgba(85,34,255,0.15),rgba(255,24,136,0.1));border-bottom:1px solid rgba(255,255,255,0.08)}#arch-chat-header .ach-title{font-size:14px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px}#arch-chat-header .ach-title .ach-dot{width:8px;height:8px;border-radius:50%;background:#34d399;animation:ach-pulse 2s infinite}@keyframes ach-pulse{0%,100%{opacity:1}50%{opacity:.4}}#arch-chat-close{background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1}#arch-chat-close:hover{color:#fff}#arch-chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}#arch-chat-messages::-webkit-scrollbar{width:4px}#arch-chat-messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:4px}.ach-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;word-wrap:break-word;white-space:pre-wrap}.ach-msg.bot{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.88);border-bottom-left-radius:4px;align-self:flex-start}.ach-msg.user{background:linear-gradient(135deg,#5522FF,#FF1888);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}.ach-typing{display:flex;gap:4px;padding:10px 14px;align-self:flex-start}.ach-typing span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);animation:ach-bounce .6s infinite alternate}.ach-typing span:nth-child(2){animation-delay:.2s}.ach-typing span:nth-child(3){animation-delay:.4s}@keyframes ach-bounce{to{opacity:1;transform:translateY(-4px)}}#arch-chat-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(7,6,26,0.8)}#arch-chat-input{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;resize:none}#arch-chat-input::placeholder{color:rgba(255,255,255,0.3)}#arch-chat-input:focus{border-color:rgba(85,34,255,0.5)}#arch-chat-send{background:linear-gradient(135deg,#5522FF,#FF1888);border:none;border-radius:8px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}#arch-chat-send:hover{opacity:.85}#arch-chat-send:disabled{opacity:.4;cursor:not-allowed}#arch-chat-send svg{width:18px;height:18px;fill:#fff}@media(max-width:480px){#arch-chat-window{bottom:0;right:0;width:100vw;max-width:100vw;height:100vh;max-height:100vh;border-radius:0}}</style><button id="arch-chat-bubble" aria-label="Open chat" onclick="archChatToggle()"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg></button><div id="arch-chat-window"><div id="arch-chat-header"><div class="ach-title"><div class="ach-dot"></div>Arch Tools Support</div><button id="arch-chat-close" onclick="archChatToggle()" aria-label="Close chat">&times;</button></div><div id="arch-chat-messages"><div class="ach-msg bot">Hey! 👋 I'm the Arch Tools assistant. Ask me about our API, pricing, MCP setup, x402 payments, or anything else!</div></div><div id="arch-chat-input-row"><input type="text" id="arch-chat-input" placeholder="Ask about Arch Tools..." maxlength="2000" autocomplete="off" /><button id="arch-chat-send" onclick="archChatSend()" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div></div><script>(function(){var chatHistory=[],sending=false;window.archChatToggle=function(){var w=document.getElementById('arch-chat-window');w.classList.toggle('open');if(w.classList.contains('open'))document.getElementById('arch-chat-input').focus()};function addMsg(text,role){var msgs=document.getElementById('arch-chat-messages'),d=document.createElement('div');d.className='ach-msg '+(role==='user'?'user':'bot');d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;chatHistory.push({role:role,content:text});if(chatHistory.length>20)chatHistory=chatHistory.slice(-20)}function showTyping(){var msgs=document.getElementById('arch-chat-messages'),t=document.createElement('div');t.className='ach-typing';t.id='ach-typing-ind';t.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(t);msgs.scrollTop=msgs.scrollHeight}function hideTyping(){var t=document.getElementById('ach-typing-ind');if(t)t.remove()}window.archChatSend=function(){if(sending)return;var inp=document.getElementById('arch-chat-input'),msg=inp.value.trim();if(!msg)return;inp.value='';addMsg(msg,'user');sending=true;document.getElementById('arch-chat-send').disabled=true;showTyping();fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory.slice(0,-1)})}).then(function(r){return r.json()}).then(function(d){hideTyping();if(d.ok&&d.reply)addMsg(d.reply,'assistant');else addMsg('Sorry, something went wrong. Please try again.','assistant')}).catch(function(){hideTyping();addMsg('Connection error. Please try again.','assistant')}).finally(function(){sending=false;document.getElementById('arch-chat-send').disabled=false})};document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.activeElement===document.getElementById('arch-chat-input')&&!e.shiftKey){e.preventDefault();archChatSend()}})})();</script>
 </body>
 </html>`;
 //# sourceMappingURL=dashboardHtml.js.map

@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 const FOOTER_LINKS = [
   { label: 'Docs', href: '/docs' },
   { label: 'Pricing', href: '/pricing' },
+  { label: 'Fund', href: '/fund' },
+  { label: 'Wallets', href: '/wallets' },
   { label: 'Playground', href: '/playground' },
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'OpenAPI', href: '/openapi.json' },

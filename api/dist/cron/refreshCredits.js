@@ -9,6 +9,7 @@
  */
 import "dotenv/config";
 import { prisma } from "../lib/prisma.js";
+import { sendMonthlyRefreshEmail } from "../services/email.js";
 async function main() {
     const credits = Number(process.env.FREE_MONTHLY_CREDITS || 100);
     if (credits <= 0) {
@@ -21,7 +22,7 @@ async function main() {
     startOfMonth.setUTCHours(0, 0, 0, 0);
     const agents = await prisma.agent.findMany({
         where: { tier: "free" },
-        select: { id: true, updatedAt: true },
+        select: { id: true, email: true, updatedAt: true },
     });
     let granted = 0;
     let skipped = 0;
@@ -36,6 +37,10 @@ async function main() {
             data: { credits: credits },
         });
         granted++;
+        // Send monthly refresh email (non-blocking)
+        if (agent.email) {
+            sendMonthlyRefreshEmail(agent.email, credits, credits).catch(() => { });
+        }
     }
     console.log(`Credit refresh complete: ${granted} granted, ${skipped} already refreshed this month.`);
 }

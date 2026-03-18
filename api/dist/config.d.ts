@@ -27,11 +27,19 @@ export declare const config: {
     coingecko: {
         apiKey: string;
     };
+    cdp: {
+        apiKeyId: string;
+        apiKeySecret: string;
+        projectId: string;
+    };
     redisUrl: string;
     x402: {
         walletAddress: string;
         network: string;
         facilitatorUrl: string;
+    };
+    facilitator: {
+        feePercent: number;
     };
     rateLimits: {
         free: number;

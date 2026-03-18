@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changelog — Arch Tools</title>
+  <meta name="description" content="Arch Tools changelog. See what's new, changed, and fixed in every release." />
+  <meta name="keywords" content="Arch Tools changelog, release notes, API updates, new features, x402 updates" />
+  <meta property="og:title" content="Changelog — Arch Tools" />
+  <meta property="og:description" content="Arch Tools changelog. See what's new, changed, and fixed in every release." />
+  <meta property="og:url" content="https://archtools.dev/changelog" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://archtools.dev/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Changelog — Arch Tools" />
+  <meta name="twitter:description" content="See what's new, changed, and fixed in every Arch Tools release." />
+  <meta name="twitter:image" content="https://archtools.dev/og-image.png" />
+  <link rel="canonical" href="https://archtools.dev/changelog" />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888;
+    }
+    body { font-family: Syne, system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px); background: rgba(7,6,26,0.9);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-links a.active { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+    .container { max-width: 800px; margin: 0 auto; padding: 48px 24px 96px; }
+    h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 48px; }
+    .release { margin-bottom: 48px; padding: 32px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); position: relative; overflow: hidden; }
+    .release::before { content: ''; position: absolute; top: -60px; right: -60px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%); pointer-events: none; }
+    .version { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+    .date { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; padding: 4px 10px; border-radius: 6px; display: inline-block; }
+    .section-label.added { color: var(--green); background: rgba(52,211,153,0.1); }
+    .section-label.changed { color: var(--orange); background: rgba(255,176,48,0.1); }
+    .section-label.fixed { color: var(--pink); background: rgba(255,24,136,0.1); }
+    .section { margin-bottom: 20px; }
+    .section ul { list-style: none; padding: 0; }
+    .section li { font-family: 'DM Sans', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); padding: 6px 0 6px 16px; position: relative; line-height: 1.5; }
+    .section li::before { content: ''; position: absolute; left: 0; top: 13px; width: 6px; height: 6px; border-radius: 50%; }
+    .section.added li::before { background: var(--green); }
+    .section.changed li::before { background: var(--orange); }
+    .section.fixed li::before { background: var(--pink); }
+    @media (max-width: 600px) {
+      .container { padding: 24px 16px 64px; }
+      h1 { font-size: 1.6rem; }
+      .release { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="at-nav">
+    <a href="/" class="at-nav-logo">
+      <div class="at-logo-mark"><svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="arch-grad-nav-cl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="arch-neon-nav-cl"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#arch-grad-nav-cl)" filter="url(#arch-neon-nav-cl)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg></div>
+      <span class="at-logo-name">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/">Home</a>
+      <a href="/docs">Docs</a>
+      <a href="/changelog" class="active">Changelog</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/signup" class="at-nav-cta">Get API Key</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Changelog</h1>
+    <p class="subtitle">What's new, changed, and fixed in every release of Arch Tools.</p>
+
+    <!-- v1.11.0 -->
+    <div class="release">
+      <div class="version">v1.11.0 — x402 Ecosystem Launch</div>
+      <div class="date">March 17, 2026</div>
+
+      <div class="section added">
+        <span class="section-label added">Added</span>
+        <ul>
+          <li><strong>x402 SDK Integration</strong> — native x402 payment protocol support with USDC micropayments across 15 blockchain networks</li>
+          <li><strong>Service Directory</strong> — curated directory of 112 AI-powered services with search, filtering, and x402 payment support</li>
+          <li><strong>Fund Page + Wallet Onboarding</strong> — guided wallet setup and funding flow for x402 payments (Base, Ethereum, Arbitrum, Optimism, Polygon, and more)</li>
+          <li><strong>Interactive Playground</strong> — live API testing environment with code generation for all 53+ tools</li>
+          <li><strong>Framework Integrations</strong> — official SDKs for 5 platforms: Python, JavaScript/TypeScript, LangChain, CrewAI, and OpenAI Agents</li>
+          <li><strong>Agent Identity (KYA)</strong> — Know Your Agent system with verifiable on-chain identity, reputation scoring, and trust metrics</li>
+          <li><strong>Facilitator-as-a-Service</strong> — turnkey x402 payment facilitation for third-party API providers with automated settlement</li>
+          <li><strong>Analytics Dashboard</strong> — real-time usage analytics with per-tool breakdowns, credit consumption charts, and cost tracking</li>
+          <li><strong>API Documentation Overhaul</strong> — comprehensive endpoint reference with interactive examples, authentication guides, and error code reference</li>
+          <li><strong>Competitor Comparison Page</strong> — side-by-side feature and pricing comparison with alternative platforms</li>
+          <li><strong>FAQ Page</strong> — comprehensive answers to common questions about x402, pricing, chains, and agent identity</li>
+        </ul>
+      </div>
+
+      <div class="section changed">
+        <span class="section-label changed">Changed</span>
+        <ul>
+          <li>Privacy Policy updated with x402 payment data, agent identity, and directory listing sections</li>
+          <li>Terms of Service expanded with x402 payment terms, facilitator terms, agent identity terms, and directory listing terms</li>
+          <li>SEO optimization across all pages (meta tags, structured data, canonical URLs)</li>
+          <li>Landing page updated with x402 ecosystem messaging and service directory highlights</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- v1.10.0 -->
+    <div class="release">
+      <div class="version">v1.10.0</div>
+      <div class="date">March 16, 2026</div>
+
+      <div class="section added">
+        <span class="section-label added">Added</span>
+        <ul>
+          <li>Pricing restructured: Developer $19/mo, Pro $49/mo, Business $149/mo subscriptions</li>
+          <li>Enterprise tier (Contact Us)</li>
+          <li>250 free credits on signup (was 100)</li>
+          <li>BYOK for Brave Search, Tavily, and Exa APIs</li>
+          <li>Customer support chatbot</li>
+          <li>Investor page (/investor.html)</li>
+          <li>Sentry frontend monitoring</li>
+          <li>Cloudflare CDN + performance optimizations</li>
+        </ul>
+      </div>
+
+      <div class="section changed">
+        <span class="section-label changed">Changed</span>
+        <ul>
+          <li>Image generation credits: 15 → 30 per call</li>
+          <li>Text-to-speech credits: 5 → 10 per call</li>
+          <li>Transcribe audio credits: 8 → 12 per call</li>
+          <li>Annual discount: 25% → 17% (industry standard)</li>
+          <li>Marquee animation: CSS-only (removed JS RAF for smoother performance)</li>
+        </ul>
+      </div>
+
+      <div class="section fixed">
+        <span class="section-label fixed">Fixed</span>
+        <ul>
+          <li>Sign-out now properly clears session cookie</li>
+          <li>Favicon updated to dual-arch logo</li>
+          <li>All pages standardized with correct logo + footer</li>
+          <li>crypto-market-cap no longer 500s on empty body</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- v1.9.0 -->
+    <div class="release">
+      <div class="version">v1.9.0</div>
+      <div class="date">March 16, 2026</div>
+
+      <div class="section added">
+        <span class="section-label added">Added</span>
+        <ul>
+          <li>AI mode presets: pass <code>mode: "fast" | "smart" | "deep"</code> to ai-generate — routes to the right model automatically</li>
+          <li>AI Oracle endpoint (<code>/v1/tools/ai-oracle</code>) — premium reasoning with structured analysis and confidence levels (25 credits)</li>
+          <li>Session API: <code>/v1/tools/session-create</code> and <code>/v1/tools/session-message</code> — managed conversation history for agents</li>
+          <li>Getting Started guide at <code>/docs/getting-started</code></li>
+          <li>This changelog page</li>
+          <li>Social proof section on landing page</li>
+          <li>JavaScript SDK (<code>@archtools/sdk</code>) — full TypeScript client with retry logic</li>
+          <li>Python SDK (<code>archtools</code>) — complete client with type hints and exponential backoff</li>
+          <li>Admin credit-grant endpoint for internal account management</li>
+        </ul>
+      </div>
+
+      <div class="section changed">
+        <span class="section-label changed">Changed</span>
+        <ul>
+          <li>ai-generate response now includes <code>mode</code> field when mode presets are used</li>
+          <li>Navigation updated with Changelog and Getting Started links</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- v1.8.0 -->
+    <div class="release">
+      <div class="version">v1.8.0</div>
+      <div class="date">March 15, 2026</div>
+
+      <div class="section added">
+        <span class="section-label added">Added</span>
+        <ul>
+          <li>53 production-ready tools (up from 45) — fact-check, news-search, research-report, crypto-sentiment, crypto-ohlcv, token-lookup, crypto-fear-greed, workflow-agent</li>
+          <li>MCP server-card.json with full tool annotations (readOnlyHint, destructiveHint, openWorldHint)</li>
+          <li>Smithery HTTP transport support with configurable API key and base URL</li>
+          <li>Resources: tool catalog (arch://tools/catalog) and quickstart guide (arch://docs/quickstart)</li>
+          <li>Prompts: research-topic, fact-check-claim, analyze-url</li>
+          <li>DALL-E 3 image generation (generate-image tool)</li>
+          <li>ElevenLabs text-to-speech (text-to-speech tool)</li>
+          <li>OpenAI Whisper audio transcription (transcribe-audio tool)</li>
+          <li>Resend email delivery (send-email tool)</li>
+          <li>Browser automation via Playwright (browser-task tool)</li>
+          <li>Comprehensive legal pages (terms, privacy, AUP, refund, security, retention, subprocessors)</li>
+          <li>OAuth 2.1 with PKCE + Dynamic Client Registration</li>
+        </ul>
+      </div>
+
+      <div class="section changed">
+        <span class="section-label changed">Changed</span>
+        <ul>
+          <li>SSE transport upgraded to SSE + Streamable HTTP</li>
+          <li>SSRF hardening on web-scrape and browser-task tools</li>
+          <li>Improved rate limiting with plan-based tiers (free/pro/business)</li>
+        </ul>
+      </div>
+
+      <div class="section fixed">
+        <span class="section-label fixed">Fixed</span>
+        <ul>
+          <li>Stripe webhook idempotency (no duplicate credit grants)</li>
+          <li>Registration rate limiting (5/IP/hour)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- v1.0.0 -->
+    <div class="release">
+      <div class="version">v1.0.0</div>
+      <div class="date">February 27, 2026</div>
+
+      <div class="section added">
+        <span class="section-label added">Added</span>
+        <ul>
+          <li>Initial release — 38 tools across 13 categories</li>
+          <li>API key authentication with credit-based billing</li>
+          <li>x402 autonomous agent payments (USDC on 15 chains)</li>
+          <li>Stripe integration for human credit purchases</li>
+          <li>MCP server for Claude Desktop, Cursor, and Windsurf</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <footer style="border-top:1px solid rgba(255,255,255,0.06);padding:24px 0;text-align:center;font-size:12px;color:rgba(255,255,255,0.35);margin-top:48px;">
+    © 2026 MCMetaverse LLC · <a href="/terms.html" style="color:rgba(255,255,255,0.45);text-decoration:none;">Terms</a> · <a href="/privacy.html" style="color:rgba(255,255,255,0.45);text-decoration:none;">Privacy</a> · <a href="/docs" style="color:rgba(255,255,255,0.45);text-decoration:none;">Docs</a>
+  </footer>
+</body>
+</html>

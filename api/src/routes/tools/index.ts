@@ -171,8 +171,9 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     const ok = await deductCredits(req, res, "convert-format", 2);
     if (!ok) return;
   }
-  const { input, from, to } = req.body as { input?: string; from?: string; to?: string };
-  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input, from, and to are required", request_id: reqId() }); return; }
+  const input = req.body.data ?? req.body.input;
+  const { from, to } = req.body as { from?: string; to?: string };
+  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data), from, and to are required", request_id: reqId() }); return; }
   try {
     const yaml = await import("js-yaml");
     let parsed: unknown;
@@ -297,22 +298,26 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
     res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), content: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
   } catch (_axiosErr) {
     // Fallback: Firecrawl (handles JS-heavy / bot-protected sites)
-    if (process.env.FIRECRAWL_API_KEY) {
+    // BYOK: check for user-provided Firecrawl key first, fall back to platform key
+    const fcKey = (req.headers["x-firecrawl-key"] as string | undefined) || process.env.FIRECRAWL_API_KEY;
+    if (fcKey) {
+      const byokFc = !!(req.headers["x-firecrawl-key"] as string | undefined);
+      if (byokFc) console.log(`[BYOK] web-scrape using user-provided firecrawl key`);
       try {
         const fc = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${fcKey}` },
           body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
         });
         if (fc.ok) {
           const fd = await fc.json() as { data?: { markdown?: string; metadata?: { title?: string; description?: string } } };
           const text = fd.data?.markdown ?? "";
-          res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", request_id: reqId() }); return;
+          res.json({ ok: true, url, title: fd.data?.metadata?.title ?? "", text: text.slice(0, 8000), word_count: text.split(/\s+/).length, links: [], status_code: 200, source: "firecrawl", ...(byokFc ? { byok: true, byok_provider: "firecrawl" } : {}), request_id: reqId() }); return;
         }
       } catch (_) { /* fall through to error */ }
     }
     const status = axios.isAxiosError(_axiosErr) ? (_axiosErr.response?.status ?? 502) : 500;
-    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), request_id: reqId() });
+    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), hint: "For JS-heavy sites, provide your Firecrawl key via x-firecrawl-key header (BYOK).", request_id: reqId() });
   }
 });
 
@@ -355,35 +360,42 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
   }
   const { query, num_results = 5 } = req.body as { query?: string; num_results?: number };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  // BYOK: check for user-provided search keys
+  const byokBraveKeySearch = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeySearch = req.headers["x-tavily-key"] as string | undefined;
   try {
-    // Primary: Brave Search
-    if (process.env.BRAVE_SEARCH_API_KEY) {
+    // Primary: Brave Search (BYOK first, then platform key)
+    const braveKey = byokBraveKeySearch || process.env.BRAVE_SEARCH_API_KEY;
+    if (braveKey) {
+      if (byokBraveKeySearch) console.log(`[BYOK] search-web using user-provided brave key`);
       try {
         const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
-          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY },
+          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
         });
         if (resp.ok) {
           const data = await resp.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
           const results = (data.web?.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.description ?? "" }));
           if (results.length > 0) {
-            res.json({ ok: true, query, results, count: results.length, source: "brave", request_id: reqId() }); return;
+            res.json({ ok: true, query, results, count: results.length, source: "brave", ...(byokBraveKeySearch ? { byok: true, byok_provider: "brave" } : {}), request_id: reqId() }); return;
           }
         }
       } catch (_) { /* fall through to Tavily */ }
     }
-    // Fallback: Tavily
-    if (process.env.TAVILY_API_KEY) {
+    // Fallback: Tavily (BYOK first, then platform key)
+    const tavilyKey = byokTavilyKeySearch || process.env.TAVILY_API_KEY;
+    if (tavilyKey) {
+      if (byokTavilyKeySearch) console.log(`[BYOK] search-web using user-provided tavily key`);
       try {
         const resp = await fetch("https://api.tavily.com/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: Math.min(num_results, 10) }),
+          body: JSON.stringify({ api_key: tavilyKey, query, max_results: Math.min(num_results, 10) }),
         });
         if (resp.ok) {
           const data = await resp.json() as { results?: Array<{ title?: string; url?: string; content?: string }> };
           const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", snippet: r.content ?? "" }));
           if (results.length > 0) {
-            res.json({ ok: true, query, results, count: results.length, source: "tavily", request_id: reqId() }); return;
+            res.json({ ok: true, query, results, count: results.length, source: "tavily", ...(byokTavilyKeySearch ? { byok: true, byok_provider: "tavily" } : {}), request_id: reqId() }); return;
           }
         }
       } catch (_) { /* fall through */ }
@@ -405,7 +417,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
         }
       } catch (_) { /* fall through */ }
     }
-    res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable.", request_id: reqId() });
+    res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable. Pass x-brave-key or x-tavily-key header for BYOK.", request_id: reqId() });
   } catch (e) {
     res.status(502).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
   }
@@ -422,16 +434,21 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
   if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { query } = req.body as { query?: string };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  // BYOK: check for user-provided search keys
+  const byokBraveKeyWS = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeyWS = req.headers["x-tavily-key"] as string | undefined;
   try {
     // Get search context — Tavily primary, Brave fallback
     let context = "";
     let sources: Array<{ title: string; url: string }> = [];
-    if (process.env.TAVILY_API_KEY) {
+    const tavilyKeyWS = byokTavilyKeyWS || process.env.TAVILY_API_KEY;
+    if (tavilyKeyWS) {
+      if (byokTavilyKeyWS) console.log(`[BYOK] web-search using user-provided tavily key`);
       try {
         const r = await fetch("https://api.tavily.com/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: 5, include_raw_content: false }),
+          body: JSON.stringify({ api_key: tavilyKeyWS, query, max_results: 5, include_raw_content: false }),
         });
         if (r.ok) {
           const d = await r.json() as { results?: Array<{ title?: string; url?: string; content?: string }> };
@@ -440,10 +457,12 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
         }
       } catch (_) { /* fall through */ }
     }
-    if (!context && process.env.BRAVE_SEARCH_API_KEY) {
+    const braveKeyWS = byokBraveKeyWS || process.env.BRAVE_SEARCH_API_KEY;
+    if (!context && braveKeyWS) {
+      if (byokBraveKeyWS) console.log(`[BYOK] web-search using user-provided brave key`);
       try {
         const r = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: "5" }), {
-          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY },
+          headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKeyWS },
         });
         if (r.ok) {
           const d = await r.json() as { web?: { results?: Array<{ title?: string; url?: string; description?: string }> } };
@@ -452,7 +471,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
         }
       } catch (_) { /* fall through */ }
     }
-    if (!context) { res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable.", request_id: reqId() }); return; }
+    if (!context) { res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable. Pass x-tavily-key or x-brave-key header for BYOK.", request_id: reqId() }); return; }
     // Synthesize with Claude
     const msg = await anthropic!.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -677,8 +696,10 @@ router.post("/diff-text", ...toolMiddleware("diff-text"), async (req: AuthedRequ
     const ok = await deductCredits(req, res, "diff-text", 2);
     if (!ok) return;
   }
-  const { text1, text2, mode = "words" } = req.body as { text1?: string; text2?: string; mode?: string };
-  if (!text1 || !text2) { res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: reqId() }); return; }
+  const text1 = req.body.original ?? req.body.text1;
+  const text2 = req.body.modified ?? req.body.text2;
+  const mode = req.body.mode ?? "words";
+  if (!text1 || !text2) { res.status(400).json({ ok: false, error: "invalid_request", message: "text1/original and text2/modified are required", request_id: reqId() }); return; }
   try {
     const diff = await import("diff");
     let changes: unknown[];
@@ -887,16 +908,42 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req: AuthedRe
 
 // ─── 27. AI-GENERATE ─────────────────────────────────────────────────────────
 
+// AI mode presets: maps a mode name to a default model
+const AI_MODE_PRESETS: Record<string, string> = {
+  fast:  "claude-haiku-4-5-20251001",  // cheapest/fastest
+  smart: "claude-sonnet-4-6",           // balanced (default)
+  deep:  "claude-opus-4-6",             // most capable
+};
+
 router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  // ── BYOK: check for user-provided API keys ──
+  const byokAnthropicKey = req.headers["x-anthropic-key"] as string | undefined;
+  const byokOpenaiKey = req.headers["x-openai-key"] as string | undefined;
+  const byokXaiKey = req.headers["x-xai-key"] as string | undefined;
+  const byokGoogleKey = req.headers["x-google-key"] as string | undefined;
+  const byokFirecrawlKey = req.headers["x-firecrawl-key"] as string | undefined;
+  const byokBraveKey = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKey = req.headers["x-tavily-key"] as string | undefined;
+  const byokExaKey = req.headers["x-exa-key"] as string | undefined;
+  const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey || byokBraveKey || byokTavilyKey || byokExaKey || byokFirecrawlKey);
+
   const paid = isX402Paid(req);
-  if (!paid) {
+  if (!paid && !hasByok) {
     const ok = await deductCredits(req, res, "ai-generate", 20);
     if (!ok) return;
   }
-  const { prompt, system, model = "claude-sonnet-4-6", max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; max_tokens?: number };
+  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
   if (prompt.length > MAX_PROMPT) { res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() }); return; }
+
+  // Resolve model: explicit model > mode preset > default "smart"
+  const validModes = Object.keys(AI_MODE_PRESETS);
+  if (mode && !validModes.includes(mode)) {
+    res.status(400).json({ ok: false, error: "invalid_mode", message: `mode must be one of: ${validModes.join(", ")}. Or provide an explicit model instead.`, request_id: reqId() }); return;
+  }
+  const model = explicitModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
+  const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
 
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
   const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
@@ -908,8 +955,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   try {
     // ── OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) — check before Claude to avoid default fallthrough ──
     if (GPT_MODELS.includes(model)) {
-      const openaiKey = process.env.OPENAI_API_KEY;
-      if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set", request_id: reqId() }); return; }
+      const openaiKey = byokOpenaiKey || process.env.OPENAI_API_KEY;
+      if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "OPENAI_API_KEY not set. Pass x-openai-key header for BYOK.", request_id: reqId() }); return; }
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
@@ -917,14 +964,15 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
-      res.json({ ok: true, text, model, provider: "openai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
+      const _u = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: _u, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_u.input_tokens * 0.000003 + _u.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "openai" } : {}), request_id: reqId() });
       return;
     }
 
     // ── Google Gemini ──
     if (GEMINI_MODELS.includes(model)) {
-      const googleKey = process.env.GOOGLE_API_KEY;
-      if (!googleKey || googleKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires a Google API key that has not been configured.", request_id: reqId() }); return; }
+      const googleKey = byokGoogleKey || process.env.GOOGLE_API_KEY;
+      if (!googleKey || googleKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Google API key not configured. Pass x-google-key header for BYOK.", request_id: reqId() }); return; }
       const fullPrompt = system ? `${system}\n\n${prompt}` : prompt;
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${googleKey}`, {
         method: "POST",
@@ -933,14 +981,15 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      res.json({ ok: true, text, model, provider: "google", usage: { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 }, request_id: reqId() });
+      const _ug = { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.000001 + _ug.output_tokens * 0.000004).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
       return;
     }
 
     // ── xAI Grok ──
     if (GROK_MODELS.includes(model)) {
-      const xaiKey = process.env.XAI_API_KEY;
-      if (!xaiKey || xaiKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an xAI API key that has not been configured.", request_id: reqId() }); return; }
+      const xaiKey = byokXaiKey || process.env.XAI_API_KEY;
+      if (!xaiKey || xaiKey.startsWith("ENTER")) { res.status(503).json({ ok: false, error: "service_unavailable", message: "xAI key not configured. Pass x-xai-key header for BYOK.", request_id: reqId() }); return; }
       const resp = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${xaiKey}` },
@@ -948,7 +997,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       });
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
-      res.json({ ok: true, text, model, provider: "xai", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 }, request_id: reqId() });
+      const _ux = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.000005 + _ux.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
       return;
     }
 
@@ -961,10 +1011,21 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
 
     // ── Claude ──
     if (CLAUDE_MODELS.includes(model)) {
-      if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-      const msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
-      const text = msg.content.find(b => b.type === "text")?.text ?? "";
-      res.json({ ok: true, text, model, provider: "anthropic", usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }, request_id: reqId() });
+      const anthKey = byokAnthropicKey || process.env.ANTHROPIC_API_KEY;
+      if (!anthKey && !anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() }); return; }
+      // BYOK: use fetch directly with user's key; otherwise use SDK client
+      let msg: any;
+      if (byokAnthropicKey) {
+        const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": byokAnthropicKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] }) });
+        msg = await r.json() as any;
+        if (!r.ok) { res.status(r.status).json({ ok: false, error: "byok_api_error", message: msg?.error?.message || "BYOK Anthropic call failed", request_id: reqId() }); return; }
+        msg = { content: msg.content, usage: msg.usage, model: msg.model };
+      } else {
+        msg = await anthropic!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+      }
+      const text = msg.content.find((b: any) => b.type === "text")?.text ?? "";
+      const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: _ua, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ua.input_tokens * 0.000003 + _ua.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "anthropic" } : {}), request_id: reqId() });
       return;
     }
   } catch (e) {
@@ -988,9 +1049,14 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     let imgMediaType: string = media_type;
     if (image_url && !image_base64) {
       try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 15000 });
+      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024 });
       imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
-      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0];
+      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim();
+    }
+    // Anthropic vision API only accepts these media types
+    const VALID_MEDIA_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!VALID_MEDIA_TYPES.includes(imgMediaType)) {
+      imgMediaType = "image/jpeg"; // safe default
     }
     const imageContent = { type: "image" as const, source: { type: "base64" as const, media_type: imgMediaType as "image/jpeg", data: imgBase64! } };
     const msg = await anthropic.messages.create({
@@ -1211,13 +1277,13 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
     const ok = await deductCredits(req, res, "webhook-send", 2);
     if (!ok) return;
   }
-  const { webhook_url, payload, headers: customHeaders = {}, method = "POST" } = req.body as {
-    webhook_url?: string;
+  const webhook_url = req.body.url ?? req.body.webhook_url;
+  const { payload, headers: customHeaders = {}, method = "POST" } = req.body as {
     payload?: unknown;
     headers?: Record<string, string>;
     method?: string;
   };
-  if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url is required", request_id: reqId() }); return; }
+  if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
   try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   const allowedMethods = ["POST", "PUT", "PATCH"];
@@ -1254,8 +1320,9 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
     const ok = await deductCredits(req, res, "jsonpath-query", 1);
     if (!ok) return;
   }
-  const { data, path: jsonPath } = req.body as { data?: unknown; path?: string };
-  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data and path are required", request_id: reqId() }); return; }
+  const data = req.body.json ?? req.body.data;
+  const jsonPath = req.body.path as string | undefined;
+  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path are required", request_id: reqId() }); return; }
   try {
     // Simple JSONPath evaluator: supports $, .key, ['key'], [index], [*], ..key
     function evalPath(obj: unknown, expr: string): unknown[] {
@@ -1307,7 +1374,7 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
 router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
-    const ok = await deductCredits(req, res, "image-generate", 15);
+    const ok = await deductCredits(req, res, "image-generate", 30);
     if (!ok) return;
   }
   if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
@@ -1339,8 +1406,9 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const ok = await deductCredits(req, res, "barcode-generate", 2);
     if (!ok) return;
   }
-  const { data: barcodeData, type = "code128", width = 250, height = 100 } = req.body as { data?: string; type?: string; width?: number; height?: number };
-  if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data is required", request_id: reqId() }); return; }
+  const barcodeData = (req.body.value ?? req.body.data) as string | undefined;
+  const { type = "code128", width = 250, height = 100 } = req.body as { type?: string; width?: number; height?: number };
+  if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() }); return; }
   const validTypes = ["code128", "qr"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
   try {
@@ -1405,6 +1473,145 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
   }
 });
 
+// ─── 39. AI-ORACLE (premium reasoning endpoint) ──────────────────────────────
+
+router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  // ── BYOK: check for user-provided API keys ──
+  const oraclByokAnthropicKey = req.headers["x-anthropic-key"] as string | undefined;
+  const oraclByokOpenaiKey = req.headers["x-openai-key"] as string | undefined;
+  const oracleHasByok = !!(oraclByokAnthropicKey || oraclByokOpenaiKey);
+
+  const paid = isX402Paid(req);
+  if (!paid && !oracleHasByok) {
+    const ok = await deductCredits(req, res, "ai-oracle", 25);
+    if (!ok) return;
+  }
+  const { question, context: oracleContext, reasoning_depth = "standard" } = req.body as {
+    question?: string;
+    context?: string;
+    reasoning_depth?: "standard" | "deep";
+  };
+  if (!question || typeof question !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "question is required", request_id: reqId() });
+    return;
+  }
+  if (question.length > 10000) {
+    res.status(400).json({ ok: false, error: "question_too_long", message: "question must be 10000 chars or less", request_id: reqId() });
+    return;
+  }
+  const validDepths = ["standard", "deep"];
+  if (!validDepths.includes(reasoning_depth)) {
+    res.status(400).json({ ok: false, error: "invalid_reasoning_depth", message: `reasoning_depth must be one of: ${validDepths.join(", ")}`, request_id: reqId() });
+    return;
+  }
+
+  const systemPrompt = "You are an expert analyst. Think step by step. Provide structured analysis with confidence levels. Always respond with valid JSON only, no markdown fences. Use this exact structure: {\"analysis\": \"<detailed analysis>\", \"confidence\": \"high\" | \"medium\" | \"low\"}";
+  const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
+
+  // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
+  const providers: Array<{ name: string; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
+
+  if (anthropic || oraclByokAnthropicKey) {
+    const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
+    providers.push({
+      name: "anthropic",
+      fn: async () => {
+        const userContent = oracleContext
+          ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
+          : question;
+        const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
+        if (oraclByokAnthropicKey) {
+          const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anthKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] }) });
+          const d = await r.json() as any;
+          if (!r.ok) throw new Error(d?.error?.message || `Anthropic BYOK error ${r.status}`);
+          const text = (d.content || []).find((b: any) => b.type === "text")?.text ?? "";
+          return { text, model: oracleModel, usage: { input_tokens: d.usage?.input_tokens ?? 0, output_tokens: d.usage?.output_tokens ?? 0 } };
+        }
+        const msg = await anthropic!.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
+        const text = (msg.content as any[]).filter(b => b.type === "text").map(b => b.text).join("") ?? "";
+        return { text, model: oracleModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens } };
+      },
+    });
+  }
+
+  const openaiKey = oraclByokOpenaiKey || process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    providers.push({
+      name: "openai",
+      fn: async () => {
+        const userContent = oracleContext
+          ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
+          : question;
+        const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            max_tokens: maxTokens,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userContent },
+            ],
+          }),
+        });
+        const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+        const text = data.choices?.[0]?.message?.content ?? "";
+        return { text, model: "gpt-4o", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 } };
+      },
+    });
+  }
+
+  if (providers.length === 0) {
+    res.status(503).json({ ok: false, error: "service_unavailable", message: "AI Oracle requires ANTHROPIC_API_KEY or OPENAI_API_KEY to be configured.", request_id: reqId() });
+    return;
+  }
+
+  let lastError: string = "";
+  for (const provider of providers) {
+    const providerName = provider.name;
+    try {
+      const result = await provider.fn();
+      // Parse the JSON response from the model
+      let analysis = result.text;
+      let confidence: "high" | "medium" | "low" = "medium";
+      try {
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]) as { analysis?: string; confidence?: string };
+          analysis = parsed.analysis ?? result.text;
+          if (parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low") {
+            confidence = parsed.confidence;
+          }
+        }
+      } catch {
+        // If JSON parsing fails, use the raw text as analysis
+      }
+
+      res.json({
+        ok: true,
+        analysis,
+        confidence,
+        model_used: result.model,
+        reasoning_depth,
+        reasoning_tokens: result.usage?.output_tokens ?? undefined,
+        word_count: analysis.split(/\s+/).filter(Boolean).length,
+        char_count: analysis.length,
+        processed_at: new Date().toISOString(),
+        arch_tools_version: "1.9.0",
+        ...(oracleHasByok ? { byok: true, byok_provider: providerName } : {}),
+        credits_used: oracleHasByok ? 0 : 25,
+        request_id: reqId(),
+      });
+      return;
+    } catch (e: any) {
+      lastError = e.message ?? String(e);
+      continue; // Try next provider
+    }
+  }
+
+  res.status(502).json({ ok: false, error: "oracle_failed", message: `All providers failed. Last error: ${lastError}`, request_id: reqId() });
+});
+
 // ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
 // Helper: returns CoinGecko headers, including API key when configured
 const cgHeaders = (): Record<string, string> => {
@@ -1430,7 +1637,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
       return;
     }
     const d = data[id];
-    res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], request_id: reqId() });
+    res.json({ ok: true, symbol: id, currency, price: d[currency], change_24h: d[`${currency}_24h_change`], market_cap: d[`${currency}_market_cap`], volume_24h: d[`${currency}_24h_vol`], data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1446,7 +1653,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const raw = await r.json() as number[][];
     const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
-    res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, request_id: reqId() });
+    res.json({ ok: true, symbol: id, currency, days, candles, count: candles.length, data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1454,7 +1661,9 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
 router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-market-cap", 1); if (!ok) return; }
-  const { limit = 10, currency = "usd" } = req.body as { limit?: number; currency?: string };
+  const body = (req.body && typeof req.body === "object") ? req.body : {};
+  const limit = parseInt(body.limit) || 10;
+  const currency = (typeof body.currency === "string" && body.currency.trim()) ? body.currency.trim().toLowerCase() : "usd";
   try {
     const n = Math.min(Math.max(1, limit), 100);
 
@@ -1476,7 +1685,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
 
     if (cgData && Array.isArray(cgData) && cgData.length > 0) {
       const coins = cgData.map((c: CgCoin) => ({ rank: c.market_cap_rank, id: c.id, symbol: c.symbol, name: c.name, price: c.current_price, market_cap: c.market_cap, volume_24h: c.total_volume, change_24h: c.price_change_percentage_24h }));
-      res.json({ ok: true, currency, coins, source: "coingecko", request_id: reqId() }); return;
+      res.json({ ok: true, currency, coins, source: "coingecko", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
     // Fallback: CoinCap API (no rate limit on cloud IPs)
@@ -1491,10 +1700,27 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
         volume_24h: parseFloat(c.volumeUsd24Hr) || 0,
         change_24h: parseFloat(c.changePercent24Hr) || 0,
       }));
-      res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", request_id: reqId() }); return;
+      res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
-    res.status(502).json({ ok: false, error: "fetch_error", message: "Both CoinGecko and CoinCap are unavailable. Try again shortly.", request_id: reqId() });
+    // Fallback 3: CryptoCompare (free, no key, different IP reputation)
+    try {
+      const ccmpUrl = `https://min-api.cryptocompare.com/data/top/mktcapfull?limit=${n}&tsym=USD`;
+      const ccmpResp = await fetch(ccmpUrl, { signal: AbortSignal.timeout(8000) });
+      if (ccmpResp.ok) {
+        const ccmpJson = await ccmpResp.json() as { Data: any[] };
+        const coins = (ccmpJson.Data || []).map((c: any, i: number) => ({
+          rank: i + 1, id: (c.CoinInfo?.Name || "").toLowerCase(), symbol: (c.CoinInfo?.Name || "").toLowerCase(), name: c.CoinInfo?.FullName || "",
+          price: c.RAW?.USD?.PRICE || 0,
+          market_cap: c.RAW?.USD?.MKTCAP || 0,
+          volume_24h: c.RAW?.USD?.TOTALVOLUME24HTO || 0,
+          change_24h: c.RAW?.USD?.CHANGEPCT24HOUR || 0,
+        }));
+        res.json({ ok: true, currency: "usd", coins, source: "cryptocompare_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
+      }
+    } catch { /* fall through */ }
+
+    res.status(502).json({ ok: false, error: "fetch_error", message: "All crypto data sources unavailable (CoinGecko, CoinCap, CryptoCompare). Try again shortly.", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1509,7 +1735,7 @@ router.post("/crypto-fear-greed", ...toolMiddleware("crypto-fear-greed"), async 
     const data = await r.json() as { data: { value: string; value_classification: string; timestamp: string }[] };
     const history = data.data.map(d => ({ value: Number(d.value), classification: d.value_classification, date: new Date(Number(d.timestamp) * 1000).toISOString().split("T")[0] }));
     const latest = history[0];
-    res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", request_id: reqId() });
+    res.json({ ok: true, current: latest, history, interpretation: Number(latest.value) < 25 ? "Extreme Fear — potential buy signal for contrarians" : Number(latest.value) > 75 ? "Extreme Greed — potential sell signal" : "Neutral zone", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -1529,6 +1755,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
       sentiment: { votes_up_pct: data.sentiment_votes_up_percentage ?? null, votes_down_pct: data.sentiment_votes_down_percentage ?? null, overall: (data.sentiment_votes_up_percentage ?? 50) > 60 ? "bullish" : (data.sentiment_votes_up_percentage ?? 50) < 40 ? "bearish" : "neutral" },
       community: { twitter_followers: data.community_data?.twitter_followers ?? null, reddit_subscribers: data.community_data?.reddit_subscribers ?? null, reddit_active: data.community_data?.reddit_active_accounts ?? null },
       price_momentum: { change_24h: data.market_data?.price_change_percentage_24h ?? null, change_7d: data.market_data?.price_change_percentage_7d ?? null },
+      data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms",
       request_id: reqId()
     });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
@@ -1593,7 +1820,7 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
       articles = articles.slice(0, n);
     }
 
-    res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, request_id: reqId() });
+    res.json({ ok: true, symbol: symbol ?? "all", articles, count: articles.length, data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
   }
@@ -1610,16 +1837,14 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
-    res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", request_id: reqId() });
+    res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
-
-export default router;
 
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 5); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 10); if (!ok) return; }
   const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body as { text?: string; voice_id?: string; model_id?: string; stability?: number; similarity_boost?: number };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 5000) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() }); return; }
@@ -1645,14 +1870,14 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
 // ─── transcribe-audio ─────────────────────────────────────────────────────────
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 8); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 12); if (!ok) return; }
   const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: reqId() }); return; }
   try {
-    // Fetch audio file
-    const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(30000) });
+    // Fetch audio file (60s timeout for large files)
+    const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(60000) });
     if (!audioResp.ok) { res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() }); return; }
     const audioBuffer = await audioResp.arrayBuffer();
     const contentType = audioResp.headers.get("content-type") ?? "audio/mpeg";
@@ -1677,7 +1902,14 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     }
     const data = await r.json() as { text: string; language?: string; duration?: number; segments?: unknown[] };
     res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: reqId() });
-  } catch (e) { console.error("[transcribe-audio]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+  } catch (e: any) {
+    console.error("[transcribe-audio]", e);
+    if (e?.name === "TimeoutError" || e?.name === "AbortError" || String(e?.message).includes("timeout")) {
+      res.status(504).json({ ok: false, error: "timeout", message: "Audio file fetch or transcription timed out. Try a smaller file or a faster URL.", request_id: reqId() });
+    } else {
+      res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+  }
 });
 
 // ─── email-send ───────────────────────────────────────────────────────────────
@@ -1711,7 +1943,7 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
 // ─── design-create ────────────────────────────────────────────────────────────
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "design-create", 15); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
   const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; style?: string; n?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
@@ -1811,7 +2043,7 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req: Auth
 router.post("/generate-image", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   req.url = "/design-create";
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "design-create", 15); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
   const { prompt, size = "1024x1024", quality = "standard" } = req.body as { prompt?: string; size?: string; quality?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
@@ -1855,18 +2087,24 @@ router.post("/check-domain", ...toolMiddleware("domain-check"), async (req: Auth
 });
 
 // ─── 51. NEWS-SEARCH ──────────────────────────────────────────────────────────
-router.get("/news-search", requireAuth, async (req: Request, res: Response) => {
-  const query = String(req.query.query ?? "").trim();
-  const limit = Math.min(Number(req.query.limit ?? 5), 10);
-  const _ok1 = await deductCredits(req, res, "news-search", 3); if (!_ok1) return;
+router.post("/news-search", ...toolMiddleware("news-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "news-search", 3); if (!ok) return; }
+  const query = String(req.body.query ?? req.query.query ?? "").trim();
+  const limit = Math.min(Number(req.body.limit ?? req.query.limit ?? 5), 10);
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
-  // Try Brave News first
-  const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-  const tavilyKey = process.env.TAVILY_API_KEY;
+  // BYOK: check for user-provided search keys
+  const byokBraveKeyNews = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeyNews = req.headers["x-tavily-key"] as string | undefined;
+
+  // Try Brave News first (BYOK first, then platform key)
+  const braveKey = byokBraveKeyNews || process.env.BRAVE_SEARCH_API_KEY;
+  const tavilyKey = byokTavilyKeyNews || process.env.TAVILY_API_KEY;
   const serperKey = process.env.SERPER_API_KEY;
 
   if (braveKey) {
+    if (byokBraveKeyNews) console.log(`[BYOK] news-search using user-provided brave key`);
     try {
       const r = await axios.get("https://api.search.brave.com/res/v1/news/search", {
         params: { q: query, count: limit, safesearch: "off" },
@@ -1876,11 +2114,12 @@ router.get("/news-search", requireAuth, async (req: Request, res: Response) => {
       const results = ((r.data as { results?: Array<{ title: string; url: string; description?: string; age?: string; source?: { name?: string } }> }).results ?? []).slice(0, limit).map(a => ({
         title: a.title, url: a.url, description: a.description ?? "", published: a.age ?? null, source: a.source?.name ?? null
       }));
-      return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, request_id: reqId() });
+      return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, ...(byokBraveKeyNews ? { byok: true, byok_provider: "brave" } : {}), request_id: reqId() });
     } catch (_) { /* fall through to Tavily */ }
   }
 
   if (tavilyKey) {
+    if (byokTavilyKeyNews) console.log(`[BYOK] news-search using user-provided tavily key`);
     try {
       const r = await axios.post("https://api.tavily.com/search", {
         api_key: tavilyKey, query, topic: "news", max_results: limit, include_answer: false
@@ -1888,7 +2127,7 @@ router.get("/news-search", requireAuth, async (req: Request, res: Response) => {
       const results = ((r.data as { results?: Array<{ title: string; url: string; content?: string; published_date?: string; source?: string }> }).results ?? []).slice(0, limit).map(a => ({
         title: a.title, url: a.url, description: a.content ?? "", published: a.published_date ?? null, source: a.source ?? null
       }));
-      return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, request_id: reqId() });
+      return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, ...(byokTavilyKeyNews ? { byok: true, byok_provider: "tavily" } : {}), request_id: reqId() });
     } catch (_) { /* fall through to Serper */ }
   }
 
@@ -1910,21 +2149,30 @@ router.get("/news-search", requireAuth, async (req: Request, res: Response) => {
 });
 
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
-router.get("/research-report", requireAuth, async (req: Request, res: Response) => {
-  const query = String(req.query.query ?? "").trim();
-  const depth = String(req.query.depth ?? "standard").toLowerCase();
-  const _ok2 = await deductCredits(req, res, "research-report", 15); if (!_ok2) return;
+router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", 15); if (!ok) return; }
+  const query = String(req.body.query ?? req.query.query ?? "").trim();
+  const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
-  const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-  const tavilyKey = process.env.TAVILY_API_KEY;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  // BYOK: check for user-provided search keys
+  const byokBraveKeyRR = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeyRR = req.headers["x-tavily-key"] as string | undefined;
+  const byokAnthropicKeyRR = req.headers["x-anthropic-key"] as string | undefined;
+
+  const braveKey = byokBraveKeyRR || process.env.BRAVE_SEARCH_API_KEY;
+  const tavilyKey = byokTavilyKeyRR || process.env.TAVILY_API_KEY;
+  const anthropicKey = byokAnthropicKeyRR || process.env.ANTHROPIC_API_KEY;
   const numResults = depth === "deep" ? 10 : 5;
+  const rrHasByok = !!(byokBraveKeyRR || byokTavilyKeyRR || byokAnthropicKeyRR);
 
   // Step 1: Gather search results
   let searchResults: Array<{ title: string; url: string; description: string }> = [];
+  let rrSearchProvider = "";
 
   if (tavilyKey) {
+    if (byokTavilyKeyRR) console.log(`[BYOK] research-report using user-provided tavily key`);
     try {
       const r = await axios.post("https://api.tavily.com/search", {
         api_key: tavilyKey, query, max_results: numResults, include_answer: true, search_depth: depth === "deep" ? "advanced" : "basic"
@@ -1932,10 +2180,12 @@ router.get("/research-report", requireAuth, async (req: Request, res: Response) 
       searchResults = ((r.data as { results?: Array<{ title: string; url: string; content?: string }> }).results ?? []).map(a => ({
         title: a.title, url: a.url, description: a.content ?? ""
       }));
+      if (searchResults.length > 0) rrSearchProvider = "tavily";
     } catch (_) { /* try Brave */ }
   }
 
   if (searchResults.length === 0 && braveKey) {
+    if (byokBraveKeyRR) console.log(`[BYOK] research-report using user-provided brave key`);
     try {
       const r = await axios.get("https://api.search.brave.com/res/v1/web/search", {
         params: { q: query, count: numResults, safesearch: "off" },
@@ -1945,6 +2195,7 @@ router.get("/research-report", requireAuth, async (req: Request, res: Response) 
       searchResults = ((r.data as { web?: { results?: Array<{ title: string; url: string; description?: string }> } }).web?.results ?? []).map(a => ({
         title: a.title, url: a.url, description: a.description ?? ""
       }));
+      if (searchResults.length > 0) rrSearchProvider = "brave";
     } catch (_) { /* fall through */ }
   }
 
@@ -1954,7 +2205,7 @@ router.get("/research-report", requireAuth, async (req: Request, res: Response) 
 
   // Step 2: Synthesize with Claude
   if (!anthropicKey) {
-    return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured", credits_used: 15, request_id: reqId() });
+    return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 15, ...(rrHasByok ? { byok: true, byok_provider: rrSearchProvider || "unknown" } : {}), request_id: reqId() });
   }
 
   const sourcesText = searchResults.map((s, i) => `[${i+1}] ${s.title}\n${s.url}\n${s.description}`).join("\n\n");
@@ -1971,26 +2222,35 @@ router.get("/research-report", requireAuth, async (req: Request, res: Response) 
       timeout: 30000
     });
     const report = ((claude.data as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "").trim();
-    return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, request_id: reqId() });
+    return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, ...(rrHasByok ? { byok: true, byok_provider: byokAnthropicKeyRR ? "anthropic" : rrSearchProvider } : {}), request_id: reqId() });
   } catch (e) {
     return void res.status(502).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
   }
 });
 
 // ─── 53. FACT-CHECK ───────────────────────────────────────────────────────────
-router.get("/fact-check", requireAuth, async (req: Request, res: Response) => {
-  const claim = String(req.query.claim ?? "").trim();
-  const _ok3 = await deductCredits(req, res, "fact-check", 10); if (!_ok3) return;
+router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "fact-check", 10); if (!ok) return; }
+  const claim = String(req.body.claim ?? req.query.claim ?? "").trim();
   if (!claim) return void res.status(400).json({ ok: false, error: "missing_param", message: "claim is required" });
 
-  const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-  const tavilyKey = process.env.TAVILY_API_KEY;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  // BYOK: check for user-provided search keys
+  const byokBraveKeyFC = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeyFC = req.headers["x-tavily-key"] as string | undefined;
+  const byokAnthropicKeyFC = req.headers["x-anthropic-key"] as string | undefined;
+
+  const braveKey = byokBraveKeyFC || process.env.BRAVE_SEARCH_API_KEY;
+  const tavilyKey = byokTavilyKeyFC || process.env.TAVILY_API_KEY;
+  const anthropicKey = byokAnthropicKeyFC || process.env.ANTHROPIC_API_KEY;
+  const fcHasByok = !!(byokBraveKeyFC || byokTavilyKeyFC || byokAnthropicKeyFC);
+  let fcSearchProvider = "";
 
   // Step 1: Search for evidence
   let evidence: Array<{ title: string; url: string; description: string }> = [];
 
   if (tavilyKey) {
+    if (byokTavilyKeyFC) console.log(`[BYOK] fact-check using user-provided tavily key`);
     try {
       const r = await axios.post("https://api.tavily.com/search", {
         api_key: tavilyKey, query: `fact check: ${claim}`, max_results: 8, include_answer: false, search_depth: "advanced"
@@ -1998,10 +2258,12 @@ router.get("/fact-check", requireAuth, async (req: Request, res: Response) => {
       evidence = ((r.data as { results?: Array<{ title: string; url: string; content?: string }> }).results ?? []).map(a => ({
         title: a.title, url: a.url, description: a.content ?? ""
       }));
+      if (evidence.length > 0) fcSearchProvider = "tavily";
     } catch (_) { /* try Brave */ }
   }
 
   if (evidence.length === 0 && braveKey) {
+    if (byokBraveKeyFC) console.log(`[BYOK] fact-check using user-provided brave key`);
     try {
       const r = await axios.get("https://api.search.brave.com/res/v1/web/search", {
         params: { q: `fact check "${claim}"`, count: 8, safesearch: "off" },
@@ -2011,11 +2273,12 @@ router.get("/fact-check", requireAuth, async (req: Request, res: Response) => {
       evidence = ((r.data as { web?: { results?: Array<{ title: string; url: string; description?: string }> } }).web?.results ?? []).map(a => ({
         title: a.title, url: a.url, description: a.description ?? ""
       }));
+      if (evidence.length > 0) fcSearchProvider = "brave";
     } catch (_) { /* fall through */ }
   }
 
   if (!anthropicKey) {
-    return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured", credits_used: 10, request_id: reqId() });
+    return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 10, ...(fcHasByok ? { byok: true, byok_provider: fcSearchProvider || "unknown" } : {}), request_id: reqId() });
   }
 
   // Step 2: Analyze with Claude
@@ -2055,9 +2318,397 @@ router.get("/fact-check", requireAuth, async (req: Request, res: Response) => {
       contradicting_evidence: analysis.contradicting_evidence ?? [],
       caveats: analysis.caveats ?? null,
       sources: evidence,
-      credits_used: 10, request_id: reqId()
+      credits_used: 10, ...(fcHasByok ? { byok: true, byok_provider: byokAnthropicKeyFC ? "anthropic" : fcSearchProvider } : {}), request_id: reqId()
     });
   } catch (e) {
     return void res.status(502).json({ ok: false, error: "analysis_failed", message: safeErr(e), request_id: reqId() });
   }
 });
+
+// ─── SESSION-CREATE ───────────────────────────────────────────────────────────
+// Creates a conversation session with optional system prompt and model.
+// Sessions are stored in memory (Map) — no DB required yet.
+
+interface SessionData {
+  session_id: string;
+  namespace: string;
+  system_prompt: string | null;
+  model: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  created_at: string;
+}
+
+const sessionStore = new Map<string, SessionData>();
+
+// Clean up old sessions every 30 minutes (sessions older than 4 hours)
+setInterval(() => {
+  const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+  for (const [id, session] of sessionStore.entries()) {
+    if (new Date(session.created_at).getTime() < cutoff) sessionStore.delete(id);
+  }
+}, 30 * 60 * 1000);
+
+router.post("/session-create", ...toolMiddleware("session-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const ok = await deductCredits(req, res, "session-create", 5);
+    if (!ok) return;
+  }
+  const { namespace, system_prompt, model } = req.body as { namespace?: string; system_prompt?: string; model?: string };
+  if (!namespace || typeof namespace !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
+    return;
+  }
+
+  const AI_MODE_PRESETS: Record<string, string> = {
+    fast: "claude-haiku-4-5-20251001",
+    smart: "claude-sonnet-4-6",
+    deep: "claude-opus-4-6",
+  };
+  const resolvedModel = model ?? "claude-sonnet-4-6";
+  const ALLOWED = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"];
+  if (!ALLOWED.includes(resolvedModel)) {
+    res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: ${ALLOWED.join(", ")}`, request_id: reqId() });
+    return;
+  }
+
+  const session_id = `sess_${crypto.randomUUID().replace(/-/g, "")}`;
+  const created_at = new Date().toISOString();
+
+  const session: SessionData = {
+    session_id,
+    namespace: namespace.slice(0, 100),
+    system_prompt: system_prompt ? String(system_prompt).slice(0, 4000) : null,
+    model: resolvedModel,
+    messages: [],
+    created_at,
+  };
+
+  sessionStore.set(session_id, session);
+
+  res.json({
+    ok: true,
+    session_id,
+    namespace: session.namespace,
+    model: resolvedModel,
+    created_at,
+    credits_used: 5,
+    request_id: reqId(),
+  });
+});
+
+// ─── SESSION-MESSAGE ──────────────────────────────────────────────────────────
+// Sends a message in an existing session, maintaining conversation history.
+
+router.post("/session-message", ...toolMiddleware("session-message"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const ok = await deductCredits(req, res, "session-message", 20);
+    if (!ok) return;
+  }
+  const { session_id, message } = req.body as { session_id?: string; message?: string };
+
+  if (!session_id || typeof session_id !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "session_id is required", request_id: reqId() });
+    return;
+  }
+  if (!message || typeof message !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "message is required", request_id: reqId() });
+    return;
+  }
+  if (message.length > 10000) {
+    res.status(400).json({ ok: false, error: "message_too_long", message: "message must be 10000 chars or less", request_id: reqId() });
+    return;
+  }
+
+  const session = sessionStore.get(session_id);
+  if (!session) {
+    res.status(404).json({ ok: false, error: "session_not_found", message: `Session '${session_id}' not found or expired`, request_id: reqId() });
+    return;
+  }
+
+  // Add user message to history
+  session.messages.push({ role: "user", content: message });
+
+  // Keep conversation history bounded (last 50 messages)
+  if (session.messages.length > 50) {
+    session.messages = session.messages.slice(-50);
+  }
+
+  const model = session.model;
+  const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
+  const GPT_MODELS = ["gpt-4o", "gpt-4o-mini"];
+
+  try {
+    let responseText = "";
+
+    if (CLAUDE_MODELS.includes(model)) {
+      if (!anthropic) {
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
+        return;
+      }
+      const msg = await anthropic.messages.create({
+        model,
+        max_tokens: 2048,
+        ...(session.system_prompt ? { system: session.system_prompt } : {}),
+        messages: session.messages.map((m) => ({ role: m.role, content: m.content })),
+      });
+      responseText = msg.content.find((b) => b.type === "text")?.text ?? "";
+    } else if (GPT_MODELS.includes(model)) {
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (!openaiKey) {
+        res.status(503).json({ ok: false, error: "service_unavailable", message: "OpenAI API key not configured", request_id: reqId() });
+        return;
+      }
+      const messages: Array<{ role: string; content: string }> = [];
+      if (session.system_prompt) messages.push({ role: "system", content: session.system_prompt });
+      messages.push(...session.messages.map((m) => ({ role: m.role, content: m.content })));
+
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        body: JSON.stringify({ model, max_tokens: 2048, messages }),
+      });
+      const data = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      responseText = data.choices?.[0]?.message?.content ?? "";
+    }
+
+    // Add assistant response to history
+    session.messages.push({ role: "assistant", content: responseText });
+
+    res.json({
+      ok: true,
+      response: responseText,
+      session_id,
+      message_count: session.messages.length,
+      model_used: model,
+      credits_used: 20,
+      request_id: reqId(),
+    });
+  } catch (e) {
+    // Remove the user message we just added since the call failed
+    session.messages.pop();
+    res.status(500).json({ ok: false, error: "session_message_failed", message: safeErr(e), request_id: reqId() });
+  }
+});
+
+// ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
+router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "video-generate", 50); if (!ok) return; }
+  const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body as { prompt?: string; duration?: number; aspect_ratio?: string };
+  if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  const validDurations = [5, 10];
+  if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
+  const runwayKey = process.env.RUNWAY_API_KEY;
+  if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
+  try {
+    // Start video generation task
+    const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+      body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: aspect_ratio, watermark: false }),
+    });
+    if (!startResp.ok) {
+      const err = await startResp.text();
+      console.error("[video-generate] Runway start error:", startResp.status, err);
+      res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${startResp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+    }
+    const startData = await startResp.json() as { id?: string };
+    const taskId = startData.id;
+    if (!taskId) { res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
+
+    // Poll for completion (max 120s)
+    let videoUrl: string | null = null;
+    for (let i = 0; i < 24; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const pollResp = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+        headers: { "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+      });
+      if (!pollResp.ok) continue;
+      const pollData = await pollResp.json() as { status?: string; output?: string[]; failure?: string; failureCode?: string };
+      if (pollData.status === "SUCCEEDED" && pollData.output?.length) {
+        videoUrl = pollData.output[0];
+        break;
+      }
+      if (pollData.status === "FAILED") {
+        res.status(502).json({ ok: false, error: "generation_failed", message: pollData.failure ?? pollData.failureCode ?? "Video generation failed", request_id: reqId() }); return;
+      }
+    }
+    if (!videoUrl) { res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() }); return; }
+    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio, task_id: taskId, credits_used: 50, request_id: reqId() });
+  } catch (e) { console.error("[video-generate]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── 55. IMAGE-REMOVE-BG (RemoveBG) ──────────────────────────────────────────
+router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", 10); if (!ok) return; }
+  const { image_url, size = "auto" } = req.body as { image_url?: string; size?: string };
+  if (!image_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url is required", request_id: reqId() }); return; }
+  const validSizes = ["auto", "preview", "hd"];
+  if (!validSizes.includes(size)) { res.status(400).json({ ok: false, error: "invalid_request", message: `size must be one of: ${validSizes.join(", ")}`, request_id: reqId() }); return; }
+  const removebgKey = process.env.REMOVEBG_API_KEY;
+  if (!removebgKey) { res.status(503).json({ ok: false, error: "not_configured", message: "REMOVEBG_API_KEY not configured", request_id: reqId() }); return; }
+  try {
+    const resp = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: { "X-Api-Key": removebgKey, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ image_url, size, format: "png", type: "auto" }),
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
+      res.status(502).json({ ok: false, error: "removebg_error", message: `RemoveBG returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+    }
+    const data = await resp.json() as { data?: { result_b64?: string; foreground_top?: number; foreground_left?: number; foreground_width?: number; foreground_height?: number } };
+    const imageBase64 = data.data?.result_b64 ?? "";
+    if (!imageBase64) { res.status(502).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() }); return; }
+    res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 10, request_id: reqId() });
+  } catch (e) { console.error("[image-remove-bg]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── 56. EMAIL-FIND (Hunter.io) ──────────────────────────────────────────────
+router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "email-find", 5); if (!ok) return; }
+  const { domain, first_name, last_name } = req.body as { domain?: string; first_name?: string; last_name?: string };
+  if (!domain) { res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() }); return; }
+  const hunterKey = process.env.HUNTER_API_KEY;
+  if (!hunterKey) { res.status(503).json({ ok: false, error: "not_configured", message: "HUNTER_API_KEY not configured", request_id: reqId() }); return; }
+  try {
+    const params = new URLSearchParams({ domain, api_key: hunterKey });
+    if (first_name) params.set("first_name", first_name);
+    if (last_name) params.set("last_name", last_name);
+    const resp = await fetch(`https://api.hunter.io/v2/email-finder?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("[email-find] Hunter error:", resp.status, err);
+      res.status(502).json({ ok: false, error: "hunter_error", message: `Hunter.io returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+    }
+    const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
+    const result = data.data;
+    if (!result?.email) { res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() }); return; }
+    res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, credits_used: 5, request_id: reqId() });
+  } catch (e) { console.error("[email-find]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── 57. SEMANTIC-SEARCH (Exa) ───────────────────────────────────────────────
+router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "semantic-search", 8); if (!ok) return; }
+  const { query, num_results = 5, type = "neural" } = req.body as { query?: string; num_results?: number; type?: string };
+  if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  const validTypes = ["neural", "keyword"];
+  if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
+  const exaKey = process.env.EXA_API_KEY;
+  if (!exaKey) { res.status(503).json({ ok: false, error: "not_configured", message: "EXA_API_KEY not configured", request_id: reqId() }); return; }
+  try {
+    const n = Math.min(Math.max(1, num_results), 20);
+    const resp = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${exaKey}` },
+      body: JSON.stringify({ query, numResults: n, type, contents: { text: { maxCharacters: 1000 } } }),
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("[semantic-search] Exa error:", resp.status, err);
+      res.status(502).json({ ok: false, error: "exa_error", message: `Exa returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+    }
+    const data = await resp.json() as { results?: Array<{ title?: string; url?: string; text?: string; score?: number; publishedDate?: string; author?: string }> };
+    const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", text: (r.text ?? "").slice(0, 1000), score: r.score ?? 0, published_date: r.publishedDate ?? null, author: r.author ?? null }));
+    res.json({ ok: true, query, type, results, count: results.length, credits_used: 8, request_id: reqId() });
+  } catch (e) { console.error("[semantic-search]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── 58. SOCIAL-POST (X/Twitter) ─────────────────────────────────────────────
+router.post("/social-post", ...toolMiddleware("social-post"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "social-post", 5); if (!ok) return; }
+  const { text, reply_to } = req.body as { text?: string; reply_to?: string };
+  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  if (text.length > 280) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 280 characters or less", request_id: reqId() }); return; }
+  const apiKey = process.env.X_API_KEY;
+  const apiSecret = process.env.X_API_SECRET;
+  const accessToken = process.env.X_ACCESS_TOKEN;
+  const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
+  if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
+    res.status(503).json({ ok: false, error: "not_configured", message: "X/Twitter API credentials not configured", request_id: reqId() }); return;
+  }
+  try {
+    // OAuth 1.0a signature generation
+    const method = "POST";
+    const url = "https://api.twitter.com/2/tweets";
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = crypto.randomBytes(16).toString("hex");
+
+    const oauthParams: Record<string, string> = {
+      oauth_consumer_key: apiKey,
+      oauth_nonce: nonce,
+      oauth_signature_method: "HMAC-SHA1",
+      oauth_timestamp: timestamp,
+      oauth_token: accessToken,
+      oauth_version: "1.0",
+    };
+
+    // Create signature base string
+    const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
+    const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+    const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+    const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
+    const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
+
+    const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
+
+    const body: Record<string, unknown> = { text };
+    if (reply_to) body.reply = { in_reply_to_tweet_id: reply_to };
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": authHeader },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("[social-post] Twitter error:", resp.status, err);
+      res.status(502).json({ ok: false, error: "twitter_error", message: `Twitter API returned ${resp.status}: ${err.slice(0, 300)}`, request_id: reqId() }); return;
+    }
+    const data = await resp.json() as { data?: { id?: string; text?: string } };
+    const tweetId = data.data?.id ?? "";
+    res.json({ ok: true, tweet_id: tweetId, url: tweetId ? `https://x.com/i/web/status/${tweetId}` : "", text: data.data?.text ?? text, credits_used: 5, request_id: reqId() });
+  } catch (e) { console.error("[social-post]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── GET handler for x402scan compatibility ─────────────────────────────────
+// x402scan sends GET to each endpoint and expects 402 Payment Required.
+// Our tools are POST-only, so GET would 404. This catch-all returns 402 with
+// the same payment schema x402scan needs to register the resource.
+import { X402_PRICES } from "../../middleware/x402.js";
+
+// We need buildPaymentRequired but it's not exported — inline a minimal version
+// that calls x402Middleware which handles the 402 response
+router.get("/:toolName", (req: Request, res: Response): void => {
+  const toolName = req.params.toolName;
+    // @ts-ignore — Express params typing
+  const price = X402_PRICES[toolName];
+  if (!price) {
+    res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
+    return;
+  }
+  // Return 402 by passing through the x402 middleware
+  // x402Middleware checks for X-Payment header first; with no header on GET, it returns 402
+    // @ts-ignore — Express params typing
+  const middleware = x402Middleware(toolName);
+  // x402Middleware returns an array or function — call it as middleware
+  const handler = Array.isArray(middleware) ? middleware[0] : middleware;
+  if (typeof handler === 'function') {
+    handler(req, res, () => {
+      // If somehow it passes (shouldn't without auth), return 402 anyway
+      res.status(402).json({ error: "payment_required" });
+    });
+  } else {
+    res.status(402).json({ error: "payment_required" });
+  }
+});
+
+export default router;

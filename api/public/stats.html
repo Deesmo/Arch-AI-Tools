@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Platform Stats — Arch Tools</title>
+  <meta name="description" content="Live platform statistics for Arch Tools — the AI-native API toolkit with x402 payments.">
+  <link rel="icon" href="/arch-icon.svg?v=2">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#07061A;color:#f0f0f6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:60px 20px}
+    
+    .hero{text-align:center;max-width:800px;margin-bottom:48px}
+    .hero h1{font-size:2.8rem;font-weight:800;margin-bottom:12px}
+    .hero h1 span{color:#00e5b0}
+    .hero p{color:#8b8ba6;font-size:1.1rem;line-height:1.6}
+    
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:1000px;width:100%;margin-bottom:48px}
+    .stat-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:32px;text-align:center;transition:border-color .2s}
+    .stat-card:hover{border-color:rgba(0,229,176,.2)}
+    .stat-icon{font-size:2.4rem;margin-bottom:12px}
+    .stat-value{font-size:2.8rem;font-weight:800;color:#f0f0f6;margin-bottom:4px}
+    .stat-value.green{color:#00e5b0}
+    .stat-label{font-size:14px;color:#8b8ba6;text-transform:uppercase;letter-spacing:.5px}
+    
+    .chains-section{text-align:center;max-width:800px;margin-bottom:48px}
+    .chains-section h2{font-size:1.4rem;color:#8b8ba6;margin-bottom:20px;font-weight:500}
+    .chain-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+    .chain-tag{background:#12121e;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 16px;font-size:13px;color:#f0f0f6;font-weight:500}
+    .chain-tag:first-child{border-color:rgba(0,229,176,.3);color:#00e5b0}
+    
+    .cta{text-align:center;margin-top:20px}
+    .cta-text{font-size:1.3rem;color:#8b8ba6;margin-bottom:20px}
+    .cta-text strong{color:#f0f0f6}
+    .cta a{display:inline-block;background:#00e5b0;color:#07061A;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;transition:background .2s}
+    .cta a:hover{background:#00c89d}
+    .cta .secondary{background:transparent;border:1px solid rgba(255,255,255,.12);color:#f0f0f6;margin-left:12px}
+    .cta .secondary:hover{border-color:#00e5b0;color:#00e5b0}
+    
+    .counter-anim{transition:all .3s ease-out}
+    .loading{opacity:.4}
+    
+    footer{margin-top:auto;padding:40px 20px;text-align:center;color:#6b6b86;font-size:13px}
+    footer a{color:#8b8ba6;text-decoration:none}
+    footer a:hover{color:#00e5b0}
+
+    @media(max-width:600px){
+      .hero h1{font-size:2rem}
+      .stat-value{font-size:2rem}
+      .stats-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+      .stat-card{padding:20px}
+      body{padding:40px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>⚡ <span>Arch Tools</span> Platform Stats</h1>
+  <p>The AI-native API toolkit powering agent workflows with x402 micropayments.<br>Real numbers. No fluff.</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon">📡</div>
+    <div class="stat-value loading" id="statCalls">—</div>
+    <div class="stat-label">API Calls Served</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🤖</div>
+    <div class="stat-value loading" id="statAgents">—</div>
+    <div class="stat-label">Agents Registered</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🧰</div>
+    <div class="stat-value green loading" id="statTools">—</div>
+    <div class="stat-label">Tools Available</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">💎</div>
+    <div class="stat-value green loading" id="statX402">—</div>
+    <div class="stat-label">x402 Payments</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">⛓️</div>
+    <div class="stat-value loading" id="statChains">—</div>
+    <div class="stat-label">Chains Supported</div>
+  </div>
+</div>
+
+<div class="chains-section">
+  <h2>Supported Payment Chains</h2>
+  <div class="chain-grid" id="chainGrid">
+    <span class="chain-tag">Loading...</span>
+  </div>
+</div>
+
+<div class="cta">
+  <p class="cta-text">Join <strong id="ctaAgentCount">hundreds of</strong> AI agents using Arch Tools</p>
+  <a href="/docs/getting-started">Get Started →</a>
+  <a href="/docs" class="secondary">Read Docs</a>
+</div>
+
+<footer>
+  <p>Built by <a href="https://archtools.dev">Arch Tools</a> · Stats update every 5 minutes</p>
+</footer>
+
+<script>
+function fmt(n) {
+  if (n >= 1_000_000) return (n/1_000_000).toFixed(1) + 'M';
+  if (n >= 10_000) return (n/1_000).toFixed(0) + 'K+';
+  if (n >= 1_000) return (n/1_000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch('/api/v1/stats');
+    const data = await r.json();
+    if (!data.ok) return;
+    
+    const s = data.stats;
+    animateValue('statCalls', s.total_api_calls);
+    animateValue('statAgents', s.total_agents);
+    animateValue('statTools', s.total_tools);
+    animateValue('statX402', s.total_x402_payments);
+    animateValue('statChains', s.chains_supported);
+    
+    // Update CTA
+    document.getElementById('ctaAgentCount').textContent = fmt(s.total_agents);
+    
+    // Render chains
+    const chainGrid = document.getElementById('chainGrid');
+    chainGrid.innerHTML = (s.chain_names || []).map(c => 
+      `<span class="chain-tag">${c}</span>`
+    ).join('');
+    
+  } catch (e) {
+    console.error('Stats load error:', e);
+  }
+}
+
+function animateValue(id, target) {
+  const el = document.getElementById(id);
+  el.classList.remove('loading');
+  const start = 0;
+  const duration = 1200;
+  const startTime = performance.now();
+  
+  function update(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const current = Math.round(start + (target - start) * eased);
+    el.textContent = fmt(current);
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+loadStats();
+// Refresh every 5 minutes
+setInterval(loadStats, 300000);
+</script>
+</body>
+</html>

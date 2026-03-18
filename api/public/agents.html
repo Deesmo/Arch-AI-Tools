@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Identity — Arch Tools</title>
+  <meta name="description" content="Lightweight KYA (Know Your Agent) — Agent reputation, badges, and identity for AI agents using Arch Tools." />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888; --purple: #8844FF;
+    }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    h1, h2, h3, h4 { font-family: 'Syne', system-ui, sans-serif; }
+
+    /* NAV */
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px); background: rgba(7,6,26,0.9);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-links a.active { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+
+    /* MAIN */
+    .main { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    /* HERO */
+    .hero { text-align: center; margin-bottom: 56px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2);
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .hero h1 { font-size: 42px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px; }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 17px; color: var(--muted); max-width: 600px; margin: 0 auto; }
+
+    /* SECTION */
+    .section { margin-bottom: 48px; }
+    .section h2 {
+      font-size: 26px; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .section h3 { font-size: 18px; font-weight: 600; margin: 20px 0 8px; color: var(--accent); }
+    .section p { color: var(--muted); margin-bottom: 12px; }
+
+    /* CODE */
+    pre {
+      background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 20px; overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      line-height: 1.6; margin-bottom: 16px;
+    }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .inline-code {
+      background: rgba(255,255,255,0.08); padding: 2px 6px;
+      border-radius: 4px; font-size: 12px;
+    }
+
+    /* BADGE CARDS */
+    .badge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 16px 0; }
+    .badge-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; text-align: center;
+      transition: border-color 0.2s;
+    }
+    .badge-card:hover { border-color: rgba(255,255,255,0.2); }
+    .badge-emoji { font-size: 36px; margin-bottom: 8px; }
+    .badge-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+    .badge-req { font-size: 13px; color: var(--muted); }
+
+    /* SCORE METER */
+    .score-bar { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+    .score-track {
+      flex: 1; height: 8px; background: rgba(255,255,255,0.06);
+      border-radius: 4px; overflow: hidden;
+    }
+    .score-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, #FF1888, #FFB030, #34d399);
+    }
+    .score-label { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); min-width: 32px; }
+
+    /* TABLE */
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 16px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { color: var(--accent); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { color: var(--muted); }
+
+    /* ENDPOINT CARD */
+    .endpoint {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 24px; margin: 16px 0;
+    }
+    .endpoint-method {
+      display: inline-block; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
+      margin-right: 8px;
+    }
+    .method-get { background: rgba(52,211,153,0.15); color: var(--green); }
+    .method-post { background: rgba(255,176,48,0.15); color: var(--orange); }
+    .method-put { background: rgba(136,68,255,0.15); color: var(--purple); }
+    .endpoint-path { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .endpoint-desc { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+    /* FOOTER */
+    .footer {
+      text-align: center; padding: 32px 24px;
+      border-top: 1px solid var(--border); color: var(--muted); font-size: 13px;
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 28px; }
+      .badge-grid { grid-template-columns: repeat(2, 1fr); }
+      .at-nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="at-nav">
+  <a href="/" class="at-nav-logo">
+    <div class="at-logo-mark">
+      <img src="/arch-icon.svg" alt="Arch" width="20" height="20" />
+    </div>
+    <span class="at-logo-name">Arch Tools</span>
+  </a>
+  <div class="at-nav-links">
+    <a href="/docs">Docs</a>
+    <a href="/directory">Directory</a>
+    <a href="/agents" class="active">Agents</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/signup" class="at-nav-cta">Get API Key</a>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">🤖 Know Your Agent</div>
+    <h1>Agent <span>Identity</span></h1>
+    <p>Lightweight reputation and identity for AI agents. Build trust through usage, earn badges, and let others verify your agent's track record.</p>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="section">
+    <h2>How It Works</h2>
+    <p>Every agent on Arch Tools automatically builds a reputation profile. No complex identity verification needed — your agent's behavior speaks for itself.</p>
+
+    <h3>1. Register</h3>
+    <p>Create an agent with a name, description, and optional wallet address. You get an API key and a public profile URL immediately.</p>
+
+    <h3>2. Use Tools</h3>
+    <p>Every API call is tracked: successes, errors, tools used, and payments made. This data feeds your reputation score.</p>
+
+    <h3>3. Build Reputation</h3>
+    <p>Your score (0-100) updates automatically based on payment history, usage volume, and error rate. Reliable agents score higher.</p>
+
+    <h3>4. Earn Badges</h3>
+    <p>Hit usage milestones to unlock badges that show on your public profile.</p>
+  </div>
+
+  <!-- BADGES -->
+  <div class="section">
+    <h2>Badge Tiers</h2>
+    <div class="badge-grid">
+      <div class="badge-card">
+        <div class="badge-emoji">🥉</div>
+        <div class="badge-name">Bronze</div>
+        <div class="badge-req">10+ API calls</div>
+      </div>
+      <div class="badge-card">
+        <div class="badge-emoji">🥈</div>
+        <div class="badge-name">Silver</div>
+        <div class="badge-req">100+ API calls</div>
+      </div>
+      <div class="badge-card">
+        <div class="badge-emoji">🥇</div>
+        <div class="badge-name">Gold</div>
+        <div class="badge-req">1,000+ API calls</div>
+      </div>
+      <div class="badge-card">
+        <div class="badge-emoji">💎</div>
+        <div class="badge-name">Diamond</div>
+        <div class="badge-req">10,000+ API calls</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPUTATION SCORE -->
+  <div class="section">
+    <h2>Reputation Score</h2>
+    <p>Your reputation score is calculated from three factors:</p>
+
+    <table>
+      <tr><th>Factor</th><th>Weight</th><th>Description</th></tr>
+      <tr><td>Payment History</td><td>40%</td><td>Agents that pay reliably score higher. Logarithmic scale — even small spending helps.</td></tr>
+      <tr><td>Usage Volume</td><td>30%</td><td>Active agents are more trustworthy. Based on total API calls.</td></tr>
+      <tr><td>Error Rate</td><td>30%</td><td>Low error rates signal a well-behaved agent. 50%+ error rate = 0 for this factor.</td></tr>
+    </table>
+
+    <p>New agents start at 50 (neutral). There's also a small longevity bonus for older accounts.</p>
+
+    <div class="score-bar">
+      <span class="score-label">0</span>
+      <div class="score-track"><div class="score-fill" style="width: 72%;"></div></div>
+      <span class="score-label">100</span>
+    </div>
+    <p style="text-align: center; font-size: 13px; color: var(--muted);">Example: Agent with 500 calls, $12 spent, 3% error rate → Score: 72</p>
+  </div>
+
+  <!-- API ENDPOINTS -->
+  <div class="section">
+    <h2>API Endpoints</h2>
+
+    <div class="endpoint">
+      <span class="endpoint-method method-post">POST</span>
+      <span class="endpoint-path">/api/v1/agents/register</span>
+      <div class="endpoint-desc">Register a new agent with identity metadata. Returns API key and profile URL.</div>
+    </div>
+
+    <h3>Request Body</h3>
+<pre>{
+  "email": "agent@example.com",       // required
+  "name": "My AI Agent",              // optional
+  "description": "Summarizes docs",   // optional
+  "wallet_address": "0x...",           // optional, Ethereum address
+  "callback_url": "https://...",       // optional, webhook URL
+  "is_public": true                    // optional, default true
+}</pre>
+
+    <h3>Response</h3>
+<pre>{
+  "ok": true,
+  "agent_id": "clx...",
+  "api_key": "arch_...",
+  "credits": 100,
+  "reputation_score": 50,
+  "badge": "none",
+  "profile_url": "https://archtools.dev/api/v1/agents/clx...",
+  "docs": "https://archtools.dev/agents"
+}</pre>
+
+    <div class="endpoint">
+      <span class="endpoint-method method-get">GET</span>
+      <span class="endpoint-path">/api/v1/agents/:agentId</span>
+      <div class="endpoint-desc">Public agent profile — reputation score, badges, top tools, usage stats.</div>
+    </div>
+
+    <h3>Response</h3>
+<pre>{
+  "ok": true,
+  "agent": {
+    "agent_id": "clx...",
+    "name": "My AI Agent",
+    "description": "Summarizes docs",
+    "reputation_score": 72,
+    "badge": "silver",
+    "badge_emoji": "🥈",
+    "total_calls": 500,
+    "success_rate": 97.0,
+    "error_rate": 3.0,
+    "total_spent_usdc": 12.5,
+    "tier": "starter",
+    "member_since": "2026-01-15T...",
+    "last_seen": "2026-03-17T..."
+  },
+  "top_tools": [
+    { "tool": "summarize", "calls": 200 },
+    { "tool": "sentiment", "calls": 150 }
+  ]
+}</pre>
+
+    <div class="endpoint">
+      <span class="endpoint-method method-get">GET</span>
+      <span class="endpoint-path">/api/v1/agents/leaderboard</span>
+      <div class="endpoint-desc">Top agents ranked by reputation, usage, or spend. Public.</div>
+    </div>
+
+    <h3>Query Params</h3>
+    <table>
+      <tr><th>Param</th><th>Default</th><th>Options</th></tr>
+      <tr><td><code class="inline-code">sort</code></td><td>reputation</td><td>reputation, usage, spend</td></tr>
+      <tr><td><code class="inline-code">limit</code></td><td>25</td><td>1-100</td></tr>
+    </table>
+
+    <div class="endpoint">
+      <span class="endpoint-method method-put">PUT</span>
+      <span class="endpoint-path">/api/v1/agents/profile</span>
+      <div class="endpoint-desc">Update your agent's profile. Requires API key auth.</div>
+    </div>
+
+    <h3>Headers</h3>
+<pre>Authorization: Bearer arch_your_api_key</pre>
+
+    <h3>Request Body</h3>
+<pre>{
+  "name": "Updated Name",
+  "description": "New description",
+  "wallet_address": "0x...",
+  "callback_url": "https://...",
+  "is_public": true
+}</pre>
+  </div>
+
+  <!-- QUICK START -->
+  <div class="section">
+    <h2>Quick Start</h2>
+
+    <h3>Register Your Agent</h3>
+<pre>curl -X POST https://archtools.dev/api/v1/agents/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "agent@myapp.com",
+    "name": "My Assistant",
+    "description": "Helps users summarize documents"
+  }'</pre>
+
+    <h3>Check Any Agent's Reputation</h3>
+<pre>curl https://archtools.dev/api/v1/agents/AGENT_ID</pre>
+
+    <h3>View the Leaderboard</h3>
+<pre>curl https://archtools.dev/api/v1/agents/leaderboard?sort=reputation&limit=10</pre>
+
+    <h3>Update Your Profile</h3>
+<pre>curl -X PUT https://archtools.dev/api/v1/agents/profile \
+  -H "Authorization: Bearer arch_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "description": "Updated description" }'</pre>
+  </div>
+
+  <!-- WHY -->
+  <div class="section">
+    <h2>Why Agent Identity?</h2>
+    <p>In the agentic economy, trust matters. When agents transact autonomously, you need a way to verify track records without heavy KYC processes.</p>
+    <p>Arch Tools' KYA (Know Your Agent) is deliberately lightweight:</p>
+    <table>
+      <tr><th>Feature</th><th>KYA (Arch)</th><th>Traditional KYC</th></tr>
+      <tr><td>Registration</td><td>Instant, API-only</td><td>Days, manual review</td></tr>
+      <tr><td>Trust Signal</td><td>Behavioral (usage data)</td><td>Document-based</td></tr>
+      <tr><td>Privacy</td><td>Minimal PII (email only)</td><td>Full identity docs</td></tr>
+      <tr><td>Cost</td><td>Free</td><td>$5-50/verification</td></tr>
+      <tr><td>Agent-Native</td><td>✅ Built for AI agents</td><td>❌ Built for humans</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Arch Tools — 61 tools, one API key. <a href="/docs">Full Docs</a> · <a href="/directory">Directory</a> · <a href="https://github.com/Deesmo/Arch-AI-Tools">GitHub</a></p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Framework Integrations — Arch Tools</title>
+  <meta name="description" content="Use Arch Tools with LangChain, CrewAI, AutoGen, and more. Ready-to-use Python and TypeScript integrations for 58+ AI tools with x402 payments." />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="canonical" href="https://archtools.dev/integrations" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888; --purple: #8844FF;
+    }
+    body { font-family: Syne, system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* NAV */
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px); background: rgba(7,6,26,0.9);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-links a.active { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+
+    /* LAYOUT */
+    .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+    .sidebar {
+      width: 240px; flex-shrink: 0; padding: 32px 0 32px 24px;
+      position: sticky; top: 60px; height: calc(100vh - 60px);
+      overflow-y: auto; border-right: 1px solid var(--border);
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; } .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .sidebar-section { margin-bottom: 24px; }
+    .sidebar-heading { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding-left: 4px; }
+    .sidebar a { display: block; font-size: 12px; color: var(--muted); text-decoration: none; padding: 4px 4px 4px 8px; border-radius: 6px; border-left: 2px solid transparent; transition: all 0.12s; }
+    .sidebar a:hover { color: var(--text); background: var(--card); }
+    .sidebar a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(34,211,238,0.06); }
+
+    /* CONTENT */
+    .content { flex: 1; padding: 40px 48px 80px; min-width: 0; }
+    h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 8px; }
+    .subtitle { font-size: 16px; color: var(--muted); margin-bottom: 32px; }
+    h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; margin: 48px 0 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    h2:first-of-type { border-top: none; margin-top: 24px; }
+    h3 { font-size: 16px; font-weight: 700; margin: 28px 0 10px; color: var(--orange); }
+    p { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 12px; }
+    ul { font-size: 14px; color: rgba(255,255,255,0.7); margin: 0 0 16px 20px; }
+    li { margin-bottom: 4px; }
+
+    /* CODE */
+    pre { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; overflow-x: auto; margin: 12px 0 20px; position: relative; }
+    code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: rgba(255,255,255,0.85); }
+    .inline-code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+    .c-key { color: #79c0ff; } .c-str { color: #a5d6ff; } .c-num { color: #79c0ff; } .c-muted { color: rgba(255,255,255,0.4); }
+    .c-fn { color: #d2a8ff; } .c-kw { color: #ff7b72; } .c-cls { color: #ffa657; } .c-dec { color: #79c0ff; }
+
+    /* COPY BTN */
+    .copy-btn { position: absolute; top: 8px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.12s; z-index: 2; }
+    .copy-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+
+    /* BADGES */
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 6px; vertical-align: middle; }
+    .badge-py { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+    .badge-ts { background: rgba(34,211,238,0.15); color: #22d3ee; border: 1px solid rgba(34,211,238,0.3); }
+    .badge-new { background: rgba(255,40,150,0.15); color: #ff7eb3; border: 1px solid rgba(255,40,150,0.3); }
+
+    /* FRAMEWORK CARDS */
+    .fw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 20px 0 32px; }
+    .fw-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; transition: border-color 0.15s, transform 0.15s;
+      cursor: pointer; text-decoration: none; color: inherit;
+    }
+    .fw-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+    .fw-card h4 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .fw-card p { font-size: 13px; color: var(--muted); margin: 0; }
+    .fw-icon { font-size: 28px; margin-bottom: 10px; }
+
+    /* ALERT */
+    .alert { padding: 12px 16px; border-radius: 10px; border: 1px solid; margin-bottom: 16px; font-size: 13px; }
+    .alert-info { background: rgba(34,211,238,0.07); border-color: rgba(34,211,238,0.25); color: rgba(255,255,255,0.7); }
+
+    /* TAB SWITCHER */
+    .tab-bar { display: flex; gap: 2px; margin-bottom: 0; background: rgba(0,0,0,0.3); border-radius: 10px 10px 0 0; padding: 4px 4px 0; border: 1px solid var(--border); border-bottom: none; }
+    .tab-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.15s; font-family: inherit; }
+    .tab-btn.active { background: rgba(0,0,0,0.4); color: var(--text); }
+    .tab-btn:hover:not(.active) { color: rgba(255,255,255,0.7); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-content pre { border-radius: 0 0 12px 12px; margin-top: 0; border-top: none; }
+
+    @media (max-width: 768px) { .sidebar { display: none; } .content { padding: 24px 20px; } .fw-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<nav class="at-nav">
+  <a class="at-nav-logo" href="/">
+    <div class="at-logo-mark">
+      <svg viewBox="0 10 100 90" overflow="visible" width="20" height="20"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF9010"/><stop offset="60%" stop-color="#FF2896"/><stop offset="100%" stop-color="#8844FF"/></linearGradient><filter id="an"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path fill="url(#ag)" filter="url(#an)" d="M15,100L15,55A35,35,0,0,1,85,55L85,100L74,100L74,55A24,24,0,0,0,26,55L26,100Z M34,100L34,55A16,16,0,0,1,66,55L66,100L58,100L58,55A8,8,0,0,0,42,55L42,100Z"/></svg>
+    </div>
+    <span class="at-logo-name">Arch Tools</span>
+  </a>
+  <div class="at-nav-links">
+    <a href="/">Home</a>
+    <a href="/docs">Docs</a>
+    <a href="/integrations" class="active">Integrations</a>
+    <a href="/changelog">Changelog</a>
+    <a href="/signup" class="at-nav-cta">Get API Key</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Overview</div>
+      <a href="#overview" class="active">Introduction</a>
+      <a href="#install">Installation</a>
+      <a href="#quickstart">Quick Start</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Python SDK</div>
+      <a href="#python-sdk">Python Client</a>
+      <a href="#python-async">Async Client</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Frameworks</div>
+      <a href="#langchain">LangChain</a>
+      <a href="#crewai">CrewAI</a>
+      <a href="#autogen">AutoGen</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">TypeScript</div>
+      <a href="#typescript">TypeScript Client</a>
+      <a href="#ts-node">Node.js / Bun</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Advanced</div>
+      <a href="#x402">x402 Payments</a>
+      <a href="#error-handling">Error Handling</a>
+      <a href="#all-tools">All 61 Tools</a>
+    </div>
+  </nav>
+
+  <div class="content">
+    <h1>Framework Integrations</h1>
+    <p class="subtitle">Use Arch Tools with LangChain, CrewAI, AutoGen, and any Python or TypeScript project. One API key, 61 tools, ready in 30 seconds.</p>
+
+    <div class="fw-grid">
+      <a class="fw-card" href="#python-sdk">
+        <div class="fw-icon">🐍</div>
+        <h4>Python SDK <span class="badge badge-py">Python</span></h4>
+        <p>Sync + async client with retry logic, rate limit handling, and typed convenience methods for all 61 tools.</p>
+      </a>
+      <a class="fw-card" href="#langchain">
+        <div class="fw-icon">🦜</div>
+        <h4>LangChain <span class="badge badge-py">Python</span></h4>
+        <p>Ready-to-use BaseTool wrappers and a full Toolkit. Drop into any LangChain agent in one line.</p>
+      </a>
+      <a class="fw-card" href="#crewai">
+        <div class="fw-icon">🚀</div>
+        <h4>CrewAI <span class="badge badge-py">Python</span></h4>
+        <p>CrewAI tool wrappers with Pydantic schemas. Give your crew access to web scraping, AI, crypto, and more.</p>
+      </a>
+      <a class="fw-card" href="#autogen">
+        <div class="fw-icon">🤖</div>
+        <h4>AutoGen <span class="badge badge-py">Python</span></h4>
+        <p>Register Arch Tools with AutoGen agents for function calling. Works with AG2 and older autogen.</p>
+      </a>
+      <a class="fw-card" href="#typescript">
+        <div class="fw-icon">📦</div>
+        <h4>TypeScript <span class="badge badge-ts">TS</span></h4>
+        <p>Zero-dependency TypeScript client. Works in Node.js, Deno, Bun, and browsers.</p>
+      </a>
+    </div>
+
+    <!-- ─── INSTALL ─────────────────────────────────────────────────── -->
+
+    <h2 id="install">Installation</h2>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="install-pip">pip</button>
+      <button class="tab-btn" data-tab="install-npm">npm</button>
+      <button class="tab-btn" data-tab="install-copy">Copy files</button>
+    </div>
+    <div class="tab-content active" id="install-pip">
+      <pre><code><span class="c-muted"># Install the Python SDK + framework deps</span>
+pip install httpx
+
+<span class="c-muted"># For LangChain integration</span>
+pip install httpx langchain-core
+
+<span class="c-muted"># For CrewAI integration</span>
+pip install httpx crewai crewai-tools
+
+<span class="c-muted"># For AutoGen integration</span>
+pip install httpx pyautogen</code></pre>
+    </div>
+    <div class="tab-content" id="install-npm">
+      <pre><code><span class="c-muted"># TypeScript / Node.js client</span>
+npm install @archtools/sdk
+
+<span class="c-muted"># Or just copy arch-tools-client.ts into your project</span></code></pre>
+    </div>
+    <div class="tab-content" id="install-copy">
+      <pre><code><span class="c-muted"># Download integration files directly</span>
+curl -O https://archtools.dev/integrations/arch_tools.py
+curl -O https://archtools.dev/integrations/langchain.py
+curl -O https://archtools.dev/integrations/crewai.py
+curl -O https://archtools.dev/integrations/autogen.py
+curl -O https://archtools.dev/integrations/arch-tools-client.ts</code></pre>
+    </div>
+
+    <!-- ─── PYTHON SDK ──────────────────────────────────────────────── -->
+
+    <h2 id="python-sdk">Python SDK</h2>
+    <p>The Python SDK is a single-file client with zero required dependencies (uses stdlib <code class="inline-code">urllib</code>). Install <code class="inline-code">httpx</code> for connection pooling and async support.</p>
+
+    <h3>Basic Usage</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> arch_tools <span class="c-kw">import</span> ArchToolsClient
+
+<span class="c-muted"># Initialize with API key (or set ARCHTOOLS_API_KEY env var)</span>
+client = ArchToolsClient(api_key=<span class="c-str">"arch_..."</span>)
+
+<span class="c-muted"># Call any tool by name</span>
+result = client.call_tool(<span class="c-str">"summarize"</span>,
+    text=<span class="c-str">"Your long article text here..."</span>,
+    style=<span class="c-str">"bullets"</span>
+)
+<span class="c-fn">print</span>(result)
+
+<span class="c-muted"># Use convenience methods</span>
+result = client.web_scrape(url=<span class="c-str">"https://example.com"</span>)
+result = client.ai_generate(prompt=<span class="c-str">"Explain x402 protocol"</span>)
+result = client.sentiment(text=<span class="c-str">"This product is amazing!"</span>)
+result = client.search_web(query=<span class="c-str">"latest AI news"</span>)
+result = client.image_generate(prompt=<span class="c-str">"A futuristic city at sunset"</span>)
+result = client.screenshot(url=<span class="c-str">"https://archtools.dev"</span>)</code></pre>
+
+    <h3 id="python-async">Async Client</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">import</span> asyncio
+<span class="c-kw">from</span> arch_tools <span class="c-kw">import</span> ArchToolsAsyncClient
+
+<span class="c-kw">async def</span> <span class="c-fn">main</span>():
+    <span class="c-kw">async with</span> ArchToolsAsyncClient(api_key=<span class="c-str">"arch_..."</span>) <span class="c-kw">as</span> client:
+        <span class="c-muted"># All methods are async</span>
+        result = <span class="c-kw">await</span> client.call_tool(<span class="c-str">"ai-generate"</span>,
+            prompt=<span class="c-str">"Explain quantum computing"</span>,
+            model=<span class="c-str">"claude"</span>
+        )
+        <span class="c-fn">print</span>(result)
+
+        <span class="c-muted"># Run multiple tools concurrently</span>
+        results = <span class="c-kw">await</span> asyncio.gather(
+            client.summarize(text=<span class="c-str">"Article 1..."</span>),
+            client.summarize(text=<span class="c-str">"Article 2..."</span>),
+            client.search_web(query=<span class="c-str">"x402 protocol"</span>),
+        )
+
+asyncio.run(main())</code></pre>
+
+    <!-- ─── LANGCHAIN ───────────────────────────────────────────────── -->
+
+    <h2 id="langchain">🦜 LangChain Integration</h2>
+    <p>Drop Arch Tools into any LangChain agent with pre-built <code class="inline-code">BaseTool</code> wrappers. Each tool has proper Pydantic schemas for structured input.</p>
+
+    <h3>Quick Start — Toolkit</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> langchain_openai <span class="c-kw">import</span> ChatOpenAI
+<span class="c-kw">from</span> langchain.agents <span class="c-kw">import</span> create_tool_calling_agent, AgentExecutor
+<span class="c-kw">from</span> langchain_core.prompts <span class="c-kw">import</span> ChatPromptTemplate
+
+<span class="c-muted"># Import the Arch Tools toolkit</span>
+<span class="c-kw">from</span> langchain <span class="c-kw">import</span> ArchToolsToolkit
+
+<span class="c-muted"># Create toolkit — gives you 11 curated tools</span>
+toolkit = ArchToolsToolkit(api_key=<span class="c-str">"arch_..."</span>)
+tools = toolkit.get_tools()
+
+<span class="c-muted"># Set up agent</span>
+llm = ChatOpenAI(model=<span class="c-str">"gpt-4o"</span>)
+prompt = ChatPromptTemplate.from_messages([
+    (<span class="c-str">"system"</span>, <span class="c-str">"You have access to Arch Tools for web, AI, crypto, and more."</span>),
+    (<span class="c-str">"human"</span>, <span class="c-str">"{input}"</span>),
+    (<span class="c-str">"placeholder"</span>, <span class="c-str">"{agent_scratchpad}"</span>),
+])
+
+agent = create_tool_calling_agent(llm, tools, prompt)
+executor = AgentExecutor(agent=agent, tools=tools, verbose=<span class="c-dec">True</span>)
+
+<span class="c-muted"># Run it</span>
+result = executor.invoke({
+    <span class="c-str">"input"</span>: <span class="c-str">"Scrape archtools.dev and summarize what the product does"</span>
+})</code></pre>
+
+    <h3>Individual Tools</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> langchain <span class="c-kw">import</span> (
+    ArchToolsWebScrape,
+    ArchToolsWebSearch,
+    ArchToolsSummarize,
+    ArchToolsAiGenerate,
+    ArchToolsSentiment,
+    ArchToolsScreenshot,
+    ArchToolsCryptoPrice,
+    ArchToolsImageGenerate,
+    ArchToolsResearch,
+    ArchToolsFactCheck,
+    ArchToolsGeneric,  <span class="c-muted"># calls any of 61 tools by name</span>
+)
+
+<span class="c-muted"># Each tool works standalone</span>
+scraper = ArchToolsWebScrape(api_key=<span class="c-str">"arch_..."</span>)
+result = scraper.invoke({<span class="c-str">"url"</span>: <span class="c-str">"https://example.com"</span>})
+
+<span class="c-muted"># Or use the generic tool for any of the 61 tools</span>
+generic = ArchToolsGeneric(api_key=<span class="c-str">"arch_..."</span>)
+result = generic.invoke({
+    <span class="c-str">"tool_name"</span>: <span class="c-str">"ocr-extract"</span>,
+    <span class="c-str">"params"</span>: <span class="c-str">'{"image_url": "https://example.com/receipt.png"}'</span>
+})</code></pre>
+
+    <div class="alert alert-info">
+      <strong>💡 Tip:</strong> The <code class="inline-code">ArchToolsGeneric</code> tool lets LangChain agents access all 61 tools dynamically — great for autonomous agents that need to pick the right tool.
+    </div>
+
+    <!-- ─── CREWAI ──────────────────────────────────────────────────── -->
+
+    <h2 id="crewai">🚀 CrewAI Integration</h2>
+    <p>Give your CrewAI agents access to web scraping, AI generation, crypto data, research, and more.</p>
+
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> crewai <span class="c-kw">import</span> Agent, Task, Crew
+<span class="c-kw">from</span> crewai <span class="c-kw">import</span> get_arch_tools
+
+<span class="c-muted"># Get all Arch Tools as CrewAI tools</span>
+tools = get_arch_tools(api_key=<span class="c-str">"arch_..."</span>)
+
+<span class="c-muted"># Create a researcher agent with Arch Tools</span>
+researcher = Agent(
+    role=<span class="c-str">"Senior Research Analyst"</span>,
+    goal=<span class="c-str">"Find and analyze information using Arch Tools"</span>,
+    backstory=<span class="c-str">"Expert researcher with access to 61 AI-powered tools"</span>,
+    tools=tools,
+    verbose=<span class="c-dec">True</span>,
+)
+
+<span class="c-muted"># Create a task</span>
+task = Task(
+    description=<span class="c-str">"Research the x402 protocol for HTTP-native payments. "</span>
+               <span class="c-str">"Scrape key sources and write a comprehensive summary."</span>,
+    expected_output=<span class="c-str">"A detailed report with key findings and sources"</span>,
+    agent=researcher,
+)
+
+<span class="c-muted"># Run the crew</span>
+crew = Crew(agents=[researcher], tasks=[task], verbose=<span class="c-dec">True</span>)
+result = crew.kickoff()
+<span class="c-fn">print</span>(result)</code></pre>
+
+    <h3>Available CrewAI Tools</h3>
+    <ul>
+      <li><strong>ArchWebScrapeTool</strong> — Scrape any web page</li>
+      <li><strong>ArchWebSearchTool</strong> — AI-powered web search</li>
+      <li><strong>ArchSummarizeTool</strong> — Summarize text</li>
+      <li><strong>ArchAiGenerateTool</strong> — Generate text with Claude/GPT-4/Grok/Gemini</li>
+      <li><strong>ArchSentimentTool</strong> — Sentiment analysis</li>
+      <li><strong>ArchScreenshotTool</strong> — Screenshot web pages</li>
+      <li><strong>ArchCryptoPriceTool</strong> — Crypto prices</li>
+      <li><strong>ArchResearchTool</strong> — Generate research reports</li>
+      <li><strong>ArchImageGenerateTool</strong> — Generate images with DALL-E</li>
+      <li><strong>ArchFactCheckTool</strong> — Verify claims with evidence</li>
+      <li><strong>ArchGenericTool</strong> — Call any of 61 tools by name</li>
+    </ul>
+
+    <!-- ─── AUTOGEN ─────────────────────────────────────────────────── -->
+
+    <h2 id="autogen">🤖 AutoGen Integration</h2>
+    <p>Register Arch Tools as callable functions with AutoGen (AG2) agents. One function call registers all tools.</p>
+
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">import</span> autogen
+<span class="c-kw">from</span> autogen <span class="c-kw">import</span> register_arch_tools
+
+config_list = [{<span class="c-str">"model"</span>: <span class="c-str">"gpt-4o"</span>, <span class="c-str">"api_key"</span>: <span class="c-str">"sk-..."</span>}]
+
+<span class="c-muted"># Create AutoGen agents</span>
+assistant = autogen.AssistantAgent(
+    <span class="c-str">"assistant"</span>,
+    llm_config={<span class="c-str">"config_list"</span>: config_list}
+)
+user = autogen.UserProxyAgent(
+    <span class="c-str">"user"</span>,
+    human_input_mode=<span class="c-str">"NEVER"</span>,
+    code_execution_config=<span class="c-dec">False</span>
+)
+
+<span class="c-muted"># Register ALL Arch Tools in one line</span>
+register_arch_tools(user, assistant, api_key=<span class="c-str">"arch_..."</span>)
+
+<span class="c-muted"># Start chatting — the assistant can now use any Arch Tool</span>
+user.initiate_chat(
+    assistant,
+    message=<span class="c-str">"Search the web for the latest x402 protocol news and summarize it"</span>
+)</code></pre>
+
+    <h3>Register Specific Tools Only</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-muted"># Only register specific tools</span>
+register_arch_tools(user, assistant,
+    api_key=<span class="c-str">"arch_..."</span>,
+    tools=[<span class="c-str">"arch_web_search"</span>, <span class="c-str">"arch_summarize"</span>, <span class="c-str">"arch_crypto_price"</span>]
+)</code></pre>
+
+    <!-- ─── TYPESCRIPT ──────────────────────────────────────────────── -->
+
+    <h2 id="typescript">📦 TypeScript Client</h2>
+    <p>Zero-dependency TypeScript client. Uses native <code class="inline-code">fetch</code> — works everywhere.</p>
+
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">import</span> { ArchTools } <span class="c-kw">from</span> <span class="c-str">'./arch-tools-client'</span>;
+
+<span class="c-kw">const</span> arch = <span class="c-kw">new</span> <span class="c-cls">ArchTools</span>({ apiKey: <span class="c-str">'arch_...'</span> });
+
+<span class="c-muted">// Call any tool</span>
+<span class="c-kw">const</span> result = <span class="c-kw">await</span> arch.callTool(<span class="c-str">'summarize'</span>, {
+  text: <span class="c-str">'Your article text...'</span>,
+  style: <span class="c-str">'bullets'</span>
+});
+
+<span class="c-muted">// Typed convenience methods</span>
+<span class="c-kw">const</span> summary = <span class="c-kw">await</span> arch.summarize({ text: <span class="c-str">'...'</span>, style: <span class="c-str">'tldr'</span> });
+<span class="c-kw">const</span> page = <span class="c-kw">await</span> arch.webScrape({ url: <span class="c-str">'https://example.com'</span> });
+<span class="c-kw">const</span> search = <span class="c-kw">await</span> arch.webSearch({ query: <span class="c-str">'AI agents'</span> });
+<span class="c-kw">const</span> btc = <span class="c-kw">await</span> arch.cryptoPrice({ symbol: <span class="c-str">'bitcoin'</span> });
+<span class="c-kw">const</span> img = <span class="c-kw">await</span> arch.imageGenerate({ prompt: <span class="c-str">'A cat in space'</span> });
+<span class="c-kw">const</span> report = <span class="c-kw">await</span> arch.research({ topic: <span class="c-str">'x402 payments'</span> });</code></pre>
+
+    <h3 id="ts-node">Node.js / Bun Example</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-muted">// Works in Node.js 18+, Bun, Deno</span>
+<span class="c-kw">import</span> { ArchTools } <span class="c-kw">from</span> <span class="c-str">'@archtools/sdk'</span>;
+
+<span class="c-kw">const</span> arch = <span class="c-kw">new</span> <span class="c-cls">ArchTools</span>({
+  apiKey: process.env.ARCHTOOLS_API_KEY,
+  timeoutMs: <span class="c-num">60000</span>,
+  maxRetries: <span class="c-num">3</span>,
+});
+
+<span class="c-muted">// List all available tools</span>
+<span class="c-kw">const</span> { tools } = <span class="c-kw">await</span> arch.listTools();
+console.log(<span class="c-str">`Available: ${tools.length} tools`</span>);
+
+<span class="c-muted">// Use any tool dynamically</span>
+<span class="c-kw">for</span> (<span class="c-kw">const</span> tool of [<span class="c-str">'crypto-price'</span>, <span class="c-str">'crypto-fear-greed'</span>]) {
+  <span class="c-kw">const</span> r = <span class="c-kw">await</span> arch.callTool(tool, { symbol: <span class="c-str">'bitcoin'</span> });
+  console.log(tool, r);
+}</code></pre>
+
+    <!-- ─── x402 ────────────────────────────────────────────────────── -->
+
+    <h2 id="x402">💰 x402 Payment Handling</h2>
+    <p>All integrations handle x402 payment errors gracefully. When a tool requires payment (no API key / insufficient credits), a <code class="inline-code">402 Payment Required</code> response is returned with payment details.</p>
+
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> arch_tools <span class="c-kw">import</span> ArchToolsClient, ArchToolsPaymentRequiredError
+
+client = ArchToolsClient()  <span class="c-muted"># no API key — will trigger x402</span>
+
+<span class="c-kw">try</span>:
+    result = client.call_tool(<span class="c-str">"summarize"</span>, text=<span class="c-str">"Hello"</span>)
+<span class="c-kw">except</span> ArchToolsPaymentRequiredError <span class="c-kw">as</span> e:
+    <span class="c-fn">print</span>(f<span class="c-str">"Payment needed! Details: {e.payment_details}"</span>)
+    <span class="c-muted"># payment_details contains:</span>
+    <span class="c-muted">#   scheme: "exact"</span>
+    <span class="c-muted">#   price: "$0.01"</span>
+    <span class="c-muted">#   network: "eip155:8453" (Base)</span>
+    <span class="c-muted">#   payTo: "0x..."</span></code></pre>
+
+    <!-- ─── ERROR HANDLING ──────────────────────────────────────────── -->
+
+    <h2 id="error-handling">Error Handling</h2>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> arch_tools <span class="c-kw">import</span> (
+    ArchToolsClient,
+    ArchToolsError,
+    ArchToolsRateLimitError,
+    ArchToolsAuthError,
+    ArchToolsPaymentRequiredError,
+)
+
+client = ArchToolsClient(api_key=<span class="c-str">"arch_..."</span>)
+
+<span class="c-kw">try</span>:
+    result = client.call_tool(<span class="c-str">"summarize"</span>, text=<span class="c-str">"Hello"</span>)
+<span class="c-kw">except</span> ArchToolsRateLimitError <span class="c-kw">as</span> e:
+    <span class="c-fn">print</span>(f<span class="c-str">"Rate limited. Retry after: {e.retry_after}s"</span>)
+<span class="c-kw">except</span> ArchToolsAuthError:
+    <span class="c-fn">print</span>(<span class="c-str">"Invalid API key"</span>)
+<span class="c-kw">except</span> ArchToolsPaymentRequiredError <span class="c-kw">as</span> e:
+    <span class="c-fn">print</span>(f<span class="c-str">"x402 payment required: {e.payment_details}"</span>)
+<span class="c-kw">except</span> ArchToolsError <span class="c-kw">as</span> e:
+    <span class="c-fn">print</span>(f<span class="c-str">"API error ({e.status_code}): {e}"</span>)</code></pre>
+
+    <!-- ─── ALL TOOLS ───────────────────────────────────────────────── -->
+
+    <h2 id="all-tools">All 61 Tools</h2>
+    <p>Every tool is accessible via <code class="inline-code">client.call_tool("tool-name", **params)</code>. Here's the full list:</p>
+
+    <div style="columns: 3; column-gap: 24px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin: 16px 0;">
+      <div style="break-inside: avoid; margin-bottom: 4px;">validate-data</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">generate-hash</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">qr-code</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">convert-format</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">transform-text</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">extract-metadata</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">web-scrape</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">extract-page</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">search-web</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">rss-parse</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">ip-lookup</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">whois-lookup</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">email-verify</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">phone-validate</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">currency-convert</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">timezone-convert</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">generate-uuid</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">diff-text</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">readability-score</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">language-detect</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">sentiment-analysis</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">summarize</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">extract-entities</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">regex-generate</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">pii-detect</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">web-search</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">ai-generate</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">ocr-extract</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">browser-task</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">extract-pdf</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">screenshot-capture</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">html-to-markdown</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">url-shorten</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">webhook-send</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">jsonpath-query</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">image-generate</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">barcode-generate</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">workflow-agent</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">crypto-price</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">crypto-ohlcv</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">crypto-market-cap</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">crypto-fear-greed</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">crypto-sentiment</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">crypto-news</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">token-lookup</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">ai-oracle</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">session-create</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">session-message</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">text-to-speech</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">transcribe-audio</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">email-send</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">design-create</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">domain-check</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">news-search</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">research-report</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">fact-check</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">video-generate</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">image-remove-bg</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">email-find</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">semantic-search</div>
+      <div style="break-inside: avoid; margin-bottom: 4px;">social-post</div>
+    </div>
+
+    <p style="margin-top: 24px; font-size: 13px; color: var(--muted);">
+      Full API documentation for each tool: <a href="/docs" style="color: var(--accent);">archtools.dev/docs</a>
+    </p>
+
+  </div>
+</div>
+
+<script>
+// Tab switcher
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.dataset.tab;
+    const parent = btn.closest('.content') || document;
+    // Find sibling tabs
+    const bar = btn.parentElement;
+    bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Find content after this bar
+    let el = bar.nextElementSibling;
+    while (el && el.classList.contains('tab-content')) {
+      el.classList.remove('active');
+      if (el.id === tabId) el.classList.add('active');
+      el = el.nextElementSibling;
+    }
+  });
+});
+
+// Copy button
+function copyCode(btn) {
+  const pre = btn.parentElement;
+  const code = pre.querySelector('code');
+  const text = code.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// Sidebar active state
+const links = document.querySelectorAll('.sidebar a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const id = e.target.id;
+      const link = document.querySelector(`.sidebar a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-100px 0px -70%' });
+
+document.querySelectorAll('h2[id], h3[id]').forEach(h => observer.observe(h));
+</script>
+
+</body>
+</html>

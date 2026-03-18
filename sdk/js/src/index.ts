@@ -84,6 +84,60 @@ async function http<T>(
   }
 }
 
+// ─── Tool method option types ────────────────────────────────────────────────
+
+export interface AiGenerateOptions {
+  prompt: string;
+  model?: string;
+  mode?: "fast" | "smart" | "deep";
+  system?: string;
+  max_tokens?: number;
+}
+
+export interface AiOracleOptions {
+  question: string;
+  context?: string;
+  reasoning_depth?: "standard" | "deep";
+}
+
+export interface WebScrapeOptions {
+  url: string;
+  format?: string;
+  selector?: string;
+}
+
+export interface SearchWebOptions {
+  query: string;
+  max_results?: number;
+}
+
+export interface SummarizeOptions {
+  text: string;
+  style?: "paragraph" | "bullets" | "tldr" | "headline" | "executive";
+  max_length?: number;
+}
+
+export interface VectorStoreOptions {
+  content: string;
+  namespace: string;
+  metadata?: Record<string, string>;
+}
+
+export interface VectorSearchOptions {
+  query: string;
+  namespace: string;
+  top_k?: number;
+}
+
+export interface ScreenshotOptions {
+  url: string;
+  full_page?: boolean;
+  width?: number;
+  height?: number;
+}
+
+// ─── Main SDK Class ──────────────────────────────────────────────────────────
+
 export class ArchTools {
   private apiKey: string;
   private baseUrl: string;
@@ -94,7 +148,6 @@ export class ArchTools {
   constructor(opts: ArchToolsOptions) {
     this.apiKey = opts.apiKey;
     const envBase =
-      // browser-safe global injection (optional)
       (typeof process !== "undefined" && (process as any)?.env?.ARCHTOOLS_BASE_URL) ||
       (typeof process !== "undefined" && (process as any)?.env?.ARCH_API_BASE_URL) ||
       undefined;
@@ -105,35 +158,109 @@ export class ArchTools {
     this.backoffMs = opts.backoffMs ?? 300;
   }
 
+  // ─── Internal helpers ────────────────────────────────────────────────────
+
+  private _httpOpts() {
+    return {
+      apiKey: this.apiKey,
+      timeoutMs: this.timeoutMs,
+      maxRetries: this.maxRetries,
+      backoffMs: this.backoffMs,
+    };
+  }
+
+  private _get<T>(path: string): Promise<T> {
+    return http<T>(`${this.baseUrl}${path}`, { method: "GET", ...this._httpOpts() });
+  }
+
+  private _post<T>(path: string, body: any): Promise<T> {
+    return http<T>(`${this.baseUrl}${path}`, { method: "POST", body, ...this._httpOpts() });
+  }
+
+  // ─── Generic tool call ───────────────────────────────────────────────────
+
+  /**
+   * Call any tool by name with arbitrary params.
+   * Useful for tools not yet covered by typed methods.
+   */
+  async callTool(toolName: string, params: Record<string, any> = {}): Promise<any> {
+    return this._post(`/v1/tools/${encodeURIComponent(toolName)}`, params);
+  }
+
+  // ─── AI tools ────────────────────────────────────────────────────────────
+
+  /** Generate text with AI. Supports mode presets (fast/smart/deep) or explicit model. */
+  async aiGenerate(opts: AiGenerateOptions): Promise<any> {
+    return this._post("/v1/tools/ai-generate", opts);
+  }
+
+  /** Deep reasoning with AI Oracle. Tries Opus → GPT-4o fallback. */
+  async aiOracle(opts: AiOracleOptions): Promise<any> {
+    return this._post("/v1/tools/ai-oracle", opts);
+  }
+
+  // ─── Web tools ───────────────────────────────────────────────────────────
+
+  /** Scrape a web page and extract text/HTML content. */
+  async webScrape(opts: WebScrapeOptions): Promise<any> {
+    return this._post("/v1/tools/web-scrape", opts);
+  }
+
+  /** Search the web with AI-synthesized answers. */
+  async searchWeb(opts: SearchWebOptions): Promise<any> {
+    return this._post("/v1/tools/search-web", {
+      query: opts.query,
+      num_results: opts.max_results,
+    });
+  }
+
+  /** Take a screenshot of a web page. */
+  async screenshot(opts: ScreenshotOptions): Promise<any> {
+    return this._post("/v1/tools/screenshot-capture", opts);
+  }
+
+  // ─── Text tools ──────────────────────────────────────────────────────────
+
+  /** Summarize text in various styles. */
+  async summarize(opts: SummarizeOptions): Promise<any> {
+    return this._post("/v1/tools/summarize", opts);
+  }
+
+  // ─── Vector tools ────────────────────────────────────────────────────────
+
+  /** Store content in a vector namespace for later retrieval. */
+  async vectorStore(opts: VectorStoreOptions): Promise<any> {
+    return this._post("/v1/tools/vector-store", opts);
+  }
+
+  /** Search a vector namespace by semantic similarity. */
+  async vectorSearch(opts: VectorSearchOptions): Promise<any> {
+    return this._post("/v1/tools/vector-search", opts);
+  }
+
+  // ─── Session / Conversation ──────────────────────────────────────────────
+
+  /** Create a conversation session. */
+  async sessionCreate(opts: { namespace: string; system_prompt?: string; model?: string }): Promise<any> {
+    return this._post("/v1/tools/session-create", opts);
+  }
+
+  /** Send a message in an existing session. */
+  async sessionMessage(opts: { session_id: string; message: string }): Promise<any> {
+    return this._post("/v1/tools/session-message", opts);
+  }
+
+  // ─── Utility namespaces (preserved from scaffold) ────────────────────────
+
   tools = {
     list: async () =>
-      http<{ ok: true; tools: any[] }>(`${this.baseUrl}/v1/tools`, {
-        method: "GET",
-        apiKey: this.apiKey,
-        timeoutMs: this.timeoutMs,
-        maxRetries: this.maxRetries,
-        backoffMs: this.backoffMs,
-      }),
+      this._get<{ ok: true; tools: any[] }>("/v1/tools"),
     invoke: async (toolName: string, input: any) =>
-      http<any>(`${this.baseUrl}/v1/tools/${encodeURIComponent(toolName)}`, {
-        method: "POST",
-        apiKey: this.apiKey,
-        body: input,
-        timeoutMs: this.timeoutMs,
-        maxRetries: this.maxRetries,
-        backoffMs: this.backoffMs,
-      }),
+      this._post<any>(`/v1/tools/${encodeURIComponent(toolName)}`, input),
   };
 
   agent = {
-    usage: async () =>
-      http<any>(`${this.baseUrl}/v1/agent/usage`, {
-        method: "GET",
-        apiKey: this.apiKey,
-        timeoutMs: this.timeoutMs,
-        maxRetries: this.maxRetries,
-        backoffMs: this.backoffMs,
-      }),
+    usage: async () => this._get<any>("/v1/agent/usage"),
     register: async (name?: string, email?: string) =>
       http<any>(`${this.baseUrl}/v1/agent/register`, {
         method: "POST",
@@ -146,13 +273,8 @@ export class ArchTools {
 
   billing = {
     checkout: async (priceId: string) =>
-      http<any>(`${this.baseUrl}/v1/checkout`, {
-        method: "POST",
-        apiKey: this.apiKey,
-        body: { price_id: priceId },
-        timeoutMs: this.timeoutMs,
-        maxRetries: this.maxRetries,
-        backoffMs: this.backoffMs,
-      }),
+      this._post<any>("/v1/checkout", { price_id: priceId }),
   };
 }
+
+export default ArchTools;
