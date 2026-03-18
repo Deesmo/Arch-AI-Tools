@@ -138,7 +138,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "eip155:1",
+            network: "ethereum",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -154,7 +154,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "eip155:42161",
+            network: "arbitrum",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -170,7 +170,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "eip155:137",
+            network: "polygon",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -186,7 +186,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "eip155:10",
+            network: "optimism",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -202,7 +202,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "eip155:43114",
+            network: "avalanche",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
@@ -385,7 +385,7 @@ function buildPaymentRequired(toolName, price) {
         // ETH on Ethereum mainnet
         accepts.push({
             scheme: "exact",
-            network: "eip155:1",
+            network: "ethereum",
             amount: ethWei,
             maxAmountRequired: ethWei,
             resource,
@@ -428,7 +428,7 @@ function buildPaymentRequired(toolName, price) {
             bnbWei = "32000000000000";
         accepts.push({
             scheme: "exact",
-            network: "eip155:56",
+            network: "bsc",
             amount: bnbWei,
             maxAmountRequired: bnbWei,
             resource,
@@ -573,7 +573,7 @@ function buildPaymentRequired(toolName, price) {
             uniAtomic = "2500000000000000";
         accepts.push({
             scheme: "exact",
-            network: "eip155:1",
+            network: "ethereum",
             amount: uniAtomic,
             maxAmountRequired: uniAtomic,
             resource,
