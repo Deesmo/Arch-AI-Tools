@@ -323,3 +323,22 @@ model DirectoryListing {
   @@index([tier])
   @@index([status])
 }
+
+// ─── Audit Log (GDPR/Compliance) ─────────────────────────────────────────────
+// Tracks all significant user actions for compliance and debugging
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  agentId     String?  @map("agent_id")     // null for anonymous actions
+  action      String                         // e.g. "signup", "login", "x402_payment", "api_call"
+  resource    String?                        // e.g. tool name, endpoint
+  ip          String?                        // Anonymized IP (last octet zeroed for GDPR)
+  userAgent   String?  @map("user_agent")
+  status      String   @default("success")  // success | failure
+  meta        Json?                          // Additional context (never store sensitive data)
+  createdAt   DateTime @default(now())
+
+  @@index([agentId])
+  @@index([action])
+  @@index([createdAt])
+}

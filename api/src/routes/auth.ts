@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
+import { logAudit } from "../lib/audit.js";
 import { logger } from "../lib/logger.js";
 import { sendPasswordResetEmail } from "../services/email.js";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
