@@ -775,11 +775,48 @@ async function verifyPayment(paymentHeader, toolName, paymentRequirements) {
             headers["X-CDP-API-Key-ID"] = process.env.CDP_API_KEY_ID;
             headers["X-CDP-API-Key-Secret"] = process.env.CDP_API_KEY_SECRET ?? "";
         }
-        console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName})`);
+        // CDP requires x402 v2 format; x402.org uses v1
+        const isCdp = facilitatorUrl.includes("cdp.coinbase.com");
+        if (isCdp) {
+            // Generate CDP JWT for mainnet facilitator
+            try {
+                const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+                const jwt = await generateJwt({
+                    apiKeyId: process.env.CDP_API_KEY_ID ?? "",
+                    apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
+                    requestMethod: "POST",
+                    requestHost: "api.cdp.coinbase.com",
+                    requestPath: "/platform/v2/x402/verify",
+                });
+                headers["Authorization"] = `Bearer ${jwt}`;
+                delete headers["X-CDP-API-Key-ID"];
+                delete headers["X-CDP-API-Key-Secret"];
+            }
+            catch (jwtErr) {
+                console.error("[x402] CDP JWT generation failed:", jwtErr?.message);
+            }
+        }
+        // Build v2 requirements for CDP (uses 'amount' not 'maxAmountRequired')
+        const finalPaymentReqs = isCdp ? {
+            scheme: paymentRequirements.scheme,
+            network: paymentRequirements.network,
+            asset: paymentRequirements.asset,
+            amount: paymentRequirements.maxAmountRequired ?? paymentRequirements.amount,
+            payTo: paymentRequirements.payTo,
+            maxTimeoutSeconds: paymentRequirements.maxTimeoutSeconds || 60,
+            extra: paymentRequirements.extra,
+        } : paymentRequirements;
+        // v2 payload wraps the EVM payload with 'accepted' field
+        const finalPayload = isCdp ? {
+            x402Version: 2,
+            payload: paymentPayload.payload,
+            accepted: finalPaymentReqs,
+        } : paymentPayload;
+        console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName}, format: ${isCdp ? "v2" : "v1"})`);
         const res = await axios.post(`${facilitatorUrl}/verify`, {
-            x402Version: 1,
-            paymentPayload,
-            paymentRequirements,
+            x402Version: isCdp ? 2 : 1,
+            paymentPayload: finalPayload,
+            paymentRequirements: finalPaymentReqs,
         }, {
             timeout: 8000,
             headers,
