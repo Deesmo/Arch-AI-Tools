@@ -130,6 +130,12 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
       tier: agent.tier,
       recent_activity: recentActivity,
       buy_credits: "https://archtools.dev/pricing",
+      purchase_history: await prisma.purchase.findMany({
+        where: { agentId: agent.id },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: { credits: true, amountCents: true, createdAt: true, label: true },
+      }).catch(() => []),
       request_id: reqId(),
     });
   } catch (e) {
