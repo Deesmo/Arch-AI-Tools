@@ -183,8 +183,8 @@ export default function HomePage() {
 
             <div className="flex flex-wrap gap-8 pt-4 border-t border-white/8">
               {[
-                { value: '38',     label: 'production tools'     },
-                { value: '500',    label: 'free credits on signup'},
+                { value: '116',    label: 'production tools'     },
+                { value: '100',    label: 'free credits on signup'},
                 { value: '$0.001', label: 'cheapest tool call'   },
                 { value: 'MCP',    label: 'universal protocol'   },
               ].map(({ value, label }) => (

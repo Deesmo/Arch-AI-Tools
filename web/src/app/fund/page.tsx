@@ -181,7 +181,7 @@ export default function FundPage() {
           </div>
           <p className="text-sm text-white/55 leading-relaxed mb-4">
             Not using x402? Sign up for a free account, get an API key, and use credit packs via Stripe.
-            500 free credits on signup. No crypto wallet needed.
+            100 free credits on signup. No crypto wallet needed.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/signin"

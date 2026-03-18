@@ -292,6 +292,7 @@ app.use("/api/chat", chatRouter);
 
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML));
+app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 app.get("/login", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (req: Request, res: Response) => {
   const token = req.cookies?.arch_session;
