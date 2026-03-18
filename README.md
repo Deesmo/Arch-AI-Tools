@@ -230,6 +230,16 @@ No installation required — works with any MCP-compatible client that supports 
 
 ---
 
+## Community
+
+- 💬 **[GitHub Discussions](https://github.com/Deesmo/Arch-AI-Tools/discussions)** — Ask questions, share ideas, show off what you've built
+- 📢 **[Announcements](https://github.com/Deesmo/Arch-AI-Tools/discussions/categories/announcements)** — Product updates and new tool releases
+- 🙋 **[Q&A](https://github.com/Deesmo/Arch-AI-Tools/discussions/categories/q-a)** — Get help with x402 payments, API keys, MCP setup
+- 💡 **[Ideas](https://github.com/Deesmo/Arch-AI-Tools/discussions/categories/ideas)** — Request new tools and features
+- 🎉 **[Show & Tell](https://github.com/Deesmo/Arch-AI-Tools/discussions/categories/show-and-tell)** — Share agents and projects built with Arch Tools
+
+---
+
 ## Architecture
 
 ```

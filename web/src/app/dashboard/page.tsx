@@ -126,6 +126,19 @@ export default function DashboardPage() {
       {data && (
         <div className="flex flex-col gap-6">
 
+          {/* Upgrade CTA when credits < 50 */}
+          {data.credits_remaining < 50 && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-amber-300">⚠️ Low credits — {data.credits_remaining} remaining</div>
+                <div className="text-xs text-white/50 mt-1">Top up now to keep your agents running without interruption.</div>
+              </div>
+              <Link href="/pricing" className="rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 px-6 py-2.5 text-sm font-bold text-white hover:opacity-90 transition-opacity whitespace-nowrap">
+                Upgrade Now →
+              </Link>
+            </div>
+          )}
+
           {/* Stat cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
@@ -218,6 +231,80 @@ export default function DashboardPage() {
                     )
                   })}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Cost breakdown + savings calculator */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Estimated monthly spend */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <div className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Estimated monthly projection</div>
+              {data.daily_usage.length > 0 ? (() => {
+                const avgDaily = data.daily_usage.slice(0, 7).reduce((s, d) => s + d.credits_used, 0) / Math.min(7, data.daily_usage.length)
+                const monthlyCredits = Math.round(avgDaily * 30)
+                const monthlyCost = (monthlyCredits * 0.005).toFixed(2)
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-white/60">Avg daily usage</span>
+                      <span className="text-lg font-bold text-white">{Math.round(avgDaily).toLocaleString()} credits</span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-white/60">Projected monthly</span>
+                      <span className="text-lg font-bold text-white">{monthlyCredits.toLocaleString()} credits</span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-white/60">Estimated cost</span>
+                      <span className="text-lg font-bold text-emerald-400">${monthlyCost}</span>
+                    </div>
+                    <div className="border-t border-white/8 pt-3">
+                      <div className="text-xs text-white/35">
+                        {monthlyCredits <= 1000 ? 'Starter ($9) covers your usage' :
+                         monthlyCredits <= 10000 ? 'Pro ($49) recommended for your usage' :
+                         'Business ($199) recommended for your usage'}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })() : (
+                <p className="text-sm text-white/35">Not enough data yet — check back after a few days of usage.</p>
+              )}
+            </div>
+
+            {/* Savings calculator */}
+            <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.03] p-5">
+              <div className="text-xs font-semibold text-emerald-400/60 uppercase tracking-widest mb-4">💰 You've saved vs separate API keys</div>
+              {data.tool_breakdown.length > 0 ? (() => {
+                const toolCategories = new Set(data.tool_breakdown.map(t => {
+                  if (t.tool.includes('ai-') || t.tool === 'summarize' || t.tool.includes('sentiment') || t.tool.includes('entity') || t.tool.includes('pii') || t.tool.includes('regex')) return 'ai'
+                  if (t.tool.includes('web') || t.tool.includes('scrape') || t.tool.includes('search') || t.tool.includes('extract')) return 'web'
+                  if (t.tool.includes('crypto')) return 'crypto'
+                  if (t.tool.includes('image') || t.tool.includes('design') || t.tool.includes('video') || t.tool.includes('tts') || t.tool.includes('speech') || t.tool.includes('ocr')) return 'media'
+                  if (t.tool.includes('email') || t.tool.includes('webhook') || t.tool.includes('social')) return 'comm'
+                  return 'utility'
+                }))
+                // Avg API key cost per category per month
+                const keyCosts: Record<string, number> = { ai: 20, web: 15, crypto: 10, media: 25, comm: 10, utility: 5 }
+                const savedAmount = Array.from(toolCategories).reduce((s, cat) => s + (keyCosts[cat] || 5), 0)
+                return (
+                  <div className="space-y-4">
+                    <div className="text-3xl font-bold text-emerald-400">~${savedAmount}/mo</div>
+                    <div className="text-sm text-white/50">
+                      You're using tools across <strong className="text-white/75">{toolCategories.size} categories</strong> that would typically require {toolCategories.size} separate API subscriptions.
+                    </div>
+                    <div className="text-xs text-white/35 space-y-1">
+                      {Array.from(toolCategories).map(cat => (
+                        <div key={cat} className="flex justify-between">
+                          <span className="capitalize">{cat === 'ai' ? 'AI/NLP' : cat === 'comm' ? 'Communication' : cat} APIs</span>
+                          <span className="text-emerald-400/60">~${keyCosts[cat] || 5}/mo saved</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })() : (
+                <p className="text-sm text-white/35">Start using tools to see your savings.</p>
               )}
             </div>
           </div>

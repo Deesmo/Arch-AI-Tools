@@ -1,0 +1,1492 @@
+{
+  "payload": {
+    "type": "hosted",
+    "stateful": false,
+    "hasAuthAdapter": false,
+    "serverCard": {
+      "serverInfo": {
+        "name": "arch-tools-mcp",
+        "version": "1.8.0"
+      },
+      "tools": [
+        {
+          "name": "ai-generate",
+          "description": "AI-powered text generation using Claude (requires ANTHROPIC_API_KEY)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "string",
+                "description": "The prompt to send to the AI model"
+              },
+              "model": {
+                "type": "string",
+                "description": "AI model to use (default: claude-haiku)"
+              },
+              "max_tokens": {
+                "type": "number",
+                "description": "Maximum tokens in response (default: 1000)"
+              },
+              "temperature": {
+                "type": "number",
+                "description": "Sampling temperature 0-1 (default: 0.7)"
+              }
+            },
+            "required": [
+              "prompt"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "barcode-generate",
+          "description": "Generate Code128 barcodes as SVG",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Text or data to encode in the barcode"
+              },
+              "format": {
+                "type": "string",
+                "description": "Barcode format: code128, qr, ean13, upc (default: code128)"
+              }
+            },
+            "required": [
+              "content"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "browser-task",
+          "description": "Headless browser automation (click/type/extract) via Playwright — SSRF hardened",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL to navigate to"
+              },
+              "task": {
+                "type": "string",
+                "description": "Description of the browser task to perform"
+              },
+              "extract": {
+                "type": "string",
+                "description": "CSS selector or description of data to extract"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "check-domain",
+          "description": "Check if a domain is available or registered via RDAP. No API key needed.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string",
+                "description": "Domain name to check availability (e.g. example.com)"
+              }
+            },
+            "required": [
+              "domain"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "convert-format",
+          "description": "Convert data between JSON, YAML, CSV, and XML formats",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "string",
+                "description": "Input data to convert"
+              },
+              "from": {
+                "type": "string",
+                "description": "Source format: json, yaml, csv, xml, toml"
+              },
+              "to": {
+                "type": "string",
+                "description": "Target format: json, yaml, csv, xml, toml"
+              }
+            },
+            "required": [
+              "data",
+              "from",
+              "to"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "crypto-fear-greed",
+          "description": "Crypto Fear & Greed Index with historical data",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "days": {
+                "type": "number",
+                "description": "Number of days of historical data (default: 1)"
+              }
+            }
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "crypto-market-cap",
+          "description": "Top N cryptocurrencies by market cap with price, volume, and 24h change",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "number",
+                "description": "Number of top cryptocurrencies to return (default: 10)"
+              },
+              "currency": {
+                "type": "string",
+                "description": "Fiat currency for prices (default: usd)"
+              }
+            }
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "crypto-news",
+          "description": "Latest crypto news headlines. Filter by token symbol",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "number",
+                "description": "Number of news articles to return (default: 5)"
+              },
+              "topic": {
+                "type": "string",
+                "description": "Optional topic filter (e.g. bitcoin, ethereum)"
+              }
+            }
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "crypto-ohlcv",
+          "description": "OHLCV candlestick data for any crypto over 1-90 days",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "description": "Cryptocurrency ID (e.g. bitcoin, ethereum)"
+              },
+              "days": {
+                "type": "number",
+                "description": "Number of days of OHLCV data (default: 30)"
+              },
+              "currency": {
+                "type": "string",
+                "description": "Fiat currency (default: usd)"
+              }
+            },
+            "required": [
+              "symbol"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "crypto-price",
+          "description": "Real-time price, 24h change, market cap, and volume for any cryptocurrency",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "description": "Cryptocurrency ID (e.g. bitcoin, ethereum, solana)"
+              },
+              "currency": {
+                "type": "string",
+                "description": "Fiat currency for price (default: usd)"
+              }
+            },
+            "required": [
+              "symbol"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "crypto-sentiment",
+          "description": "Community sentiment, social stats, and price momentum for any cryptocurrency",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "description": "Cryptocurrency ID to analyze sentiment for"
+              }
+            },
+            "required": [
+              "symbol"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "currency-convert",
+          "description": "Convert between currencies using real-time exchange rates (170+ currencies)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "number",
+                "description": "Amount to convert"
+              },
+              "from": {
+                "type": "string",
+                "description": "Source currency code (e.g. USD, EUR, GBP)"
+              },
+              "to": {
+                "type": "string",
+                "description": "Target currency code (e.g. EUR, JPY, GBP)"
+              }
+            },
+            "required": [
+              "amount",
+              "from",
+              "to"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "diff-text",
+          "description": "Compare two text strings and return differences in unified, word, char, or JSON format",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text1": {
+                "type": "string",
+                "description": "Original text"
+              },
+              "text2": {
+                "type": "string",
+                "description": "Modified text"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Diff mode: chars, words, lines (default: lines)"
+              }
+            },
+            "required": [
+              "text1",
+              "text2"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "email-verify",
+          "description": "Deep email validation: syntax, MX record check, disposable domain detection",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "description": "Email address to verify"
+              }
+            },
+            "required": [
+              "email"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "extract-entities",
+          "description": "Named entity recognition: people, organizations, locations, dates, money, and more",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to extract named entities from"
+              },
+              "types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Entity types to extract: person, organization, location, date, etc."
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "extract-metadata",
+          "description": "Extract metadata from text or URLs (word count, OG tags, headers, etc.)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL to extract metadata from (title, description, OG tags)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "extract-page",
+          "description": "Fetch a webpage and return clean text, metadata, and links",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the page to extract structured content from"
+              },
+              "format": {
+                "type": "string",
+                "description": "Output format: text, markdown, html (default: markdown)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "extract-pdf",
+          "description": "Extract text and tables from a PDF (requires PDF_EXTRACTOR_URL)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the PDF to extract text from"
+              },
+              "pages": {
+                "type": "string",
+                "description": "Page range to extract (e.g. 1-5, default: all)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "fact-check",
+          "description": "Verify the accuracy of a claim. Returns verdict (TRUE/FALSE/MIXED/UNVERIFIED/MISLEADING), confidence score, summary, and supporting/contradicting evidence with sources.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "claim": {
+                "type": "string",
+                "description": "The claim or statement to fact-check (e.g. 'The Great Wall of China is visible from space')"
+              }
+            },
+            "required": [
+              "claim"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "generate-hash",
+          "description": "Generate cryptographic hashes (sha256, sha512, md5, sha1)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to hash"
+              },
+              "algorithm": {
+                "type": "string",
+                "description": "Hash algorithm: md5, sha1, sha256, sha512 (default: sha256)"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "generate-image",
+          "description": "Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "string",
+                "description": "Text description of the image to generate"
+              },
+              "size": {
+                "type": "string",
+                "description": "Image size: 1024x1024, 1792x1024, 1024x1792 (default: 1024x1024)"
+              },
+              "quality": {
+                "type": "string",
+                "description": "Quality level: standard, hd (default: standard)"
+              }
+            },
+            "required": [
+              "prompt"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "generate-uuid",
+          "description": "Generate UUIDs (v1/v4), secure random tokens, and API-key-format strings",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "description": "UUID format: uuid, ulid, nanoid, cuid (default: uuid)"
+              },
+              "count": {
+                "type": "number",
+                "description": "Number of IDs to generate (default: 1)"
+              }
+            }
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "html-to-markdown",
+          "description": "Convert HTML or any URL to clean Markdown",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "html": {
+                "type": "string",
+                "description": "HTML content to convert to Markdown"
+              }
+            },
+            "required": [
+              "html"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "image-generate",
+          "description": "Generate SVG images from text prompts via Claude",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "string",
+                "description": "Text description of the image to generate"
+              },
+              "size": {
+                "type": "string",
+                "description": "Image dimensions (default: 1024x1024)"
+              },
+              "quality": {
+                "type": "string",
+                "description": "Quality: standard or hd"
+              },
+              "style": {
+                "type": "string",
+                "description": "Style: vivid or natural"
+              }
+            },
+            "required": [
+              "prompt"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "ip-lookup",
+          "description": "Geolocate any IP address — country, city, timezone, ISP, VPN/proxy detection",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "ip": {
+                "type": "string",
+                "description": "IP address to look up geolocation for"
+              }
+            },
+            "required": [
+              "ip"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "jsonpath-query",
+          "description": "Run JSONPath expressions against any JSON payload",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "description": "JSON object to query"
+              },
+              "query": {
+                "type": "string",
+                "description": "JSONPath expression (e.g. $.store.book[0].title)"
+              }
+            },
+            "required": [
+              "data",
+              "query"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "language-detect",
+          "description": "Detect the language of any text with confidence score and script identification",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to detect the language of"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "news-search",
+          "description": "Search for recent news articles on any topic. Returns title, URL, description, source, and publication date from Brave News, Tavily, or Serper.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "News search query (e.g. 'AI regulations 2025')"
+              },
+              "limit": {
+                "type": "number",
+                "description": "Number of results to return (default: 5, max: 10)"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "ocr-extract",
+          "description": "Extract text from images or screenshots using AI vision (base64 or URL input)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the image to extract text from via OCR"
+              },
+              "language": {
+                "type": "string",
+                "description": "Language hint for OCR (default: eng)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "phone-validate",
+          "description": "Parse and validate phone numbers in any format — E.164, carrier type, country",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "description": "Phone number to validate (include country code, e.g. +12125551234)"
+              }
+            },
+            "required": [
+              "phone"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "pii-detect",
+          "description": "Detect and optionally redact PII: names, emails, SSNs, credit cards, API keys, and more",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to scan for personally identifiable information (PII)"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "qr-code",
+          "description": "Generate QR codes from text or URLs (PNG data URL or SVG)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Text, URL, or data to encode in QR code"
+              },
+              "format": {
+                "type": "string",
+                "description": "Output format: svg, png (default: svg)"
+              },
+              "size": {
+                "type": "number",
+                "description": "QR code size in pixels (default: 256)"
+              }
+            },
+            "required": [
+              "content"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "readability-score",
+          "description": "Compute Flesch-Kincaid readability, grade level, word count, and read time",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to analyze for readability metrics"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "regex-generate",
+          "description": "Generate regular expressions from plain English with explanations and test results",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "Natural language description of the pattern to match"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Example strings that should match"
+              }
+            },
+            "required": [
+              "description"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "research-report",
+          "description": "Generate a structured AI research report on any topic. Searches multiple sources and synthesizes findings into executive summary, key findings, and conclusion with citations.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Research topic or question to investigate"
+              },
+              "depth": {
+                "type": "string",
+                "description": "Research depth: 'standard' (5 sources) or 'deep' (10 sources + advanced synthesis). Default: standard"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "rss-parse",
+          "description": "Fetch and parse RSS or Atom feeds into clean structured JSON",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the RSS or Atom feed to parse"
+              },
+              "limit": {
+                "type": "number",
+                "description": "Maximum number of items to return (default: 10)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "screenshot-capture",
+          "description": "Capture page metadata and screenshot URL for any public URL",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the page to screenshot"
+              },
+              "width": {
+                "type": "number",
+                "description": "Viewport width in pixels (default: 1280)"
+              },
+              "height": {
+                "type": "number",
+                "description": "Viewport height in pixels (default: 720)"
+              },
+              "fullPage": {
+                "type": "boolean",
+                "description": "Capture full scrollable page (default: false)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "search-web",
+          "description": "Search the web and return structured results (Tavily/Serper or DuckDuckGo fallback)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query string"
+              },
+              "num_results": {
+                "type": "number",
+                "description": "Number of results to return (default: 5, max: 10)"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "send-email",
+          "description": "Send transactional emails via Resend — plain text or HTML.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "to": {
+                "type": "string",
+                "description": "Recipient email address"
+              },
+              "subject": {
+                "type": "string",
+                "description": "Email subject line"
+              },
+              "body": {
+                "type": "string",
+                "description": "Email body (plain text or HTML)"
+              },
+              "from": {
+                "type": "string",
+                "description": "Sender email (default: noreply@archtools.dev)"
+              }
+            },
+            "required": [
+              "to",
+              "subject",
+              "body"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "sentiment-analysis",
+          "description": "Analyze text sentiment: positive/negative/neutral with score and emotion detection",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to analyze for sentiment (positive, negative, neutral)"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "summarize",
+          "description": "Summarize text in multiple styles: paragraph, bullets, tldr, headline, executive",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to summarize"
+              },
+              "style": {
+                "type": "string",
+                "description": "Summary style: brief, detailed, tldr, bullets (default: brief)"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum summary length in words"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "text-to-speech",
+          "description": "Convert text to natural-sounding audio via ElevenLabs. Returns base64-encoded MP3.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to convert to speech"
+              },
+              "voice": {
+                "type": "string",
+                "description": "Voice ID or name (default: adam)"
+              },
+              "stability": {
+                "type": "number",
+                "description": "Voice stability 0-1 (default: 0.5)"
+              },
+              "similarity_boost": {
+                "type": "number",
+                "description": "Voice similarity boost 0-1 (default: 0.75)"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "timezone-convert",
+          "description": "Convert a datetime between any two IANA timezones",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "datetime": {
+                "type": "string",
+                "description": "Date/time string to convert (ISO 8601)"
+              },
+              "from_tz": {
+                "type": "string",
+                "description": "Source timezone (e.g. America/New_York)"
+              },
+              "to_tz": {
+                "type": "string",
+                "description": "Target timezone (e.g. Europe/London)"
+              }
+            },
+            "required": [
+              "datetime",
+              "from_tz",
+              "to_tz"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "token-lookup",
+          "description": "Search for any token by name or ticker, returns CoinGecko IDs",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "description": "Token symbol or contract address to look up"
+              },
+              "chain": {
+                "type": "string",
+                "description": "Blockchain network (default: ethereum)"
+              }
+            },
+            "required": [
+              "symbol"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "transcribe-audio",
+          "description": "Transcribe audio files to text via OpenAI Whisper. Supports 100+ languages.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "audio_url": {
+                "type": "string",
+                "description": "URL of the audio file to transcribe"
+              },
+              "language": {
+                "type": "string",
+                "description": "Language code hint (e.g. en, es, fr)"
+              }
+            },
+            "required": [
+              "audio_url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "transform-text",
+          "description": "Transform text: uppercase, lowercase, trim, reverse, slug, title, camel, snake, base64",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to transform"
+              },
+              "operation": {
+                "type": "string",
+                "description": "Transformation: uppercase, lowercase, titlecase, reverse, slug, camelCase, snakeCase"
+              }
+            },
+            "required": [
+              "text",
+              "operation"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "url-shorten",
+          "description": "Shorten any URL via TinyURL",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "Long URL to shorten"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "validate-data",
+          "description": "Validate JSON data against a JSON Schema",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "description": "Data to validate"
+              },
+              "schema": {
+                "type": "object",
+                "description": "JSON Schema to validate against"
+              }
+            },
+            "required": [
+              "data",
+              "schema"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "webhook-send",
+          "description": "POST a JSON payload to any webhook URL",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "Webhook URL to send the payload to"
+              },
+              "method": {
+                "type": "string",
+                "description": "HTTP method: POST, PUT, PATCH (default: POST)"
+              },
+              "body": {
+                "type": "object",
+                "description": "JSON payload to send"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Additional HTTP headers"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "web-scrape",
+          "description": "Scrape and extract content from websites with optional CSS selector",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the page to scrape"
+              },
+              "selector": {
+                "type": "string",
+                "description": "CSS selector to extract specific content"
+              },
+              "format": {
+                "type": "string",
+                "description": "Output format: text, html, markdown (default: text)"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "web-search",
+          "description": "Real-time web search with AI-synthesized answer (requires TAVILY_API_KEY)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query to research and synthesize an answer for"
+              },
+              "depth": {
+                "type": "string",
+                "description": "Search depth: quick, thorough (default: quick)"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "whois-lookup",
+          "description": "Look up domain registration info: registrar, created/expires dates, nameservers, status",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string",
+                "description": "Domain name to look up WHOIS/RDAP information for"
+              }
+            },
+            "required": [
+              "domain"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          }
+        },
+        {
+          "name": "workflow-agent",
+          "description": "Multi-step autonomous AI agent pipeline",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "description": "Description of the multi-step workflow to execute"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                },
+                "description": "Ordered list of steps with tool names and inputs"
+              }
+            },
+            "required": [
+              "task"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        }
+      ],
+      "resources": [
+        {
+          "name": "Arch AI Tools Catalog",
+          "uri": "arch://tools/catalog",
+          "description": "Complete catalog of all 64 available Arch AI Tools with descriptions, categories, and credit costs",
+          "mimeType": "application/json"
+        },
+        {
+          "name": "Quick Start Guide",
+          "uri": "arch://docs/quickstart",
+          "description": "Getting started guide for the Arch AI Tools MCP server — authentication, usage, and examples",
+          "mimeType": "text/markdown"
+        }
+      ],
+      "prompts": [
+        {
+          "name": "research-topic",
+          "description": "Deep research on any topic — searches multiple sources and synthesizes a structured report with citations",
+          "arguments": [
+            {
+              "name": "topic",
+              "description": "The topic or question to research",
+              "required": true
+            },
+            {
+              "name": "depth",
+              "description": "Research depth: 'standard' or 'deep'",
+              "required": false
+            }
+          ]
+        },
+        {
+          "name": "fact-check-claim",
+          "description": "Verify whether a claim is true, false, mixed, or unverified — returns verdict with confidence score and evidence",
+          "arguments": [
+            {
+              "name": "claim",
+              "description": "The claim or statement to fact-check",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "analyze-url",
+          "description": "Comprehensive analysis of a URL — extracts content, metadata, takes screenshot, and summarizes",
+          "arguments": [
+            {
+              "name": "url",
+              "description": "The URL to analyze",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    "source": {
+      "commit": "b22bf84bf34bcf8a367090f9da0e9c405bc72647",
+      "branch": "main"
+    }
+  },
+  "artifacts": {
+    "module": "module.js",
+    "sourcemap": "module.js.map"
+  }
+}

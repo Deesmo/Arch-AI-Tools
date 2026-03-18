@@ -400,3 +400,39 @@ export async function sendDay7ReengagementEmail(to: string, creditsRemaining: nu
   `);
   await sendEmail(to, subject, html);
 }
+
+// ─── 80% Credit Consumption Alert ────────────────────────────────────────────
+export async function sendEmail80PctAlert(to: string, creditsRemaining: number, agentId: string): Promise<void> {
+  const subject = `⚠️ 80% of your Arch Tools credits used — ${creditsRemaining} remaining`;
+  const html = layout(subject, `
+    <div class="alert-warn"><strong>⚠️ 80% consumed:</strong> You've used most of your credits. Only <strong>${creditsRemaining}</strong> remain.</div>
+    <p>Top up now to avoid interruptions. Your agents will receive a <code>402</code> response when credits hit zero — but they can still pay per-call via x402 USDC.</p>
+    <div class="stats">
+      <div class="stat"><span>Starter</span>1,000 credits · $9</div>
+      <div class="stat"><span>Pro</span>10,000 credits · $49</div>
+      <div class="stat"><span>Business</span>100,000 credits · $199</div>
+    </div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing">Upgrade now →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}… · Reply "stop" to unsubscribe.</p>
+  `);
+  await sendEmail(to, subject, html);
+}
+
+// ─── Credits Depleted (0 remaining) Alert ────────────────────────────────────
+export async function sendCreditsDepletedAlert(to: string, agentId: string): Promise<void> {
+  const subject = `🚨 Your Arch Tools credits are depleted — upgrade to continue`;
+  const html = layout(subject, `
+    <div class="alert-warn"><strong>🚨 Credits depleted:</strong> Your credit balance has hit <strong>0</strong>. API calls will return <code>402 Payment Required</code>.</div>
+    <p>Two ways to keep building:</p>
+    <div class="stats">
+      <div class="stat"><span>Option 1</span>Buy credits at archtools.dev/pricing</div>
+      <div class="stat"><span>Option 2</span>Pay per-call with USDC via x402 protocol</div>
+    </div>
+    <p>Your agents can still make calls — they just need to include an <code>X-Payment</code> header with a signed USDC payment. <a href="${SITE}/x402-guide">Learn about x402 →</a></p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing">Buy credits →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}… · Reply "stop" to unsubscribe.</p>
+  `);
+  await sendEmail(to, subject, html);
+}

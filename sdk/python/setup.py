@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="arch-tools",
+    name="arch_tools",
     version="0.1.0",
     description="Official Python SDK for Arch Tools — 58 AI agent API tools with x402 payments",
     long_description=open("README.md").read(),

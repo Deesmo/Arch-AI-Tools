@@ -6,6 +6,7 @@
   <url><loc>https://archtools.dev/playground</loc><priority>0.8</priority></url>
   <url><loc>https://archtools.dev/directory</loc><priority>0.8</priority></url>
   <url><loc>https://archtools.dev/x402-guide</loc><priority>0.8</priority></url>
+  <url><loc>https://archtools.dev/langchain-guide</loc><priority>0.7</priority></url>
   <url><loc>https://archtools.dev/refer</loc><priority>0.7</priority></url>
   <url><loc>https://archtools.dev/landing-b</loc><priority>0.7</priority></url>
   <url><loc>https://archtools.dev/agents</loc><priority>0.7</priority></url>

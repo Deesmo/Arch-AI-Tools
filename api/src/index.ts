@@ -336,6 +336,7 @@ app.get("/admin", (_req: Request, _res: Response) => _res.sendFile(path.join(__d
 app.get("/sitemap.xml", (_req, res) => res.sendFile(path.join(__dirname, '../public/sitemap.xml')));
 app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../public/robots.txt')));
 app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
+app.get("/langchain-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/langchain-guide.html')));
 app.get("/refer", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/refer.html')));
 app.get("/landing-b", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/landing-b.html')));
 app.get("/changelog-tonight", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/changelog-tonight.html')));

@@ -146,15 +146,17 @@
     }
     .copy-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
 
-    /* TRY IT BTN */
+    /* TRY IT FREE BTN */
     .try-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 6px 14px; font-size: 12px; font-weight: 600;
-      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
-      color: var(--accent); border-radius: 8px; cursor: pointer;
-      text-decoration: none; transition: all 0.15s; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; font-size: 13px; font-weight: 700;
+      background: linear-gradient(135deg, rgba(255,176,48,0.15), rgba(255,24,136,0.15));
+      border: 1px solid rgba(255,176,48,0.4);
+      color: #FFB030; border-radius: 10px; cursor: pointer;
+      text-decoration: none; transition: all 0.2s; font-family: inherit;
+      letter-spacing: 0.01em;
     }
-    .try-btn:hover { background: rgba(34,211,238,0.18); border-color: var(--accent); }
+    .try-btn:hover { background: linear-gradient(135deg, rgba(255,176,48,0.25), rgba(255,24,136,0.25)); border-color: #FFB030; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,176,48,0.15); }
     .try-btn svg { width: 14px; height: 14px; }
 
     /* RESPONSE TOGGLE */
@@ -555,7 +557,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=web-scrape&url=https://example.com&format=markdown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=web-scrape&url=https://example.com&format=markdown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -586,7 +588,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=extract-page&url=https://example.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=extract-page&url=https://example.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -617,7 +619,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=search-web&query=best+AI+tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=search-web&query=best+AI+tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -648,7 +650,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=web-search&query=What+is+x402"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=web-search&query=What+is+x402"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -670,7 +672,7 @@ print(res.json())</code></pre>
   -d '{"query":"tutorials about building AI agents with tool use","num_results":5}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=semantic-search&query=AI+agent+tutorials"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=semantic-search&query=AI+agent+tutorials"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -692,7 +694,7 @@ print(res.json())</code></pre>
   -d '{"query":"artificial intelligence","limit":5}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=news-search&query=artificial+intelligence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=news-search&query=artificial+intelligence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -713,7 +715,7 @@ print(res.json())</code></pre>
   -d '{"url":"https://hnrss.org/frontpage","limit":5}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=rss-parse&url=https://hnrss.org/frontpage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=rss-parse&url=https://hnrss.org/frontpage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -734,7 +736,7 @@ print(res.json())</code></pre>
   -d '{"url":"https://archtools.dev"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=extract-metadata&url=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=extract-metadata&url=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -758,7 +760,7 @@ print(res.json())</code></pre>
   -d '{"url":"https://archtools.dev","full_page":true}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=screenshot-capture&url=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=screenshot-capture&url=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -780,7 +782,7 @@ print(res.json())</code></pre>
   -d '{"url":"https://example.com","steps":[{"action":"extract","selector":"h1"}]}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=browser-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=browser-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -817,7 +819,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=ai-generate&prompt=Explain+quantum+computing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=ai-generate&prompt=Explain+quantum+computing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -839,7 +841,7 @@ print(res.json())</code></pre>
   -d '{"question":"Should I use serverless or containers for a high-traffic API?","depth":"deep"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=ai-oracle&question=serverless+vs+containers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=ai-oracle&question=serverless+vs+containers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -861,7 +863,7 @@ print(res.json())</code></pre>
   -d '{"text":"Long article text here...","style":"tldr"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=summarize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=summarize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -890,7 +892,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=sentiment-analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=sentiment-analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -910,7 +912,7 @@ print(res.json())</code></pre>
   -d '{"text":"Tim Cook announced Apple will invest $500M in Austin, Texas by March 2026."}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=extract-entities"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=extract-entities"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -931,7 +933,7 @@ print(res.json())</code></pre>
   -d '{"description":"match US phone numbers like (555) 123-4567","test_strings":["(555) 123-4567","hello"]}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=regex-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=regex-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -952,7 +954,7 @@ print(res.json())</code></pre>
   -d '{"text":"Contact john@example.com or call 555-0123","redact":true}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=pii-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=pii-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -972,7 +974,7 @@ print(res.json())</code></pre>
   -d '{"text":"The quick brown fox jumps over the lazy dog."}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=readability-score"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=readability-score"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -992,7 +994,7 @@ print(res.json())</code></pre>
   -d '{"text":"Bonjour le monde"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=language-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=language-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1014,7 +1016,7 @@ print(res.json())</code></pre>
   -d '{"topic":"State of AI agents in 2026","depth":"comprehensive"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=research-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=research-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1035,7 +1037,7 @@ print(res.json())</code></pre>
   -d '{"claim":"The Great Wall of China is visible from space"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=fact-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=fact-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1057,7 +1059,7 @@ print(res.json())</code></pre>
   -d '{"goal":"Get Bitcoin price and write a 2-sentence market summary","max_steps":3}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=workflow-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=workflow-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1094,7 +1096,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=session-create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=session-create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1115,7 +1117,7 @@ print(res.json())</code></pre>
   -d '{"session_id":"sess_abc123def456","message":"How do I sort an array in Python?"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=session-message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=session-message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1142,7 +1144,7 @@ print(res.json())</code></pre>
   -d '{"prompt":"A cyberpunk cityscape at night, neon lights, rain","size":"1792x1024"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=image-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=image-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1165,7 +1167,7 @@ print(res.json())</code></pre>
   -d '{"prompt":"Minimalist logo for a tech startup","quality":"hd","style":"natural"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=design-create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=design-create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1187,7 +1189,7 @@ print(res.json())</code></pre>
   -d '{"image_url":"https://example.com/photo.jpg","size":"full"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=image-remove-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=image-remove-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1208,7 +1210,7 @@ print(res.json())</code></pre>
   -d '{"prompt":"A drone shot flying over a tropical island at sunset","duration":10}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=video-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=video-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1237,7 +1239,7 @@ print(res.json())</code></pre>
   -d '{"text":"Hello from Arch Tools!","voice_id":"EXAVITQu4vr4xnSDxMaL"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=text-to-speech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=text-to-speech"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1259,7 +1261,7 @@ print(res.json())</code></pre>
   -d '{"audio_url":"https://example.com/audio.mp3","language":"en"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=transcribe-audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=transcribe-audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1295,7 +1297,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=crypto-price&symbol=bitcoin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=crypto-price&symbol=bitcoin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1316,7 +1318,7 @@ print(res.json())</code></pre>
   -d '{"limit":5}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=crypto-market-cap&limit=10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=crypto-market-cap&limit=10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1337,7 +1339,7 @@ print(res.json())</code></pre>
   -d '{"symbol":"ethereum","days":30}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=crypto-ohlcv&symbol=ethereum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=crypto-ohlcv&symbol=ethereum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1357,7 +1359,7 @@ print(res.json())</code></pre>
   -d '{"limit":7}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=crypto-fear-greed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=crypto-fear-greed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1377,7 +1379,7 @@ print(res.json())</code></pre>
   -d '{"symbol":"bitcoin"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=crypto-sentiment&symbol=bitcoin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=crypto-sentiment&symbol=bitcoin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1398,7 +1400,7 @@ print(res.json())</code></pre>
   -d '{"symbol":"ETH","limit":5}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=crypto-news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=crypto-news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1418,7 +1420,7 @@ print(res.json())</code></pre>
   -d '{"query":"SOL"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=token-lookup&query=SOL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=token-lookup&query=SOL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1444,7 +1446,7 @@ print(res.json())</code></pre>
   -d '{"data":{"name":"Brad","age":43},"schema":{"type":"object","required":["name"],"properties":{"name":{"type":"string"},"age":{"type":"number"}}}}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=validate-data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=validate-data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1473,7 +1475,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=generate-hash&text=hello+world"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=generate-hash&text=hello+world"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1495,7 +1497,7 @@ print(res.json())</code></pre>
   -d '{"type":"api-key","count":3}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=generate-uuid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=generate-uuid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1517,7 +1519,7 @@ print(res.json())</code></pre>
   -d '{"text":"https://archtools.dev","size":300}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=qr-code&text=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=qr-code&text=https://archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1540,7 +1542,7 @@ print(res.json())</code></pre>
   -d '{"text":"123456789","format":"CODE128"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=barcode-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=barcode-generate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1562,7 +1564,7 @@ print(res.json())</code></pre>
   -d '{"input":"{\"name\":\"Brad\",\"age\":43}","from":"json","to":"yaml"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=convert-format"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=convert-format"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1583,7 +1585,7 @@ print(res.json())</code></pre>
   -d '{"text":"hello world example","mode":"camel"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=transform-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=transform-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1605,7 +1607,7 @@ print(res.json())</code></pre>
   -d '{"text1":"The quick brown fox","text2":"The slow brown dog","mode":"words"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=diff-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=diff-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1626,7 +1628,7 @@ print(res.json())</code></pre>
   -d '{"html":"<h1>Hello</h1><p>World</p>"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=html-to-markdown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=html-to-markdown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1647,7 +1649,7 @@ print(res.json())</code></pre>
   -d '{"data":{"users":[{"name":"Alice"},{"name":"Bob"}]},"path":"$.users[*].name"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=jsonpath-query"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=jsonpath-query"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1667,7 +1669,7 @@ print(res.json())</code></pre>
   -d '{"url":"https://archtools.dev/docs#authentication"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=url-shorten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=url-shorten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1690,7 +1692,7 @@ print(res.json())</code></pre>
   -d '{"webhook_url":"https://hooks.slack.com/services/xxx","payload":{"text":"Hello from Arch Tools!"}}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=webhook-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=webhook-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1712,7 +1714,7 @@ print(res.json())</code></pre>
   -d '{"amount":100,"from":"USD","to":"EUR"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=currency-convert&amount=100&from=USD&to=EUR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=currency-convert&amount=100&from=USD&to=EUR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1734,7 +1736,7 @@ print(res.json())</code></pre>
   -d '{"datetime":"2026-03-17T09:00:00","from_tz":"America/New_York","to_tz":"Asia/Tokyo"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=timezone-convert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=timezone-convert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1759,7 +1761,7 @@ print(res.json())</code></pre>
   -d '{"email":"test@gmail.com"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=email-verify"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=email-verify"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1784,7 +1786,7 @@ print(res.json())</code></pre>
   -d '{"to":"user@example.com","subject":"Hello","body":"Message body"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=email-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=email-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1806,7 +1808,7 @@ print(res.json())</code></pre>
   -d '{"domain":"stripe.com","first_name":"Patrick","last_name":"Collison"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=email-find"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=email-find"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1827,7 +1829,7 @@ print(res.json())</code></pre>
   -d '{"phone":"+15551234567"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=phone-validate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=phone-validate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1858,7 +1860,7 @@ print(res.json())</code></pre>
 }</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=ip-lookup&ip=8.8.8.8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=ip-lookup&ip=8.8.8.8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1878,7 +1880,7 @@ print(res.json())</code></pre>
   -d '{"domain":"archtools.dev"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=whois-lookup&domain=archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=whois-lookup&domain=archtools.dev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1898,7 +1900,7 @@ print(res.json())</code></pre>
   -d '{"domain":"my-cool-startup.com"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=domain-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=domain-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1924,7 +1926,7 @@ print(res.json())</code></pre>
   -d '{"text":"Just shipped a new feature with Arch Tools! 🚀"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=social-post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=social-post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1950,7 +1952,7 @@ print(res.json())</code></pre>
   -d '{"image_url":"https://example.com/receipt.png"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=ocr-extract"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=ocr-extract"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
@@ -1971,7 +1973,7 @@ print(res.json())</code></pre>
   -d '{"pdf_url":"https://example.com/document.pdf"}'</code></pre>
       </div>
       <div class="tool-actions">
-        <a class="try-btn" href="/playground?tool=extract-pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it</a>
+        <a class="try-btn" href="/playground?tool=extract-pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try It Free</a>
       </div>
     </div>
 
