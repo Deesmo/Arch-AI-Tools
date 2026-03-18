@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bring Your Own Key (BYOK) — Arch Tools</title>
+  <meta name="description" content="Use your own API keys with Arch Tools. Pass x-anthropic-key, x-openai-key, or x-google-key headers to use your own LLM credits. No Arch Tools credits deducted." />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#07061A;--card:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.10);--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.55);--accent:#22d3ee;--green:#34d399;--grad:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF)}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+    h1,h2,h3{font-family:'Syne',system-ui,sans-serif}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;border-bottom:1px solid var(--border);backdrop-filter:blur(12px);background:rgba(7,6,26,0.9);position:sticky;top:0;z-index:100}
+    .nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text)}
+    .logo-mark{width:32px;height:32px;border-radius:8px;background:var(--bg);border:1px solid rgba(255,255,255,0.12);display:grid;place-items:center}
+    .logo-name{font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+    .nav-cta{background:var(--grad);color:#fff;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;text-decoration:none}
+    .main{max-width:760px;margin:0 auto;padding:56px 24px 100px}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.2);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--accent);margin-bottom:20px}
+    h1{font-size:38px;font-weight:800;letter-spacing:-0.03em;margin-bottom:16px;line-height:1.2}
+    .intro{font-size:17px;color:var(--muted);margin-bottom:40px;line-height:1.6}
+    h2{font-size:20px;font-weight:700;margin:36px 0 14px}
+    p{margin-bottom:14px;color:rgba(255,255,255,0.82)}
+    code{font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:4px;color:var(--accent)}
+    pre{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;margin:18px 0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7}
+    .provider-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:20px 0}
+    .provider{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+    .provider strong{display:block;font-size:15px;margin-bottom:6px}
+    .provider code{font-size:11px}
+    .tag{display:inline-flex;background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.2);padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px}
+    .cta-box{background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:16px;padding:28px;text-align:center;margin-top:48px}
+    .cta-btn{display:inline-block;background:var(--grad);color:#fff;font-weight:700;padding:11px 24px;border-radius:10px;text-decoration:none;font-size:14px}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-logo">
+      <div class="logo-mark"><img src="/arch-icon.svg" width="18" height="18" alt="Arch" /></div>
+      <span class="logo-name">Arch Tools</span>
+    </a>
+    <a href="/signin" class="nav-cta">Get 100 free credits</a>
+  </nav>
+  <div class="main">
+    <div class="badge">🔑 BYOK</div>
+    <h1>Bring Your Own Key</h1>
+    <p class="intro">Use your own API keys with Arch Tools. When you pass your own key, no Arch Tools credits are deducted — you pay the provider directly at their rates.</p>
+
+    <h2>How it works</h2>
+    <p>Pass your API key as a request header. Arch Tools detects it automatically and routes your request through your key.</p>
+
+    <pre><span style="color:#8A8AFF">curl</span> -X POST https://arch-ai-tools.onrender.com/v1/tools/ai-generate \
+  -H <span style="color:#34d399">"Authorization: Bearer YOUR_ARCH_TOOLS_KEY"</span> \
+  -H <span style="color:#34d399">"x-openai-key: sk-your-openai-key"</span> \
+  -H <span style="color:#34d399">"Content-Type: application/json"</span> \
+  -d <span style="color:#34d399">'{"prompt": "Summarize this article...", "model": "gpt-4o"}'</span></pre>
+
+    <p>The response includes <code>"byok": true</code> confirming your key was used and no credits were deducted.</p>
+
+    <h2>Supported providers & headers</h2>
+    <div class="provider-grid">
+      <div class="provider"><strong>Anthropic Claude</strong><code>x-anthropic-key</code><span class="tag">Claude 3.5+</span></div>
+      <div class="provider"><strong>OpenAI</strong><code>x-openai-key</code><span class="tag">GPT-4o, GPT-3.5</span></div>
+      <div class="provider"><strong>Google Gemini</strong><code>x-google-key</code><span class="tag">Gemini 2.0</span></div>
+      <div class="provider"><strong>xAI Grok</strong><code>x-xai-key</code><span class="tag">Grok-3</span></div>
+      <div class="provider"><strong>Firecrawl</strong><code>x-firecrawl-key</code><span class="tag">Web scraping</span></div>
+      <div class="provider"><strong>Brave Search</strong><code>x-brave-key</code><span class="tag">Web search</span></div>
+      <div class="provider"><strong>Tavily</strong><code>x-tavily-key</code><span class="tag">AI search</span></div>
+      <div class="provider"><strong>Exa</strong><code>x-exa-key</code><span class="tag">Semantic search</span></div>
+    </div>
+
+    <h2>Python example</h2>
+    <pre><span style="color:#8A8AFF">import</span> requests
+
+response = requests.post(
+    <span style="color:#34d399">"https://arch-ai-tools.onrender.com/v1/tools/ai-generate"</span>,
+    headers={
+        <span style="color:#34d399">"Authorization"</span>: <span style="color:#34d399">"Bearer YOUR_ARCH_TOOLS_KEY"</span>,
+        <span style="color:#34d399">"x-anthropic-key"</span>: <span style="color:#34d399">"sk-ant-your-key"</span>,
+    },
+    json={
+        <span style="color:#34d399">"prompt"</span>: <span style="color:#34d399">"Write a haiku about AI payments"</span>,
+        <span style="color:#34d399">"model"</span>: <span style="color:#34d399">"claude-sonnet-4-6"</span>
+    }
+)
+data = response.json()
+<span style="color:#8A8AFF">print</span>(data[<span style="color:#34d399">"text"</span>])        <span style="color:#5A5A8A"># The response</span>
+<span style="color:#8A8AFF">print</span>(data[<span style="color:#34d399">"byok"</span>])        <span style="color:#5A5A8A"># True — your key was used</span></pre>
+
+    <h2>Benefits of BYOK</h2>
+    <p>Use your existing API contracts and spend less on Arch Tools credits for heavy LLM usage. BYOK is ideal for agents running high-volume inference — you get Arch Tools' infrastructure (MCP server, structured outputs, error handling) with your own model billing.</p>
+
+    <div class="cta-box">
+      <h2 style="margin:0 0 10px">Try it now</h2>
+      <p style="color:var(--muted);margin-bottom:20px">Start with 100 free credits. No card required. Use BYOK for any provider.</p>
+      <a href="/signin" class="cta-btn">Get your API key →</a>
+    </div>
+  </div>
+</body>
+</html>
