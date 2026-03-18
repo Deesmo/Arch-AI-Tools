@@ -260,6 +260,8 @@ app.get("/dashboard", (req, res) => {
 // /pricing — full pricing page
 app.get("/pricing", (_req, res) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
 // /getting-started — convenience redirect to docs sub-path
+app.get("/byok", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/byok.html')));
+app.get("/quickstart", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/quickstart.html')));
 app.get("/getting-started", (_req, res) => res.redirect(301, "/docs/getting-started"));
 // /terms — convenience redirect to static terms page
 app.get("/terms", (_req, res) => res.redirect(301, "/terms.html"));
