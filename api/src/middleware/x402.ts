@@ -622,6 +622,30 @@ function buildPaymentRequired(toolName: string, price: string): object {
     }
   }
 
+  // USDT on Base via Permit2 — uses main EVM wallet, no separate USDT wallet needed.
+  // Permit2 enables gasless ERC-20 transfers for any token (added March 2026).
+  // The buyer must have approved the Permit2 contract (0x000000000022D473030F116dDEE9F6B43aC78BA3)
+  // to spend their USDT. The facilitator handles gas sponsorship if configured.
+  if (evmWallet) {
+    accepts.push({
+      scheme: "exact",
+      network: "eip155:8453",
+      amount: amountAtomic,
+      maxAmountRequired: amountAtomic,
+      resource,
+      description: `Arch Tools — ${toolName} (USDT on Base via Permit2)`,
+      mimeType: "application/json",
+      payTo: evmWallet,
+      maxTimeoutSeconds: 60,
+      asset: USDT_CONTRACTS["base"],  // 0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2
+      extra: {
+        name: "Tether USD",
+        version: "2",
+        assetTransferMethod: "permit2",
+      },
+    });
+  }
+
   // Add outputSchema to each accept entry for x402scan compatibility
   const toolSchema = TOOL_OUTPUT_SCHEMAS[toolName] as { input: object; output: object | null } | undefined;
   if (toolSchema) {
@@ -689,6 +713,42 @@ function extractNonce(paymentHeader: string): string | null {
   }
 }
 
+/**
+ * Determine the correct facilitator URL based on network.
+ * - Mainnet (eip155:8453): CDP facilitator (requires CDP API keys)
+ * - Testnet (eip155:84532): x402.org/facilitator (free, no auth)
+ * Falls back to X402_FACILITATOR_URL env var if set.
+ */
+function getFacilitatorUrl(): string {
+  // Explicit override takes priority
+  if (process.env.X402_FACILITATOR_URL) {
+    return process.env.X402_FACILITATOR_URL;
+  }
+  // CDP facilitator for mainnet (requires CDP_API_KEY_ID + CDP_API_KEY_SECRET)
+  if (config.x402.network === "base" && process.env.CDP_API_KEY_ID) {
+    return "https://api.cdp.coinbase.com/platform/v2/x402";
+  }
+  // x402.org for testnet or when CDP keys are not available
+  return "https://x402.org/facilitator";
+}
+
+/**
+ * Extract network and asset from a decoded payment payload to find the
+ * matching accepts[] entry. The x402 spec requires paymentRequirements
+ * sent to the facilitator to match what the agent selected.
+ */
+function extractPaymentNetwork(paymentHeader: string): { network?: string; asset?: string } {
+  try {
+    const decoded = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf-8"));
+    // x402 payloads may nest the network/asset at various levels
+    const network = decoded.network ?? decoded.chainId ?? decoded.payload?.network;
+    const asset = decoded.asset ?? decoded.token ?? decoded.payload?.asset;
+    return { network, asset };
+  } catch {
+    return {};
+  }
+}
+
 const NONCE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
 /**
@@ -708,7 +768,8 @@ async function checkAndStoreNonce(nonce: string): Promise<boolean> {
 }
 
 async function verifyPayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ isValid: boolean; payer?: string }> {
-  if (!config.x402.facilitatorUrl) return { isValid: false };
+  const facilitatorUrl = getFacilitatorUrl();
+  if (!facilitatorUrl) return { isValid: false };
   try {
     // Decode the base64 payment header into a PaymentPayload object
     let paymentPayload: object;
@@ -719,8 +780,16 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       paymentPayload = { raw: paymentHeader };
     }
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    // CDP facilitator requires API key auth
+    if (facilitatorUrl.includes("cdp.coinbase.com") && process.env.CDP_API_KEY_ID) {
+      headers["X-CDP-API-Key-ID"] = process.env.CDP_API_KEY_ID;
+      headers["X-CDP-API-Key-Secret"] = process.env.CDP_API_KEY_SECRET ?? "";
+    }
+
+    console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName})`);
     const res = await axios.post(
-      `${config.x402.facilitatorUrl}/verify`,
+      `${facilitatorUrl}/verify`,
       {
         x402Version: 1,
         paymentPayload,
@@ -728,17 +797,20 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       },
       {
         timeout: 8000,
-        headers: { "Content-Type": "application/json" },
+        headers,
       }
     );
+    console.log(`[x402] Verify response: ${JSON.stringify(res.data)}`);
     return { isValid: res.data?.isValid === true, payer: res.data?.payer };
-  } catch {
+  } catch (err: any) {
+    console.error(`[x402] Verify FAILED: ${err?.response?.status ?? err?.message} — ${JSON.stringify(err?.response?.data ?? {})}`);
     return { isValid: false };
   }
 }
 
 async function settlePayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ transaction?: string; network?: string; payer?: string } | null> {
-  if (!config.x402.facilitatorUrl) return null;
+  const facilitatorUrl = getFacilitatorUrl();
+  if (!facilitatorUrl) return null;
   try {
     // Decode the base64 payment header into a PaymentPayload object
     let paymentPayload: object;
@@ -748,8 +820,15 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       paymentPayload = { raw: paymentHeader };
     }
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (facilitatorUrl.includes("cdp.coinbase.com") && process.env.CDP_API_KEY_ID) {
+      headers["X-CDP-API-Key-ID"] = process.env.CDP_API_KEY_ID;
+      headers["X-CDP-API-Key-Secret"] = process.env.CDP_API_KEY_SECRET ?? "";
+    }
+
+    console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName})`);
     const res = await axios.post(
-      `${config.x402.facilitatorUrl}/settle`,
+      `${facilitatorUrl}/settle`,
       {
         x402Version: 1,
         paymentPayload,
@@ -757,15 +836,17 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       },
       {
         timeout: 10000,
-        headers: { "Content-Type": "application/json" },
+        headers,
       }
     );
+    console.log(`[x402] Settle response: ${JSON.stringify(res.data)}`);
     return {
       transaction: res.data?.transaction ?? res.data?.txHash ?? undefined,
       network: res.data?.network ?? undefined,
       payer: res.data?.payer ?? undefined,
     };
-  } catch {
+  } catch (err: any) {
+    console.error(`[x402] Settle FAILED: ${err?.response?.status ?? err?.message} — ${JSON.stringify(err?.response?.data ?? {})}`);
     return null;
   }
 }
@@ -830,19 +911,29 @@ export function x402Middleware(toolName: string) {
       }
     }
 
-    // Build the payment requirements for verify/settle calls
+    // Build the payment requirements for verify/settle calls.
+    // CRITICAL FIX: paymentRequirements sent to the facilitator MUST match the
+    // accepts[] entry the agent selected. We rebuild the full accepts[] and
+    // find the matching entry from the payment payload's network/asset.
     const price = X402_PRICES[toolName] ?? "0.005";
-    const chainId = config.x402.network === "base" ? "eip155:8453" : "eip155:84532";
-    const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
-    const paymentRequirements = {
-      scheme: "exact",
-      network: chainId,
-      asset: USDC_CONTRACTS["base"] ?? USDC_CONTRACTS[config.x402.network],
-      amount: amountAtomic,
-      payTo: config.x402.walletAddress,
-      maxTimeoutSeconds: 60,
-      extra: { name: "USD Coin", version: "2" },
-    };
+    const fullPaymentDetails = buildPaymentRequired(toolName, price) as { accepts: any[] };
+    const { network: paymentNetwork, asset: paymentAsset } = extractPaymentNetwork(paymentHeader);
+
+    // Find matching accepts[] entry - exact match on network+asset, fallback to first
+    let paymentRequirements: object = fullPaymentDetails.accepts[0]; // fallback
+    if (paymentNetwork || paymentAsset) {
+      const match = fullPaymentDetails.accepts.find((a: any) => {
+        const networkMatch = !paymentNetwork || a.network === paymentNetwork;
+        const assetMatch = !paymentAsset || a.asset === paymentAsset;
+        return networkMatch && assetMatch;
+      });
+      if (match) {
+        paymentRequirements = match;
+        console.log(`[x402] Matched payment to: ${(match as any).network} / ${(match as any).asset}`);
+      } else {
+        console.warn(`[x402] No accepts[] match for network=${paymentNetwork} asset=${paymentAsset} - using first entry`);
+      }
+    }
 
     // Payment header present — verify with facilitator using spec-compliant format
     const verifyResult = await verifyPayment(paymentHeader, toolName, paymentRequirements);
@@ -882,7 +973,7 @@ export function x402Middleware(toolName: string) {
     const settleResponse = {
       success: true,
       transaction: settleResult?.transaction ?? "",
-      network: settleResult?.network ?? chainId,
+      network: settleResult?.network ?? (paymentRequirements as any).network ?? config.x402.network,
       payer: settleResult?.payer ?? verifyResult.payer ?? "",
     };
     res.setHeader("PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResponse)).toString("base64"));
