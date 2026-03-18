@@ -2,7 +2,7 @@
 
 **53 production-ready API tools for AI agents** — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation (DALL-E 3), audio transcription, text-to-speech, email, domain lookup, and more.
 
-[![Smithery](https://smithery.ai/badge/@deesmo/arch-tools)](https://smithery.ai/server/@deesmo/arch-tools)
+[![Smithery](https://smithery.ai/badge/mcmetaverse/arch-tools)](https://smithery.ai/server/mcmetaverse/arch-tools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/@deesmo/arch-tools-mcp)](https://www.npmjs.com/package/@deesmo/arch-tools-mcp)
 
@@ -15,7 +15,7 @@
 ### Install via Smithery
 
 ```bash
-npx -y @smithery/cli install @deesmo/arch-tools --client claude
+npx -y @smithery/cli install mcmetaverse/arch-tools --client claude
 ```
 
 ### Install via npx
