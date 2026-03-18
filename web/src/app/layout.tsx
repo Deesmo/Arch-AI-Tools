@@ -6,7 +6,7 @@ import { PostHogProvider } from '@/components/PostHogProvider'
 export const metadata: Metadata = {
   title: 'Arch Tools — Patent-Pending x402 API Infrastructure for AI Agents',
   description: '116 production-ready API tools for AI agents. Patent-pending agent auth, x402 USDC payments on Base, and MCP-compatible. 100 free credits on signup.',
-  keywords: 'API tools, AI agents, MCP, workflow engine, web scraping, sentiment analysis, developer tools',
+  keywords: 'x402 payments, AI agents API, MCP server, patent-pending agent auth, USDC crypto payments, web scraping API, AI generation API, autonomous agents, developer tools',
   openGraph: {
     title: 'Arch Tools — Patent-Pending x402 API Infrastructure for AI Agents',
     description: '58 API tools for AI agents with patent-pending auth + x402 USDC payments.',
