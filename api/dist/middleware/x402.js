@@ -399,7 +399,7 @@ function buildPaymentRequired(toolName, price) {
         // ETH on Base (same wallet, faster + cheaper)
         accepts.push({
             scheme: "exact",
-            network: "eip155:8453",
+            network: "base",
             amount: ethWei,
             maxAmountRequired: ethWei,
             resource,
@@ -515,7 +515,7 @@ function buildPaymentRequired(toolName, price) {
             solAtomic = "140000";
         accepts.push({
             scheme: "exact",
-            network: "eip155:8453",
+            network: "base",
             amount: solAtomic,
             maxAmountRequired: solAtomic,
             resource,
@@ -589,13 +589,13 @@ function buildPaymentRequired(toolName, price) {
     const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
     if (usdtWallet) {
         const usdtNetworks = [
-            { network: "eip155:1", chain: "ethereum" }, // $40B USDT — largest EVM pool
-            { network: "eip155:56", chain: "bsc" }, // BSC USDT — $15B+ pool
-            { network: "eip155:42161", chain: "arbitrum" },
-            { network: "eip155:137", chain: "polygon" },
-            { network: "eip155:10", chain: "optimism" },
-            { network: "eip155:43114", chain: "avalanche" },
-            { network: "eip155:8453", chain: "base" },
+            { network: "ethereum", chain: "ethereum" }, // $40B USDT — largest EVM pool
+            { network: "bsc", chain: "bsc" }, // BSC USDT — $15B+ pool
+            { network: "arbitrum", chain: "arbitrum" },
+            { network: "polygon", chain: "polygon" },
+            { network: "optimism", chain: "optimism" },
+            { network: "avalanche", chain: "avalanche" },
+            { network: "base", chain: "base" },
         ];
         for (const { network, chain } of usdtNetworks) {
             if (USDT_CONTRACTS[chain]) {
@@ -622,7 +622,7 @@ function buildPaymentRequired(toolName, price) {
     if (evmWallet) {
         accepts.push({
             scheme: "exact",
-            network: "eip155:8453",
+            network: "base",
             amount: amountAtomic,
             maxAmountRequired: amountAtomic,
             resource,
