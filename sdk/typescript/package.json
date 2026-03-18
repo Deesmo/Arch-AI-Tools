@@ -1,0 +1,27 @@
+{
+  "name": "@archtools/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript/Node SDK for Arch Tools — 58 AI agent API tools with x402 payments",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "files": ["dist", "README.md"],
+  "keywords": ["arch-tools", "ai-agents", "x402", "crypto-payments", "mcp", "web-scraping"],
+  "author": "Brad Valdes <support@archtools.dev>",
+  "license": "MIT",
+  "homepage": "https://archtools.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Deesmo/Arch-AI-Tools"
+  }
+}

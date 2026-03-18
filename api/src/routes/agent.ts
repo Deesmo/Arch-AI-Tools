@@ -161,3 +161,56 @@ router.get("/balance", requireAuth, async (req: AuthedRequest, res: Response): P
 });
 
 export default router;
+
+// ─── POST /v1/agent/keys/rotate ──────────────────────────────────────────────
+// Generate a new API key, invalidate the old one. Returns new key ONCE.
+router.post("/keys/rotate", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+  const agent = req.agent;
+  if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
+
+  try {
+    const crypto = await import("crypto");
+    const bcrypt = await import("bcryptjs");
+    
+    const newKey = `arch_${crypto.default.randomBytes(24).toString("hex")}`;
+    const newPrefix = newKey.slice(0, 12);
+    const newHash = await bcrypt.default.hash(newKey, 10);
+
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: { apiKey: newKey, apiKeyPrefix: newPrefix, apiKeyHash: newHash },
+    });
+
+    res.json({
+      ok: true,
+      message: "API key rotated successfully. Save this key — it won't be shown again.",
+      api_key: newKey,
+      prefix: newPrefix,
+      request_id: reqId(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: "server_error", message: safeErr(err), request_id: reqId() });
+  }
+});
+
+// ─── DELETE /v1/agent/keys/:prefix ───────────────────────────────────────────
+// Revoke a specific API key by prefix (for multi-key accounts in future)
+router.delete("/keys/:prefix", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+  const agent = req.agent;
+  const { prefix } = req.params;
+  if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
+  
+  // For now, can only revoke own current key prefix
+  if (!agent.apiKey?.startsWith(prefix)) {
+    res.status(403).json({ ok: false, error: "forbidden", message: "Can only revoke your own key", request_id: reqId() });
+    return;
+  }
+
+  // Invalidate by setting apiKey to empty — forces re-registration
+  await prisma.agent.update({
+    where: { id: agent.id },
+    data: { apiKey: `revoked_${prefix}`, apiKeyHash: "" },
+  }).catch(() => {});
+
+  res.json({ ok: true, message: "API key revoked. Generate a new key via POST /v1/agent/keys/rotate.", request_id: reqId() });
+});
