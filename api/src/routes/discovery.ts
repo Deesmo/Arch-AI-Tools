@@ -436,6 +436,19 @@ router.get("/.well-known/agents.json", (_req: Request, res: Response): void => {
   }
 });
 
+// GET /.well-known/mcp/server-card.json — Smithery MCP server card
+router.get("/.well-known/mcp/server-card.json", (_req: Request, res: Response): void => {
+  const fs = require("fs");
+  const path = require("path");
+  try {
+    const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/mcp/server-card.json"), "utf8"));
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.json(content);
+  } catch {
+    res.status(404).json({ error: "server-card.json not found" });
+  }
+});
+
 // GET /.well-known/mcp.json — MCP server discovery
 router.get("/.well-known/mcp.json", (_req: Request, res: Response): void => {
   const fs = require("fs");
