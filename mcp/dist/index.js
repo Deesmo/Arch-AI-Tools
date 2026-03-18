@@ -1,10 +1,10 @@
 import "dotenv/config";
 import fetch from "node-fetch";
-import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { TOOL_SCHEMAS } from "./schemas.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
+import { TOOL_SCHEMAS } from "./schemas.js";
 import express from "express";
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
@@ -39,23 +39,164 @@ async function invokeTool(toolName, input) {
     const out = await res.json();
     return JSON.stringify(out, null, 2);
 }
+// ─── Annotation helpers ──────────────────────────────────────────────────────
+const WRITE_TOOLS = new Set([
+    "send-email", "generate-image", "text-to-speech", "browser-task",
+    "transcribe-audio", "image-generate", "webhook-send"
+]);
+const OPEN_WORLD_TOOLS = new Set([
+    "web-scrape", "web-search", "search-web", "rss-parse",
+    "crypto-price", "crypto-news", "crypto-market-cap", "crypto-fear-greed",
+    "crypto-ohlcv", "crypto-sentiment", "whois-lookup", "check-domain",
+    "extract-metadata", "extract-page"
+]);
+function buildToolEntry(t) {
+    return {
+        name: t.name,
+        description: t.description,
+        inputSchema: TOOL_SCHEMAS[t.name] ?? t.inputSchema ?? {
+            type: "object",
+            properties: {},
+            additionalProperties: true
+        },
+        annotations: {
+            readOnlyHint: !WRITE_TOOLS.has(t.name),
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: OPEN_WORLD_TOOLS.has(t.name)
+        }
+    };
+}
+// ─── Resources data ──────────────────────────────────────────────────────────
+const RESOURCES = [
+    {
+        uri: "arch://tools/catalog",
+        name: "Arch AI Tools Catalog",
+        description: "Complete catalog of all 53 available Arch AI Tools with descriptions, categories, and credit costs",
+        mimeType: "application/json"
+    },
+    {
+        uri: "arch://docs/quickstart",
+        name: "Quick Start Guide",
+        description: "Getting started guide for the Arch AI Tools MCP server — authentication, usage, and examples",
+        mimeType: "text/markdown"
+    }
+];
+const QUICKSTART_MD = `# Arch AI Tools — Quick Start
+
+Connect to 53 powerful AI tools via MCP.
+
+## Authentication
+All tools require an \`x-api-key\` header with your Arch API key.
+Get a free key at: https://archtools.dev/signup
+
+## Usage Example
+\`\`\`json
+{
+  "tool": "search-web",
+  "input": { "query": "latest AI news" }
+}
+\`\`\`
+
+## Tool Categories
+- **AI**: ai-generate, summarize, sentiment-analysis, web-search, research-report, fact-check
+- **Search**: search-web, news-search, rss-parse
+- **Crypto**: crypto-price, crypto-market-cap, crypto-fear-greed, crypto-ohlcv
+- **Web**: web-scrape, extract-page, screenshot-capture, whois-lookup
+- **Utilities**: generate-uuid, generate-hash, qr-code, url-shorten, timezone-convert
+
+Full documentation: https://archtools.dev/docs`;
+// ─── Prompts data ────────────────────────────────────────────────────────────
+const PROMPTS = [
+    {
+        name: "research-topic",
+        description: "Deep research on any topic — searches multiple sources and synthesizes a structured report with citations",
+        arguments: [
+            { name: "topic", description: "The topic or question to research", required: true },
+            { name: "depth", description: "Research depth: 'standard' or 'deep'", required: false }
+        ]
+    },
+    {
+        name: "fact-check-claim",
+        description: "Verify whether a claim is true, false, mixed, or unverified — returns verdict with confidence score and evidence",
+        arguments: [
+            { name: "claim", description: "The claim or statement to fact-check", required: true }
+        ]
+    },
+    {
+        name: "analyze-url",
+        description: "Comprehensive analysis of a URL — extracts content, metadata, takes screenshot, and summarizes",
+        arguments: [
+            { name: "url", description: "The URL to analyze", required: true }
+        ]
+    }
+];
+function getPromptMessages(name, args) {
+    switch (name) {
+        case "research-topic": {
+            const topic = args.topic || "[topic]";
+            const depth = args.depth || "standard";
+            return { description: "Research prompt", messages: [{ role: "user", content: { type: "text", text: `Please research the following topic using the research-report tool and provide a comprehensive report:\n\nTopic: ${topic}\nDepth: ${depth}\n\nUse the research-report tool with query="${topic}" and depth="${depth}".` } }] };
+        }
+        case "fact-check-claim": {
+            const claim = args.claim || "[claim]";
+            return { description: "Fact-check prompt", messages: [{ role: "user", content: { type: "text", text: `Please fact-check the following claim using the fact-check tool:\n\nClaim: "${claim}"\n\nUse the fact-check tool and provide the verdict, confidence score, and key evidence.` } }] };
+        }
+        case "analyze-url": {
+            const url = args.url || "[url]";
+            return { description: "URL analysis prompt", messages: [{ role: "user", content: { type: "text", text: `Please perform a comprehensive analysis of this URL: ${url}\n\n1. Use extract-page to get the main content\n2. Use extract-metadata to get title, description, OG tags\n3. Use screenshot-capture to capture a visual\n4. Summarize what you found.` } }] };
+        }
+        default:
+            throw new Error("Prompt not found");
+    }
+}
+// ─── Server factory (low-level Server for full schema control) ───────────────
 async function createServer() {
-    const server = new McpServer({
-        name: "arch-tools-mcp",
-        version: "1.0.0",
+    const server = new Server({ name: "arch-tools-mcp", version: "1.8.0" }, {
+        capabilities: {
+            tools: { listChanged: false },
+            resources: { listChanged: false },
+            prompts: { listChanged: false },
+        },
     });
     const tools = await getTools();
-    for (const t of tools) {
-        server.tool(t.name, t.description, { input: z.any().optional() }, async ({ input }) => {
-            const out = await invokeTool(t.name, input);
-            return { content: [{ type: "text", text: out }] };
-        });
-    }
+    // tools/list — returns full inputSchema with required + annotations
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+        tools: tools.map(buildToolEntry)
+    }));
+    // tools/call
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        const result = await invokeTool(request.params.name, request.params.arguments ?? {});
+        return { content: [{ type: "text", text: result }] };
+    });
+    // resources/list
+    server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+        resources: RESOURCES
+    }));
+    // resources/read
+    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+        const uri = request.params.uri;
+        if (uri === "arch://tools/catalog") {
+            const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+            const toolsData = await toolsRes.json();
+            return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] };
+        }
+        if (uri === "arch://docs/quickstart") {
+            return { contents: [{ uri, mimeType: "text/markdown", text: QUICKSTART_MD }] };
+        }
+        throw new Error("Resource not found");
+    });
+    // prompts/list
+    server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+        prompts: PROMPTS
+    }));
+    // prompts/get
+    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+        return getPromptMessages(request.params.name, (request.params.arguments ?? {}));
+    });
     return server;
 }
 // ─── Streamable HTTP POST handler (shared by /mcp and /sse POST) ─────────────
-// mcp-remote and modern clients try POST first; this handles the JSON-RPC layer
-// directly without the SDK transport so we control the Accept header behaviour.
 async function handleStreamablePost(req, res) {
     const body = req.body;
     res.setHeader("Content-Type", "text/event-stream");
@@ -69,6 +210,7 @@ async function handleStreamablePost(req, res) {
         return;
     }
     try {
+        const tools = await getTools();
         switch (body.method) {
             case "initialize":
                 send({ jsonrpc: "2.0", id: body.id, result: {
@@ -78,70 +220,29 @@ async function handleStreamablePost(req, res) {
                     } });
                 break;
             case "notifications/initialized":
-                // No response needed — just ack
                 break;
-            case "tools/list": {
-                const tools = await getTools();
+            case "tools/list":
                 send({ jsonrpc: "2.0", id: body.id, result: {
-                        tools: tools.map((t) => ({
-                            name: t.name,
-                            description: t.description,
-                            inputSchema: TOOL_SCHEMAS[t.name] ?? t.inputSchema ?? {
-                                type: "object",
-                                properties: {},
-                                additionalProperties: true
-                            },
-                            annotations: {
-                                readOnlyHint: !["send-email", "generate-image", "text-to-speech", "browser-task", "transcribe-audio", "image-generate", "webhook-send"].includes(t.name),
-                                destructiveHint: false,
-                                idempotentHint: true,
-                                openWorldHint: ["web-scrape", "web-search", "search-web", "rss-parse", "crypto-price", "crypto-news", "crypto-market-cap", "crypto-fear-greed", "crypto-ohlcv", "crypto-sentiment", "whois-lookup", "check-domain", "extract-metadata", "extract-page"].includes(t.name)
-                            }
-                        }))
+                        tools: tools.map(buildToolEntry)
                     } });
                 break;
-            }
             case "tools/call": {
                 const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {});
                 send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
                 break;
             }
             case "resources/list":
-                send({ jsonrpc: "2.0", id: body.id, result: { resources: [
-                            {
-                                uri: "arch://tools/catalog",
-                                name: "Arch AI Tools Catalog",
-                                description: "Complete catalog of all 53 available Arch AI Tools with descriptions, categories, and credit costs",
-                                mimeType: "application/json"
-                            },
-                            {
-                                uri: "arch://docs/quickstart",
-                                name: "Quick Start Guide",
-                                description: "Getting started guide for the Arch AI Tools MCP server — authentication, usage, and examples",
-                                mimeType: "text/markdown"
-                            }
-                        ] } });
+                send({ jsonrpc: "2.0", id: body.id, result: { resources: RESOURCES } });
                 break;
             case "resources/read": {
                 const uri = body.params?.uri;
                 if (uri === "arch://tools/catalog") {
-                    try {
-                        const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
-                        const toolsData = await toolsRes.json();
-                        send({ jsonrpc: "2.0", id: body.id, result: { contents: [{
-                                        uri, mimeType: "application/json",
-                                        text: JSON.stringify(toolsData, null, 2)
-                                    }] } });
-                    }
-                    catch (e) {
-                        send({ jsonrpc: "2.0", id: body.id, error: { code: -32000, message: e?.message || "Failed to fetch catalog" } });
-                    }
+                    const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+                    const toolsData = await toolsRes.json();
+                    send({ jsonrpc: "2.0", id: body.id, result: { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] } });
                 }
                 else if (uri === "arch://docs/quickstart") {
-                    send({ jsonrpc: "2.0", id: body.id, result: { contents: [{
-                                    uri, mimeType: "text/markdown",
-                                    text: `# Arch AI Tools — Quick Start\n\nConnect to 53 powerful AI tools via MCP.\n\n## Authentication\nAll tools require an \`x-api-key\` header with your Arch API key.\nGet a free key at: https://archtools.dev/signup\n\n## Usage Example\n\`\`\`json\n{\n  "tool": "search-web",\n  "input": { "query": "latest AI news" }\n}\n\`\`\`\n\n## Tool Categories\n- **AI**: ai-generate, summarize, sentiment-analysis, web-search, research-report, fact-check\n- **Search**: search-web, news-search, rss-parse\n- **Crypto**: crypto-price, crypto-market-cap, crypto-fear-greed, crypto-ohlcv\n- **Web**: web-scrape, extract-page, screenshot-capture, whois-lookup\n- **Utilities**: generate-uuid, generate-hash, qr-code, url-shorten, timezone-convert\n\nFull documentation: https://archtools.dev/docs`
-                                }] } });
+                    send({ jsonrpc: "2.0", id: body.id, result: { contents: [{ uri, mimeType: "text/markdown", text: QUICKSTART_MD }] } });
                 }
                 else {
                     send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Resource not found" } });
@@ -149,54 +250,16 @@ async function handleStreamablePost(req, res) {
                 break;
             }
             case "prompts/list":
-                send({ jsonrpc: "2.0", id: body.id, result: { prompts: [
-                            {
-                                name: "research-topic",
-                                description: "Deep research on any topic — searches multiple sources and synthesizes a structured report with citations",
-                                arguments: [
-                                    { name: "topic", description: "The topic or question to research", required: true },
-                                    { name: "depth", description: "Research depth: 'standard' or 'deep'", required: false }
-                                ]
-                            },
-                            {
-                                name: "fact-check-claim",
-                                description: "Verify whether a claim is true, false, mixed, or unverified — returns verdict with confidence score and evidence",
-                                arguments: [
-                                    { name: "claim", description: "The claim or statement to fact-check", required: true }
-                                ]
-                            },
-                            {
-                                name: "analyze-url",
-                                description: "Comprehensive analysis of a URL — extracts content, metadata, takes screenshot, and summarizes",
-                                arguments: [
-                                    { name: "url", description: "The URL to analyze", required: true }
-                                ]
-                            }
-                        ] } });
+                send({ jsonrpc: "2.0", id: body.id, result: { prompts: PROMPTS } });
                 break;
             case "prompts/get": {
                 const promptName = body.params?.name;
                 const promptArgs = body.params?.arguments || {};
-                if (promptName === "research-topic") {
-                    const topic = promptArgs.topic || "[topic]";
-                    const depth = promptArgs.depth || "standard";
-                    send({ jsonrpc: "2.0", id: body.id, result: { description: "Research prompt", messages: [{
-                                    role: "user", content: { type: "text", text: `Please research the following topic using the research-report tool and provide a comprehensive report:\n\nTopic: ${topic}\nDepth: ${depth}\n\nUse the research-report tool with query="${topic}" and depth="${depth}".` }
-                                }] } });
+                try {
+                    const result = getPromptMessages(promptName, promptArgs);
+                    send({ jsonrpc: "2.0", id: body.id, result });
                 }
-                else if (promptName === "fact-check-claim") {
-                    const claim = promptArgs.claim || "[claim]";
-                    send({ jsonrpc: "2.0", id: body.id, result: { description: "Fact-check prompt", messages: [{
-                                    role: "user", content: { type: "text", text: `Please fact-check the following claim using the fact-check tool:\n\nClaim: "${claim}"\n\nUse the fact-check tool and provide the verdict, confidence score, and key evidence.` }
-                                }] } });
-                }
-                else if (promptName === "analyze-url") {
-                    const url = promptArgs.url || "[url]";
-                    send({ jsonrpc: "2.0", id: body.id, result: { description: "URL analysis prompt", messages: [{
-                                    role: "user", content: { type: "text", text: `Please perform a comprehensive analysis of this URL: ${url}\n\n1. Use extract-page to get the main content\n2. Use extract-metadata to get title, description, OG tags\n3. Use screenshot-capture to capture a visual\n4. Summarize what you found.` }
-                                }] } });
-                }
-                else {
+                catch {
                     send({ jsonrpc: "2.0", id: body.id, error: { code: -32002, message: "Prompt not found" } });
                 }
                 break;
@@ -214,13 +277,9 @@ async function main() {
     if (transport === "sse") {
         const app = express();
         app.use(express.json());
-        // Per-session store — each SSE connection gets its OWN McpServer instance.
-        // Reusing a single server across connections causes the SDK to confuse
-        // transports and return 502 errors to real clients.
+        // Per-session store — each SSE connection gets its OWN Server instance.
         const transports = new Map();
         // ─── SSE transport (legacy / Claude Desktop / Cursor / mcp-remote) ────────
-        // GET /sse — opens the SSE stream; sends endpoint event so the client knows
-        // where to POST messages.  Each connection gets a fresh McpServer instance.
         app.get("/sse", async (_req, res) => {
             const sessionServer = await createServer();
             const sseTransport = new SSEServerTransport("/messages", res);
@@ -228,10 +287,7 @@ async function main() {
             res.on("close", () => transports.delete(sseTransport.sessionId));
             await sessionServer.connect(sseTransport);
         });
-        // POST /sse — mcp-remote tries POST first before falling back to GET/SSE.
-        // Handle it as Streamable HTTP so mcp-remote works without any fallback dance.
         app.post("/sse", handleStreamablePost);
-        // POST /messages — receives JSON-RPC from SSE clients
         app.post("/messages", async (req, res) => {
             const sessionId = req.query.sessionId;
             const session = transports.get(sessionId);
@@ -242,19 +298,14 @@ async function main() {
             await session.transport.handlePostMessage(req, res);
         });
         // ─── Streamable HTTP transport (Smithery + modern MCP clients) ────────────
-        // GET /mcp — server-initiated events stream required by Streamable HTTP spec.
-        // NOTE: only ONE app.get("/mcp") is registered here — the previous codebase
-        // had a duplicate that shadowed this handler entirely.
         app.get("/mcp", (req, res) => {
             res.setHeader("Content-Type", "text/event-stream");
             res.setHeader("Cache-Control", "no-cache");
             res.setHeader("Connection", "keep-alive");
             res.setHeader("Access-Control-Allow-Origin", "*");
-            // Send endpoint event so the client knows where to POST, then close
             res.write(`event: endpoint\ndata: /mcp\n\n`);
             res.end();
         });
-        // POST /mcp — Streamable HTTP endpoint; handles initialize / tools/list / tools/call
         app.post("/mcp", handleStreamablePost);
         app.options("/mcp", (_req, res) => {
             res.setHeader("Access-Control-Allow-Origin", "*");
@@ -263,10 +314,8 @@ async function main() {
             res.status(204).end();
         });
         // ─── Discovery / meta endpoints ──────────────────────────────────────────
-        // Smithery server-card — allows scan-free listing (uses MCP-spec format)
         app.get("/.well-known/mcp/server-card.json", async (_req, res) => {
             try {
-                // Dynamically build the card with live tools list for accuracy
                 const tools = await getTools();
                 res.json({
                     serverInfo: {
@@ -275,33 +324,15 @@ async function main() {
                         description: `${tools.length} production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.`
                     },
                     authentication: { required: false },
-                    tools: tools.map((t) => ({
-                        name: t.name,
-                        description: t.description,
-                        inputSchema: TOOL_SCHEMAS[t.name] ?? t.inputSchema ?? { type: "object", properties: {}, additionalProperties: true },
-                        annotations: {
-                            readOnlyHint: !["send-email", "generate-image", "text-to-speech", "browser-task", "transcribe-audio", "image-generate", "webhook-send"].includes(t.name),
-                            destructiveHint: false,
-                            idempotentHint: true,
-                            openWorldHint: ["web-scrape", "web-search", "search-web", "rss-parse", "crypto-price", "crypto-news", "crypto-market-cap", "crypto-fear-greed", "crypto-ohlcv", "crypto-sentiment", "whois-lookup", "check-domain", "extract-metadata", "extract-page"].includes(t.name)
-                        }
-                    })),
-                    resources: [
-                        { uri: "arch://tools/catalog", name: "Arch AI Tools Catalog", description: `Complete catalog of all ${tools.length} available Arch AI Tools`, mimeType: "application/json" },
-                        { uri: "arch://docs/quickstart", name: "Quick Start Guide", description: "Getting started guide for the Arch AI Tools MCP server", mimeType: "text/markdown" }
-                    ],
-                    prompts: [
-                        { name: "research-topic", description: "Deep research on any topic with citations", arguments: [{ name: "topic", required: true }, { name: "depth", required: false }] },
-                        { name: "fact-check-claim", description: "Verify a claim with confidence score and evidence", arguments: [{ name: "claim", required: true }] },
-                        { name: "analyze-url", description: "Comprehensive URL analysis — content, metadata, screenshot", arguments: [{ name: "url", required: true }] }
-                    ]
+                    tools: tools.map(buildToolEntry),
+                    resources: RESOURCES,
+                    prompts: PROMPTS
                 });
             }
             catch (err) {
                 res.status(500).json({ error: err?.message || "Failed to generate server card" });
             }
         });
-        // Rich health check — includes session count and transport info
         app.get("/health", (_req, res) => res.json({ ok: true, service: "arch-tools-mcp", transport: "sse+streamable", sessions: transports.size }));
         app.listen(ssePort, () => {
             console.log(`MCP SSE server running on port ${ssePort}`);
