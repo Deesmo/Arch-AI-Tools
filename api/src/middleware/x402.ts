@@ -48,6 +48,7 @@ const USDT_CONTRACTS: Record<string, string> = {
   optimism:  "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
   avalanche: "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
   base:      "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+  bsc:       "0x55d398326f99059fF775485246999027B3197955",  // USDT on BSC (BEP-20) — $40B+ liquidity
 };
 
 // Aptos native USDC token address (Circle native, launched Jan 2025)
@@ -594,7 +595,8 @@ function buildPaymentRequired(toolName: string, price: string): object {
   const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
   if (usdtWallet) {
     const usdtNetworks: Array<{ network: string; chain: string }> = [
-      { network: "eip155:1",     chain: "ethereum" },
+      { network: "eip155:1",     chain: "ethereum" },   // $40B USDT — largest EVM pool
+      { network: "eip155:56",    chain: "bsc" },         // BSC USDT — $15B+ pool
       { network: "eip155:42161", chain: "arbitrum" },
       { network: "eip155:137",   chain: "polygon" },
       { network: "eip155:10",    chain: "optimism" },
