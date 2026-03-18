@@ -54,6 +54,7 @@
     "lru-cache": "^11.0.2",
     "marked": "^15.0.6",
     "morgan": "^1.10.0",
+    "posthog-node": "^5.28.2",
     "qrcode": "^1.5.4",
     "resend": "^4.1.2",
     "slugify": "^1.6.6",

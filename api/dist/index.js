@@ -37,6 +37,9 @@ import facilitatorRouter from "./routes/facilitator.js";
 import agentsRouter from "./routes/agents.js";
 import webhooksRouter from "./routes/webhooks.js";
 import mcpMarketplaceRouter from "./routes/mcp-marketplace.js";
+import referralRouter from "./routes/referral.js";
+import trialRouter from "./routes/trial.js";
+import affiliateRouter from "./routes/affiliate.js";
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
@@ -221,6 +224,12 @@ app.use("/api/v1/x402/playground", playgroundRouter);
 app.use("/api/v1/x402", x402PaymentsRouter);
 // Facilitator-as-a-Service — let other API providers use Arch Tools as their x402 facilitator
 app.use("/api/v1/facilitator", facilitatorRouter);
+// Referral system
+app.use("/api/v1/referral", referralRouter);
+// Free trial system
+app.use("/v1/trial", trialRouter);
+// Affiliate tracking
+app.use("/v1/affiliate", affiliateRouter);
 // Agent Identity (KYA — Know Your Agent)
 app.use("/api/v1/agents", agentsRouter);
 // Webhooks — event notification system
@@ -238,6 +247,7 @@ app.use("/auth", authRouter);
 app.use("/api/chat", chatRouter);
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (_req, res) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML));
+app.get("/register", (_req, res) => res.redirect(301, "/signup"));
 app.get("/login", (_req, res) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (req, res) => {
     const token = req.cookies?.arch_session;
@@ -253,8 +263,6 @@ app.get("/pricing", (_req, res) => res.sendFile(path.join(__dirname, '../public/
 app.get("/getting-started", (_req, res) => res.redirect(301, "/docs/getting-started"));
 // /terms — convenience redirect to static terms page
 app.get("/terms", (_req, res) => res.redirect(301, "/terms.html"));
-// /links — Linktree-style page
-app.get("/links", (_req, res) => res.redirect(301, "/links.html"));
 // /privacy and /legal — convenience redirects to canonical sub-paths
 app.get("/privacy", (_req, res) => res.redirect(301, "/legal/privacy"));
 // /docs — full API reference page
@@ -269,7 +277,18 @@ app.get("/sdk", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdk.
 app.get("/fund", (_req, res) => res.sendFile(path.join(__dirname, '../public/fund.html')));
 app.get("/playground", (_req, res) => res.sendFile(path.join(__dirname, '../public/playground.html')));
 app.get("/agents", (_req, res) => res.sendFile(path.join(__dirname, '../public/agents.html')));
-app.get("/analytics", (_req, res) => res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/analytics", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
+app.get("/admin.html", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+app.get("/admin", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+app.get("/sitemap.xml", (_req, res) => res.sendFile(path.join(__dirname, '../public/sitemap.xml')));
+app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../public/robots.txt')));
+app.get("/x402-guide", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
+app.get("/refer", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/refer.html')));
+app.get("/landing-b", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/landing-b.html')));
+app.get("/changelog-tonight", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/changelog-tonight.html')));
+app.get("/agents", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/agents-landing.html')));
+// /register → /signup redirect (common developer habit)
+app.get("/register", (_req, res) => res.redirect(301, "/signup"));
 app.get("/usage", (_req, res) => res.sendFile(path.join(__dirname, '../public/usage.html')));
 app.get("/status", (_req, res) => res.sendFile(path.join(__dirname, '../public/status.html')));
 app.get("/stats", (_req, res) => res.sendFile(path.join(__dirname, '../public/stats.html')));

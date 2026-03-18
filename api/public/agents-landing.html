@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arch Tools — The API Infrastructure Your AI Agent Needs</title>
+  <meta name="description" content="116 tools, patent-pending x402 payments, MCP marketplace. The infrastructure layer purpose-built for autonomous AI agents." />
+  <meta name="keywords" content="AI agent tools, x402 API, MCP tools, agent infrastructure, autonomous agent, crypto payments AI, patent-pending" />
+  <meta property="og:title" content="Arch Tools — Built for AI Agents" />
+  <meta property="og:description" content="116 tools. Patent-pending x402. MCP marketplace. The infrastructure your agent needs." />
+  <meta property="og:url" content="https://archtools.dev/agents" />
+  <meta property="og:image" content="https://archtools.dev/og-image.png" />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="canonical" href="https://archtools.dev/agents" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888; --purple: #8844FF;
+    }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    h1, h2, h3, h4 { font-family: 'Syne', system-ui, sans-serif; }
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px); background: rgba(7,6,26,0.9);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+    .main { max-width: 900px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    /* HERO */
+    .hero { text-align: center; margin-bottom: 64px; padding-top: 32px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,176,48,0.10); border: 1px solid rgba(255,176,48,0.25);
+      padding: 5px 14px; border-radius: 20px; font-size: 12px; color: var(--orange);
+      margin-bottom: 20px; font-weight: 500;
+    }
+    .hero h1 { font-size: 48px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 16px; line-height: 1.1; }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 18px; color: var(--muted); max-width: 640px; margin: 0 auto 32px; }
+    .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-cta {
+      display: inline-block; background: var(--grad); color: #fff; font-weight: 700;
+      padding: 14px 32px; border-radius: 10px; font-size: 16px; text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 24px rgba(255,24,136,0.25);
+    }
+    .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,24,136,0.35); }
+    .hero-cta-secondary {
+      display: inline-block; background: transparent; color: var(--text); font-weight: 600;
+      padding: 14px 28px; border-radius: 10px; font-size: 15px; text-decoration: none;
+      border: 1px solid var(--border); transition: border-color 0.2s;
+    }
+    .hero-cta-secondary:hover { border-color: var(--accent); }
+
+    /* PROBLEM */
+    .problem {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 40px 32px; margin-bottom: 56px;
+    }
+    .problem h2 { font-size: 26px; margin-bottom: 16px; color: var(--orange); }
+    .problem ul { list-style: none; padding: 0; }
+    .problem li { padding: 8px 0; font-size: 15px; color: var(--muted); display: flex; align-items: flex-start; gap: 10px; }
+    .problem li::before { content: '✕'; color: var(--pink); font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+
+    /* SOLUTION GRID */
+    .solutions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 56px; }
+    .sol-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px 20px; transition: border-color 0.2s;
+    }
+    .sol-card:hover { border-color: rgba(255,255,255,0.2); }
+    .sol-icon { font-size: 28px; margin-bottom: 12px; }
+    .sol-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .sol-card p { font-size: 13px; color: var(--muted); }
+
+    /* CODE BLOCK */
+    .code-section { margin-bottom: 56px; }
+    .code-section h2 { font-size: 28px; text-align: center; margin-bottom: 8px; }
+    .code-section .subtitle { text-align: center; color: var(--muted); margin-bottom: 24px; font-size: 15px; }
+    .code-block {
+      background: #0d0c22; border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px 28px; overflow-x: auto;
+    }
+    .code-block pre {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--muted);
+    }
+    .code-block .kw { color: var(--pink); }
+    .code-block .str { color: var(--green); }
+    .code-block .cmt { color: rgba(255,255,255,0.3); }
+    .code-block .fn { color: var(--accent); }
+    .code-block .num { color: var(--orange); }
+
+    /* PATENT SECTION */
+    .patent-box {
+      background: linear-gradient(135deg, rgba(255,176,48,0.08), rgba(255,24,136,0.08));
+      border: 1px solid rgba(255,176,48,0.2); border-radius: 16px;
+      padding: 40px 32px; text-align: center; margin-bottom: 56px;
+    }
+    .patent-box h2 { font-size: 26px; margin-bottom: 12px; }
+    .patent-box h2 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .patent-box p { color: var(--muted); max-width: 600px; margin: 0 auto; font-size: 15px; }
+
+    /* STATS */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 56px; }
+    .stat {
+      text-align: center; padding: 20px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    }
+    .stat-num {
+      font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800;
+      background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* MCP */
+    .mcp-section { margin-bottom: 56px; }
+    .mcp-section h2 { font-size: 28px; text-align: center; margin-bottom: 8px; }
+    .mcp-section .subtitle { text-align: center; color: var(--muted); margin-bottom: 24px; font-size: 15px; }
+    .mcp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .mcp-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; display: flex; align-items: flex-start; gap: 14px;
+    }
+    .mcp-card .icon { font-size: 24px; flex-shrink: 0; }
+    .mcp-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .mcp-card p { font-size: 13px; color: var(--muted); }
+
+    /* FINAL CTA */
+    .final-cta {
+      text-align: center; padding: 48px 32px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    }
+    .final-cta h2 { font-size: 32px; margin-bottom: 12px; }
+    .final-cta p { color: var(--muted); margin-bottom: 24px; font-size: 16px; }
+    .final-cta code {
+      display: block; background: #0d0c22; border: 1px solid var(--border);
+      padding: 16px 24px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; margin: 0 auto 24px; max-width: 500px; text-align: left;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .solutions { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .mcp-grid { grid-template-columns: 1fr; }
+      .at-nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="at-nav">
+    <a href="/" class="at-nav-logo">
+      <div class="at-logo-mark"><img src="/arch-icon.svg" alt="Arch" width="20" height="20" /></div>
+      <span class="at-logo-name">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/docs">Docs</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/directory">MCP Directory</a>
+      <a href="/x402-guide">x402 Guide</a>
+      <a href="/signup" class="at-nav-cta">Get API Key →</a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="hero">
+      <div class="hero-badge">⚡ Patent-Pending Technology</div>
+      <h1>Your Agent Needs <span>Better Tools</span></h1>
+      <p>116 API tools. Native x402 crypto payments. MCP marketplace. The infrastructure layer purpose-built for AI agents that need to <em>do things</em>.</p>
+      <div class="hero-ctas">
+        <a href="/signup" class="hero-cta">Start Free — 100 Credits →</a>
+        <a href="/docs" class="hero-cta-secondary">Read the Docs</a>
+      </div>
+    </div>
+
+    <div class="problem">
+      <h2>Building an AI agent? You've hit these walls.</h2>
+      <ul>
+        <li>Stitching together 15 different APIs just to do basic tasks</li>
+        <li>Payment infrastructure that doesn't work for autonomous agents</li>
+        <li>No standard way for agents to discover and use tools</li>
+        <li>Rate limits, auth flows, and SDKs that assume a human is clicking</li>
+        <li>MCP tools scattered across repos with no quality control</li>
+      </ul>
+    </div>
+
+    <div class="solutions">
+      <div class="sol-card">
+        <div class="sol-icon">🔧</div>
+        <h3>116 Tools, One Key</h3>
+        <p>Web scraping, AI generation, crypto prices, OCR, DNS, hashing, sentiment analysis — all behind a single API key and consistent interface.</p>
+      </div>
+      <div class="sol-card">
+        <div class="sol-icon">💰</div>
+        <h3>x402 Native Payments</h3>
+        <p>Your agent pays per-call with USDC. No subscriptions, no invoices, no human approval needed. HTTP 402 → pay → get result. Autonomous.</p>
+      </div>
+      <div class="sol-card">
+        <div class="sol-icon">🔌</div>
+        <h3>MCP Marketplace</h3>
+        <p>Model Context Protocol tools your agent can discover and use. Growing directory of verified providers. Standards-based interop.</p>
+      </div>
+      <div class="sol-card">
+        <div class="sol-icon">📋</div>
+        <h3>Agent-First Design</h3>
+        <p>No CAPTCHAs. No OAuth flows. No browser redirects. Just API key auth and structured JSON responses your agent can parse.</p>
+      </div>
+      <div class="sol-card">
+        <div class="sol-icon">⚡</div>
+        <h3>Multi-Chain USDC</h3>
+        <p>Pay on Base, Polygon, Avalanche, or Solana. Your agent picks the cheapest chain automatically. Native ETH and SOL also accepted.</p>
+      </div>
+      <div class="sol-card">
+        <div class="sol-icon">🛡️</div>
+        <h3>Patent-Pending Protocol</h3>
+        <p>Our AI Agent Identity and Authorization Protocol is patent-pending. You're building on protected infrastructure with a moat.</p>
+      </div>
+    </div>
+
+    <div class="code-section">
+      <h2>Three Lines to Tool Access</h2>
+      <p class="subtitle">Your agent is making API calls in under a minute.</p>
+      <div class="code-block"><pre><span class="cmt">// 1. Activate a free trial (no credit card)</span>
+<span class="kw">const</span> trial = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://archtools.dev/v1/trial/activate'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  body: JSON.stringify({ email: <span class="str">'agent@example.com'</span> })
+});
+<span class="kw">const</span> { api_key } = <span class="kw">await</span> trial.json();
+
+<span class="cmt">// 2. Use any tool</span>
+<span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://archtools.dev/v1/tools/web-scrape'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: { <span class="str">'Authorization'</span>: <span class="str">`Bearer ${api_key}`</span>, <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  body: JSON.stringify({ url: <span class="str">'https://example.com'</span> })
+});
+
+<span class="cmt">// 3. When credits run out → x402 kicks in automatically</span>
+<span class="cmt">// Agent pays per-call with USDC. No human needed.</span></pre>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">116</div>
+        <div class="stat-label">API Tools</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">7</div>
+        <div class="stat-label">Chains Supported</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">40+</div>
+        <div class="stat-label">Active Agents</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">$0</div>
+        <div class="stat-label">To Start</div>
+      </div>
+    </div>
+
+    <div class="patent-box">
+      <h2>Protected by <span>Patent-Pending Technology</span></h2>
+      <p>The AI Agent Identity and Authorization Protocol System (Application #64/008,145) is the first patent filing for x402-based agent authentication. When you build on Arch Tools, you're building on defensible infrastructure.</p>
+    </div>
+
+    <div class="mcp-section">
+      <h2>MCP-Ready Infrastructure</h2>
+      <p class="subtitle">Model Context Protocol tools your agent can discover and connect to.</p>
+      <div class="mcp-grid">
+        <div class="mcp-card">
+          <div class="icon">🌐</div>
+          <div>
+            <h3>Web & Data</h3>
+            <p>Scraping, search, DNS lookup, WHOIS, RSS feeds — the web as a tool for your agent.</p>
+          </div>
+        </div>
+        <div class="mcp-card">
+          <div class="icon">🤖</div>
+          <div>
+            <h3>AI & Generation</h3>
+            <p>Text generation, sentiment analysis, summarization, translation — AI tools for AI agents.</p>
+          </div>
+        </div>
+        <div class="mcp-card">
+          <div class="icon">💎</div>
+          <div>
+            <h3>Crypto & Finance</h3>
+            <p>Real-time prices, market cap, gas fees, portfolio tracking — DeFi intelligence built in.</p>
+          </div>
+        </div>
+        <div class="mcp-card">
+          <div class="icon">🔐</div>
+          <div>
+            <h3>Security & Utility</h3>
+            <p>Hashing, UUID generation, OCR, QR codes, encoding — the utility belt every agent needs.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="final-cta">
+      <h2>Ship Your Agent Tonight</h2>
+      <p>100 free credits. No credit card. Activate in one API call.</p>
+      <code>curl -X POST https://archtools.dev/v1/trial/activate \<br>  -H "Content-Type: application/json" \<br>  -d '{"email":"you@example.com"}'</code>
+      <a href="/signup" class="hero-cta">Create Free Account →</a>
+    </div>
+  </div>
+</body>
+</html>

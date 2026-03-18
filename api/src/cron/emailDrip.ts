@@ -21,20 +21,20 @@ export async function runEmailDrip(): Promise<void> {
   try {
     const [day3Agents, day7Agents] = await Promise.all([
       prisma.agent.findMany({
-        where: { createdAt: { gte: day3Start, lte: day3End }, email: { not: null } },
-        select: { id: true, email: true, creditsRemaining: true }
+        where: { createdAt: { gte: day3Start, lte: day3End }, email: { not: "" } },
+        select: { id: true, email: true, credits: true }
       }),
       prisma.agent.findMany({
-        where: { createdAt: { gte: day7Start, lte: day7End }, email: { not: null } },
-        select: { id: true, email: true, creditsRemaining: true }
+        where: { createdAt: { gte: day7Start, lte: day7End }, email: { not: "" } },
+        select: { id: true, email: true, credits: true }
       }),
     ]);
 
     logger.info({ day3: day3Agents.length, day7: day7Agents.length }, "Email drip batch");
 
     await Promise.all([
-      ...day3Agents.map(a => a.email ? sendDay3FollowupEmail(a.email, a.id, a.creditsRemaining ?? 0) : Promise.resolve()),
-      ...day7Agents.map(a => a.email ? sendDay7ReengagementEmail(a.email, a.creditsRemaining ?? 0) : Promise.resolve()),
+      ...day3Agents.map(a => a.email ? sendDay3FollowupEmail(a.email, a.id, a.credits ?? 0) : Promise.resolve()),
+      ...day7Agents.map(a => a.email ? sendDay7ReengagementEmail(a.email, a.credits ?? 0) : Promise.resolve()),
     ]);
   } catch (err: any) {
     logger.error({ err: err.message }, "Email drip cron failed");

@@ -19,6 +19,7 @@ import { logger } from "../lib/logger.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { captureEvent, identifyUser } from "../lib/posthog.js";
 
 const router = Router();
 
@@ -83,6 +84,8 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
     });
 
     logger.info({ agentId: agent.id, email, credits: TRIAL_CREDITS }, "Trial account activated");
+    captureEvent(agent.id, "trial_activated", { email, credits: TRIAL_CREDITS });
+    identifyUser(agent.id, { email, tier: "free", credits: TRIAL_CREDITS, source: "trial" });
 
     res.status(201).json({
       ok: true,

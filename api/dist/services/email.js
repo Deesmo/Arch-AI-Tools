@@ -178,8 +178,15 @@ export async function sendVerificationEmail(args) {
     logger.info({ to }, "Verification email sent");
 }
 // ─── 2. Welcome Email ───
-export async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted) {
+export async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted, referralCode) {
     const subject = "Welcome to Arch Tools — Your API key is ready";
+    const referralSection = referralCode ? `
+    <hr class="divider">
+    <h3 style="font-size:16px;font-weight:700;color:#F0EEFF;margin-bottom:8px;">🎁 Share & Earn More Credits</h3>
+    <p>Give friends <strong>500 free credits</strong> when they sign up with your referral code — and you get <strong>500 credits</strong> too!</p>
+    <div class="key-box" style="font-size:16px;text-align:center;letter-spacing:1px;color:#FF9010;">${referralCode}</div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/refer.html" style="background:linear-gradient(135deg,#AA77FF,#FF2896);">Share your referral link →</a></div>
+  ` : "";
     const html = layout(subject, `
     <p>You're in. Here's your API key — <strong>copy it now and store it somewhere safe. It cannot be retrieved again.</strong></p>
     <div class="key-warning">Save this key now — it won't be shown again after you close this email.</div>
@@ -189,13 +196,15 @@ export async function sendWelcomeEmail(to, agentId, apiKey, creditsGranted) {
       <div class="stat"><span>Plan</span>Free</div>
       <div class="stat"><span>Agent ID</span>${agentId.slice(0, 14)}…</div>
     </div>
+    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 58 AI tools — enough to really put Arch Tools through its paces.</p>
     <p>Use your key in any HTTP request:</p>
     <div class="key-box" style="font-size:13px;">x-api-key: ${apiKey.slice(0, 12)}…</div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Read the docs →</a></div>
+    ${referralSection}
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Credits never expire. When you're ready to scale, grab a credit pack at <a href="${SITE}/#pricing">archtools.dev/pricing</a>.</p>
   `);
-    const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\nDocs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
+    const text = `Welcome to Arch Tools!\n\nYour API key (save this — it can't be retrieved later):\n${apiKey}\n\nCredits granted: ${creditsGranted}\nAgent ID: ${agentId}\n\n${referralCode ? `Your referral code: ${referralCode}\nShare it and you both get 500 bonus credits!\n\n` : ""}Docs: ${SITE}/docs\nPricing: ${SITE}/#pricing`;
     await sendEmail(to, subject, html, text);
 }
 // ─── 3. Low Credit Alert ───
@@ -319,6 +328,42 @@ export async function sendPasswordResetEmail(to, resetUrl) {
     <p style="font-size:14px;color:#8A85B0;margin-bottom:24px;">Click the button below to set a new password. This link expires in 1 hour.</p>
     <div class="btn-wrap"><a class="btn" href="${resetUrl}">Reset Password →</a></div>
     <p style="font-size:12px;color:#5A557A;margin-top:20px;">If you didn't request this, ignore this email. Your password won't change.</p>
+  `);
+    await sendEmail(to, subject, html);
+}
+// ─── Day-3 Follow-up Email ───────────────────────────────────────────────────
+export async function sendDay3FollowupEmail(to, agentId, creditsRemaining) {
+    const subject = "Quick tip from Arch Tools — your most-used tools";
+    const html = layout(subject, `
+    <p>Three days in. Here's a quick tip on getting more out of Arch Tools.</p>
+    <p>The tools developers use most:</p>
+    <div class="stats">
+      <div class="stat"><span>Most popular</span>ai-generate (Claude, GPT, Grok)</div>
+      <div class="stat"><span>Fastest</span>generate-hash, generate-uuid</div>
+      <div class="stat"><span>Most powerful</span>web-scrape + ai-generate chained</div>
+    </div>
+    <p>You have <strong>${creditsRemaining} credits</strong> remaining. Run them through the playground to see the full x402 payment flow in action.</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/playground">Try the x402 Playground →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 14)}… · Unsubscribe: reply with "stop"</p>
+  `);
+    await sendEmail(to, subject, html);
+}
+// ─── Day-7 Re-engagement Email ───────────────────────────────────────────────
+export async function sendDay7ReengagementEmail(to, creditsRemaining) {
+    const subject = "Still building with Arch Tools?";
+    const html = layout(subject, `
+    <p>A week in. Just checking — are you getting value from Arch Tools?</p>
+    <p>If you haven't tried x402 payments yet, here's what they unlock:</p>
+    <div class="stats">
+      <div class="stat"><span>For agents</span>Pay per-call with USDC, no API key needed</div>
+      <div class="stat"><span>Chains</span>Base, Ethereum, Solana, Polygon + 12 more</div>
+      <div class="stat"><span>Cost</span>As low as $0.001 per call</div>
+    </div>
+    <p>You have <strong>${creditsRemaining} credits</strong> left. When they run out, your agents can keep going via x402 without any human intervention.</p>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/playground">Test x402 Payments →</a></div>
+    <hr class="divider">
+    <p style="font-size:13px;color:#8A85B0;">Reply "stop" to unsubscribe.</p>
   `);
     await sendEmail(to, subject, html);
 }

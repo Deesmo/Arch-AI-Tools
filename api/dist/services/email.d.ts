@@ -3,7 +3,7 @@ export declare function sendVerificationEmail(args: {
     to: string;
     verifyUrl: string;
 }): Promise<void>;
-export declare function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number): Promise<void>;
+export declare function sendWelcomeEmail(to: string, agentId: string, apiKey: string, creditsGranted: number, referralCode?: string): Promise<void>;
 export declare function sendLowCreditAlert(to: string, creditsRemaining: number, agentId: string): Promise<void>;
 export declare function sendPurchaseConfirmation(to: string, credits: number, label: string, newBalance: number): Promise<void>;
 export declare function sendAdminAlert(subject: string, body: string): Promise<void>;
@@ -21,4 +21,6 @@ export declare function sendX402PaymentReceipt(to: string, opts: {
     network: string;
 }): Promise<void>;
 export declare function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void>;
+export declare function sendDay3FollowupEmail(to: string, agentId: string, creditsRemaining: number): Promise<void>;
+export declare function sendDay7ReengagementEmail(to: string, creditsRemaining: number): Promise<void>;
 //# sourceMappingURL=email.d.ts.map

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arch Tools — Ship Log: March 17, 2026</title>
+  <meta name="description" content="Everything shipped tonight: free trial, affiliate system, CI/CD, PostHog analytics, admin dashboard, x402 fix, drip emails, SEO pages." />
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --grad: linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);
+      --green: #34d399; --orange: #FFB030; --pink: #FF1888; --purple: #8844FF;
+    }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    h1, h2, h3, h4 { font-family: 'Syne', system-ui, sans-serif; }
+    .at-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px); background: rgba(7,6,26,0.9);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .at-nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .at-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); border: 1px solid rgba(255,255,255,0.12); display: grid; place-items: center; }
+    .at-logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .at-nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .at-nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .at-nav-links a:hover { color: var(--text); }
+    .at-nav-cta { background: var(--grad); color: #fff !important; font-weight: 700; padding: 7px 14px; border-radius: 8px; font-size: 12px !important; }
+    .main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    .hero { text-align: center; margin-bottom: 48px; padding-top: 24px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(52,211,153,0.10); border: 1px solid rgba(52,211,153,0.25);
+      padding: 5px 14px; border-radius: 20px; font-size: 12px; color: var(--green);
+      margin-bottom: 20px; font-weight: 500;
+    }
+    .hero h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px; line-height: 1.15; }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 16px; color: var(--muted); }
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before {
+      content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+      width: 2px; background: linear-gradient(to bottom, var(--orange), var(--pink), var(--purple));
+      border-radius: 1px;
+    }
+    .entry { position: relative; margin-bottom: 36px; }
+    .entry::before {
+      content: ''; position: absolute; left: -24px; top: 6px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--grad); border: 2px solid var(--bg);
+    }
+    .entry h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .entry .tag {
+      display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+      border-radius: 4px; margin-right: 6px; margin-bottom: 6px;
+    }
+    .tag-feat { background: rgba(52,211,153,0.15); color: var(--green); }
+    .tag-fix { background: rgba(255,176,48,0.15); color: var(--orange); }
+    .tag-infra { background: rgba(136,68,255,0.15); color: var(--purple); }
+    .tag-seo { background: rgba(34,211,238,0.15); color: var(--accent); }
+    .entry p { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; }
+    .cta-box {
+      text-align: center; margin-top: 56px; padding: 32px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    }
+    .cta-box h2 { font-size: 24px; margin-bottom: 12px; }
+    .cta-box p { color: var(--muted); margin-bottom: 20px; }
+    .cta-btn {
+      display: inline-block; background: var(--grad); color: #fff; font-weight: 700;
+      padding: 12px 28px; border-radius: 10px; font-size: 15px; text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 24px rgba(255,24,136,0.25);
+    }
+    .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,24,136,0.35); }
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 26px; }
+      .at-nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="at-nav">
+    <a href="/" class="at-nav-logo">
+      <div class="at-logo-mark"><img src="/arch-icon.svg" alt="Arch" width="20" height="20" /></div>
+      <span class="at-logo-name">Arch Tools</span>
+    </a>
+    <div class="at-nav-links">
+      <a href="/docs">Docs</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/changelog">Full Changelog</a>
+      <a href="/signup" class="at-nav-cta">Get Started →</a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="hero">
+      <div class="hero-badge">🚀 Ship Log</div>
+      <h1>March 17, 2026 — <span>Massive Drop</span></h1>
+      <p>One night. Eleven features. Zero downtime.</p>
+    </div>
+
+    <div class="timeline">
+      <div class="entry">
+        <span class="tag tag-feat">Feature</span>
+        <h3>Free Trial System</h3>
+        <p>New <code>POST /v1/trial/activate</code> endpoint — email in, API key out, 100 free credits. No credit card required. When credits hit zero, x402 pay-per-call kicks in automatically.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-feat">Feature</span>
+        <h3>Affiliate Tracking</h3>
+        <p>Full affiliate system with unique referral codes, click analytics, conversion tracking, and credit rewards. Share your link, earn credits when people sign up.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-infra">Infrastructure</span>
+        <h3>CI/CD Pipeline</h3>
+        <p>GitHub Actions workflow: push to <code>main</code> → auto-deploy to Render. No more manual deploys. Includes lint, type-check, and integration tests.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-infra">Infrastructure</span>
+        <h3>PostHog Analytics</h3>
+        <p>Server-side event tracking on signups, logins, trial activations, and API calls. Product analytics without client-side bloat.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-feat">Feature</span>
+        <h3>Admin Dashboard</h3>
+        <p>Full admin panel at <code>/admin.html</code> — real-time stats, top tools by usage, agent breakdown, purchase history. Protected by admin key.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-fix">Fix</span>
+        <h3>x402 Payment Flow</h3>
+        <p>Fixed the x402 SDK integration — unauthenticated tool calls now return proper <code>HTTP 402</code> with multi-chain USDC payment instructions (Base, Polygon, Avalanche, Solana + native ETH/SOL).</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-feat">Feature</span>
+        <h3>Drip Email Sequences</h3>
+        <p>Automated email drips: Day 1 welcome, Day 3 follow-up tips, Day 7 re-engagement. Runs daily via cron. Includes credit balance and personalized tool suggestions.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-feat">Feature</span>
+        <h3>Referral System</h3>
+        <p>Dedicated <code>/refer</code> page with unique referral codes, live stats, one-click copy link. Both referrer and referred get bonus credits.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-seo">SEO</span>
+        <h3>SEO Pages</h3>
+        <p>New pages: <code>/x402-guide</code> explainer, <code>/landing-b</code> A/B variant with patent-pending hook, <code>/sitemap.xml</code>, <code>/robots.txt</code>. Meta tags updated with x402 and patent keywords across all pages.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-fix">Fix</span>
+        <h3>Free Credits Default</h3>
+        <p>Standardized free credits to 100 across all signup paths, marketing copy, and monthly refresh cron. Added <code>/register → /signup</code> redirect.</p>
+      </div>
+
+      <div class="entry">
+        <span class="tag tag-feat">Feature</span>
+        <h3>Agent Developer Landing Page</h3>
+        <p>New <code>/agents</code> landing page specifically for developers building AI agents. Patent-pending x402 infrastructure, MCP marketplace, and tool directory pitch.</p>
+      </div>
+    </div>
+
+    <div class="cta-box">
+      <h2>Try It Free</h2>
+      <p>100 credits. No credit card. Start building in 30 seconds.</p>
+      <a href="/signup" class="cta-btn">Get Your API Key →</a>
+    </div>
+  </div>
+</body>
+</html>

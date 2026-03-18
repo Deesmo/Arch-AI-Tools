@@ -332,6 +332,8 @@ app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../publ
 app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
 app.get("/refer", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/refer.html')));
 app.get("/landing-b", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/landing-b.html')));
+app.get("/changelog-tonight", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/changelog-tonight.html')));
+app.get("/agents", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/agents-landing.html')));
 // /register → /signup redirect (common developer habit)
 app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 

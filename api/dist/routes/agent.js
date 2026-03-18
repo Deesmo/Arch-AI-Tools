@@ -66,11 +66,28 @@ router.post("/register", async (req, res) => {
             docs: "https://archtools.dev",
             request_id: reqId(),
         });
+        // Create referral code for the new user (non-blocking)
+        let referralCode;
+        try {
+            const code = `ARCH-${crypto.randomBytes(4).toString("hex")}`;
+            await prisma.referral.create({
+                data: {
+                    referrerId: agent.id,
+                    code,
+                    status: "pending",
+                    rewardCredits: 500,
+                },
+            });
+            referralCode = code;
+        }
+        catch {
+            // Non-fatal — referral code creation failed
+        }
         // Send welcome email (non-blocking — don't delay the response)
         if (email) {
-            sendWelcomeEmail(email, agent.id, apiKey, freeCredits).catch(() => { });
+            sendWelcomeEmail(email, agent.id, apiKey, freeCredits, referralCode).catch(() => { });
             // Admin new signup alert
-            sendAdminAlert(`👤 New Arch Tools signup — ${email}`, `New user registered!\n\nEmail: ${email}\nName: ${name ?? "(not provided)"}\nStarting credits: ${freeCredits}\nAgent ID: ${agent.id}`).catch(() => { });
+            sendAdminAlert(`👤 New Arch Tools signup — ${email}`, `New user registered!\n\nEmail: ${email}\nName: ${name ?? "(not provided)"}\nStarting credits: ${freeCredits}\nReferral code: ${referralCode ?? "N/A"}\nAgent ID: ${agent.id}`).catch(() => { });
         }
     }
     catch (e) {

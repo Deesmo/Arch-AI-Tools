@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
 import { sendPasswordResetEmail } from "../services/email.js";
+import { captureEvent, identifyUser } from "../lib/posthog.js";
 const router = Router();
 // Security: fail hard at startup if JWT_SECRET is not set — never use a hardcoded fallback.
 // This applies in ALL environments; a missing secret is always a configuration error.
@@ -70,6 +71,7 @@ router.post("/login-key", loginLimiter, async (req, res) => {
     const token = signSession(agent.id);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
     logger.info({ agentId: agent.id }, "Agent logged in via API key");
+    captureEvent(agent.id, "login", { method: "api_key" });
     res.json({ ok: true, redirect: "/dashboard" });
 });
 // ─── POST /auth/login ──────────────────────────────────────────────────────────
@@ -103,6 +105,7 @@ router.post("/login", loginLimiter, async (req, res) => {
     const token = signSession(agent.id);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
     logger.info({ agentId: agent.id }, "Agent logged in");
+    captureEvent(agent.id, "login", { method: "email_password" });
     res.json({ ok: true, redirect: "/dashboard" });
 });
 // ─── POST /auth/set-password ───────────────────────────────────────────────────
@@ -128,6 +131,8 @@ router.post("/set-password", async (req, res) => {
     const token = signSession(agent.id);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
     logger.info({ agentId: agent.id }, "Agent set password + logged in");
+    captureEvent(agent.id, "signup_password_set", { email: agent.email, tier: agent.tier });
+    identifyUser(agent.id, { email: agent.email, tier: agent.tier, credits: agent.credits });
     res.json({ ok: true, redirect: "/dashboard" });
 });
 // ─── GET /auth/logout ──────────────────────────────────────────────────────────
