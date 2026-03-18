@@ -761,6 +761,7 @@ export function x402Middleware(toolName) {
     return async (req, res, next) => {
         // If wallet address not configured, skip x402 (Stripe-only mode)
         if (!config.x402.walletAddress) {
+            console.log(`[x402] Skipping — no wallet address configured (WALLET_ADDRESS=${process.env.WALLET_ADDRESS?.slice(0, 10) ?? 'undefined'})`);
             next();
             return;
         }

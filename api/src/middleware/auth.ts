@@ -19,6 +19,12 @@ export async function requireAuth(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  // Skip auth if x402 payment was already verified
+  if ((req as any).x402Paid) {
+    next();
+    return;
+  }
+
   const authHeader = req.headers.authorization;
   const xApiKey = req.headers["x-api-key"] as string | undefined;
   

@@ -2,6 +2,11 @@ import { prisma } from "../lib/prisma.js";
 import { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 export async function requireAuth(req, res, next) {
+    // Skip auth if x402 payment was already verified
+    if (req.x402Paid) {
+        next();
+        return;
+    }
     const authHeader = req.headers.authorization;
     const xApiKey = req.headers["x-api-key"];
     if (!authHeader?.startsWith("Bearer ") && !xApiKey) {
