@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LangChain + Arch Tools Integration Guide</title>
+  <meta name="description" content="Complete guide to using Arch Tools 58 AI agent tools with LangChain. Web scraping, AI generation, crypto data with Python SDK.">
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#07061A;--card:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.10);--text:rgba(255,255,255,0.92);--muted:rgba(255,255,255,0.55);--accent:#22d3ee;--green:#34d399;--grad:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF)}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+    h1,h2,h3{font-family:'Syne',system-ui,sans-serif}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;border-bottom:1px solid var(--border);background:rgba(7,6,26,0.9);position:sticky;top:0;z-index:100}
+    .nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text)}
+    .logo-name{font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+    .nav-cta{background:var(--grad);color:#fff;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;text-decoration:none}
+    .main{max-width:760px;margin:0 auto;padding:56px 24px 100px}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.2);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--accent);margin-bottom:20px}
+    h1{font-size:36px;font-weight:800;letter-spacing:-0.03em;margin-bottom:16px;line-height:1.2}
+    .intro{font-size:17px;color:var(--muted);margin-bottom:40px}
+    h2{font-size:20px;font-weight:700;margin:36px 0 14px}
+    p{margin-bottom:14px;color:rgba(255,255,255,0.82)}
+    pre{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;margin:18px 0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7}
+    .cta-box{background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:16px;padding:28px;text-align:center;margin-top:48px}
+    .cta-btn{display:inline-block;background:var(--grad);color:#fff;font-weight:700;padding:11px 24px;border-radius:10px;text-decoration:none;font-size:14px}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-logo"><span class="logo-name">Arch Tools</span></a>
+    <a href="/signin" class="nav-cta">Get 100 free credits</a>
+  </nav>
+  <div class="main">
+    <div class="badge">🦜 LangChain Integration</div>
+    <h1>Using Arch Tools with LangChain</h1>
+    <p class="intro">Add 58 production tools to your LangChain agents in minutes. Web scraping, AI generation, crypto data, OCR, and more — all available as LangChain tools.</p>
+
+    <h2>Install</h2>
+    <pre>pip install arch-tools langchain langchain-openai</pre>
+
+    <h2>Quick Start</h2>
+    <pre>from arch_tools import ArchTools
+from langchain.tools import Tool
+from langchain.agents import initialize_agent, AgentType
+from langchain_openai import ChatOpenAI
+
+# Initialize Arch Tools
+arch = ArchTools(api_key="arch_your_key_here")
+
+# Wrap as LangChain tools
+tools = [
+    Tool(
+        name="WebScraper",
+        func=lambda url: arch.web_scrape(url)["text"],
+        description="Scrape and extract text from any URL"
+    ),
+    Tool(
+        name="CryptoPrice",
+        func=lambda symbol: str(arch.crypto_price(symbol)),
+        description="Get current price for a crypto symbol (e.g. bitcoin, ethereum)"
+    ),
+    Tool(
+        name="AIGenerate",
+        func=lambda prompt: arch.ai_generate(prompt)["text"],
+        description="Generate text using Claude, GPT-4, or other models"
+    ),
+    Tool(
+        name="SearchWeb",
+        func=lambda query: str(arch.search_web(query)["results"][:3]),
+        description="Search the web and return top results"
+    ),
+]
+
+# Create agent
+llm = ChatOpenAI(model="gpt-4o")
+agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
+
+# Run
+result = agent.run("What is Bitcoin's current price and summarize recent crypto news?")
+print(result)</pre>
+
+    <h2>All 58 Tools as LangChain Tools</h2>
+    <pre>tools = []
+tool_names = [
+    ("WebScrape", "web_scrape", "Scrape text from a URL"),
+    ("SearchWeb", "search_web", "Search the web"),
+    ("Screenshot", "screenshot_capture", "Take a screenshot of a URL"),
+    ("AIGenerate", "ai_generate", "Generate text with AI"),
+    ("OCR", "ocr_extract", "Extract text from images"),
+    ("CryptoPrice", "crypto_price", "Get crypto price"),
+    ("EmailVerify", "email_verify", "Verify an email address"),
+    ("Summarize", "summarize", "Summarize text"),
+]
+
+for name, method, desc in tool_names:
+    tools.append(Tool(
+        name=name,
+        func=lambda x, m=method: str(getattr(arch, m)(x)),
+        description=desc
+    ))</pre>
+
+    <h2>Using BYOK (Your Own LLM Keys)</h2>
+    <pre># Use your own Anthropic key for AI generation (no credits deducted)
+result = arch.ai_generate(
+    prompt="Write a market analysis",
+    model="claude-sonnet-4-6",
+    headers={"x-anthropic-key": "sk-ant-your-key"}
+)</pre>
+
+    <h2>x402 Payments for Agents</h2>
+    <pre># Agents can pay per-call with USDC instead of using credits
+# No API key needed — just a USDC wallet
+
+from arch_tools import ArchTools
+# Pass x402 payment header instead of API key
+# See: https://archtools.dev/x402-guide</pre>
+
+    <div class="cta-box">
+      <h2 style="margin:0 0 10px">Get 100 free credits</h2>
+      <p style="color:var(--muted);margin-bottom:20px">No card required. Start building with LangChain today.</p>
+      <a href="/signin" class="cta-btn">Get your API key →</a>
+    </div>
+  </div>
+</body>
+</html>

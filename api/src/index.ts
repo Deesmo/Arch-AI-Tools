@@ -306,6 +306,7 @@ app.get("/dashboard", (req: Request, res: Response) => {
 // /pricing — full pricing page
 app.get("/pricing", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
 // /getting-started — convenience redirect to docs sub-path
+app.get("/langchain-guide", (_req, res) => res.sendFile(path.join(__dirname, '../public/langchain-guide.html')));
 app.get("/byok", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/byok.html')));
 app.get("/quickstart", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/quickstart.html')));
 app.get("/getting-started", (_req: Request, res: Response) => res.redirect(301, "/docs/getting-started"));
