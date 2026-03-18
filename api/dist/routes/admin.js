@@ -105,6 +105,18 @@ router.post("/seed-tools", requireAdmin, async (_req, res) => {
         { name: "crypto-news", description: "Latest crypto news headlines with source and sentiment", category: "crypto", credits: 2 },
         { name: "crypto-sentiment", description: "Market sentiment analysis for any cryptocurrency", category: "crypto", credits: 3 },
         { name: "token-lookup", description: "Look up any token by name, symbol, or contract address", category: "crypto", credits: 1 },
+        // New tools (2026-03-18)
+        { name: "ai-oracle", description: "AI reasoning engine with standard and deep analysis modes", category: "ai", credits: 25 },
+        { name: "session-create", description: "Create a persistent AI conversation session", category: "ai", credits: 5 },
+        { name: "session-message", description: "Send a message in an existing AI session", category: "ai", credits: 10 },
+        { name: "design-create", description: "Generate designs and images via DALL-E 3", category: "media", credits: 20 },
+        { name: "image-remove-bg", description: "Remove background from any image", category: "media", credits: 10 },
+        { name: "video-generate", description: "Generate short video clips from text prompts", category: "media", credits: 30 },
+        { name: "email-find", description: "Find email addresses for a person at a company domain", category: "utility", credits: 5 },
+        { name: "email-send", description: "Send transactional emails via Resend", category: "utility", credits: 3 },
+        { name: "domain-check", description: "Check domain availability via RDAP", category: "network", credits: 2 },
+        { name: "semantic-search", description: "AI-powered semantic search across web content", category: "ai", credits: 10 },
+        { name: "social-post", description: "Post content to social media platforms", category: "utility", credits: 5 },
     ];
     // First, diagnose the actual Tool table structure
     let columns = [];
