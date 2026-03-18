@@ -645,29 +645,28 @@ function buildPaymentRequired(toolName, price) {
             accept.outputSchema = toolSchema;
         }
     }
-    // x402scan network whitelist — only these pass validation.
-    // Named networks + eip155:* with known ChainIdToNetwork mapping in coinbase/x402.
-    // See: Merit-Systems/x402scan/apps/scan/src/lib/x402/v1/schema.ts
-    const X402SCAN_VALID_NETWORKS = new Set([
-        "base", "base-sepolia", "eip155:8453", "eip155:84532",
-        "avalanche", "avalanche-fuji", "eip155:43114", "eip155:43113",
-        "polygon", "polygon-amoy", "eip155:137", "eip155:80002",
-        "solana", "solana-devnet",
-        "sei", "sei-testnet", "eip155:1329", "eip155:1328",
-        "iotex", "eip155:4689",
-        "abstract", "abstract-testnet", "eip155:2741", "eip155:11124",
-        "peaq", "eip155:3338",
-        "story", "eip155:1514",
-        "educhain", "eip155:41923",
+    // CDP Facilitator supported networks ONLY.
+    // CDP supports: Base, Polygon, Solana — for ERC-20 tokens (USDC via EIP-3009, any ERC-20 via Permit2).
+    // CDP does NOT support: Avalanche, Ethereum mainnet, Arbitrum, Optimism, native ETH, native SOL, or any non-ERC-20.
+    // Source: https://docs.cdp.coinbase.com/x402/network-support
+    const CDP_SUPPORTED_NETWORKS = new Set([
+        "eip155:8453", // Base mainnet ✅
+        "eip155:84532", // Base Sepolia (testnet) ✅
+        "eip155:137", // Polygon mainnet ✅
+        "eip155:80002", // Polygon Amoy (testnet) ✅
+        "solana", // Solana mainnet ✅
+        "solana-devnet", // Solana devnet ✅
     ]);
-    // Filter to only x402scan-valid networks and normalize "solana:mainnet" → "solana"
+    // Filter to only CDP-supported networks and normalize "solana:mainnet" → "solana"
+    // This ensures only payment options that the CDP facilitator can actually verify/settle are returned.
+    // A client that pays with an unsupported network would lose funds — never return those options.
     const filteredAccepts = accepts
         .map((a) => {
         if (a.network === "solana:mainnet")
             a.network = "solana";
         return a;
     })
-        .filter((a) => X402SCAN_VALID_NETWORKS.has(a.network));
+        .filter((a) => CDP_SUPPORTED_NETWORKS.has(a.network));
     return {
         x402Version: 1,
         resource: {
@@ -843,15 +842,45 @@ async function settlePayment(paymentHeader, toolName, paymentRequirements) {
             paymentPayload = { raw: paymentHeader };
         }
         const headers = { "Content-Type": "application/json" };
-        if (facilitatorUrl.includes("cdp.coinbase.com") && process.env.CDP_API_KEY_ID) {
-            headers["X-CDP-API-Key-ID"] = process.env.CDP_API_KEY_ID;
-            headers["X-CDP-API-Key-Secret"] = process.env.CDP_API_KEY_SECRET ?? "";
+        const isCdpSettle = facilitatorUrl.includes("cdp.coinbase.com");
+        if (isCdpSettle && process.env.CDP_API_KEY_ID) {
+            // CDP requires JWT auth for settle — same as verify
+            try {
+                const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+                const jwt = await generateJwt({
+                    apiKeyId: process.env.CDP_API_KEY_ID ?? "",
+                    apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
+                    requestMethod: "POST",
+                    requestHost: "api.cdp.coinbase.com",
+                    requestPath: "/platform/v2/x402/settle",
+                });
+                headers["Authorization"] = `Bearer ${jwt}`;
+            }
+            catch (jwtErr) {
+                console.error("[x402] CDP JWT generation failed for settle:", jwtErr?.message);
+            }
         }
+        // Build v2 requirements for CDP (uses 'amount' not 'maxAmountRequired')
+        const finalPaymentReqsSettle = isCdpSettle ? {
+            scheme: paymentRequirements.scheme,
+            network: paymentRequirements.network,
+            asset: paymentRequirements.asset,
+            amount: paymentRequirements.maxAmountRequired ?? paymentRequirements.amount,
+            payTo: paymentRequirements.payTo,
+            maxTimeoutSeconds: paymentRequirements.maxTimeoutSeconds || 60,
+            extra: paymentRequirements.extra,
+        } : paymentRequirements;
+        // v2 payload wraps the EVM payload with 'accepted' field
+        const finalPayloadSettle = isCdpSettle ? {
+            x402Version: 2,
+            payload: paymentPayload.payload,
+            accepted: finalPaymentReqsSettle,
+        } : paymentPayload;
         console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName})`);
         const res = await axios.post(`${facilitatorUrl}/settle`, {
-            x402Version: 1,
-            paymentPayload,
-            paymentRequirements,
+            x402Version: isCdpSettle ? 2 : 1,
+            paymentPayload: finalPayloadSettle,
+            paymentRequirements: finalPaymentReqsSettle,
         }, {
             timeout: 10000,
             headers,
@@ -967,7 +996,7 @@ export function x402Middleware(toolName) {
                     toolName,
                     amountUsdc: price,
                     txHash: settleResult?.transaction ?? undefined,
-                    network: config.x402.network,
+                    network: settleResult?.network ?? paymentRequirements.network ?? config.x402.network,
                     status: "settled",
                 },
             });
