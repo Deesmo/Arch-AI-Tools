@@ -329,6 +329,9 @@ app.get("/admin", (_req: Request, _res: Response) => _res.sendFile(path.join(__d
 app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
 app.get("/refer", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/refer.html')));
 app.get("/landing-b", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/landing-b.html')));
+// /register → /signup redirect (common developer habit)
+app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
+
 app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/usage.html')));
 app.get("/status", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/status.html')));
 app.get("/stats", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/stats.html')));
