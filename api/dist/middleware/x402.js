@@ -658,14 +658,27 @@ function buildPaymentRequired(toolName, price) {
     ]);
     // Filter to only CDP-supported networks and normalize "solana:mainnet" → "solana"
     // This ensures only payment options that the CDP facilitator can actually verify/settle are returned.
-    // A client that pays with an unsupported network would lose funds — never return those options.
+    // A client that pays with an unsupported option would lose funds — never return those options.
+    // Additional rules:
+    // - asset === "native" means native SOL or native ETH — CDP does NOT support these (ERC-20/SPL only)
+    // - asset === "0x0000...0000" means native ETH — also excluded
     const filteredAccepts = accepts
         .map((a) => {
         if (a.network === "solana:mainnet")
             a.network = "solana";
         return a;
     })
-        .filter((a) => CDP_SUPPORTED_NETWORKS.has(a.network));
+        .filter((a) => {
+        if (!CDP_SUPPORTED_NETWORKS.has(a.network))
+            return false;
+        if (a.asset === "native")
+            return false; // native SOL — CDP can't handle
+        if (a.asset === "0x0000000000000000000000000000000000000000")
+            return false; // native ETH
+        if (a.extra?.version === "native" || a.extra?.version === "native-base")
+            return false;
+        return true;
+    });
     return {
         x402Version: 1,
         resource: {
