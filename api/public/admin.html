@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Arch Tools</title>
+  <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
+      --accent: #22d3ee; --green: #34d399; --orange: #FFB030; --pink: #FF1888; --red: #f87171;
+    }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    h1,h2,h3 { font-family: 'Syne', system-ui, sans-serif; }
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:60px; border-bottom:1px solid var(--border); backdrop-filter:blur(12px); background:rgba(7,6,26,0.9); position:sticky; top:0; z-index:100; }
+    .nav-logo { display:flex; align-items:center; gap:9px; text-decoration:none; color:var(--text); }
+    .logo-mark { width:32px; height:32px; border-radius:8px; background:var(--bg); border:1px solid rgba(255,255,255,0.12); display:grid; place-items:center; }
+    .logo-name { font-family:'Syne',sans-serif; font-weight:700; font-size:15px; }
+    .nav-badge { background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.3); color:var(--red); padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700; }
+    .main { max-width:1100px; margin:0 auto; padding:40px 24px 80px; }
+    .page-title { font-size:28px; font-weight:800; margin-bottom:8px; }
+    .page-sub { color:var(--muted); font-size:14px; margin-bottom:32px; }
+    .auth-box { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; max-width:480px; margin:60px auto; }
+    .auth-box h2 { font-size:18px; margin-bottom:16px; }
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; }
+    .field input { width:100%; background:rgba(255,255,255,0.07); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:13px; outline:none; }
+    .field input:focus { border-color:var(--accent); }
+    .btn { background:var(--accent); color:#07061A; font-weight:700; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; width:100%; }
+    .btn:hover { opacity:.9; }
+    .err { color:var(--red); font-size:13px; margin-top:8px; }
+    .grid4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:32px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+    .stat-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; }
+    .stat-value { font-size:32px; font-weight:800; font-family:'Syne',sans-serif; }
+    .stat-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+    .green { color:var(--green); }
+    .orange { color:var(--orange); }
+    .accent { color:var(--accent); }
+    .section { margin-bottom:40px; }
+    .section h2 { font-size:16px; font-weight:700; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:8px 12px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.07em; border-bottom:1px solid var(--border); }
+    td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.05); }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,0.03); }
+    .tag { display:inline-flex; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; font-family:'JetBrains Mono',monospace; }
+    .tag-green { background:rgba(52,211,153,0.1); color:var(--green); border:1px solid rgba(52,211,153,0.2); }
+    .tag-orange { background:rgba(255,176,48,0.1); color:var(--orange); border:1px solid rgba(255,176,48,0.2); }
+    .tag-accent { background:rgba(34,211,238,0.1); color:var(--accent); border:1px solid rgba(34,211,238,0.2); }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+    .flex { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .refresh-btn { background:rgba(255,255,255,0.07); border:1px solid var(--border); color:var(--text); padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; }
+    .refresh-btn:hover { background:rgba(255,255,255,0.12); }
+    .loading { color:var(--muted); font-size:14px; text-align:center; padding:40px; }
+    .mono { font-family:'JetBrains Mono',monospace; font-size:12px; }
+    .bar-wrap { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .bar-label { font-size:12px; min-width:140px; color:var(--muted); }
+    .bar-track { flex:1; height:6px; background:rgba(255,255,255,0.07); border-radius:3px; }
+    .bar-fill { height:100%; border-radius:3px; background:var(--accent); }
+    .bar-count { font-size:12px; color:var(--muted); min-width:40px; text-align:right; }
+    #dashboard { display:none; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-logo">
+      <div class="logo-mark">
+        <img src="/arch-icon.svg" width="18" height="18" alt="Arch" />
+      </div>
+      <span class="logo-name">Arch Tools</span>
+    </a>
+    <span class="nav-badge">🔐 ADMIN ONLY</span>
+  </nav>
+
+  <div class="main">
+    <!-- Auth Gate -->
+    <div id="auth-gate">
+      <div class="auth-box">
+        <h2>Admin Access</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Private dashboard. Authorized personnel only.</p>
+        <div class="field">
+          <label>Admin Key</label>
+          <input type="password" id="admin-key-input" placeholder="Enter admin key..." autocomplete="off" />
+        </div>
+        <button class="btn" onclick="login()">Access Dashboard</button>
+        <div class="err" id="auth-err"></div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard">
+      <div class="flex">
+        <div>
+          <div class="page-title">Admin Dashboard</div>
+          <div class="page-sub" id="last-updated">Loading...</div>
+        </div>
+        <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid4" id="stats-grid">
+        <div class="loading">Loading stats...</div>
+      </div>
+
+      <!-- Top Tools -->
+      <div class="section">
+        <h2>Top Tools (All Time)</h2>
+        <div class="card">
+          <div id="top-tools-chart"></div>
+        </div>
+      </div>
+
+      <!-- Caller Types -->
+      <div class="section">
+        <h2>Caller Breakdown</h2>
+        <div class="grid4" id="caller-grid"></div>
+      </div>
+
+      <!-- Recent Purchases -->
+      <div class="section">
+        <h2>Recent Purchases</h2>
+        <div class="card">
+          <table>
+            <thead><tr><th>Agent</th><th>Credits</th><th>Amount</th><th>Date</th></tr></thead>
+            <tbody id="purchases-table"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- All Agents -->
+      <div class="section">
+        <h2>All Agents</h2>
+        <div class="card" id="agents-section">
+          <div class="loading">Loading agents...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://arch-ai-tools.onrender.com';
+    let adminKey = localStorage.getItem('arch_admin_key') || '';
+    
+    if (adminKey) { document.getElementById('admin-key-input').value = adminKey; login(); }
+
+    async function login() {
+      const key = document.getElementById('admin-key-input').value.trim();
+      if (!key) { document.getElementById('auth-err').textContent = 'Enter admin key'; return; }
+      
+      try {
+        const r = await fetch(`${API}/v1/admin/stats`, { headers: { 'x-admin-key': key } });
+        if (!r.ok) { document.getElementById('auth-err').textContent = 'Invalid key'; return; }
+        adminKey = key;
+        localStorage.setItem('arch_admin_key', key);
+        document.getElementById('auth-gate').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        loadData();
+      } catch(e) { document.getElementById('auth-err').textContent = 'Connection error'; }
+    }
+
+    async function loadData() {
+      try {
+        const r = await fetch(`${API}/v1/admin/stats`, { headers: { 'x-admin-key': adminKey } });
+        const d = await r.json();
+        const s = d.summary || {};
+        
+        document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+
+        // Stats grid
+        document.getElementById('stats-grid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-label">Total Agents</div>
+            <div class="stat-value accent">${s.total_agents || 0}</div>
+            <div class="stat-sub">Registered users</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total API Calls</div>
+            <div class="stat-value">${(s.total_requests || 0).toLocaleString()}</div>
+            <div class="stat-sub">${s.requests_today || 0} today · ${s.requests_last_30d || 0} last 30d</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">x402 Payments</div>
+            <div class="stat-value ${s.x402_payments > 0 ? 'green' : 'orange'}">${s.x402_payments || 0}</div>
+            <div class="stat-sub">${s.x402_payments > 0 ? 'On-chain USDC payments' : 'No payments yet'}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Revenue</div>
+            <div class="stat-value ${s.revenue_sample_cents > 0 ? 'green' : ''}">$${((s.revenue_sample_cents || 0)/100).toFixed(2)}</div>
+            <div class="stat-sub">Stripe + x402 combined</div>
+          </div>
+        `;
+
+        // Top tools chart
+        const tools = d.top_tools || [];
+        const maxCalls = Math.max(...tools.map(t => t.calls), 1);
+        document.getElementById('top-tools-chart').innerHTML = tools.map(t => `
+          <div class="bar-wrap">
+            <span class="bar-label mono">${t.tool}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${(t.calls/maxCalls*100).toFixed(0)}%"></div></div>
+            <span class="bar-count">${t.calls}</span>
+          </div>
+        `).join('') || '<div style="color:var(--muted);font-size:13px;padding:12px">No tool calls yet</div>';
+
+        // Caller breakdown
+        const callers = d.caller_breakdown || [];
+        document.getElementById('caller-grid').innerHTML = callers.slice(0,4).map(c => `
+          <div class="stat-card">
+            <div class="stat-label">${c.caller}</div>
+            <div class="stat-value" style="font-size:24px">${c.calls}</div>
+            <div class="stat-sub">calls</div>
+          </div>
+        `).join('');
+
+        // Recent purchases
+        const purchases = d.recent_purchases || [];
+        document.getElementById('purchases-table').innerHTML = purchases.length ? purchases.map(p => `
+          <tr>
+            <td class="mono">${(p.agentId||'').slice(0,12)}...</td>
+            <td><span class="tag tag-green">+${p.credits} credits</span></td>
+            <td class="green">$${(p.amountCents/100).toFixed(2)}</td>
+            <td style="color:var(--muted)">${new Date(p.createdAt).toLocaleDateString()}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No purchases yet — go get those first customers!</td></tr>';
+
+        // Load agents
+        loadAgents();
+      } catch(e) { console.error(e); }
+    }
+
+    async function loadAgents() {
+      try {
+        const r = await fetch(`${API}/v1/admin/agents?limit=20`, { headers: { 'x-admin-key': adminKey } });
+        if (!r.ok) { document.getElementById('agents-section').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Agent list endpoint not available</div>'; return; }
+        const d = await r.json();
+        const agents = d.agents || d.data || [];
+        if (!agents.length) { document.getElementById('agents-section').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">No agents yet</div>'; return; }
+        document.getElementById('agents-section').innerHTML = `
+          <table>
+            <thead><tr><th>Email</th><th>Plan</th><th>Credits</th><th>Calls</th><th>Joined</th></tr></thead>
+            <tbody>${agents.map(a => `
+              <tr>
+                <td>${a.email || '—'}</td>
+                <td><span class="tag ${a.plan==='pro'?'tag-orange':a.plan==='business'?'tag-green':'tag-accent'}">${a.plan||'free'}</span></td>
+                <td class="mono">${a.creditsRemaining ?? a.credits_remaining ?? '—'}</td>
+                <td class="mono">${a.totalCalls ?? a.total_calls ?? '—'}</td>
+                <td style="color:var(--muted)">${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '—'}</td>
+              </tr>
+            `).join('')}</tbody>
+          </table>
+        `;
+      } catch(e) {
+        document.getElementById('agents-section').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Agent list endpoint not available — check /v1/admin/agents</div>';
+      }
+    }
+
+    document.getElementById('admin-key-input').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+  </script>
+</body>
+</html>
