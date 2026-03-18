@@ -138,7 +138,7 @@ router.post("/seed-tools", requireAdmin, async (_req, res) => {
             if (existing) {
                 // Ensure tool is active and enabled
                 if (!existing.active) {
-                    await prisma.$executeRaw(Prisma.sql `UPDATE "Tool" SET active = true, enabled = true WHERE name = ${t.name}`);
+                    await prisma.$executeRaw(Prisma.sql `UPDATE "Tool" SET active = true WHERE name = ${t.name}`);
                     results.push({ name: t.name, status: "activated" });
                 }
                 else {
