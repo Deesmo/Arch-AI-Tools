@@ -651,9 +651,13 @@ function buildPaymentRequired(toolName, price) {
     // Source: https://docs.cdp.coinbase.com/x402/network-support
     const CDP_SUPPORTED_NETWORKS = new Set([
         "eip155:8453", // Base mainnet ✅
+        "base", // Base mainnet (named alias) ✅
         "eip155:84532", // Base Sepolia (testnet) ✅
+        "base-sepolia", // Base Sepolia (named alias) ✅
         "eip155:137", // Polygon mainnet ✅
+        "polygon", // Polygon mainnet (named alias) ✅
         "eip155:80002", // Polygon Amoy (testnet) ✅
+        "polygon-amoy", // Polygon Amoy (named alias) ✅
         "solana", // Solana mainnet ✅
         "solana-devnet", // Solana devnet ✅
     ]);
