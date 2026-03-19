@@ -41,7 +41,7 @@ import referralRouter from "./routes/referral.js";
 import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 // x402 SDK (official Coinbase @x402/express integration)
-import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus, warmX402Sdk } from "./middleware/x402-sdk.js";
+import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -395,24 +395,14 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 // Initialize x402 SDK (official Coinbase protocol support)
 // Pre-warm BEFORE accepting connections: fetch CDP /supported so feePayer is ready.
 // Without this, the first payment request triggers a blocking CDP network call.
-async function startServer() {
-    initX402Sdk();
-    // Pre-warm: fetch CDP /supported (gets feePayer for Solana + confirms auth)
-    // This runs BEFORE app.listen so no request sees cold-start latency
-    try {
-        await warmX402Sdk();
-        console.log("[startup] x402 SDK pre-warm complete");
-    }
-    catch (err) {
-        console.warn("[startup] x402 SDK pre-warm failed (non-fatal):", err.message);
-    }
-    app.listen(config.port, () => {
-        console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
-        console.log(`   ENV: ${config.nodeEnv}`);
-        console.log(`   Site: ${config.publicSiteUrl}`);
-    });
-}
-startServer().catch(console.error);
+// Initialize x402 SDK — syncFacilitatorOnStart=true means CDP /supported is fetched
+// on the first payment request (shared across all requests, not per-request).
+initX402Sdk();
+app.listen(config.port, () => {
+    console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
+    console.log(`   ENV: ${config.nodeEnv}`);
+    console.log(`   Site: ${config.publicSiteUrl}`);
+});
 // Daily cleanup of expired OAuth records
 setInterval(async () => {
     try {

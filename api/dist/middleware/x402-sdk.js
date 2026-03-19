@@ -126,14 +126,11 @@ export function initX402Sdk() {
             console.log(`[x402-sdk] ${_initError}`);
             return false;
         }
-        // Use type assertion since our route config matches the SDK's expected shape
-        // syncFacilitatorOnStart=false: Lazy init — don't block server startup waiting for CDP.
-        // We manually pre-warm the facilitator connection after the server starts listening.
-        // See warmX402Sdk() in index.ts which fires 2s after server start.
+        // syncFacilitatorOnStart=true: On first request, middleware awaits CDP /supported call.
+        // This runs once and is shared across all requests — subsequent requests are instant.
         _sdkMiddleware = paymentMiddleware(routes, resourceServer, undefined, // paywallConfig
         undefined, // paywall provider
-        false);
-        // Store resource server ref for manual pre-warming at startup
+        true);
         _resourceServer = resourceServer;
         const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
         console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes`);
