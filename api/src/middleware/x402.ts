@@ -807,29 +807,44 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       }
     }
 
-    // Build v2 requirements for CDP (uses 'amount' not 'maxAmountRequired')
-    const finalPaymentReqs = isCdp ? {
-      scheme: (paymentRequirements as any).scheme,
-      network: (paymentRequirements as any).network,
-      asset: (paymentRequirements as any).asset,
-      amount: (paymentRequirements as any).maxAmountRequired ?? (paymentRequirements as any).amount,
-      payTo: (paymentRequirements as any).payTo,
-      maxTimeoutSeconds: (paymentRequirements as any).maxTimeoutSeconds || 60,
-      extra: (paymentRequirements as any).extra,
-    } : paymentRequirements;
+    // Detect Solana vs EVM
+    const isSolana = (paymentRequirements as any).network?.includes("solana");
 
-    // v2 payload wraps the EVM payload with 'accepted' field
-    const finalPayload = isCdp ? {
-      x402Version: 2,
-      payload: (paymentPayload as any).payload,
-      accepted: finalPaymentReqs,
-    } : paymentPayload;
+    let finalPaymentReqs: object;
+    let finalPayload: object;
 
-    console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName}, format: ${isCdp ? "v2" : "v1"})`);
+    if (isCdp && isSolana) {
+      // Solana: pass payload through as-is, CDP handles v1 Solana format natively
+      finalPaymentReqs = paymentRequirements;
+      finalPayload = paymentPayload;
+    } else if (isCdp) {
+      // EVM: Build v2 requirements for CDP (uses 'amount' not 'maxAmountRequired')
+      finalPaymentReqs = {
+        scheme: (paymentRequirements as any).scheme,
+        network: (paymentRequirements as any).network,
+        asset: (paymentRequirements as any).asset,
+        amount: (paymentRequirements as any).maxAmountRequired ?? (paymentRequirements as any).amount,
+        payTo: (paymentRequirements as any).payTo,
+        maxTimeoutSeconds: (paymentRequirements as any).maxTimeoutSeconds || 60,
+        extra: (paymentRequirements as any).extra,
+      };
+      // v2 payload wraps the EVM payload with 'accepted' field
+      finalPayload = {
+        x402Version: 2,
+        payload: (paymentPayload as any).payload,
+        accepted: finalPaymentReqs,
+      };
+    } else {
+      finalPaymentReqs = paymentRequirements;
+      finalPayload = paymentPayload;
+    }
+
+    const payloadFormat = isSolana ? "solana-v1" : (isCdp ? "evm-v2" : "v1");
+    console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName}, format: ${payloadFormat})`);
     const res = await axios.post(
       `${facilitatorUrl}/verify`,
       {
-        x402Version: isCdp ? 2 : 1,
+        x402Version: (isCdp && !isSolana) ? 2 : 1,
         paymentPayload: finalPayload,
         paymentRequirements: finalPaymentReqs,
       },
@@ -877,29 +892,44 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       }
     }
 
-    // Build v2 requirements for CDP (uses 'amount' not 'maxAmountRequired')
-    const finalPaymentReqsSettle = isCdpSettle ? {
-      scheme: (paymentRequirements as any).scheme,
-      network: (paymentRequirements as any).network,
-      asset: (paymentRequirements as any).asset,
-      amount: (paymentRequirements as any).maxAmountRequired ?? (paymentRequirements as any).amount,
-      payTo: (paymentRequirements as any).payTo,
-      maxTimeoutSeconds: (paymentRequirements as any).maxTimeoutSeconds || 60,
-      extra: (paymentRequirements as any).extra,
-    } : paymentRequirements;
+    // Detect Solana vs EVM
+    const isSolanaSettle = (paymentRequirements as any).network?.includes("solana");
 
-    // v2 payload wraps the EVM payload with 'accepted' field
-    const finalPayloadSettle = isCdpSettle ? {
-      x402Version: 2,
-      payload: (paymentPayload as any).payload,
-      accepted: finalPaymentReqsSettle,
-    } : paymentPayload;
+    let finalPaymentReqsSettle: object;
+    let finalPayloadSettle: object;
 
-    console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName})`);
+    if (isCdpSettle && isSolanaSettle) {
+      // Solana: pass payload through as-is, CDP handles v1 Solana format natively
+      finalPaymentReqsSettle = paymentRequirements;
+      finalPayloadSettle = paymentPayload;
+    } else if (isCdpSettle) {
+      // EVM: Build v2 requirements for CDP (uses 'amount' not 'maxAmountRequired')
+      finalPaymentReqsSettle = {
+        scheme: (paymentRequirements as any).scheme,
+        network: (paymentRequirements as any).network,
+        asset: (paymentRequirements as any).asset,
+        amount: (paymentRequirements as any).maxAmountRequired ?? (paymentRequirements as any).amount,
+        payTo: (paymentRequirements as any).payTo,
+        maxTimeoutSeconds: (paymentRequirements as any).maxTimeoutSeconds || 60,
+        extra: (paymentRequirements as any).extra,
+      };
+      // v2 payload wraps the EVM payload with 'accepted' field
+      finalPayloadSettle = {
+        x402Version: 2,
+        payload: (paymentPayload as any).payload,
+        accepted: finalPaymentReqsSettle,
+      };
+    } else {
+      finalPaymentReqsSettle = paymentRequirements;
+      finalPayloadSettle = paymentPayload;
+    }
+
+    const settleFormat = isSolanaSettle ? "solana-v1" : (isCdpSettle ? "evm-v2" : "v1");
+    console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName}, format: ${settleFormat})`);
     const res = await axios.post(
       `${facilitatorUrl}/settle`,
       {
-        x402Version: isCdpSettle ? 2 : 1,
+        x402Version: (isCdpSettle && !isSolanaSettle) ? 2 : 1,
         paymentPayload: finalPayloadSettle,
         paymentRequirements: finalPaymentReqsSettle,
       },
