@@ -1,15 +1,14 @@
 /**
- * x402 SDK Middleware — Official Coinbase @x402/express integration
+ * x402 SDK Middleware — Official Coinbase @x402/express integration (PRIMARY)
  *
- * Uses the official x402 SDK for proper protocol-compliant payment handling.
- * This runs alongside the existing custom x402 middleware — controlled by
- * the X402_SDK_ENABLED env var.
+ * Uses the official x402 SDK for protocol-compliant payment handling.
+ * This is the PRIMARY payment middleware — always active when WALLET_ADDRESS is set.
+ * The custom x402.ts middleware remains as fallback for non-CDP networks only.
  *
- * When enabled, the SDK middleware handles payment verification and settlement
- * via the official facilitator, replacing our custom verify/settle logic.
- *
- * The existing custom middleware remains as fallback for non-EVM chains
- * (Solana, Cosmos, Bittensor, etc.) that the SDK doesn't yet support.
+ * Handles payment verification and settlement via the CDP facilitator for:
+ * - Base mainnet (EVM, USDC via EIP-3009)
+ * - Polygon mainnet (EVM, USDC via Permit2)
+ * - Solana mainnet (SPL USDC)
  */
 import type { Request, Response, NextFunction } from "express";
 /**
@@ -28,6 +27,12 @@ export declare function x402SdkMiddleware(req: Request, res: Response, next: Nex
 /**
  * Get SDK initialization status for health checks / admin endpoints.
  */
+/**
+ * Pre-warm the x402 SDK by triggering the facilitator /supported call in the background.
+ * Call this after the server starts listening — fires async, never blocks.
+ * This ensures the first real x402 request doesn't pay the CDP init cost (~1-2s).
+ */
+export declare function warmX402Sdk(): Promise<void>;
 export declare function getX402SdkStatus(): {
     enabled: boolean;
     error: string | null;

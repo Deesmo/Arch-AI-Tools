@@ -199,9 +199,10 @@ app.use("/v1/agent/register", registerLimiter);
 app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
-// x402 SDK middleware — applies official Coinbase x402 protocol to all tool routes
-// When enabled (X402_SDK_ENABLED=true), handles payment verification/settlement
-// via the official facilitator before requests reach the tool handlers
+// x402 SDK middleware (PRIMARY) — official Coinbase @x402/express protocol
+// Always active when WALLET_ADDRESS is set. Handles payment verification/settlement
+// via CDP facilitator for Base, Polygon, and Solana before requests reach tool handlers.
+// The custom x402.ts middleware in toolMiddleware() is fallback for non-CDP networks only.
 app.use("/v1/tools", x402SdkMiddleware);
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);

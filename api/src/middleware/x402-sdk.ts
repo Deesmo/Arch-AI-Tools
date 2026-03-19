@@ -1,15 +1,14 @@
 /**
- * x402 SDK Middleware — Official Coinbase @x402/express integration
+ * x402 SDK Middleware — Official Coinbase @x402/express integration (PRIMARY)
  *
- * Uses the official x402 SDK for proper protocol-compliant payment handling.
- * This runs alongside the existing custom x402 middleware — controlled by
- * the X402_SDK_ENABLED env var.
+ * Uses the official x402 SDK for protocol-compliant payment handling.
+ * This is the PRIMARY payment middleware — always active when WALLET_ADDRESS is set.
+ * The custom x402.ts middleware remains as fallback for non-CDP networks only.
  *
- * When enabled, the SDK middleware handles payment verification and settlement
- * via the official facilitator, replacing our custom verify/settle logic.
- *
- * The existing custom middleware remains as fallback for non-EVM chains
- * (Solana, Cosmos, Bittensor, etc.) that the SDK doesn't yet support.
+ * Handles payment verification and settlement via the CDP facilitator for:
+ * - Base mainnet (EVM, USDC via EIP-3009)
+ * - Polygon mainnet (EVM, USDC via Permit2)
+ * - Solana mainnet (SPL USDC)
  */
 
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
@@ -123,11 +122,8 @@ export function initX402Sdk(): boolean {
     return false;
   }
 
-  if (process.env.X402_SDK_ENABLED !== "true") {
-    _initError = "X402_SDK_ENABLED not set to 'true' — SDK middleware disabled";
-    console.log(`[x402-sdk] ${_initError}`);
-    return false;
-  }
+  // X402_SDK_ENABLED gate removed — SDK is now always active when WALLET_ADDRESS is set.
+  // The SDK is the primary payment middleware; custom x402.ts is fallback only.
 
   try {
     // Use @coinbase/x402's createFacilitatorConfig for proper CDP JWT auth
