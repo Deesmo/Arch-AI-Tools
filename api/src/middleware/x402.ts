@@ -121,7 +121,9 @@ export const X402_PRICES: Record<string, string> = {
 
 function buildPaymentRequired(toolName: string, price: string): object {
   const network = config.x402.network;
-  const chainId = network === "base" ? "eip155:8453" : "eip155:84532";
+  // Use x402 named network format (required by client SDK schema validation)
+  // "base" / "polygon" / "solana" NOT "eip155:8453" / "eip155:137"
+  const baseNetwork = network === "base-sepolia" ? "base-sepolia" : "base";
   const usdcContract = USDC_CONTRACTS[network] ?? USDC_CONTRACTS["base"];
   // Convert price to USDC atomic units (6 decimals)
   const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
@@ -134,7 +136,7 @@ function buildPaymentRequired(toolName: string, price: string): object {
   if (evmWallet) {
     accepts.push({
       scheme: "exact",
-      network: chainId,
+      network: baseNetwork,
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
@@ -181,11 +183,11 @@ function buildPaymentRequired(toolName: string, price: string): object {
     });
   }
 
-  // Option 4: USDC on Polygon (same EVM wallet) — CDP supported via eip155:137
+  // Option 4: USDC on Polygon (same EVM wallet) — CDP supported
   if (evmWallet) {
     accepts.push({
       scheme: "exact",
-      network: "eip155:137",
+      network: "polygon",
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
@@ -601,8 +603,8 @@ function buildPaymentRequired(toolName: string, price: string): object {
   if (usdtWallet) {
     // CDP supports USDT via Permit2 on Base and Polygon only (CAIP-2 format required)
     const usdtNetworks: Array<{ network: string; chain: string }> = [
-      { network: "eip155:8453", chain: "base" },     // USDT on Base ✅ CDP supported
-      { network: "eip155:137",  chain: "polygon" },  // USDT on Polygon ✅ CDP supported
+      { network: "base",    chain: "base" },    // USDT on Base ✅ CDP supported
+      { network: "polygon", chain: "polygon" }, // USDT on Polygon ✅ CDP supported
     ];
     for (const { network, chain } of usdtNetworks) {
       if (USDT_CONTRACTS[chain]) {
@@ -641,11 +643,17 @@ function buildPaymentRequired(toolName: string, price: string): object {
   // CDP supports ONLY these exact network identifiers. Named aliases (e.g. "base", "polygon") are NOT
   // used here intentionally — they would also match native ETH/SOL options that CDP cannot handle.
   // All CDP-supported options in buildPaymentRequired use CAIP-2 format (eip155:*) or "solana".
+  // CDP supports these networks. Use x402 named format (base/polygon/solana) in accepts[].
+  // CAIP-2 (eip155:*) variants included for internal verify/settle calls that may use them.
   const CDP_SUPPORTED_NETWORKS = new Set([
-    "eip155:8453",   // Base mainnet ✅ (USDC, USDT via Permit2)
-    "eip155:84532",  // Base Sepolia (testnet) ✅
-    "eip155:137",    // Polygon mainnet ✅ (USDC, USDT via Permit2)
-    "eip155:80002",  // Polygon Amoy (testnet) ✅
+    "base",          // Base mainnet ✅ (named — used in accepts[])
+    "base-sepolia",  // Base Sepolia ✅
+    "eip155:8453",   // Base mainnet ✅ (CAIP-2 — used in verify/settle)
+    "eip155:84532",  // Base Sepolia ✅
+    "polygon",       // Polygon mainnet ✅ (named — used in accepts[])
+    "polygon-amoy",  // Polygon Amoy ✅
+    "eip155:137",    // Polygon mainnet ✅ (CAIP-2 — used in verify/settle)
+    "eip155:80002",  // Polygon Amoy ✅
     "solana",        // Solana mainnet ✅ (USDC SPL)
     "solana-devnet", // Solana devnet ✅
   ]);
