@@ -14,10 +14,11 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
-import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
+// Bazaar + discovery extensions disabled — they cause dynamic import blocking on every request
+// import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import { config } from "../config.js";
-import { X402_PRICES, TOOL_OUTPUT_SCHEMAS } from "./x402.js";
+import { X402_PRICES } from "./x402.js";
 // Solana mainnet CAIP-2 identifier
 const SOLANA_MAINNET_CAIP2 = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 // ─── Build x402 SDK route config from our pricing table ──────────────────────
@@ -31,14 +32,8 @@ function buildSdkRoutes() {
         : "eip155:8453"; // Default to Base mainnet
     const routes = {};
     for (const [toolName, price] of Object.entries(X402_PRICES)) {
-        // Bazaar discovery metadata — declares input schema for POST tool endpoints
-        const postDiscovery = declareDiscoveryExtension({
-            bodyType: "json",
-            inputSchema: TOOL_OUTPUT_SCHEMAS[toolName]?.input ?? { type: "object" },
-            output: TOOL_OUTPUT_SCHEMAS[toolName]?.output
-                ? { schema: TOOL_OUTPUT_SCHEMAS[toolName].output }
-                : undefined,
-        });
+        // Discovery extensions disabled (Bazaar causes blocking dynamic imports)
+        // const postDiscovery = declareDiscoveryExtension({...});
         // Build accepts[] array with all supported networks for this tool
         const accepts = [];
         // EVM: Base mainnet (primary)
@@ -77,15 +72,7 @@ function buildSdkRoutes() {
         routes[routeKey] = {
             accepts,
             description: `Arch Tools — ${toolName}`,
-            extensions: postDiscovery,
-        };
-        // Also register GET for x402scan compatibility (query-style discovery)
-        const getDiscovery = declareDiscoveryExtension({});
-        const getRouteKey = `GET /${toolName}`;
-        routes[getRouteKey] = {
-            accepts,
-            description: `Arch Tools — ${toolName}`,
-            extensions: getDiscovery,
+            // No extensions — Bazaar extension causes blocking dynamic imports per-request
         };
     }
     return routes;
@@ -129,8 +116,9 @@ export function initX402Sdk() {
         const resourceServer = new x402ResourceServer(facilitatorClient)
             .register(evmNetwork, new ExactEvmScheme()) // Base mainnet
             .register("eip155:137", new ExactEvmScheme()) // Polygon mainnet
-            .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet (feePayer from CDP /supported)
-            .registerExtension(bazaarResourceServerExtension);
+            .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()); // Solana mainnet (feePayer from CDP /supported)
+        // NOTE: Bazaar extension NOT registered — it causes route-level blocking via dynamic import on every request
+        // Re-enable only after verifying bazaar doesn't block in this Express setup
         const routes = buildSdkRoutes();
         const routeCount = Object.keys(routes).length;
         if (routeCount === 0) {
