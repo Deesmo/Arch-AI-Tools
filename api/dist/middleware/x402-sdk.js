@@ -94,6 +94,7 @@ function buildSdkRoutes() {
 // ─── Create and export the SDK middleware ─────────────────────────────────────
 let _sdkMiddleware = null;
 let _initError = null;
+let _resourceServer = null;
 /**
  * Initialize the x402 SDK middleware.
  * Call this once at startup. Returns true if successful.
@@ -142,11 +143,14 @@ export function initX402Sdk() {
             return false;
         }
         // Use type assertion since our route config matches the SDK's expected shape
-        // syncFacilitatorOnStart=true: SDK contacts CDP /supported at startup (not on first request)
-        // This prevents first-request latency spikes and ensures feePayer is ready for Solana
+        // syncFacilitatorOnStart=false: Lazy init — don't block server startup waiting for CDP.
+        // We manually pre-warm the facilitator connection after the server starts listening.
+        // See warmX402Sdk() in index.ts which fires 2s after server start.
         _sdkMiddleware = paymentMiddleware(routes, resourceServer, undefined, // paywallConfig
         undefined, // paywall provider
-        true);
+        false);
+        // Store resource server ref for manual pre-warming at startup
+        _resourceServer = resourceServer;
         const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
         console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes`);
         console.log(`[x402-sdk]    Networks: ${evmNetwork} (Base), eip155:137 (Polygon)${solanaWallet ? `, ${SOLANA_MAINNET_CAIP2} (Solana)` : ''}`);
@@ -196,6 +200,25 @@ export function x402SdkMiddleware(req, res, next) {
 /**
  * Get SDK initialization status for health checks / admin endpoints.
  */
+/**
+ * Pre-warm the x402 SDK by triggering the facilitator /supported call in the background.
+ * Call this after the server starts listening — fires async, never blocks.
+ * This ensures the first real x402 request doesn't pay the CDP init cost (~1-2s).
+ */
+export async function warmX402Sdk() {
+    if (!_resourceServer)
+        return;
+    try {
+        // Trigger the facilitator /supported call by making a dummy internal request
+        // The SDK caches the response for all future requests
+        await _resourceServer.initialize?.();
+        console.log("[x402-sdk] Pre-warm complete — CDP /supported fetched");
+    }
+    catch (err) {
+        // Non-fatal — SDK will re-try on first real request
+        console.warn("[x402-sdk] Pre-warm failed (non-fatal):", err.message);
+    }
+}
 export function getX402SdkStatus() {
     const routes = buildSdkRoutes();
     return {

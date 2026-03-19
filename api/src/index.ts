@@ -45,7 +45,7 @@ import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
-import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
+import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus, warmX402Sdk } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -458,6 +458,9 @@ initX402Sdk();
 
 app.listen(config.port, () => {
   console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
+  // Pre-warm x402 SDK in background — fetches CDP /supported so first payment
+  // request doesn't pay the init cost. Fires 2s after server starts. Non-blocking.
+  setTimeout(() => { warmX402Sdk().catch(() => {}); }, 2000);
   console.log(`   ENV: ${config.nodeEnv}`);
   console.log(`   Site: ${config.publicSiteUrl}`);
 });
