@@ -136,7 +136,7 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
-    dotfiles: 'ignore',
+    dotfiles: 'allow', // allow .well-known directory to be served
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
