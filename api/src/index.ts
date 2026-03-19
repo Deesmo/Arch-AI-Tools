@@ -453,18 +453,27 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 }
 
 // Initialize x402 SDK (official Coinbase protocol support)
-initX402Sdk();
+// Pre-warm BEFORE accepting connections: fetch CDP /supported so feePayer is ready.
+// Without this, the first payment request triggers a blocking CDP network call.
+async function startServer(): Promise<void> {
+  initX402Sdk();
+  // Pre-warm: fetch CDP /supported (gets feePayer for Solana + confirms auth)
+  // This runs BEFORE app.listen so no request sees cold-start latency
+  try {
+    await warmX402Sdk();
+    console.log("[startup] x402 SDK pre-warm complete");
+  } catch (err) {
+    console.warn("[startup] x402 SDK pre-warm failed (non-fatal):", (err as Error).message);
+  }
 
-// x402 SDK status endpoint (for admin/health checks)
+  app.listen(config.port, () => {
+    console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
+    console.log(`   ENV: ${config.nodeEnv}`);
+    console.log(`   Site: ${config.publicSiteUrl}`);
+  });
+}
 
-app.listen(config.port, () => {
-  console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
-  // Pre-warm x402 SDK in background — fetches CDP /supported so first payment
-  // request doesn't pay the init cost. Fires 2s after server starts. Non-blocking.
-  setTimeout(() => { warmX402Sdk().catch(() => {}); }, 2000);
-  console.log(`   ENV: ${config.nodeEnv}`);
-  console.log(`   Site: ${config.publicSiteUrl}`);
-});
+startServer().catch(console.error);
 
 // Daily cleanup of expired OAuth records
 setInterval(async () => {
