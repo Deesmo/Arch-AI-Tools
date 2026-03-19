@@ -850,7 +850,7 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
         paymentRequirements: finalPaymentReqs,
       },
       {
-        timeout: 8000,
+        timeout: 30000, // 30s — Solana settlement can take longer than EVM
         headers,
       }
     );
@@ -935,7 +935,7 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
         paymentRequirements: finalPaymentReqsSettle,
       },
       {
-        timeout: 10000,
+        timeout: 30000, // 30s — Solana settlement can take longer than EVM
         headers,
       }
     );

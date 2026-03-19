@@ -837,7 +837,7 @@ async function verifyPayment(paymentHeader, toolName, paymentRequirements) {
             paymentPayload: finalPayload,
             paymentRequirements: finalPaymentReqs,
         }, {
-            timeout: 8000,
+            timeout: 30000, // 30s — Solana settlement can take longer than EVM
             headers,
         });
         console.log(`[x402] Verify response: ${JSON.stringify(res.data)}`);
@@ -918,7 +918,7 @@ async function settlePayment(paymentHeader, toolName, paymentRequirements) {
             paymentPayload: finalPayloadSettle,
             paymentRequirements: finalPaymentReqsSettle,
         }, {
-            timeout: 10000,
+            timeout: 30000, // 30s — Solana settlement can take longer than EVM
             headers,
         });
         console.log(`[x402] Settle response: ${JSON.stringify(res.data)}`);
