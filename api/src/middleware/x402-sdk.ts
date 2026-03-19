@@ -84,8 +84,9 @@ function buildSdkRoutes(): Record<string, any> {
       });
     }
 
-    // Each tool is a POST endpoint at /v1/tools/<toolName>
-    const routeKey = `POST /v1/tools/${toolName}`;
+    // Routes are relative to /v1/tools (the mount point in index.ts)
+    // app.use("/v1/tools", x402SdkMiddleware) strips the /v1/tools prefix
+    const routeKey = `POST /${toolName}`;
     routes[routeKey] = {
       accepts,
       description: `Arch Tools — ${toolName}`,
@@ -94,7 +95,7 @@ function buildSdkRoutes(): Record<string, any> {
 
     // Also register GET for x402scan compatibility (query-style discovery)
     const getDiscovery = declareDiscoveryExtension({} as any);
-    const getRouteKey = `GET /v1/tools/${toolName}`;
+    const getRouteKey = `GET /${toolName}`;
     routes[getRouteKey] = {
       accepts,
       description: `Arch Tools — ${toolName}`,
