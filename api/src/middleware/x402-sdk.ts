@@ -15,22 +15,27 @@
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
+import { createFacilitatorConfig } from "@coinbase/x402";
 import { config } from "../config.js";
 import { X402_PRICES, TOOL_OUTPUT_SCHEMAS } from "./x402.js";
 import type { Request, Response, NextFunction } from "express";
 
+// Solana mainnet CAIP-2 identifier
+const SOLANA_MAINNET_CAIP2 = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+
 // ─── Build x402 SDK route config from our pricing table ──────────────────────
 
 function buildSdkRoutes(): Record<string, any> {
-  const walletAddress = config.x402.walletAddress;
-  if (!walletAddress) return {};
+  const evmWallet = config.x402.walletAddress;
+  const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
+  if (!evmWallet && !solanaWallet) return {};
 
-  const network = config.x402.network === "base-sepolia"
+  const evmNetwork = config.x402.network === "base-sepolia"
     ? "eip155:84532"
     : "eip155:8453"; // Default to Base mainnet
 
-  const baseUrl = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
   const routes: Record<string, any> = {};
 
   for (const [toolName, price] of Object.entries(X402_PRICES)) {
@@ -43,16 +48,46 @@ function buildSdkRoutes(): Record<string, any> {
         : undefined,
     } as any);
 
+    // Build accepts[] array with all supported networks for this tool
+    const accepts: any[] = [];
+
+    // EVM: Base mainnet (primary)
+    if (evmWallet) {
+      accepts.push({
+        scheme: "exact",
+        price: `$${price}`,
+        network: evmNetwork,
+        payTo: evmWallet,
+        maxTimeoutSeconds: 60,
+      });
+    }
+
+    // EVM: Polygon (CDP-supported)
+    if (evmWallet) {
+      accepts.push({
+        scheme: "exact",
+        price: `$${price}`,
+        network: "eip155:137",
+        payTo: evmWallet,
+        maxTimeoutSeconds: 60,
+      });
+    }
+
+    // SVM: Solana mainnet (CDP-supported via @x402/svm)
+    if (solanaWallet) {
+      accepts.push({
+        scheme: "exact",
+        price: `$${price}`,
+        network: SOLANA_MAINNET_CAIP2,
+        payTo: solanaWallet,
+        maxTimeoutSeconds: 60,
+      });
+    }
+
     // Each tool is a POST endpoint at /v1/tools/<toolName>
     const routeKey = `POST /v1/tools/${toolName}`;
     routes[routeKey] = {
-      accepts: {
-        scheme: "exact",
-        price: `$${price}`,
-        network,
-        payTo: walletAddress,
-        maxTimeoutSeconds: 60,
-      },
+      accepts,
       description: `Arch Tools — ${toolName}`,
       extensions: postDiscovery,
     };
@@ -61,13 +96,7 @@ function buildSdkRoutes(): Record<string, any> {
     const getDiscovery = declareDiscoveryExtension({} as any);
     const getRouteKey = `GET /v1/tools/${toolName}`;
     routes[getRouteKey] = {
-      accepts: {
-        scheme: "exact",
-        price: `$${price}`,
-        network,
-        payTo: walletAddress,
-        maxTimeoutSeconds: 60,
-      },
+      accepts,
       description: `Arch Tools — ${toolName}`,
       extensions: getDiscovery,
     };
@@ -99,15 +128,34 @@ export function initX402Sdk(): boolean {
   }
 
   try {
-    const facilitatorUrl = config.x402.facilitatorUrl || "https://x402.org/facilitator";
-    const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl });
+    // Use @coinbase/x402's createFacilitatorConfig for proper CDP JWT auth
+    // This handles JWT generation automatically for verify/settle/supported calls
+    const hasCdpKeys = !!(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET);
+    let facilitatorClient: HTTPFacilitatorClient;
 
-    const network = config.x402.network === "base-sepolia"
+    if (hasCdpKeys) {
+      // CDP facilitator with proper JWT auth via @coinbase/x402
+      const cdpConfig = createFacilitatorConfig(
+        process.env.CDP_API_KEY_ID!,
+        process.env.CDP_API_KEY_SECRET!,
+      );
+      facilitatorClient = new HTTPFacilitatorClient(cdpConfig);
+      console.log(`[x402-sdk] Using CDP facilitator with JWT auth`);
+    } else {
+      // Fallback to x402.org (testnet only)
+      const facilitatorUrl = config.x402.facilitatorUrl || "https://x402.org/facilitator";
+      facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl });
+      console.log(`[x402-sdk] Using fallback facilitator: ${facilitatorUrl}`);
+    }
+
+    const evmNetwork = config.x402.network === "base-sepolia"
       ? "eip155:84532"
       : "eip155:8453";
 
     const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register(network, new ExactEvmScheme())
+      .register(evmNetwork, new ExactEvmScheme())          // Base
+      .register("eip155:137", new ExactEvmScheme())         // Polygon
+      .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet
       .registerExtension(bazaarResourceServerExtension);
 
     const routes = buildSdkRoutes();
@@ -128,9 +176,12 @@ export function initX402Sdk(): boolean {
       false,     // syncFacilitatorOnStart — we handle facilitator ourselves
     );
 
-    console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes on ${network}`);
-    console.log(`[x402-sdk]    Facilitator: ${facilitatorUrl}`);
-    console.log(`[x402-sdk]    Wallet: ${config.x402.walletAddress.slice(0, 6)}...${config.x402.walletAddress.slice(-4)}`);
+    const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
+    console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes`);
+    console.log(`[x402-sdk]    Networks: ${evmNetwork} (Base), eip155:137 (Polygon)${solanaWallet ? `, ${SOLANA_MAINNET_CAIP2} (Solana)` : ''}`);
+    console.log(`[x402-sdk]    CDP auth: ${hasCdpKeys ? 'JWT' : 'none (testnet)'}`);
+    if (config.x402.walletAddress) console.log(`[x402-sdk]    EVM wallet: ${config.x402.walletAddress.slice(0, 6)}...${config.x402.walletAddress.slice(-4)}`);
+    if (solanaWallet) console.log(`[x402-sdk]    Solana wallet: ${solanaWallet.slice(0, 4)}...${solanaWallet.slice(-4)}`);
     return true;
   } catch (err) {
     _initError = `Failed to initialize x402 SDK: ${(err as Error).message}`;
