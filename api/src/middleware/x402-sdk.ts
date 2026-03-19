@@ -154,11 +154,9 @@ export function initX402Sdk(): boolean {
       : "eip155:8453";
 
     const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register(evmNetwork, new ExactEvmScheme())          // Base
-      .register("eip155:137", new ExactEvmScheme())         // Polygon
-      // NOTE: Solana (ExactSvmScheme) removed temporarily — causes request timeouts
-      // The CDP facilitator makes async network calls per-request for Solana feePayer
-      // TODO: Re-enable when @x402/svm supports synchronous feePayer resolution
+      .register(evmNetwork, new ExactEvmScheme())           // Base mainnet
+      .register("eip155:137", new ExactEvmScheme())          // Polygon mainnet
+      .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet (feePayer from CDP /supported)
       .registerExtension(bazaarResourceServerExtension);
 
     const routes = buildSdkRoutes();
@@ -171,12 +169,14 @@ export function initX402Sdk(): boolean {
     }
 
     // Use type assertion since our route config matches the SDK's expected shape
+    // syncFacilitatorOnStart=true: SDK contacts CDP /supported at startup (not on first request)
+    // This prevents first-request latency spikes and ensures feePayer is ready for Solana
     _sdkMiddleware = paymentMiddleware(
       routes as any,
       resourceServer,
       undefined, // paywallConfig
       undefined, // paywall provider
-      false,     // syncFacilitatorOnStart — we handle facilitator ourselves
+      true,      // syncFacilitatorOnStart — pre-warm CDP connection at startup
     );
 
     const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;

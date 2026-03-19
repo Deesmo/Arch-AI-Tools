@@ -14,6 +14,7 @@
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import { config } from "../config.js";
@@ -129,11 +130,9 @@ export function initX402Sdk() {
             ? "eip155:84532"
             : "eip155:8453";
         const resourceServer = new x402ResourceServer(facilitatorClient)
-            .register(evmNetwork, new ExactEvmScheme()) // Base
-            .register("eip155:137", new ExactEvmScheme()) // Polygon
-            // NOTE: Solana (ExactSvmScheme) removed temporarily — causes request timeouts
-            // The CDP facilitator makes async network calls per-request for Solana feePayer
-            // TODO: Re-enable when @x402/svm supports synchronous feePayer resolution
+            .register(evmNetwork, new ExactEvmScheme()) // Base mainnet
+            .register("eip155:137", new ExactEvmScheme()) // Polygon mainnet
+            .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet (feePayer from CDP /supported)
             .registerExtension(bazaarResourceServerExtension);
         const routes = buildSdkRoutes();
         const routeCount = Object.keys(routes).length;
@@ -143,9 +142,11 @@ export function initX402Sdk() {
             return false;
         }
         // Use type assertion since our route config matches the SDK's expected shape
+        // syncFacilitatorOnStart=true: SDK contacts CDP /supported at startup (not on first request)
+        // This prevents first-request latency spikes and ensures feePayer is ready for Solana
         _sdkMiddleware = paymentMiddleware(routes, resourceServer, undefined, // paywallConfig
         undefined, // paywall provider
-        false);
+        true);
         const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
         console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes`);
         console.log(`[x402-sdk]    Networks: ${evmNetwork} (Base), eip155:137 (Polygon)${solanaWallet ? `, ${SOLANA_MAINNET_CAIP2} (Solana)` : ''}`);
