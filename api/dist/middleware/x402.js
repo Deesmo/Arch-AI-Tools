@@ -217,6 +217,10 @@ function buildPaymentRequired(toolName, price) {
     // Option 7: USDC on Solana
     const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
     if (solanaWallet) {
+        // CDP Solana fee payer (v2 mainnet) — fetched from CDP /supported endpoint 2026-03-18
+        // Signer: solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp → D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM
+        // Required by @x402/svm SDK: "feePayer is required in paymentRequirements.extra"
+        const CDP_SOLANA_FEE_PAYER = "D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM";
         accepts.push({
             scheme: "exact",
             network: "solana:mainnet",
@@ -228,7 +232,7 @@ function buildPaymentRequired(toolName, price) {
             payTo: solanaWallet,
             maxTimeoutSeconds: 60,
             asset: SOLANA_USDC_MINT,
-            extra: { name: "USD Coin", version: "spl" },
+            extra: { name: "USD Coin", version: "spl", feePayer: CDP_SOLANA_FEE_PAYER },
         });
     }
     // Option 8: USDC on Noble (Cosmos native USDC issuance chain — IBC to 50+ Cosmos chains)
