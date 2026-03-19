@@ -451,14 +451,29 @@ router.get("/.well-known/mcp/server-card.json", (_req: Request, res: Response): 
 
 // GET /.well-known/mcp.json — MCP server discovery
 router.get("/.well-known/mcp.json", (_req: Request, res: Response): void => {
-  const fs = require("fs");
-  const path = require("path");
   try {
-    const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/mcp.json"), "utf8"));
+    const fs = require("fs");
+    const path = require("path");
+    const filePath = path.join(__dirname, "../../public/.well-known/mcp.json");
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: "mcp.json not found" });
+      return;
+    }
+    const raw = fs.readFileSync(filePath, "utf8");
+    let content: object;
+    try {
+      content = JSON.parse(raw);
+    } catch (parseErr) {
+      console.error("[discovery] mcp.json parse error:", parseErr);
+      res.status(500).json({ error: "mcp.json parse error" });
+      return;
+    }
     res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("Content-Type", "application/json");
     res.json(content);
-  } catch {
-    res.status(404).json({ error: "mcp.json not found" });
+  } catch (err) {
+    console.error("[discovery] mcp.json read error:", err);
+    res.status(500).json({ error: "internal error reading mcp.json" });
   }
 });
 
