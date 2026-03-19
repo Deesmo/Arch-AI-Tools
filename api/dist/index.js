@@ -41,7 +41,7 @@ import referralRouter from "./routes/referral.js";
 import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 // x402 SDK (official Coinbase @x402/express integration)
-import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus } from "./middleware/x402-sdk.js";
+import { getX402SdkStatus } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -200,10 +200,9 @@ app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
 // x402 SDK middleware (PRIMARY) — official Coinbase @x402/express protocol
-// Always active when WALLET_ADDRESS is set. Handles payment verification/settlement
-// via CDP facilitator for Base, Polygon, and Solana before requests reach tool handlers.
-// The custom x402.ts middleware in toolMiddleware() is fallback for non-CDP networks only.
-app.use("/v1/tools", x402SdkMiddleware);
+// SDK middleware DISABLED — causes infinite hangs on Render/Cloudflare setup.
+// Custom x402.ts middleware in toolMiddleware() handles all payments.
+// app.use("/v1/tools", x402SdkMiddleware);
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);
 // Billing
@@ -395,9 +394,8 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 // Initialize x402 SDK (official Coinbase protocol support)
 // Pre-warm BEFORE accepting connections: fetch CDP /supported so feePayer is ready.
 // Without this, the first payment request triggers a blocking CDP network call.
-// Initialize x402 SDK — syncFacilitatorOnStart=true means CDP /supported is fetched
-// on the first payment request (shared across all requests, not per-request).
-initX402Sdk();
+// x402 SDK init disabled — SDK middleware is commented out above
+// initX402Sdk();
 app.listen(config.port, () => {
     console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
     console.log(`   ENV: ${config.nodeEnv}`);
