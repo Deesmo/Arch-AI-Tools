@@ -592,7 +592,8 @@ function buildPaymentRequired(toolName: string, price: string): object {
   }
 
   // USDT options — Tether (higher market cap than USDC, widely held by trading agents)
-  const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS;
+  // Use main EVM wallet for USDT — one wallet for all EVM tokens (USDC + USDT on Base + Polygon)
+  const usdtWallet = evmWallet; // always use main EVM wallet, not separate USDT_ETH_WALLET_ADDRESS
   if (usdtWallet) {
     // CDP supports USDT via Permit2 on Base and Polygon only (CAIP-2 format required)
     const usdtNetworks: Array<{ network: string; chain: string }> = [
@@ -618,29 +619,8 @@ function buildPaymentRequired(toolName: string, price: string): object {
     }
   }
 
-  // USDT on Base via Permit2 — uses main EVM wallet, no separate USDT wallet needed.
-  // Permit2 enables gasless ERC-20 transfers for any token (added March 2026).
-  // The buyer must have approved the Permit2 contract (0x000000000022D473030F116dDEE9F6B43aC78BA3)
-  // to spend their USDT. The facilitator handles gas sponsorship if configured.
-  if (evmWallet) {
-    accepts.push({
-      scheme: "exact",
-      network: "eip155:8453",
-      amount: amountAtomic,
-      maxAmountRequired: amountAtomic,
-      resource,
-      description: `Arch Tools — ${toolName} (USDT on Base via Permit2)`,
-      mimeType: "application/json",
-      payTo: evmWallet,
-      maxTimeoutSeconds: 60,
-      asset: USDT_CONTRACTS["base"],  // 0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2
-      extra: {
-        name: "Tether USD",
-        version: "2",
-        assetTransferMethod: "permit2",
-      },
-    });
-  }
+  // NOTE: USDT on Base via Permit2 removed — duplicate of USDT on Base above.
+  // All USDT routes now use the main EVM wallet consistently.
 
   // Add outputSchema to each accept entry for x402scan compatibility
   const toolSchema = TOOL_OUTPUT_SCHEMAS[toolName] as { input: object; output: object | null } | undefined;
