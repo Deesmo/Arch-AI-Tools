@@ -14,7 +14,6 @@
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import { config } from "../config.js";
@@ -132,7 +131,9 @@ export function initX402Sdk() {
         const resourceServer = new x402ResourceServer(facilitatorClient)
             .register(evmNetwork, new ExactEvmScheme()) // Base
             .register("eip155:137", new ExactEvmScheme()) // Polygon
-            .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet
+            // NOTE: Solana (ExactSvmScheme) removed temporarily — causes request timeouts
+            // The CDP facilitator makes async network calls per-request for Solana feePayer
+            // TODO: Re-enable when @x402/svm supports synchronous feePayer resolution
             .registerExtension(bazaarResourceServerExtension);
         const routes = buildSdkRoutes();
         const routeCount = Object.keys(routes).length;

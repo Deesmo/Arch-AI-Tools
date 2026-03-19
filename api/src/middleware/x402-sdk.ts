@@ -156,7 +156,9 @@ export function initX402Sdk(): boolean {
     const resourceServer = new x402ResourceServer(facilitatorClient)
       .register(evmNetwork, new ExactEvmScheme())          // Base
       .register("eip155:137", new ExactEvmScheme())         // Polygon
-      .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet
+      // NOTE: Solana (ExactSvmScheme) removed temporarily — causes request timeouts
+      // The CDP facilitator makes async network calls per-request for Solana feePayer
+      // TODO: Re-enable when @x402/svm supports synchronous feePayer resolution
       .registerExtension(bazaarResourceServerExtension);
 
     const routes = buildSdkRoutes();
