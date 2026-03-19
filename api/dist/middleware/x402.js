@@ -668,6 +668,10 @@ function buildPaymentRequired(toolName, price) {
         if (a.asset === "0x0000000000000000000000000000000000000000")
             return false; // native ETH
         if (a.extra?.version === "native" || a.extra?.version === "native-base")
+            return false; // no native ETH/SOL
+        if (a.extra?.version === "usol-erc20")
+            return false; // no wrapped SOL on Base — CDP can't verify this
+        if (a.extra?.version === "usol-erc20" || a.asset === "0x311935cd80b76769bf2ecc9d8ab7635b2139cf82")
             return false;
         return true;
     });
