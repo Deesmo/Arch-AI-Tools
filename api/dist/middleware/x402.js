@@ -645,19 +645,19 @@ function buildPaymentRequired(toolName, price) {
         "polygon-amoy", // Polygon Amoy ✅
         "eip155:137", // Polygon mainnet ✅ (CAIP-2 — used in verify/settle)
         "eip155:80002", // Polygon Amoy ✅
-        "solana", // Solana mainnet ✅ (USDC SPL)
+        "solana", // Solana mainnet (short alias) ✅
+        "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", // Solana mainnet (full CAIP-2) ✅
         "solana-devnet", // Solana devnet ✅
+        "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", // Solana devnet (full CAIP-2) ✅
     ]);
-    // Filter to only CDP-supported networks and normalize "solana:mainnet" → "solana"
-    // This ensures only payment options that the CDP facilitator can actually verify/settle are returned.
-    // A client that pays with an unsupported option would lose funds — never return those options.
-    // Additional rules:
-    // - asset === "native" means native SOL or native ETH — CDP does NOT support these (ERC-20/SPL only)
-    // - asset === "0x0000...0000" means native ETH — also excluded
+    // Filter to only CDP-supported networks.
+    // Normalize Solana network to full CAIP-2 format required by @x402/svm client SDK.
     const filteredAccepts = accepts
         .map((a) => {
-        if (a.network === "solana:mainnet")
-            a.network = "solana";
+        // Normalize Solana to full CAIP-2 — @x402/svm registerV1 uses this exact string
+        if (a.network === "solana:mainnet" || a.network === "solana") {
+            a.network = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+        }
         return a;
     })
         .filter((a) => {
