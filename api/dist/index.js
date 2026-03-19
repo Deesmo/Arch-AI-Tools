@@ -42,6 +42,8 @@ import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 // x402 SDK (official Coinbase @x402/express integration)
 import { getX402SdkStatus } from "./middleware/x402-sdk.js";
+// x402 Official middleware — per Coinbase quickstart docs
+import { initOfficialX402, officialX402Middleware } from "./middleware/x402-official.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -199,10 +201,11 @@ app.use("/v1/agent/register", registerLimiter);
 app.use("/v1/agent", authLimiter, agentRouter);
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
-// x402 SDK middleware (PRIMARY) — official Coinbase @x402/express protocol
-// SDK middleware DISABLED — causes infinite hangs on Render/Cloudflare setup.
-// Custom x402.ts middleware in toolMiddleware() handles all payments.
+// x402 SDK middleware (LEGACY) — DISABLED, replaced by x402-official.ts
 // app.use("/v1/tools", x402SdkMiddleware);
+// x402 Official middleware (PRIMARY) — per Coinbase quickstart docs
+// Mounted at root with full-path routes (POST /v1/tools/*)
+app.use(officialX402Middleware);
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);
 // Billing
@@ -394,8 +397,10 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 // Initialize x402 SDK (official Coinbase protocol support)
 // Pre-warm BEFORE accepting connections: fetch CDP /supported so feePayer is ready.
 // Without this, the first payment request triggers a blocking CDP network call.
-// x402 SDK init disabled — SDK middleware is commented out above
+// Legacy x402 SDK init disabled — replaced by x402-official.ts
 // initX402Sdk();
+// Initialize official x402 middleware (per Coinbase quickstart docs)
+initOfficialX402();
 app.listen(config.port, () => {
     console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
     console.log(`   ENV: ${config.nodeEnv}`);
