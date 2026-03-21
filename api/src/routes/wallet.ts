@@ -66,18 +66,16 @@ router.post(
     const label = body.label?.slice(0, 64) ?? `agent-${agentId.slice(0, 8)}`;
 
     try {
-      // Dynamic import so the server doesn't crash if @coinbase/agentkit isn't installed yet
-      // @ts-ignore — @coinbase/agentkit not yet installed
-      const { CdpEvmWalletProvider } = await import("@coinbase/agentkit");
-
-      const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
+      // Use CdpClient via dynamic import (avoids jose ESM/CJS issue)
+      // This is the official pattern from Coinbase docs — handles JWT + wallet auth internally
+      const { CdpClient } = await import("@coinbase/cdp-sdk");
+      const cdp = new CdpClient({
         apiKeyId: config.cdp.apiKeyId,
         apiKeySecret: config.cdp.apiKeySecret,
         walletSecret: config.cdp.walletSecret,
-        networkId: "base" as any,
       });
-
-      const address = walletProvider.getAddress();
+      const account = await cdp.evm.createAccount({ name: label });
+      const address = account.address;
 
       const walletRecord: WalletRecord = {
         address,
@@ -116,8 +114,7 @@ router.post(
       res.status(500).json({
         ok: false,
         error: "wallet_provision_failed",
-        message: `Failed to create wallet: ${message}`,
-        debug_hint: message,
+        message: "Failed to create wallet. Please try again later.",
       });
     }
   }
@@ -152,6 +149,7 @@ router.get(
       const cdp = new CdpClient({
         apiKeyId: config.cdp.apiKeyId,
         apiKeySecret: config.cdp.apiKeySecret,
+        walletSecret: config.cdp.walletSecret,
       });
 
       // USDC on Base contract address
