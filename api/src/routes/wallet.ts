@@ -52,12 +52,12 @@ router.post(
     }
 
     // Validate CDP config is present
-    if (!config.cdp.apiKeyId || !config.cdp.apiKeySecret) {
-      logger.error("CDP API keys not configured — cannot provision wallet");
+    if (!config.cdp.apiKeyId || !config.cdp.apiKeySecret || !config.cdp.walletSecret) {
+      logger.error("CDP API keys or wallet secret not configured — cannot provision wallet");
       res.status(503).json({
         ok: false,
         error: "cdp_not_configured",
-        message: "Wallet provisioning is not yet available. CDP keys not configured.",
+        message: "Wallet provisioning is not yet available. CDP keys or wallet secret not configured.",
       });
       return;
     }
@@ -73,6 +73,7 @@ router.post(
       const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
         apiKeyId: config.cdp.apiKeyId,
         apiKeySecret: config.cdp.apiKeySecret,
+        walletSecret: config.cdp.walletSecret,
         networkId: "base" as any,
       });
 

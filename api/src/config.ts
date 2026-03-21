@@ -30,6 +30,7 @@ export const config = {
   cdp: {
     apiKeyId: process.env.CDP_API_KEY_ID ?? "",
     apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
+    walletSecret: process.env.CDP_WALLET_SECRET ?? "",
     projectId: process.env.CDP_PROJECT_ID ?? "",
   },
   redisUrl: process.env.REDIS_URL ?? "",
