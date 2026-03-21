@@ -116,7 +116,8 @@ router.post(
       res.status(500).json({
         ok: false,
         error: "wallet_provision_failed",
-        message: "Failed to create wallet. Please try again later.",
+        message: `Failed to create wallet: ${message}`,
+        debug_hint: message,
       });
     }
   }
