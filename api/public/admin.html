@@ -13,57 +13,133 @@
       --bg: #07061A; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10);
       --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.55);
       --accent: #22d3ee; --green: #34d399; --orange: #FFB030; --pink: #FF1888; --red: #f87171;
+      --purple: #a78bfa;
     }
     body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
     h1,h2,h3 { font-family: 'Syne', system-ui, sans-serif; }
+
+    /* Nav */
     .nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:60px; border-bottom:1px solid var(--border); backdrop-filter:blur(12px); background:rgba(7,6,26,0.9); position:sticky; top:0; z-index:100; }
     .nav-logo { display:flex; align-items:center; gap:9px; text-decoration:none; color:var(--text); }
     .logo-mark { width:32px; height:32px; border-radius:8px; background:var(--bg); border:1px solid rgba(255,255,255,0.12); display:grid; place-items:center; }
     .logo-name { font-family:'Syne',sans-serif; font-weight:700; font-size:15px; }
     .nav-badge { background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.3); color:var(--red); padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700; }
-    .main { max-width:1100px; margin:0 auto; padding:40px 24px 80px; }
-    .page-title { font-size:28px; font-weight:800; margin-bottom:8px; }
-    .page-sub { color:var(--muted); font-size:14px; margin-bottom:32px; }
+
+    .main { max-width:1200px; margin:0 auto; padding:32px 24px 80px; }
+
+    /* Auth */
     .auth-box { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; max-width:480px; margin:60px auto; }
     .auth-box h2 { font-size:18px; margin-bottom:16px; }
     .field { margin-bottom:16px; }
     .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; }
-    .field input { width:100%; background:rgba(255,255,255,0.07); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:13px; outline:none; }
-    .field input:focus { border-color:var(--accent); }
-    .btn { background:var(--accent); color:#07061A; font-weight:700; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; width:100%; }
+    .field input, .search-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:13px; outline:none; }
+    .field input:focus, .search-input:focus { border-color:var(--accent); }
+    .btn { background:var(--accent); color:#07061A; font-weight:700; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; }
     .btn:hover { opacity:.9; }
+    .btn-sm { padding:6px 14px; font-size:12px; border-radius:6px; }
+    .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
+    .btn-outline:hover { background:rgba(255,255,255,0.07); }
+    .btn-green { background:var(--green); color:#07061A; }
+    .btn-orange { background:var(--orange); color:#07061A; }
+    .btn-pink { background:var(--pink); color:#fff; }
     .err { color:var(--red); font-size:13px; margin-top:8px; }
-    .grid4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:32px; }
-    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
-    .stat-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; }
-    .stat-value { font-size:32px; font-weight:800; font-family:'Syne',sans-serif; }
-    .stat-sub { font-size:12px; color:var(--muted); margin-top:4px; }
-    .green { color:var(--green); }
-    .orange { color:var(--orange); }
-    .accent { color:var(--accent); }
-    .section { margin-bottom:40px; }
-    .section h2 { font-size:16px; font-weight:700; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+
+    /* Header */
+    .dash-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+    .page-title { font-size:26px; font-weight:800; }
+    .page-sub { color:var(--muted); font-size:13px; margin-top:2px; }
+    .refresh-btn { background:rgba(255,255,255,0.07); border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:6px; }
+    .refresh-btn:hover { background:rgba(255,255,255,0.12); }
+
+    /* KPI Cards */
+    .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
+    @media(max-width:900px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:500px) { .kpi-grid { grid-template-columns:1fr; } }
+    .kpi { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden; }
+    .kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:12px 12px 0 0; }
+    .kpi.c-accent::before { background:var(--accent); }
+    .kpi.c-green::before { background:var(--green); }
+    .kpi.c-orange::before { background:var(--orange); }
+    .kpi.c-pink::before { background:var(--pink); }
+    .kpi.c-purple::before { background:var(--purple); }
+    .kpi.c-red::before { background:var(--red); }
+    .kpi-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; }
+    .kpi-value { font-size:28px; font-weight:800; font-family:'Syne',sans-serif; }
+    .kpi-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+
+    /* Charts */
+    .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px; }
+    @media(max-width:700px) { .charts-row { grid-template-columns:1fr; } }
+    .chart-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+    .chart-title { font-size:13px; font-weight:700; margin-bottom:16px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .chart-bars { display:flex; align-items:flex-end; gap:4px; height:120px; }
+    .chart-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+    .chart-bar { width:100%; border-radius:3px 3px 0 0; min-height:2px; transition:height .3s ease; }
+    .chart-bar.accent { background:var(--accent); }
+    .chart-bar.green { background:var(--green); }
+    .chart-bar-label { font-size:9px; color:var(--muted); writing-mode:vertical-rl; text-orientation:mixed; max-height:40px; overflow:hidden; }
+    .chart-bar-count { font-size:9px; color:var(--muted); }
+    .chart-legend { display:flex; gap:16px; margin-top:12px; font-size:11px; color:var(--muted); }
+
+    /* Sections */
+    .section { margin-bottom:28px; }
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .section-title { font-size:15px; font-weight:700; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; overflow-x:auto; }
+
+    /* Tables */
     table { width:100%; border-collapse:collapse; font-size:13px; }
-    th { text-align:left; padding:8px 12px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.07em; border-bottom:1px solid var(--border); }
+    th { text-align:left; padding:8px 12px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.07em; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap; }
+    th:hover { color:var(--accent); }
+    th .sort-arrow { font-size:10px; margin-left:4px; }
     td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.05); }
     tr:last-child td { border-bottom:none; }
     tr:hover td { background:rgba(255,255,255,0.03); }
+
     .tag { display:inline-flex; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; font-family:'JetBrains Mono',monospace; }
     .tag-green { background:rgba(52,211,153,0.1); color:var(--green); border:1px solid rgba(52,211,153,0.2); }
     .tag-orange { background:rgba(255,176,48,0.1); color:var(--orange); border:1px solid rgba(255,176,48,0.2); }
     .tag-accent { background:rgba(34,211,238,0.1); color:var(--accent); border:1px solid rgba(34,211,238,0.2); }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
-    .flex { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-    .refresh-btn { background:rgba(255,255,255,0.07); border:1px solid var(--border); color:var(--text); padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; }
-    .refresh-btn:hover { background:rgba(255,255,255,0.12); }
-    .loading { color:var(--muted); font-size:14px; text-align:center; padding:40px; }
+    .tag-pink { background:rgba(255,24,136,0.1); color:var(--pink); border:1px solid rgba(255,24,136,0.2); }
+    .tag-purple { background:rgba(167,139,250,0.1); color:var(--purple); border:1px solid rgba(167,139,250,0.2); }
+
     .mono { font-family:'JetBrains Mono',monospace; font-size:12px; }
+
+    /* Bar chart (horizontal) */
     .bar-wrap { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-    .bar-label { font-size:12px; min-width:140px; color:var(--muted); }
+    .bar-label { font-size:12px; min-width:160px; color:var(--muted); font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .bar-track { flex:1; height:6px; background:rgba(255,255,255,0.07); border-radius:3px; }
-    .bar-fill { height:100%; border-radius:3px; background:var(--accent); }
-    .bar-count { font-size:12px; color:var(--muted); min-width:40px; text-align:right; }
+    .bar-fill { height:100%; border-radius:3px; background:var(--accent); transition:width .3s ease; }
+    .bar-count { font-size:12px; color:var(--muted); min-width:50px; text-align:right; font-family:'JetBrains Mono',monospace; }
+
+    /* Caller grid */
+    .caller-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    .caller-card { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+    .caller-name { font-size:12px; color:var(--muted); margin-bottom:6px; word-break:break-all; }
+    .caller-count { font-size:22px; font-weight:800; font-family:'Syne',sans-serif; }
+
+    /* Quick actions */
+    .actions-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+    .action-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:all .15s ease; }
+    .action-card:hover { border-color:var(--accent); background:rgba(34,211,238,0.05); }
+    .action-icon { font-size:28px; margin-bottom:10px; }
+    .action-label { font-size:13px; font-weight:600; }
+    .action-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:#0d0c24; border:1px solid var(--border); border-radius:16px; padding:28px; max-width:480px; width:90%; max-height:80vh; overflow-y:auto; }
+    .modal h3 { font-size:18px; margin-bottom:16px; }
+    .modal-close { float:right; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; }
+    .modal-close:hover { color:var(--text); }
+    .modal-result { margin-top:16px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:12px; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; }
+
+    .search-row { display:flex; gap:10px; margin-bottom:16px; }
+    .search-input { flex:1; }
+
     #dashboard { display:none; }
+    .loading { color:var(--muted); font-size:14px; text-align:center; padding:40px; }
   </style>
 </head>
 <body>
@@ -74,7 +150,7 @@
       </div>
       <span class="logo-name">Arch Tools</span>
     </a>
-    <span class="nav-badge">🔐 ADMIN ONLY</span>
+    <span class="nav-badge">🔐 ADMIN</span>
   </nav>
 
   <div class="main">
@@ -87,71 +163,143 @@
           <label>Admin Key</label>
           <input type="password" id="admin-key-input" placeholder="Enter admin key..." autocomplete="off" />
         </div>
-        <button class="btn" onclick="login()">Access Dashboard</button>
+        <button class="btn" style="width:100%" onclick="login()">Access Dashboard</button>
         <div class="err" id="auth-err"></div>
       </div>
     </div>
 
     <!-- Dashboard -->
     <div id="dashboard">
-      <div class="flex">
+      <!-- Header -->
+      <div class="dash-header">
         <div>
-          <div class="page-title">Admin Dashboard</div>
+          <div class="page-title">Arch Tools Admin</div>
           <div class="page-sub" id="last-updated">Loading...</div>
         </div>
-        <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+        <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
       </div>
 
-      <!-- Stats Grid -->
-      <div class="grid4" id="stats-grid">
-        <div class="loading">Loading stats...</div>
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="loading" style="grid-column:1/-1">Loading stats...</div>
       </div>
 
-      <!-- Top Tools -->
-      <div class="section">
-        <h2>Top Tools (All Time)</h2>
-        <div class="card">
-          <div id="top-tools-chart"></div>
+      <!-- Charts Row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Daily API Calls (14 days)</div>
+          <div class="chart-bars" id="chart-requests"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Daily Signups (14 days)</div>
+          <div class="chart-bars" id="chart-signups"></div>
         </div>
       </div>
 
-      <!-- Caller Types -->
+      <!-- All Agents Table -->
       <div class="section">
-        <h2>Caller Breakdown</h2>
-        <div class="grid4" id="caller-grid"></div>
-      </div>
-
-      <!-- Recent Purchases -->
-      <div class="section">
-        <h2>Recent Purchases</h2>
+        <div class="section-header">
+          <span class="section-title">All Agents</span>
+          <span class="mono" id="agents-count" style="color:var(--muted)"></span>
+        </div>
         <div class="card">
+          <div class="search-row">
+            <input class="search-input" type="text" id="agent-search" placeholder="Search by email..." oninput="filterAgents()" />
+          </div>
           <table>
-            <thead><tr><th>Agent</th><th>Credits</th><th>Amount</th><th>Date</th></tr></thead>
-            <tbody id="purchases-table"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+            <thead>
+              <tr>
+                <th onclick="sortAgents('email')">Email <span class="sort-arrow" id="sort-email"></span></th>
+                <th onclick="sortAgents('credits')">Credits <span class="sort-arrow" id="sort-credits"></span></th>
+                <th onclick="sortAgents('tier')">Tier <span class="sort-arrow" id="sort-tier"></span></th>
+                <th onclick="sortAgents('createdAt')">Signed Up <span class="sort-arrow" id="sort-createdAt"></span></th>
+                <th onclick="sortAgents('lastActive')">Last Active <span class="sort-arrow" id="sort-lastActive"></span></th>
+                <th onclick="sortAgents('totalCalls')">API Calls <span class="sort-arrow" id="sort-totalCalls"></span></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="agents-tbody"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
 
-      <!-- All Agents -->
+      <!-- Top Tools -->
       <div class="section">
-        <h2>All Agents</h2>
-        <div class="card" id="agents-section">
-          <div class="loading">Loading agents...</div>
+        <div class="section-header">
+          <span class="section-title">Top Tools (All Time)</span>
+        </div>
+        <div class="card" id="top-tools-chart"></div>
+      </div>
+
+      <!-- Caller Breakdown -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Caller Breakdown</span>
+        </div>
+        <div class="caller-grid" id="caller-grid"></div>
+      </div>
+
+      <!-- Recent Purchases -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Recent Purchases</span>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th>Agent</th><th>Credits</th><th>Amount</th><th>Date</th></tr></thead>
+            <tbody id="purchases-tbody"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Quick Actions</span>
+        </div>
+        <div class="actions-grid">
+          <div class="action-card" onclick="openModal('lookup')">
+            <div class="action-icon">🔍</div>
+            <div class="action-label">Lookup Agent</div>
+            <div class="action-sub">Search by email</div>
+          </div>
+          <div class="action-card" onclick="openModal('grant')">
+            <div class="action-icon">💰</div>
+            <div class="action-label">Grant Credits</div>
+            <div class="action-sub">Add credits to agent</div>
+          </div>
+          <div class="action-card" onclick="openModal('broadcast')">
+            <div class="action-icon">📧</div>
+            <div class="action-label">Broadcast Email</div>
+            <div class="action-sub">Send to all users</div>
+          </div>
+          <div class="action-card" onclick="seedTools()">
+            <div class="action-icon">🛠️</div>
+            <div class="action-label">Seed Tools</div>
+            <div class="action-sub">Insert missing tools</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Modals -->
+  <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" id="modal-body"></div>
+  </div>
+
   <script>
     const API = '';
     let adminKey = localStorage.getItem('arch_admin_key') || '';
-    
+    let allAgents = [];
+    let agentSortKey = 'lastActive';
+    let agentSortDir = -1;
+
     if (adminKey) { document.getElementById('admin-key-input').value = adminKey; login(); }
 
     async function login() {
       const key = document.getElementById('admin-key-input').value.trim();
       if (!key) { document.getElementById('auth-err').textContent = 'Enter admin key'; return; }
-      
       try {
         const r = await fetch(`${API}/v1/admin/stats`, { headers: { 'x-admin-key': key } });
         if (!r.ok) { document.getElementById('auth-err').textContent = 'Invalid key'; return; }
@@ -159,103 +307,306 @@
         localStorage.setItem('arch_admin_key', key);
         document.getElementById('auth-gate').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        loadData();
+        loadAll();
       } catch(e) { document.getElementById('auth-err').textContent = 'Connection error'; }
     }
 
-    async function loadData() {
+    function hdr() { return { 'x-admin-key': adminKey, 'Content-Type': 'application/json' }; }
+
+    async function loadAll() {
+      await Promise.all([loadStats(), loadAgents()]);
+    }
+
+    async function loadStats() {
       try {
-        const r = await fetch(`${API}/v1/admin/stats`, { headers: { 'x-admin-key': adminKey } });
+        const r = await fetch(`${API}/v1/admin/stats`, { headers: hdr() });
         const d = await r.json();
         const s = d.summary || {};
-        
-        document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
 
-        // Stats grid
-        document.getElementById('stats-grid').innerHTML = `
-          <div class="stat-card">
-            <div class="stat-label">Total Agents</div>
-            <div class="stat-value accent">${s.total_agents || 0}</div>
-            <div class="stat-sub">Registered users</div>
+        document.getElementById('last-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+        // KPI cards
+        document.getElementById('kpi-grid').innerHTML = `
+          <div class="kpi c-accent">
+            <div class="kpi-label">Total Users</div>
+            <div class="kpi-value" style="color:var(--accent)">${s.total_agents || 0}</div>
+            <div class="kpi-sub">${s.signups_last_30d || 0} last 30d</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total API Calls</div>
-            <div class="stat-value">${(s.total_requests || 0).toLocaleString()}</div>
-            <div class="stat-sub">${s.requests_today || 0} today · ${s.requests_last_30d || 0} last 30d</div>
+          <div class="kpi c-green">
+            <div class="kpi-label">Signups Today</div>
+            <div class="kpi-value" style="color:var(--green)">${s.signups_today || 0}</div>
+            <div class="kpi-sub">${s.signups_last_7d || 0} last 7d</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">x402 Payments</div>
-            <div class="stat-value ${s.x402_payments > 0 ? 'green' : 'orange'}">${s.x402_payments || 0}</div>
-            <div class="stat-sub">${s.x402_payments > 0 ? 'On-chain USDC payments' : 'No payments yet'}</div>
+          <div class="kpi c-purple">
+            <div class="kpi-label">Signups 7d</div>
+            <div class="kpi-value" style="color:var(--purple)">${s.signups_last_7d || 0}</div>
+            <div class="kpi-sub">${s.signups_last_30d || 0} last 30d</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Revenue</div>
-            <div class="stat-value ${s.revenue_sample_cents > 0 ? 'green' : ''}">$${((s.revenue_sample_cents || 0)/100).toFixed(2)}</div>
-            <div class="stat-sub">Stripe + x402 combined</div>
+          <div class="kpi c-accent">
+            <div class="kpi-label">API Calls Today</div>
+            <div class="kpi-value">${(s.requests_today || 0).toLocaleString()}</div>
+            <div class="kpi-sub">${(s.total_requests || 0).toLocaleString()} total</div>
+          </div>
+          <div class="kpi c-orange">
+            <div class="kpi-label">API Calls 7d</div>
+            <div class="kpi-value" style="color:var(--orange)">${(s.requests_last_7d || 0).toLocaleString()}</div>
+            <div class="kpi-sub">${(s.requests_last_30d || 0).toLocaleString()} last 30d</div>
+          </div>
+          <div class="kpi c-green">
+            <div class="kpi-label">Active Tools</div>
+            <div class="kpi-value" style="color:var(--green)">${s.tools_active || 0}</div>
+            <div class="kpi-sub">${(s.credits_in_circulation || 0).toLocaleString()} credits in circulation</div>
+          </div>
+          <div class="kpi c-pink">
+            <div class="kpi-label">x402 Payments</div>
+            <div class="kpi-value" style="color:var(--pink)">${s.x402_payments || 0}</div>
+            <div class="kpi-sub">On-chain USDC</div>
+          </div>
+          <div class="kpi c-green">
+            <div class="kpi-label">Revenue</div>
+            <div class="kpi-value" style="color:${s.revenue_sample_cents > 0 ? 'var(--green)' : 'var(--muted)'}">$${((s.revenue_sample_cents || 0)/100).toFixed(2)}</div>
+            <div class="kpi-sub">Stripe + x402</div>
           </div>
         `;
 
-        // Top tools chart
+        // Charts
+        renderChart('chart-requests', d.daily_requests || [], 'accent');
+        renderChart('chart-signups', d.daily_signups || [], 'green');
+
+        // Top tools
         const tools = d.top_tools || [];
         const maxCalls = Math.max(...tools.map(t => t.calls), 1);
-        document.getElementById('top-tools-chart').innerHTML = tools.map(t => `
+        document.getElementById('top-tools-chart').innerHTML = tools.length ? tools.map(t => `
           <div class="bar-wrap">
-            <span class="bar-label mono">${t.tool}</span>
+            <span class="bar-label">${t.tool}</span>
             <div class="bar-track"><div class="bar-fill" style="width:${(t.calls/maxCalls*100).toFixed(0)}%"></div></div>
-            <span class="bar-count">${t.calls}</span>
+            <span class="bar-count">${t.calls.toLocaleString()}</span>
           </div>
-        `).join('') || '<div style="color:var(--muted);font-size:13px;padding:12px">No tool calls yet</div>';
+        `).join('') : '<div style="color:var(--muted);font-size:13px;padding:12px">No tool calls yet</div>';
 
         // Caller breakdown
         const callers = d.caller_breakdown || [];
-        document.getElementById('caller-grid').innerHTML = callers.slice(0,4).map(c => `
-          <div class="stat-card">
-            <div class="stat-label">${c.caller}</div>
-            <div class="stat-value" style="font-size:24px">${c.calls}</div>
-            <div class="stat-sub">calls</div>
+        document.getElementById('caller-grid').innerHTML = callers.length ? callers.map(c => `
+          <div class="caller-card">
+            <div class="caller-name">${c.caller}</div>
+            <div class="caller-count">${c.calls.toLocaleString()}</div>
           </div>
-        `).join('');
+        `).join('') : '<div style="color:var(--muted);padding:20px;text-align:center">No callers yet</div>';
 
-        // Recent purchases
+        // Purchases
         const purchases = d.recent_purchases || [];
-        document.getElementById('purchases-table').innerHTML = purchases.length ? purchases.map(p => `
+        document.getElementById('purchases-tbody').innerHTML = purchases.length ? purchases.map(p => `
           <tr>
-            <td class="mono">${(p.agentId||'').slice(0,12)}...</td>
-            <td><span class="tag tag-green">+${p.credits} credits</span></td>
-            <td class="green">$${(p.amountCents/100).toFixed(2)}</td>
+            <td class="mono">${(p.agentId||'').slice(0,12)}…</td>
+            <td><span class="tag tag-green">+${p.credits}</span></td>
+            <td style="color:var(--green)">$${(p.amountCents/100).toFixed(2)}</td>
             <td style="color:var(--muted)">${new Date(p.createdAt).toLocaleDateString()}</td>
           </tr>
-        `).join('') : '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No purchases yet — go get those first customers!</td></tr>';
+        `).join('') : '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No purchases yet</td></tr>';
 
-        // Load agents
-        loadAgents();
-      } catch(e) { console.error(e); }
+      } catch(e) { console.error('Stats load error:', e); }
+    }
+
+    function renderChart(elId, data, colorClass) {
+      const el = document.getElementById(elId);
+      if (!data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No data</div>'; return; }
+      const max = Math.max(...data.map(d => d.count), 1);
+      el.innerHTML = data.map(d => {
+        const pct = Math.max((d.count / max) * 100, 2);
+        const label = d.date.slice(5); // MM-DD
+        return `<div class="chart-bar-col">
+          <span class="chart-bar-count">${d.count}</span>
+          <div class="chart-bar ${colorClass}" style="height:${pct}%"></div>
+          <span class="chart-bar-label">${label}</span>
+        </div>`;
+      }).join('');
     }
 
     async function loadAgents() {
       try {
-        const r = await fetch(`${API}/v1/admin/agents?limit=20`, { headers: { 'x-admin-key': adminKey } });
-        if (!r.ok) { document.getElementById('agents-section').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Agent list endpoint not available</div>'; return; }
+        const r = await fetch(`${API}/v1/admin/agents?limit=500`, { headers: hdr() });
+        if (!r.ok) { document.getElementById('agents-tbody').innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Agent endpoint unavailable</td></tr>'; return; }
         const d = await r.json();
-        const agents = d.agents || d.data || [];
-        if (!agents.length) { document.getElementById('agents-section').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">No agents yet</div>'; return; }
-        document.getElementById('agents-section').innerHTML = `
-          <table>
-            <thead><tr><th>Email</th><th>Plan</th><th>Credits</th><th>Calls</th><th>Joined</th></tr></thead>
-            <tbody>${agents.map(a => `
-              <tr>
-                <td>${a.email || '—'}</td>
-                <td><span class="tag ${a.plan==='pro'?'tag-orange':a.plan==='business'?'tag-green':'tag-accent'}">${a.plan||'free'}</span></td>
-                <td class="mono">${a.creditsRemaining ?? a.credits_remaining ?? '—'}</td>
-                <td class="mono">${a.totalCalls ?? a.total_calls ?? '—'}</td>
-                <td style="color:var(--muted)">${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '—'}</td>
-              </tr>
-            `).join('')}</tbody>
-          </table>
-        `;
+        allAgents = d.agents || [];
+        document.getElementById('agents-count').textContent = `${allAgents.length} agents`;
+        renderAgents();
       } catch(e) {
-        document.getElementById('agents-section').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Agent list endpoint not available — check /v1/admin/agents</div>';
+        document.getElementById('agents-tbody').innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Error loading agents</td></tr>';
       }
+    }
+
+    function tierTag(tier) {
+      const map = { free:'tag-accent', starter:'tag-purple', pro:'tag-orange', business:'tag-green' };
+      return `<span class="tag ${map[tier]||'tag-accent'}">${tier}</span>`;
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return '—';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days < 30) return `${days}d ago`;
+      return new Date(dateStr).toLocaleDateString();
+    }
+
+    function renderAgents() {
+      const query = (document.getElementById('agent-search').value || '').toLowerCase();
+      let filtered = allAgents;
+      if (query) filtered = filtered.filter(a => (a.email||'').toLowerCase().includes(query));
+
+      filtered.sort((a, b) => {
+        let va = a[agentSortKey], vb = b[agentSortKey];
+        if (agentSortKey === 'email') { va = (va||'').toLowerCase(); vb = (vb||'').toLowerCase(); }
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        if (va < vb) return -1 * agentSortDir;
+        if (va > vb) return 1 * agentSortDir;
+        return 0;
+      });
+
+      // Clear sort arrows
+      document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+      const arrow = document.getElementById('sort-' + agentSortKey);
+      if (arrow) arrow.textContent = agentSortDir === 1 ? '▲' : '▼';
+
+      document.getElementById('agents-tbody').innerHTML = filtered.length ? filtered.map(a => `
+        <tr>
+          <td class="mono" style="font-size:12px">${a.email || '—'}</td>
+          <td class="mono">${(a.credits ?? 0).toLocaleString()}</td>
+          <td>${tierTag(a.tier || 'free')}</td>
+          <td style="color:var(--muted);font-size:12px">${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '—'}</td>
+          <td style="color:var(--muted);font-size:12px">${timeAgo(a.lastActive)}</td>
+          <td class="mono">${(a.totalCalls ?? 0).toLocaleString()}</td>
+          <td><button class="btn btn-sm btn-green" onclick="openGrantFor('${a.id}','${(a.email||'').replace(/'/g,"\\'")}')">+ Credits</button></td>
+        </tr>
+      `).join('') : '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">No agents match</td></tr>';
+    }
+
+    function filterAgents() { renderAgents(); }
+
+    function sortAgents(key) {
+      if (agentSortKey === key) agentSortDir *= -1;
+      else { agentSortKey = key; agentSortDir = key === 'email' || key === 'tier' ? 1 : -1; }
+      renderAgents();
+    }
+
+    // Modals
+    function openModal(type) {
+      const overlay = document.getElementById('modal-overlay');
+      const body = document.getElementById('modal-body');
+      overlay.classList.add('show');
+
+      if (type === 'lookup') {
+        body.innerHTML = `
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          <h3>🔍 Lookup Agent</h3>
+          <div class="field"><label>Email</label><input type="text" id="lookup-email" placeholder="user@example.com" /></div>
+          <button class="btn" onclick="doLookup()">Search</button>
+          <div class="modal-result" id="lookup-result" style="display:none"></div>
+        `;
+      } else if (type === 'grant') {
+        body.innerHTML = `
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          <h3>💰 Grant Credits</h3>
+          <div class="field"><label>Agent ID</label><input type="text" id="grant-id" placeholder="cuid..." /></div>
+          <div class="field"><label>Credits</label><input type="number" id="grant-credits" placeholder="1000" min="1" /></div>
+          <button class="btn btn-green" onclick="doGrant()">Grant Credits</button>
+          <div class="modal-result" id="grant-result" style="display:none"></div>
+        `;
+      } else if (type === 'broadcast') {
+        body.innerHTML = `
+          <button class="modal-close" onclick="closeModal()">✕</button>
+          <h3>📧 Broadcast Email</h3>
+          <div class="field"><label>Headline</label><input type="text" id="bc-headline" placeholder="New feature!" /></div>
+          <div class="field"><label>Body</label><textarea id="bc-body" rows="4" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:13px;resize:vertical;outline:none" placeholder="Write your message..."></textarea></div>
+          <div class="field"><label>CTA Label (optional)</label><input type="text" id="bc-cta-label" placeholder="Try it now" /></div>
+          <div class="field"><label>CTA URL (optional)</label><input type="text" id="bc-cta-url" placeholder="https://archtools.dev" /></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-outline" onclick="doBroadcast(true)">Dry Run</button>
+            <button class="btn btn-pink" onclick="doBroadcast(false)">Send to All</button>
+          </div>
+          <div class="modal-result" id="bc-result" style="display:none"></div>
+        `;
+      }
+    }
+
+    function openGrantFor(id, email) {
+      openModal('grant');
+      setTimeout(() => {
+        document.getElementById('grant-id').value = id;
+        document.getElementById('grant-id').placeholder = email;
+      }, 50);
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('show');
+    }
+
+    async function doLookup() {
+      const email = document.getElementById('lookup-email').value.trim();
+      if (!email) return;
+      const el = document.getElementById('lookup-result');
+      el.style.display = 'block';
+      el.textContent = 'Searching...';
+      try {
+        const r = await fetch(`${API}/v1/admin/lookup?email=${encodeURIComponent(email)}`, { headers: hdr() });
+        const d = await r.json();
+        el.textContent = JSON.stringify(d, null, 2);
+      } catch(e) { el.textContent = 'Error: ' + e.message; }
+    }
+
+    async function doGrant() {
+      const agent_id = document.getElementById('grant-id').value.trim();
+      const credits = parseInt(document.getElementById('grant-credits').value);
+      if (!agent_id || !credits) return;
+      const el = document.getElementById('grant-result');
+      el.style.display = 'block';
+      el.textContent = 'Granting...';
+      try {
+        const r = await fetch(`${API}/v1/admin/grant-credits`, {
+          method: 'POST', headers: hdr(),
+          body: JSON.stringify({ agent_id, credits })
+        });
+        const d = await r.json();
+        el.textContent = JSON.stringify(d, null, 2);
+        if (d.ok) loadAgents();
+      } catch(e) { el.textContent = 'Error: ' + e.message; }
+    }
+
+    async function doBroadcast(dryRun) {
+      const headline = document.getElementById('bc-headline').value.trim();
+      const body = document.getElementById('bc-body').value.trim();
+      if (!headline || !body) return;
+      const el = document.getElementById('bc-result');
+      el.style.display = 'block';
+      el.textContent = dryRun ? 'Running dry run...' : 'Sending...';
+      try {
+        const r = await fetch(`${API}/v1/admin/email/broadcast`, {
+          method: 'POST', headers: hdr(),
+          body: JSON.stringify({
+            headline, body,
+            cta_label: document.getElementById('bc-cta-label').value.trim() || undefined,
+            cta_url: document.getElementById('bc-cta-url').value.trim() || undefined,
+            dry_run: dryRun,
+          })
+        });
+        const d = await r.json();
+        el.textContent = JSON.stringify(d, null, 2);
+      } catch(e) { el.textContent = 'Error: ' + e.message; }
+    }
+
+    async function seedTools() {
+      if (!confirm('Seed missing tools into the database?')) return;
+      try {
+        const r = await fetch(`${API}/v1/admin/seed-tools`, { method: 'POST', headers: hdr() });
+        const d = await r.json();
+        alert(`Seeded: ${d.results?.filter(r=>r.status==='created').length || 0} new, ${d.total || 0} total tools`);
+        loadAll();
+      } catch(e) { alert('Error: ' + e.message); }
     }
 
     document.getElementById('admin-key-input').addEventListener('keydown', e => { if(e.key==='Enter') login(); });

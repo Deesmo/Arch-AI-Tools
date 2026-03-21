@@ -11,23 +11,35 @@ const router = Router();
 router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
     const today = new Date().toISOString().slice(0, 10);
+    const todayDate = new Date(today);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
     const [
       totalAgents,
       totalRequests,
       requestsToday,
+      requestsLast7Days,
       requestsLast30Days,
+      signupsToday,
+      signupsLast7d,
+      signupsLast30d,
       topTools,
       recentPurchases,
       x402Payments,
+      creditsAgg,
+      toolsActive,
     ] = await Promise.all([
       prisma.agent.count(),
       prisma.apiRequest.count(),
-      prisma.apiRequest.count({ where: { createdAt: { gte: new Date(today) } } }),
+      prisma.apiRequest.count({ where: { createdAt: { gte: todayDate } } }),
+      prisma.apiRequest.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
       prisma.apiRequest.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.agent.count({ where: { createdAt: { gte: todayDate } } }),
+      prisma.agent.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+      prisma.agent.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
 
-      // Prisma v5 groupBy with correct _count orderBy syntax
       prisma.apiRequest.groupBy({
         by: ["toolName"],
         _count: { toolName: true },
@@ -43,9 +55,40 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
       }),
 
       prisma.x402Payment.count(),
+      prisma.agent.aggregate({ _sum: { credits: true } }),
+      prisma.tool.count({ where: { active: true } }),
     ]);
 
     const totalRevenueCents = recentPurchases.reduce((s, p) => s + p.amountCents, 0);
+
+    // Daily requests for last 14 days
+    const dailyRequests: Array<{ date: string; count: number }> = [];
+    const dailySignups: Array<{ date: string; count: number }> = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const dateStr = d.toISOString().slice(0, 10);
+      dailyRequests.push({ date: dateStr, count: 0 });
+      dailySignups.push({ date: dateStr, count: 0 });
+    }
+
+    // Batch query for daily request counts
+    const rawDailyReqs = await prisma.$queryRaw<Array<{ d: string; c: bigint }>>(
+      Prisma.sql`SELECT DATE("createdAt") as d, COUNT(*)::bigint as c FROM "ApiRequest" WHERE "createdAt" >= ${fourteenDaysAgo} GROUP BY DATE("createdAt") ORDER BY d`
+    );
+    for (const row of rawDailyReqs) {
+      const dateStr = typeof row.d === 'string' ? row.d : new Date(row.d as string).toISOString().slice(0, 10);
+      const entry = dailyRequests.find(e => e.date === dateStr);
+      if (entry) entry.count = Number(row.c);
+    }
+
+    const rawDailySignups = await prisma.$queryRaw<Array<{ d: string; c: bigint }>>(
+      Prisma.sql`SELECT DATE("createdAt") as d, COUNT(*)::bigint as c FROM "Agent" WHERE "createdAt" >= ${fourteenDaysAgo} GROUP BY DATE("createdAt") ORDER BY d`
+    );
+    for (const row of rawDailySignups) {
+      const dateStr = typeof row.d === 'string' ? row.d : new Date(row.d as string).toISOString().slice(0, 10);
+      const entry = dailySignups.find(e => e.date === dateStr);
+      if (entry) entry.count = Number(row.c);
+    }
 
     // Agent fingerprinting breakdown
     const [callerBreakdown, callerTypeBreakdown] = await Promise.all([
@@ -68,10 +111,18 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
         total_agents: totalAgents,
         total_requests: totalRequests,
         requests_today: requestsToday,
+        requests_last_7d: requestsLast7Days,
         requests_last_30d: requestsLast30Days,
+        signups_today: signupsToday,
+        signups_last_7d: signupsLast7d,
+        signups_last_30d: signupsLast30d,
         x402_payments: x402Payments,
         revenue_sample_cents: totalRevenueCents,
+        credits_in_circulation: creditsAgg._sum.credits ?? 0,
+        tools_active: toolsActive,
       },
+      daily_requests: dailyRequests,
+      daily_signups: dailySignups,
       top_tools: topTools.map(t => ({ tool: t.toolName, calls: t._count.toolName })),
       caller_breakdown: callerBreakdown.map(c => ({ caller: c.callerName ?? "unknown", calls: c._count.callerName })),
       caller_types: callerTypeBreakdown.map(c => ({ type: c.callerType ?? "unknown", calls: c._count.callerType })),
@@ -80,6 +131,45 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
     });
   } catch (e) {
     console.error("Admin stats error:", e);
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
+// GET /v1/admin/agents — list all agents with usage stats
+router.get("/agents", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 500);
+
+    const agents = await prisma.agent.findMany({
+      take: limit,
+      orderBy: { lastSeenAt: { sort: "desc", nulls: "last" } },
+      select: {
+        id: true,
+        email: true,
+        credits: true,
+        tier: true,
+        totalCalls: true,
+        lastSeenAt: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({
+      ok: true,
+      agents: agents.map(a => ({
+        id: a.id,
+        email: a.email,
+        credits: a.credits,
+        tier: a.tier,
+        totalCalls: a.totalCalls,
+        lastActive: a.lastSeenAt,
+        createdAt: a.createdAt,
+      })),
+      total: agents.length,
+      request_id: reqId(),
+    });
+  } catch (e) {
+    console.error("Admin agents error:", e);
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
