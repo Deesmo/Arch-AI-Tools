@@ -66,16 +66,29 @@ router.post(
     const label = body.label?.slice(0, 64) ?? `agent-${agentId.slice(0, 8)}`;
 
     try {
-      // Use CdpClient via dynamic import (avoids jose ESM/CJS issue)
-      // This is the official pattern from Coinbase docs — handles JWT + wallet auth internally
-      const { CdpClient } = await import("@coinbase/cdp-sdk");
-      const cdp = new CdpClient({
+      // Use axiosHooks from cdp-sdk/auth subpath (proven working — same import as x402.ts)
+      // axiosHooks.withAuth handles Bearer JWT + Wallet Auth JWT internally — no manual headers
+      const axios = (await import("axios")).default;
+      const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
+
+      const axiosClient = axios.create({
+        baseURL: "https://api.cdp.coinbase.com",
+      });
+
+      axiosHooks.withAuth(axiosClient, {
         apiKeyId: config.cdp.apiKeyId,
         apiKeySecret: config.cdp.apiKeySecret,
         walletSecret: config.cdp.walletSecret,
       });
-      const account = await cdp.evm.createAccount({ name: label });
-      const address = account.address;
+
+      const response = await axiosClient.post("/platform/v2/evm/accounts", {
+        name: label,
+      });
+
+      const address = response.data?.address;
+      if (!address) {
+        throw new Error(`CDP API returned no address. Response: ${JSON.stringify(response.data)}`);
+      }
 
       const walletRecord: WalletRecord = {
         address,
