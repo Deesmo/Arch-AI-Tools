@@ -16,7 +16,8 @@
     "npm:audit": "npm audit --json > /tmp/audit.json && echo \"Audit complete\"",
     "test": "node tests/integration.test.js && node tests/pages.test.js",
     "test:integration": "node tests/integration.test.js",
-    "test:pages": "node tests/pages.test.js"
+    "test:pages": "node tests/pages.test.js",
+    "postinstall": "rm -rf node_modules/@coinbase/cdp-sdk/node_modules/jose 2>/dev/null || true"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -63,7 +64,8 @@
     "uuid": "^11.0.5",
     "xml2js": "^0.6.2",
     "xmlbuilder2": "^3.1.1",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "jose": "^5.10.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
