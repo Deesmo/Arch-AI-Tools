@@ -1,7 +1,7 @@
 {
   "name": "arch-ai-tools",
   "version": "1.6.0",
-  "description": "Arch Tools — 30 production-ready API tools for developers and AI agents",
+  "description": "Arch Tools \u2014 30 production-ready API tools for developers and AI agents",
   "private": true,
   "type": "module",
   "scripts": {
@@ -82,5 +82,10 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "@coinbase/cdp-sdk": {
+      "jose": "5.10.0"
+    }
   }
 }
