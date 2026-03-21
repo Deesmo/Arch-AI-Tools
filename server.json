@@ -1,47 +1,36 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.Deesmo/arch-tools-mcp",
-  "version": "1.8.0",
-  "description": "53 AI tools for agents: web, crypto, AI generation, OCR, and more. Pay with Stripe or USDC.",
-  "homepage": "https://archtools.dev",
-  "license": "MIT",
+  "name": "io.github.deesmo/arch-ai-tools",
+  "description": "64 production-ready AI tools for AI agents — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation, audio transcription, text-to-speech, email, NLP, and more. Pay with Stripe credits or autonomous USDC via x402 micropayment protocol.",
   "repository": {
     "url": "https://github.com/Deesmo/Arch-AI-Tools",
     "source": "github"
   },
-  "packages": [],
-  "capabilities": {
-    "tools": true,
-    "resources": true,
-    "prompts": true
-  },
-  "categories": [
-    "web-scraping",
-    "ai-generation",
-    "crypto",
-    "utilities",
-    "data-processing",
-    "payments"
-  ],
-  "keywords": [
-    "mcp",
-    "ai-tools",
-    "web-scraping",
-    "crypto",
-    "x402",
-    "usdc",
-    "autonomous-payments",
-    "agents"
-  ],
-  "contact": {
-    "name": "Arch Tools",
-    "url": "https://archtools.dev",
-    "email": "support@archtools.dev"
-  },
-  "remotes": [
+  "version": "2.0.0",
+  "packages": [
     {
-      "type": "streamable-http",
-      "url": "https://arch-tools-mcp.onrender.com/mcp"
+      "registryType": "npm",
+      "identifier": "@deesmo/arch-tools-mcp",
+      "version": "2.0.0",
+      "transport": [
+        {
+          "type": "sse",
+          "url": "https://arch-tools-mcp.onrender.com/sse"
+        },
+        {
+          "type": "streamable-http",
+          "url": "https://arch-tools-mcp.onrender.com/mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "description": "Your Arch Tools API key from archtools.dev",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "ARCH_API_KEY"
+        }
+      ]
     }
   ]
 }

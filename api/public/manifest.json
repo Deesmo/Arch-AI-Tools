@@ -1,7 +1,7 @@
 {
   "name": "Arch Tools",
   "short_name": "Arch Tools",
-  "description": "53 production-ready API tools for developers and AI agents.",
+  "description": "64 production-ready API tools for developers and AI agents.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07061A",

@@ -28,7 +28,7 @@
       {"@type": "HowToStep", "name": "Remove RapidAPI SDK", "text": "Uninstall the RapidAPI SDK and remove X-RapidAPI headers"},
       {"@type": "HowToStep", "name": "Update Endpoints", "text": "Replace RapidAPI proxy URLs with direct Arch Tools REST endpoints"},
       {"@type": "HowToStep", "name": "Choose Payment Path", "text": "Use API key credits or x402 crypto payments — no subscription required"},
-      {"@type": "HowToStep", "name": "Test", "text": "Run your calls against Arch Tools — 58 tools available immediately"}
+      {"@type": "HowToStep", "name": "Test", "text": "Run your calls against Arch Tools — 64 tools available immediately"}
     ]
   }
   </script>
@@ -165,7 +165,7 @@
       1. <a href="/#register" style="color:var(--green);">Get an Arch Tools API key</a> (free, 100 credits included)<br>
       2. Replace RapidAPI proxy URLs and <code>X-RapidAPI-Key</code> headers with <code>x-api-key</code> to Arch Tools endpoints<br>
       3. Call tools directly — no middleman, no subscription tiers, pay only for what you use<br><br>
-      58 tools available immediately. No credit card required to start.
+      64 tools available immediately. No credit card required to start.
     </div>
 
     <!-- WHY LEAVING -->
@@ -451,7 +451,7 @@ const response = await fetch('https://archtools.dev/v1/tools/web-scrape', {
 // Agent pays per-call. No signup. No subscription. No human in the loop.</span></code></pre>
 
     <h3>MCP Setup (Claude Desktop / Cursor / Windsurf)</h3>
-    <pre><code><span class="comment">// Add to your MCP config — all 58 tools appear instantly</span>
+    <pre><code><span class="comment">// Add to your MCP config — all 64 tools appear instantly</span>
 <span class="add">{
   "mcpServers": {
     "arch-tools": {
@@ -560,7 +560,7 @@ const response = await fetch('https://archtools.dev/v1/tools/web-scrape', {
     <p>Arch Tools doesn't have per-tier rate limits like RapidAPI's Free/Pro/Ultra system. Your rate limit is your credit balance. Higher-volume needs? Buy more credits. For x402 payments, there are no rate limits at all — each call is independently paid.</p>
 
     <h3>Is there an SDK?</h3>
-    <p>You don't need one. It's a standard REST API — <code>fetch()</code> or <code>curl</code> is all you need. For MCP users, install the MCP server config and all 58 tools appear natively in Claude Desktop, Cursor, and Windsurf.</p>
+    <p>You don't need one. It's a standard REST API — <code>fetch()</code> or <code>curl</code> is all you need. For MCP users, install the MCP server config and all 64 tools appear natively in Claude Desktop, Cursor, and Windsurf.</p>
 
     <h3>What if I need an API that Arch Tools doesn't have?</h3>
     <p>We accept tool requests. Reach out at <a href="https://x.com/AiArchTools">@AiArchTools</a> on X or check the <a href="/for-providers">provider page</a> if you want to list your own API. Our directory is growing based on real developer needs — not SEO spam.</p>
@@ -576,7 +576,7 @@ const response = await fetch('https://archtools.dev/v1/tools/web-scrape', {
 <div class="wrap">
   <div class="cta-section">
     <h2>Ready to leave the middleman behind?</h2>
-    <p>Get your API key, 100 free credits, and access to all 58 tools — in 30 seconds.</p>
+    <p>Get your API key, 100 free credits, and access to all 64 tools — in 30 seconds.</p>
     <a class="btn" href="/#register">$ get-api-key →</a>
     <a class="btn-ghost" href="/directory">Browse Tools</a>
   </div>

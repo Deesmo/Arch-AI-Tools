@@ -3,7 +3,7 @@
     {
       "id": "arch-tools",
       "name": "Arch Tools",
-      "description": "The first API platform built for autonomous agent payments. 58 production-ready tools spanning AI, web scraping, crypto, media, validation, and more.",
+      "description": "The first API platform built for autonomous agent payments. 64 production-ready tools spanning AI, web scraping, crypto, media, validation, and more.",
       "base_url": "https://archtools.dev",
       "website_url": "https://archtools.dev",
       "logo_url": "https://archtools.dev/arch-icon.svg",
@@ -12,7 +12,7 @@
       "tokens_supported": ["USDC", "USDT", "ETH", "BNB", "NEAR", "SOL", "TAO", "UNI"],
       "pricing_model": "per-request",
       "price_range": { "min": "$0.001", "max": "$0.10" },
-      "total_endpoints": 58,
+      "total_endpoints": 64,
       "endpoints": [
         { "path": "/v1/tools/ai-generate", "method": "POST", "price": "$0.020", "description": "AI text generation via Claude" },
         { "path": "/v1/tools/web-scrape", "method": "POST", "price": "$0.005", "description": "Scrape any public URL" },

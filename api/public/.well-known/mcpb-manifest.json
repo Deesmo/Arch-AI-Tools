@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "name": "Arch Tools",
-  "description": "44 production-ready API tools for developers and AI agents. Web scraping, AI generation, crypto data, OCR, NLP, email/phone validation, QR codes, PDF extraction, browser automation, and more. Dual payment rails: Stripe + x402 USDC on Base.",
+  "description": "64 production-ready API tools for developers and AI agents. Web scraping, AI generation, crypto data, OCR, NLP, email/phone validation, QR codes, PDF extraction, browser automation, and more. Dual payment rails: Stripe + x402 USDC on Base.",
   "logo_url": "https://archtools.dev/arch-icon.svg",
   "website": "https://archtools.dev",
   "documentation_url": "https://archtools.dev/openapi.json",

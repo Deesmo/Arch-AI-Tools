@@ -206,7 +206,7 @@ export async function sendWelcomeEmail(to: string, agentId: string, apiKey: stri
       <div class="stat"><span>Plan</span>Free</div>
       <div class="stat"><span>Agent ID</span>${agentId.slice(0, 14)}…</div>
     </div>
-    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 58 AI tools — enough to really put Arch Tools through its paces.</p>
+    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 64 AI tools — enough to really put Arch Tools through its paces.</p>
     <p>Use your key in any HTTP request:</p>
     <div class="key-box" style="font-size:13px;">x-api-key: ${apiKey.slice(0, 12)}…</div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Read the docs →</a></div>

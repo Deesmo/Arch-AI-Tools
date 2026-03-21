@@ -150,7 +150,7 @@ function getSampleParams(tool: string): Record<string, unknown> {
     "timezone-convert": { datetime: "2025-06-01T12:00:00Z", from_tz: "America/New_York", to_tz: "Asia/Tokyo" },
     "web-search": { query: "Arch Tools API", max_results: 5 },
     "sentiment-analysis": { text: "Arch Tools is absolutely incredible! Best API I have ever used." },
-    "summarize": { text: "Arch Tools provides 58 production-ready API tools for developers and AI agents.", style: "tldr" },
+    "summarize": { text: "Arch Tools provides 64 production-ready API tools for developers and AI agents.", style: "tldr" },
     "extract-entities": { text: "Brad Valdes founded Arch Enterprises LLC in Columbia, South Carolina." },
     "language-detect": { text: "Bonjour, comment allez-vous?" },
     "pii-detect": { text: "Contact John Smith at john@example.com or 555-123-4567.", redact: true },
@@ -201,7 +201,7 @@ function getDemoResult(tool: string): unknown {
   const results: Record<string, unknown> = {
     "generate-hash": { algorithm: "sha256", hash: "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9" },
     "ip-lookup": { ip: "8.8.8.8", city: "Mountain View", region: "California", country: "US", org: "Google LLC" },
-    "ai-generate": { text: "Arch Tools gives AI agents 58 production-ready APIs with built-in x402 USDC payments — no API key required." },
+    "ai-generate": { text: "Arch Tools gives AI agents 64 production-ready APIs with built-in x402 USDC payments — no API key required." },
     "crypto-price": { symbol: "bitcoin", price_usd: 104250.42, change_24h: 2.3 },
     "sentiment-analysis": { sentiment: "positive", score: 0.95, label: "Very Positive" },
   };

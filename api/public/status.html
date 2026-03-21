@@ -154,7 +154,7 @@ function renderStatus(data) {
 
   // Components
   const components = [
-    { name: 'API Server', sub: `v${data.version || '1.10.0'} · ${data.tools || 58} tools`, status: data.ok ? 'operational' : 'down', latency: data.performance?.health_check_ms },
+    { name: 'API Server', sub: `v${data.version || '1.10.0'} · ${data.tools || 64} tools`, status: data.ok ? 'operational' : 'down', latency: data.performance?.health_check_ms },
     { name: 'Database (PostgreSQL)', sub: `${data.agents || 0} agents registered`, status: deps.database?.status === 'connected' ? 'operational' : 'down', latency: deps.database?.latency_ms },
     { name: 'Redis Cache', sub: 'Rate limiting & real-time counters', status: deps.redis?.status === 'connected' ? 'operational' : deps.redis?.status === 'not_configured' ? 'not_configured' : 'degraded', latency: deps.redis?.latency_ms },
     { name: 'x402 Facilitator', sub: 'Coinbase USDC payment processing', status: deps.x402_facilitator?.status === 'reachable' ? 'operational' : deps.x402_facilitator?.status === 'not_configured' ? 'not_configured' : 'degraded', latency: deps.x402_facilitator?.latency_ms },
@@ -188,7 +188,7 @@ function renderStatus(data) {
     if (stats.ok) {
       document.getElementById('statCalls24h').textContent = fmt(stats.stats.total_api_calls);
       document.getElementById('statAgents').textContent = fmt(stats.stats.total_agents);
-      document.getElementById('statEndpoints').textContent = stats.stats.total_tools || '58';
+      document.getElementById('statEndpoints').textContent = stats.stats.total_tools || '64';
     }
   }).catch(() => {});
 

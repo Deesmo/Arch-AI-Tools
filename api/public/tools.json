@@ -1,9 +1,9 @@
 {
   "name": "Arch Tools",
-  "description": "58 production-ready API tools for AI agents and developers",
+  "description": "64 production-ready API tools for AI agents and developers",
   "baseUrl": "https://archtools.dev",
   "version": "1.10.0",
-  "totalTools": 61,
+  "totalTools": 64,
   "authentication": {
     "apiKey": {
       "header": "Authorization",

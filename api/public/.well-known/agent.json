@@ -1,6 +1,6 @@
 {
   "name": "Arch Tools",
-  "description": "The first API platform built for autonomous agent payments. 58 production-ready tools for AI agents and developers. Web scraping, AI generation, crypto data, NLP, media, validation, and more.",
+  "description": "The first API platform built for autonomous agent payments. 64 production-ready tools for AI agents and developers. Web scraping, AI generation, crypto data, NLP, media, validation, and more.",
   "url": "https://archtools.dev",
   "version": "1.10.0",
   "protocol": "a2a/1.0",

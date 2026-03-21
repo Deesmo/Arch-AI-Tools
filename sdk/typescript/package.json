@@ -1,7 +1,7 @@
 {
   "name": "@deesmo/arch-tools-sdk",
   "version": "0.1.0",
-  "description": "Official TypeScript/Node SDK for Arch Tools \u2014 58 AI agent API tools with x402 payments",
+  "description": "Official TypeScript/Node SDK for Arch Tools \u2014 64 AI agent API tools with x402 payments",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
