@@ -18,7 +18,9 @@ interface WalletRecord {
   createdAt: string;
 }
 
-// Wallet data is persisted in the Agent DB record (walletAddress, walletLabel, walletNetwork, walletCreatedAt)
+// ─── In-memory wallet store (swap for DB table when Prisma schema is updated) ─
+// Maps agentId → wallet info
+const walletStore = new Map<string, WalletRecord>();
 
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
 // Creates a new CDP wallet for an authenticated agent.
@@ -33,20 +35,17 @@ router.post(
       return;
     }
 
-    // Check if agent already has a wallet (raw SQL — avoids Prisma schema mismatch)
-    const rows = await prisma.$queryRaw<Array<{ wallet_address: string | null; wallet_label: string | null; wallet_network: string | null }>>`
-      SELECT wallet_address, wallet_label, wallet_network FROM agents WHERE id = ${agentId} LIMIT 1
-    `;
-    const agentRow = rows[0];
-    if (agentRow?.wallet_address) {
+    // Check if agent already has a wallet
+    const existing = walletStore.get(agentId);
+    if (existing) {
       res.status(409).json({
         ok: false,
         error: "wallet_exists",
         message: "Agent already has a provisioned wallet.",
         wallet: {
-          address: agentRow.wallet_address,
-          network: agentRow.wallet_network ?? "base",
-          label: agentRow.wallet_label ?? "",
+          address: existing.address,
+          network: existing.network,
+          label: existing.label,
         },
       });
       return;
@@ -98,15 +97,8 @@ router.post(
         createdAt: new Date().toISOString(),
       };
 
-      // Persist wallet to database via raw SQL (avoids Prisma schema regeneration requirement)
-      await prisma.$executeRaw`
-        UPDATE agents SET
-          wallet_address = ${address},
-          wallet_label = ${label},
-          wallet_network = 'base',
-          wallet_created_at = NOW()
-        WHERE id = ${agentId}
-      `;
+      // Store wallet association
+      walletStore.set(agentId, walletRecord);
 
       logger.info({ agentId, address, network: "base" as any }, "Wallet provisioned for agent");
 
@@ -156,14 +148,7 @@ router.get(
       return;
     }
 
-    // Load wallet from database via raw SQL (persisted across restarts)
-    const walletRows = await prisma.$queryRaw<Array<{ wallet_address: string | null; wallet_label: string | null; wallet_network: string | null; wallet_created_at: Date | null }>>`
-      SELECT wallet_address, wallet_label, wallet_network, wallet_created_at FROM agents WHERE id = ${agentId} LIMIT 1
-    `;
-    const walletRow = walletRows[0];
-    const wallet = walletRow?.wallet_address
-      ? { address: walletRow.wallet_address, label: walletRow.wallet_label ?? "", network: walletRow.wallet_network ?? "base", createdAt: walletRow.wallet_created_at?.toISOString() ?? new Date().toISOString() }
-      : null;
+    const wallet = walletStore.get(agentId);
     if (!wallet) {
       res.status(404).json({
         ok: false,
