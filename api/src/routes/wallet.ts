@@ -8,11 +8,23 @@ const router = Router();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface WalletProvisionBody {
-  label?: string;
+  label?: string; // optional friendly name for the wallet
 }
 
+interface WalletRecord {
+  address: string;
+  network: string;
+  label: string;
+  createdAt: string;
+}
+
+// ─── In-memory wallet store (swap for DB table when Prisma schema is updated) ─
+// Maps agentId → wallet info
+const walletStore = new Map<string, WalletRecord>();
+
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
-// Creates a new CDP wallet for an authenticated agent. Persisted to PostgreSQL.
+// Creates a new CDP wallet for an authenticated agent.
+// @coinbase/cdp-sdk v1.45 installed. @coinbase/agentkit requires separate install.
 router.post(
   "/provision",
   requireAuth,
@@ -23,21 +35,17 @@ router.post(
       return;
     }
 
-    // Check if agent already has a wallet (from DB — persists across restarts)
-    const agent = await prisma.agent.findUnique({
-      where: { id: agentId },
-      select: { walletAddress: true, walletNetwork: true, walletLabel: true },
-    });
-
-    if (agent?.walletAddress) {
+    // Check if agent already has a wallet
+    const existing = walletStore.get(agentId);
+    if (existing) {
       res.status(409).json({
         ok: false,
         error: "wallet_exists",
         message: "Agent already has a provisioned wallet.",
         wallet: {
-          address: agent.walletAddress,
-          network: agent.walletNetwork ?? "base",
-          label: agent.walletLabel ?? "",
+          address: existing.address,
+          network: existing.network,
+          label: existing.label,
         },
       });
       return;
@@ -58,12 +66,13 @@ router.post(
     const label = body.label?.slice(0, 64) ?? `agent-${agentId.slice(0, 8)}`;
 
     try {
+      // Use axiosHooks from cdp-sdk/auth subpath (proven working — same import as x402.ts)
+      // axiosHooks.withAuth handles Bearer JWT + Wallet Auth JWT internally — no manual headers
       const axios = (await import("axios")).default;
       const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
 
       const axiosClient = axios.create({
         baseURL: "https://api.cdp.coinbase.com",
-        timeout: 15000, // 15s — fail fast, don't hang requests
       });
 
       axiosHooks.withAuth(axiosClient, {
@@ -81,24 +90,23 @@ router.post(
         throw new Error(`CDP API returned no address. Response: ${JSON.stringify(response.data)}`);
       }
 
-      // Persist wallet to PostgreSQL (survives server restarts and deploys)
-      await prisma.agent.update({
-        where: { id: agentId },
-        data: {
-          walletAddress: address,
-          walletNetwork: "base",
-          walletLabel: label,
-          walletProvisionedAt: new Date(),
-        },
-      });
+      const walletRecord: WalletRecord = {
+        address,
+        network: "base" as any,
+        label,
+        createdAt: new Date().toISOString(),
+      };
 
-      logger.info({ agentId, address, network: "base" }, "Wallet provisioned for agent");
+      // Store wallet association
+      walletStore.set(agentId, walletRecord);
+
+      logger.info({ agentId, address, network: "base" as any }, "Wallet provisioned for agent");
 
       res.status(201).json({
         ok: true,
         wallet: {
           address,
-          network: "base",
+          network: "base" as any,
           label,
         },
       });
@@ -106,6 +114,7 @@ router.post(
       const message = err instanceof Error ? err.message : "Unknown error";
       logger.error({ agentId, error: message }, "Failed to provision CDP wallet");
 
+      // Distinguish "module not installed" from actual CDP errors
       if (message.includes("Cannot find module") || message.includes("ERR_MODULE_NOT_FOUND")) {
         res.status(503).json({
           ok: false,
@@ -115,6 +124,7 @@ router.post(
         return;
       }
 
+      // Expose detailed error temporarily for debugging (remove after fix confirmed)
       const isAxiosError = (err as any)?.response?.data;
       res.status(500).json({
         ok: false,
@@ -138,18 +148,8 @@ router.get(
       return;
     }
 
-    // Load wallet from DB (persisted across restarts)
-    const agent = await prisma.agent.findUnique({
-      where: { id: agentId },
-      select: {
-        walletAddress: true,
-        walletNetwork: true,
-        walletLabel: true,
-        walletProvisionedAt: true,
-      },
-    });
-
-    if (!agent?.walletAddress) {
+    const wallet = walletStore.get(agentId);
+    if (!wallet) {
       res.status(404).json({
         ok: false,
         error: "no_wallet",
@@ -158,58 +158,90 @@ router.get(
       return;
     }
 
-    // USDC on Base mainnet
-    const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-    let usdcBalance = "unknown";
-
     try {
+      // Try to fetch on-chain USDC balance via CDP SDK
       const { CdpClient } = await import("@coinbase/cdp-sdk");
+
       const cdp = new CdpClient({
         apiKeyId: config.cdp.apiKeyId,
         apiKeySecret: config.cdp.apiKeySecret,
         walletSecret: config.cdp.walletSecret,
       });
 
-      const result = await cdp.evm.listTokenBalances({
-        address: agent.walletAddress as `0x${string}`,
-        network: "base",
-      });
+      // USDC on Base contract address
+      const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-      // Find USDC entry by contract address
-      const usdcEntry = result.balances.find(
-        (b: { token: { contractAddress: string }; amount: { amount: bigint; decimals: number } }) =>
-          b.token.contractAddress.toLowerCase() === USDC_BASE.toLowerCase()
-      );
+      // Attempt to read balance — if CDP SDK doesn't support this directly,
+      // fall back to returning wallet info without balance
+      let usdcBalance = "unknown";
+      try {
+        const result = await cdp.evm.listTokenBalances({
+          address: wallet.address as `0x${string}`,
+          network: "base",
+        });
 
-      if (usdcEntry) {
-        const raw = BigInt(String(usdcEntry.amount.amount));
-        const decimals = usdcEntry.amount.decimals;
-        const divisor = BigInt(10 ** decimals);
-        const whole = raw / divisor;
-        const remainder = raw % divisor;
-        const remainderStr = remainder.toString().padStart(decimals, "0");
-        usdcBalance = `${whole}.${remainderStr}`;
-      } else {
-        usdcBalance = "0.000000";
+        // Find USDC entry by contract address
+        const usdcEntry = result.balances.find(
+          (b: { token: { contractAddress: string }; amount: { amount: bigint; decimals: number } }) =>
+            b.token.contractAddress.toLowerCase() === USDC_BASE.toLowerCase()
+        );
+
+        if (usdcEntry) {
+          // amount.amount is bigint in atomic units; decimals is 6 for USDC
+          const raw = BigInt(String(usdcEntry.amount.amount));
+          const decimals = usdcEntry.amount.decimals;
+          const divisor = BigInt(10 ** decimals);
+          const whole = raw / divisor;
+          const remainder = raw % divisor;
+          const remainderStr = remainder.toString().padStart(decimals, "0");
+          usdcBalance = `${whole}.${remainderStr}`;
+        } else {
+          usdcBalance = "0.000000";
+        }
+
+        console.log("[wallet/status] USDC balance:", usdcBalance, "tokens found:", result.balances.length);
+      } catch (e) {
+        console.error("[wallet/status] Balance lookup failed:", e);
+        usdcBalance = "unavailable";
       }
 
-      console.log("[wallet/status] USDC balance:", usdcBalance, "tokens found:", result.balances.length);
-    } catch (e) {
-      console.error("[wallet/status] Balance lookup failed:", e);
-      usdcBalance = "unavailable";
-    }
+      res.json({
+        ok: true,
+        wallet: {
+          address: wallet.address,
+          network: wallet.network,
+          label: wallet.label,
+          createdAt: wallet.createdAt,
+          usdc_balance: usdcBalance,
+        },
+      });
+    } catch (err: unknown) {
+      // If CDP SDK not installed, return wallet info without balance
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("Cannot find module") || message.includes("ERR_MODULE_NOT_FOUND")) {
+        res.json({
+          ok: true,
+          wallet: {
+            address: wallet.address,
+            network: wallet.network,
+            label: wallet.label,
+            createdAt: wallet.createdAt,
+            usdc_balance: "unavailable (cdp-sdk not installed)",
+          },
+        });
+        return;
+      }
 
-    res.json({
-      ok: true,
-      wallet: {
-        address: agent.walletAddress,
-        network: agent.walletNetwork ?? "base",
-        label: agent.walletLabel ?? "",
-        createdAt: agent.walletProvisionedAt?.toISOString() ?? new Date().toISOString(),
-        usdc_balance: usdcBalance,
-      },
-    });
+      logger.error({ agentId, error: message }, "Failed to fetch wallet status");
+      res.status(500).json({
+        ok: false,
+        error: "status_check_failed",
+        message: "Could not retrieve wallet status.",
+      });
+    }
   }
 );
 
 export default router;
+// CDP_WALLET_SECRET updated Sun Mar 22 00:40:43 EDT 2026
+// env vars updated: Sun Mar 22 12:29:21 EDT 2026
