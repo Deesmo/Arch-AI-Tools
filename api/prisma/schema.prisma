@@ -29,11 +29,8 @@ model Agent {
 
   // ─── Agent Identity (KYA — Know Your Agent) ──────────────────────────────
   description     String?                          // what this agent does
-  walletAddress   String?      @map("wallet_address")   // primary wallet for x402 payments
-  walletLabel     String?      @map("wallet_label")     // friendly name for the wallet
-  walletNetwork   String?      @map("wallet_network")   // e.g. "base"
-  walletCreatedAt DateTime?    @map("wallet_created_at") // when wallet was provisioned
-  callbackUrl     String?      @map("callback_url")     // webhook for async notifications
+  walletAddress   String?      @map("wallet_address")  // primary wallet for x402 payments
+  callbackUrl     String?      @map("callback_url")    // webhook for async notifications
   reputationScore Int          @default(50) @map("reputation_score")  // 0-100
   badge           String       @default("none")    // none | bronze | silver | gold | diamond
   errorCount      Int          @default(0) @map("error_count")
