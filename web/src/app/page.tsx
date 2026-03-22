@@ -525,7 +525,7 @@ export default function HomePage() {
                 icon: '🔑',
               },
               {
-                quote: 'We went from 3 weeks of API integrations to one afternoon. 53 tools, one POST each.',
+                quote: 'We went from 3 weeks of API integrations to one afternoon. 64 tools, one POST each.',
                 author: 'Startup CTO',
                 icon: '⚡',
               },
