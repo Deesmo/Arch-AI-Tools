@@ -13,5 +13,18 @@ try {
   console.error("[startup] Migration failed — starting server anyway:", err.message);
 }
 
+// Add wallet persistence columns if they don't exist (idempotent)
+console.log("[startup] Ensuring wallet persistence columns...");
+try {
+  execSync(`npx prisma db execute --stdin <<'SQL'
+ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "wallet_label" TEXT;
+ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "wallet_network" TEXT;
+ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "wallet_created_at" TIMESTAMP(3);
+SQL`, { stdio: "inherit", timeout: 30000 });
+  console.log("[startup] Wallet persistence columns ready.");
+} catch (err) {
+  console.error("[startup] Wallet column migration failed:", err.message);
+}
+
 console.log("[startup] Starting server...");
 import("./dist/index.js");
