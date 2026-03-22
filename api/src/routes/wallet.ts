@@ -175,14 +175,33 @@ router.get(
       // fall back to returning wallet info without balance
       let usdcBalance = "unknown";
       try {
-        const balance = await cdp.evm.listTokenBalances({
+        const result = await cdp.evm.listTokenBalances({
           address: wallet.address as `0x${string}`,
-          token: USDC_BASE,
-          network: "base" as any,
-        } as any);
-        usdcBalance = balance?.toString() ?? "0";
-      } catch {
-        // Balance lookup not available or failed — return what we have
+          network: "base",
+        });
+
+        // Find USDC entry by contract address
+        const usdcEntry = result.balances.find(
+          (b: { token: { contractAddress: string }; amount: { amount: bigint; decimals: number } }) =>
+            b.token.contractAddress.toLowerCase() === USDC_BASE.toLowerCase()
+        );
+
+        if (usdcEntry) {
+          // amount.amount is bigint in atomic units; decimals is 6 for USDC
+          const raw = BigInt(String(usdcEntry.amount.amount));
+          const decimals = usdcEntry.amount.decimals;
+          const divisor = BigInt(10 ** decimals);
+          const whole = raw / divisor;
+          const remainder = raw % divisor;
+          const remainderStr = remainder.toString().padStart(decimals, "0");
+          usdcBalance = `${whole}.${remainderStr}`;
+        } else {
+          usdcBalance = "0.000000";
+        }
+
+        console.log("[wallet/status] USDC balance:", usdcBalance, "tokens found:", result.balances.length);
+      } catch (e) {
+        console.error("[wallet/status] Balance lookup failed:", e);
         usdcBalance = "unavailable";
       }
 
