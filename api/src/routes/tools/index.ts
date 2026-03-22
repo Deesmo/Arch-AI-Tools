@@ -1123,13 +1123,12 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
       base64Data = buffer.toString("base64");
     }
     try {
-      // Use beta API with pdfs-2024-09-25 header — required for document content type
-      const msg = await (anthropic as any).beta.messages.create({
+      // Use messages.create with betas header for PDF document type support
+      const msg = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
-        betas: ["pdfs-2024-09-25"],
         max_tokens: 4096,
-        messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
-      });
+        messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } } as any, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
+      } as any, { headers: { "anthropic-beta": "pdfs-2024-09-25" } });
       const text = msg.content.find((b: { type: string; text?: string }) => b.type === "text")?.text ?? "";
       res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
     } catch (anthropicErr) {
