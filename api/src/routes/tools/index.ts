@@ -2511,7 +2511,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
   try {
     // Start video generation task
-    const startResp = await fetch("https://api.runwayml.com/v1/text_to_video", {
+    const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
       body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: aspect_ratio, watermark: false }),
@@ -2529,7 +2529,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
     let videoUrl: string | null = null;
     for (let i = 0; i < 24; i++) {
       await new Promise(r => setTimeout(r, 5000));
-      const pollResp = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
+      const pollResp = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: { "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
       });
       if (!pollResp.ok) continue;
