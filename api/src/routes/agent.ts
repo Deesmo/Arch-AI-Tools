@@ -10,7 +10,7 @@ const router = Router();
 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
-  const { name, email: rawEmail, plan } = req.body as { name?: string; email?: string; plan?: string };
+  const { name, email: rawEmail, plan, password } = req.body as { name?: string; email?: string; plan?: string; password?: string };
   const email = rawEmail?.toLowerCase().trim();
   if (!email) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
@@ -62,7 +62,13 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    res.status(201).json({
+    // Save password hash if provided
+    if (password && password.length >= 8) {
+      const bcrypt = await import("bcryptjs");
+      const passwordHash = await bcrypt.hash(password, 10);
+      await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash } });
+    }
+        res.status(201).json({
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
