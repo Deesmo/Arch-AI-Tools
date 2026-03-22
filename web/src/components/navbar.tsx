@@ -55,7 +55,7 @@ export function Navbar() {
             View docs
           </Link>
           <Link
-            href="/signin"
+            href="/login"
             className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#070812] hover:bg-white/90 transition-colors"
           >
             Get API key <ArrowRight size={14} />
