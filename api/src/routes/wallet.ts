@@ -18,9 +18,7 @@ interface WalletRecord {
   createdAt: string;
 }
 
-// ─── In-memory wallet store (swap for DB table when Prisma schema is updated) ─
-// Maps agentId → wallet info
-const walletStore = new Map<string, WalletRecord>();
+// Wallet data is persisted in the Agent DB record (walletAddress, walletLabel, walletNetwork, walletCreatedAt)
 
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
 // Creates a new CDP wallet for an authenticated agent.
@@ -35,17 +33,20 @@ router.post(
       return;
     }
 
-    // Check if agent already has a wallet
-    const existing = walletStore.get(agentId);
-    if (existing) {
+    // Check if agent already has a wallet (from DB)
+    const agentRecord = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { walletAddress: true, walletLabel: true, walletNetwork: true, walletCreatedAt: true },
+    });
+    if (agentRecord?.walletAddress) {
       res.status(409).json({
         ok: false,
         error: "wallet_exists",
         message: "Agent already has a provisioned wallet.",
         wallet: {
-          address: existing.address,
-          network: existing.network,
-          label: existing.label,
+          address: agentRecord.walletAddress,
+          network: agentRecord.walletNetwork ?? "base",
+          label: agentRecord.walletLabel ?? "",
         },
       });
       return;
@@ -97,8 +98,16 @@ router.post(
         createdAt: new Date().toISOString(),
       };
 
-      // Store wallet association
-      walletStore.set(agentId, walletRecord);
+      // Persist wallet to database (survives server restarts)
+      await prisma.agent.update({
+        where: { id: agentId },
+        data: {
+          walletAddress: address,
+          walletLabel: label,
+          walletNetwork: "base",
+          walletCreatedAt: new Date(),
+        },
+      });
 
       logger.info({ agentId, address, network: "base" as any }, "Wallet provisioned for agent");
 
@@ -148,7 +157,14 @@ router.get(
       return;
     }
 
-    const wallet = walletStore.get(agentId);
+    // Load wallet from database (persisted across restarts)
+    const agentWallet = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { walletAddress: true, walletLabel: true, walletNetwork: true, walletCreatedAt: true },
+    });
+    const wallet = agentWallet?.walletAddress
+      ? { address: agentWallet.walletAddress, label: agentWallet.walletLabel ?? "", network: agentWallet.walletNetwork ?? "base", createdAt: agentWallet.walletCreatedAt?.toISOString() ?? new Date().toISOString() }
+      : null;
     if (!wallet) {
       res.status(404).json({
         ok: false,
