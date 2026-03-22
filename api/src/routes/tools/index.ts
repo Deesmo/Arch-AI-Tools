@@ -1617,7 +1617,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
 const cgHeaders = (): Record<string, string> => {
   const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
   const key = config.coingecko?.apiKey;
-  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-pro-api-key"] = key;
+  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-demo-api-key"] = key; // demo key header (upgrade to x-cg-pro-api-key if switching to Pro tier)
   return h;
 };
 
