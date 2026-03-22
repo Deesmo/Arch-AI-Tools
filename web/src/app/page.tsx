@@ -162,7 +162,7 @@ export default function HomePage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                href="/signin"
+                href="/login"
                 className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#070812] hover:bg-white/90 transition-colors"
               >
                 Get API key free →
@@ -374,7 +374,7 @@ export default function HomePage() {
               ))}
             </div>
             <Link
-              href="/signin"
+              href="/login"
               className="block text-center rounded-2xl bg-gradient-to-r from-indigo-500/80 to-cyan-500/80 px-4 py-3 text-sm font-semibold text-white hover:from-indigo-500 hover:to-cyan-500 transition-all"
             >
               Start free — 500 credits included
@@ -574,7 +574,7 @@ export default function HomePage() {
             <div className="flex gap-3 shrink-0">
               <Link
                 className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#070812] hover:bg-white/90 transition-colors"
-                href="/signin"
+                href="/login"
               >
                 Get started free
               </Link>
