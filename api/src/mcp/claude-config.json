@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "arch-tools": {
+      "command": "npx",
+      "args": ["@archtools/mcp"],
+      "env": {
+        "ARCH_TOOLS_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
