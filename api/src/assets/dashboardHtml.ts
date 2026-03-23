@@ -82,6 +82,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       .at-nav-links .at-nav-cta { display:none; }
     }
     @media (max-width:400px) { .stats-grid { grid-template-columns:1fr; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
     /* HAMBURGER */
     .hamburger { display:none; background:none; border:none; cursor:pointer; padding:6px; }
     .hamburger svg { width:24px; height:24px; stroke:var(--text); stroke-width:2; stroke-linecap:round; }
@@ -128,8 +129,14 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="page-title">Dashboard</div>
     <p class="page-sub">Monitor your API usage and manage your account.</p>
 
-    <!-- API KEY ENTRY -->
-    <div class="card">
+    <!-- LOADING STATE (shown while auto-init runs) -->
+    <div id="loading-card" class="card" style="text-align:center;padding:36px 24px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Signing you in…</div>
+      <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto;"></div>
+    </div>
+
+    <!-- API KEY ENTRY (hidden by default — only shown as last resort fallback) -->
+    <div id="key-entry-card" class="card" style="display:none;">
       <div class="card-label">API Key</div>
       <div class="key-entry-row">
         <input id="key-input" class="key-input" placeholder="arch_..." autocomplete="off" />
@@ -261,6 +268,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         }
         if (!resp.ok || data.ok === false) {
           setStatus(data.error === "unauthorized" ? "\u274C Invalid key" : (data.message || "Error"), "#f87171");
+          showKeyEntryFallback();
           return;
         }
 
@@ -305,9 +313,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         var displayKey = maskKey(token);
         qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash \\\n  -H "x-api-key: ' + displayKey + '" \\\n  -H "Content-Type: application/json" \\\n  -d \'{{"text":"hello world","algorithm":"sha256"}}\'';
 
-        // Hide input after success
-        document.getElementById("key-input").style.display = "none";
-        document.getElementById("load-btn").style.display = "none";
+        // Hide the key entry card entirely after successful load
+        document.getElementById("key-entry-card").style.display = "none";
+        document.getElementById("loading-card").style.display = "none";
         // Show set-password card only if not already logged in via session
         fetch("/auth/me", { credentials: "include" }).then(r => r.json()).then(function(me) {
           if (!me.ok) document.getElementById("set-password-card").style.display = "block";
@@ -315,12 +323,18 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
       } catch(_) {
         setStatus("Connection error", "#f87171");
+        showKeyEntryFallback();
       } finally {
         btn.disabled = false; btn.textContent = "Load";
       }
     }
 
-    // Auto-load: deferred to ensure page is fully ready
+    function showKeyEntryFallback() {
+      document.getElementById("loading-card").style.display = "none";
+      document.getElementById("key-entry-card").style.display = "block";
+    }
+
+    // Auto-load: session-first, no manual key entry for logged-in users
     setTimeout(async function() {
       var params = new URLSearchParams(window.location.search);
       var qKey = params.get("key");
@@ -328,10 +342,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById("key-input").value = qKey;
         localStorage.setItem("arch_api_key", qKey);
         history.replaceState({}, "", "/dashboard");
+        document.getElementById("loading-card").style.display = "none";
         await loadDashboard();
         return;
       }
-      // Try session cookie via /auth/api-key
+      // Primary: session cookie — this is the normal path after email/password login
       try {
         var meResp = await fetch("/auth/me", { credentials: "include" });
         if (meResp.ok) {
@@ -343,6 +358,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
               if (kd.ok && kd.api_key) {
                 document.getElementById("key-input").value = kd.api_key;
                 localStorage.setItem("arch_api_key", kd.api_key);
+                document.getElementById("loading-card").style.display = "none";
                 await loadDashboard();
                 return;
               }
@@ -350,14 +366,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           }
         }
       } catch(_) {}
-      // Fall back to localStorage
+      // Secondary: localStorage (returning users who used API key tab)
       var saved = localStorage.getItem("arch_api_key");
       if (saved) {
         document.getElementById("key-input").value = saved;
+        document.getElementById("loading-card").style.display = "none";
         await loadDashboard();
-      } else {
-        window.location.href = '/login?next=/dashboard';
+        return;
       }
+      // No session + no saved key: redirect to login
+      window.location.href = '/login?next=/dashboard';
     }, 0);
 
     async function setPassword() {
