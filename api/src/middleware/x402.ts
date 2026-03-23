@@ -56,67 +56,67 @@ const APTOS_USDC_ADDRESS = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd
 
 // Per-tool pricing in USDC (string to avoid float issues)
 export const X402_PRICES: Record<string, string> = {
-  "validate-data": "0.001",
-  "generate-hash": "0.001",
-  "qr-code": "0.002",
-  "convert-format": "0.002",
-  "transform-text": "0.003",
-  "extract-metadata": "0.003",
-  "web-scrape": "0.005",
-  "extract-page": "0.005",
-  "search-web": "0.005",
-  "rss-parse": "0.004",
-  "ip-lookup": "0.002",
-  "whois-lookup": "0.003",
-  "email-verify": "0.003",
-  "phone-validate": "0.002",
-  "currency-convert": "0.002",
-  "timezone-convert": "0.001",
-  "generate-uuid": "0.001",
-  "diff-text": "0.002",
-  "readability-score": "0.002",
-  "language-detect": "0.003",
-  "sentiment-analysis": "0.008",
+  "validate-data": "0.010",
+  "generate-hash": "0.010",
+  "qr-code": "0.010",
+  "convert-format": "0.010",
+  "transform-text": "0.010",
+  "extract-metadata": "0.010",
+  "web-scrape": "0.015",
+  "extract-page": "0.015",
+  "search-web": "0.015",
+  "rss-parse": "0.010",
+  "ip-lookup": "0.010",
+  "whois-lookup": "0.010",
+  "email-verify": "0.010",
+  "phone-validate": "0.010",
+  "currency-convert": "0.010",
+  "timezone-convert": "0.010",
+  "generate-uuid": "0.010",
+  "diff-text": "0.010",
+  "readability-score": "0.010",
+  "language-detect": "0.010",
+  "sentiment-analysis": "0.015",
   "summarize": "0.010",
-  "extract-entities": "0.008",
-  "regex-generate": "0.008",
+  "extract-entities": "0.015",
+  "regex-generate": "0.015",
   "pii-detect": "0.010",
   "web-search": "0.010",
   "ai-generate": "0.020",
   "ocr-extract": "0.010",
   "browser-task": "0.010",
-  "extract-pdf": "0.006",
+  "extract-pdf": "0.015",
   "screenshot-capture": "0.010",
-  "html-to-markdown": "0.003",
-  "url-shorten": "0.001",
-  "webhook-send": "0.002",
-  "jsonpath-query": "0.001",
+  "html-to-markdown": "0.010",
+  "url-shorten": "0.010",
+  "webhook-send": "0.010",
+  "jsonpath-query": "0.010",
   "image-generate": "0.030",
-  "barcode-generate": "0.002",
+  "barcode-generate": "0.010",
   "workflow-agent": "0.025",
-  "crypto-price": "0.001",
-  "crypto-ohlcv": "0.002",
-  "crypto-market-cap": "0.001",
-  "crypto-fear-greed": "0.001",
-  "crypto-sentiment": "0.002",
-  "crypto-news": "0.002",
-  "token-lookup": "0.001",
+  "crypto-price": "0.010",
+  "crypto-ohlcv": "0.010",
+  "crypto-market-cap": "0.010",
+  "crypto-fear-greed": "0.010",
+  "crypto-sentiment": "0.010",
+  "crypto-news": "0.015",
+  "token-lookup": "0.010",
   "ai-oracle": "0.025",
-  "session-create": "0.005",
+  "session-create": "0.010",
   "session-message": "0.020",
   "text-to-speech": "0.010",
   "transcribe-audio": "0.012",
-  "email-send": "0.003",
+  "email-send": "0.010",
   "design-create": "0.030",
-  "domain-check": "0.002",
-  "news-search": "0.003",
+  "domain-check": "0.010",
+  "news-search": "0.015",
   "research-report": "0.015",
   "fact-check": "0.010",
   "video-generate": "0.100",
   "image-remove-bg": "0.010",
-  "email-find": "0.005",
-  "semantic-search": "0.008",
-  "social-post": "0.005",
+  "email-find": "0.015",
+  "semantic-search": "0.015",
+  "social-post": "0.010",
 };
 
 function buildPaymentRequired(toolName: string, price: string): object {
@@ -981,7 +981,7 @@ export function x402Middleware(toolName: string) {
       }
 
       // Return 402 Payment Required with proper headers per x402 spec
-      const price = X402_PRICES[toolName] ?? "0.005";
+      const price = X402_PRICES[toolName] ?? "0.010";
       const paymentRequired = buildPaymentRequired(toolName, price);
       const paymentRequiredB64 = Buffer.from(JSON.stringify(paymentRequired)).toString("base64");
       res.status(402)
@@ -1011,7 +1011,7 @@ export function x402Middleware(toolName: string) {
     // CRITICAL FIX: paymentRequirements sent to the facilitator MUST match the
     // accepts[] entry the agent selected. We rebuild the full accepts[] and
     // find the matching entry from the payment payload's network/asset.
-    const price = X402_PRICES[toolName] ?? "0.005";
+    const price = X402_PRICES[toolName] ?? "0.010";
     const fullPaymentDetails = buildPaymentRequired(toolName, price) as { accepts: any[] };
     const { network: paymentNetwork, asset: paymentAsset } = extractPaymentNetwork(paymentHeader);
 
