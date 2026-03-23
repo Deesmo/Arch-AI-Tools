@@ -178,7 +178,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <!-- UPGRADE BANNER (shown when credits low) -->
       <div id="upgrade-banner" class="upgrade-banner" style="display:none">
         <div class="upgrade-text">Running low on credits. <strong>Buy more and never get cut off.</strong></div>
-        <a href="/#pricing" class="btn-upgrade">Buy Credits →</a>
+        <a href="/fund" class="btn-upgrade">Add Credits →</a>
       </div>
 
       <!-- ACTIVITY -->
@@ -335,13 +335,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
 
     // Auto-load: session-first, no manual key entry for logged-in users
+    // Loop-breaker: track if we already attempted auth this page load
+    var _authAttempted = sessionStorage.getItem("_dash_auth_attempt") === "1";
     setTimeout(async function() {
       var params = new URLSearchParams(window.location.search);
       var qKey = params.get("key");
       if (qKey && qKey.startsWith("arch_")) {
-        document.getElementById("key-input").value = qKey;
-        localStorage.setItem("arch_api_key", qKey);
+        // Consume key from URL immediately — strip from history so it never leaks
         history.replaceState({}, "", "/dashboard");
+        localStorage.setItem("arch_api_key", qKey);
+        document.getElementById("key-input").value = qKey;
         document.getElementById("loading-card").style.display = "none";
         await loadDashboard();
         return;
@@ -352,21 +355,33 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         if (meResp.ok) {
           var me = await meResp.json();
           if (me.ok) {
-            var keyResp = await fetch("/auth/api-key", { credentials: "include" });
-            if (keyResp.ok) {
-              var kd = await keyResp.json();
-              if (kd.ok && kd.api_key) {
-                document.getElementById("key-input").value = kd.api_key;
-                localStorage.setItem("arch_api_key", kd.api_key);
-                document.getElementById("loading-card").style.display = "none";
-                await loadDashboard();
-                return;
+            // Sentinel fix: clear stale localStorage key before loading session key
+            // Prevents cross-account key bleed if /auth/api-key fails transiently
+            localStorage.removeItem("arch_api_key");
+            try {
+              var keyResp = await fetch("/auth/api-key", { credentials: "include" });
+              if (keyResp.ok) {
+                var kd = await keyResp.json();
+                if (kd.ok && kd.api_key) {
+                  document.getElementById("key-input").value = kd.api_key;
+                  localStorage.setItem("arch_api_key", kd.api_key);
+                  document.getElementById("loading-card").style.display = "none";
+                  sessionStorage.removeItem("_dash_auth_attempt");
+                  await loadDashboard();
+                  return;
+                }
               }
-            }
+            } catch(_) {}
+            // Session valid but /auth/api-key failed — show error, do NOT fall to stale localStorage
+            document.getElementById("loading-card").style.display = "none";
+            showKeyEntryFallback();
+            document.getElementById("status-tag").textContent = "Session error — enter your API key";
+            document.getElementById("status-tag").style.color = "#f87171";
+            return;
           }
         }
       } catch(_) {}
-      // Secondary: localStorage (returning users who used API key tab)
+      // Secondary: localStorage (returning users who used API key tab, no active session)
       var saved = localStorage.getItem("arch_api_key");
       if (saved) {
         document.getElementById("key-input").value = saved;
@@ -375,6 +390,15 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         return;
       }
       // No session + no saved key: redirect to login
+      // Loop-breaker: if we already redirected once this tab session, show error instead of looping
+      if (_authAttempted) {
+        document.getElementById("loading-card").style.display = "none";
+        showKeyEntryFallback();
+        document.getElementById("status-tag").textContent = "Session expired — please sign in again";
+        document.getElementById("status-tag").style.color = "#f87171";
+        return;
+      }
+      sessionStorage.setItem("_dash_auth_attempt", "1");
       window.location.href = '/login?next=/dashboard';
     }, 0);
 

@@ -281,6 +281,8 @@ app.get("/blog", (_req, res) => res.sendFile(path.join(__dirname, '../public/blo
 app.get("/blog/:slug", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog.html')));
 app.get("/sdk", (_req, res) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 app.get("/fund", (_req, res) => res.sendFile(path.join(__dirname, '../public/fund.html')));
+// /wallet → 302 redirect to /fund (302 not 301 — keeps it reversible if /wallet becomes its own page)
+app.get("/wallet", (_req, res) => res.redirect(302, "/fund"));
 app.get("/playground", (_req, res) => res.sendFile(path.join(__dirname, '../public/playground.html')));
 app.get("/agents", (_req, res) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req, _res) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
