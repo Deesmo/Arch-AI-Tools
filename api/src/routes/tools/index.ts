@@ -1129,7 +1129,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
         max_tokens: 4096,
         messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } } as any, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
       } as any, { headers: { "anthropic-beta": "pdfs-2024-09-25" } });
-      const text = msg.content.find((b: { type: string; text?: string }) => b.type === "text")?.text ?? "";
+      const text = (msg.content.find((b: any) => b.type === "text") as { text: string } | undefined)?.text ?? "";
       res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
     } catch (anthropicErr) {
       console.error("[extract-pdf] Anthropic error:", anthropicErr);

@@ -1378,12 +1378,13 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
             base64Data = buffer.toString("base64");
         }
         try {
+            // Use messages.create with betas header for PDF document type support
             const msg = await anthropic.messages.create({
-                model: "claude-3-5-sonnet-20241022",
+                model: "claude-sonnet-4-6",
                 max_tokens: 4096,
                 messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
-            });
-            const text = msg.content.find(b => b.type === "text")?.text ?? "";
+            }, { headers: { "anthropic-beta": "pdfs-2024-09-25" } });
+            const text = msg.content.find((b) => b.type === "text")?.text ?? "";
             res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
         }
         catch (anthropicErr) {
@@ -1939,7 +1940,7 @@ const cgHeaders = () => {
     const h = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
     const key = config.coingecko?.apiKey;
     if (key && key.length > 10 && !key.startsWith("REPLACE"))
-        h["x-cg-pro-api-key"] = key;
+        h["x-cg-demo-api-key"] = key; // demo key header (upgrade to x-cg-pro-api-key if switching to Pro tier)
     return h;
 };
 // ─── crypto-price ────────────────────────────────────────────────────────────
@@ -2116,9 +2117,22 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
     }
     try {
         const id = symbol.toLowerCase().trim();
-        const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false`, { headers: cgHeaders() });
+        const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
         if (!r.ok) {
-            res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() });
+            console.warn(`[crypto-sentiment] CoinGecko returned ${r.status} for '${id}'`);
+            if (r.status === 429) {
+                res.status(429).json({ ok: false, error: "rate_limited", message: "CoinGecko rate limit hit. Try again in a moment.", request_id: reqId() });
+                return;
+            }
+            if (r.status === 403) {
+                res.status(503).json({ ok: false, error: "tier_required", message: "This endpoint requires a paid CoinGecko plan.", request_id: reqId() });
+                return;
+            }
+            if (r.status === 404) {
+                res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found on CoinGecko. Use full name (e.g. 'bitcoin', not 'BTC').`, request_id: reqId() });
+                return;
+            }
+            res.status(502).json({ ok: false, error: "upstream_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
             return;
         }
         const data = await r.json();
