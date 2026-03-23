@@ -86,7 +86,7 @@ export default function FundPage() {
           </p>
           <div className="flex flex-wrap gap-2">
             <a
-              href="https://www.coinbase.com/onramp/buy?appId=archtools&defaultAsset=USDC&defaultNetwork=base"
+              href="https://pay.coinbase.com/buy/select-asset?appId=cd116748-e1d9-4ac9-8eb7-b7c29e30fe14&defaultAsset=USDC&defaultNetwork=base&presetFiatAmount=25"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl bg-blue-500/90 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
