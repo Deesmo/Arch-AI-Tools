@@ -28,8 +28,9 @@ export const config = {
     apiKey: process.env.COINGECKO_API_KEY ?? "",
   },
   cdp: {
-    apiKeyId: process.env.CDP_API_KEY_ID ?? "",
-    apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
+    // Support both naming conventions: CDP_API_KEY_ID (SDK) or CDP_API_KEY (Render)
+    apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+    apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
     walletSecret: process.env.CDP_WALLET_SECRET ?? "",
     projectId: process.env.CDP_PROJECT_ID ?? "",
   },
@@ -41,7 +42,7 @@ export const config = {
     // CDP facilitator for mainnet (requires CDP_API_KEY_ID + CDP_API_KEY_SECRET)
     // x402.org/facilitator is TESTNET ONLY (Base Sepolia + Solana Devnet)
     facilitatorUrl: process.env.X402_FACILITATOR_URL ?? (
-      (process.env.X402_NETWORK ?? "base") === "base" && process.env.CDP_API_KEY_ID
+      (process.env.X402_NETWORK ?? "base") === "base" && (process.env.CDP_API_KEY_ID || process.env.CDP_API_KEY)
         ? "https://api.cdp.coinbase.com/platform/v2/x402"
         : "https://x402.org/facilitator"
     ),
