@@ -15,8 +15,8 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
-// Bazaar + discovery extensions disabled — they cause dynamic import blocking on every request
-// import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
+// Bazaar discovery extensions — static import (evaluated once at startup, zero per-request overhead)
+import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import { config } from "../config.js";
 import { X402_PRICES, TOOL_OUTPUT_SCHEMAS } from "./x402.js";
@@ -39,8 +39,7 @@ function buildSdkRoutes(): Record<string, any> {
   const routes: Record<string, any> = {};
 
   for (const [toolName, price] of Object.entries(X402_PRICES)) {
-    // Discovery extensions disabled (Bazaar causes blocking dynamic imports)
-    // const postDiscovery = declareDiscoveryExtension({...});
+    // Bazaar discovery declarations built per-tool below in buildSdkRoutes();
 
     // Build accepts[] array with all supported networks for this tool
     const accepts: any[] = [];
@@ -79,12 +78,27 @@ function buildSdkRoutes(): Record<string, any> {
     }
 
     // Routes are relative to /v1/tools (the mount point in index.ts)
-    // app.use("/v1/tools", x402SdkMiddleware) strips the /v1/tools prefix
     const routeKey = `POST /${toolName}`;
+    // Build Bazaar discovery metadata from TOOL_OUTPUT_SCHEMAS
+    const schema = TOOL_OUTPUT_SCHEMAS[toolName];
+    const extensions: Record<string, any> = {};
+    if (schema) {
+      const discoveryConfig: any = {
+        output: {
+          example: { result: "success", data: {} },
+          schema: schema.output || { type: "object" },
+        },
+      };
+      if (schema.input?.bodyFields) {
+        discoveryConfig.input = { example: {}, schema: { properties: schema.input.bodyFields, type: "object" } };
+        discoveryConfig.bodyType = "json";
+      }
+      Object.assign(extensions, declareDiscoveryExtension(discoveryConfig));
+    }
     routes[routeKey] = {
       accepts,
       description: `Arch Tools — ${toolName}`,
-      // No extensions — Bazaar extension causes blocking dynamic imports per-request
+      extensions,
     };
   }
 
@@ -114,14 +128,17 @@ export function initX402Sdk(): boolean {
   try {
     // Use @coinbase/x402's createFacilitatorConfig for proper CDP JWT auth
     // This handles JWT generation automatically for verify/settle/supported calls
-    const hasCdpKeys = !!(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET);
+    // Support both naming conventions: CDP_API_KEY_ID or CDP_API_KEY, CDP_API_KEY_SECRET or CDP_API_SECRET
+    const cdpKeyId = process.env.CDP_API_KEY_ID || process.env.CDP_API_KEY;
+    const cdpKeySecret = process.env.CDP_API_KEY_SECRET || process.env.CDP_API_SECRET;
+    const hasCdpKeys = !!(cdpKeyId && cdpKeySecret);
     let facilitatorClient: HTTPFacilitatorClient;
 
     if (hasCdpKeys) {
       // CDP facilitator with proper JWT auth via @coinbase/x402
       const cdpConfig = createFacilitatorConfig(
-        process.env.CDP_API_KEY_ID!,
-        process.env.CDP_API_KEY_SECRET!,
+        cdpKeyId!,
+        cdpKeySecret!,
       );
       facilitatorClient = new HTTPFacilitatorClient(cdpConfig);
       console.log(`[x402-sdk] Using CDP facilitator with JWT auth`);
@@ -139,9 +156,8 @@ export function initX402Sdk(): boolean {
     const resourceServer = new x402ResourceServer(facilitatorClient)
       .register(evmNetwork, new ExactEvmScheme())           // Base mainnet
       .register("eip155:137", new ExactEvmScheme())          // Polygon mainnet
-      .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()); // Solana mainnet (feePayer from CDP /supported)
-    // NOTE: Bazaar extension NOT registered — it causes route-level blocking via dynamic import on every request
-    // Re-enable only after verifying bazaar doesn't block in this Express setup
+      .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet
+      .registerExtension(bazaarResourceServerExtension);    // Bazaar discovery catalog
 
     const routes = buildSdkRoutes();
     const routeCount = Object.keys(routes).length;
