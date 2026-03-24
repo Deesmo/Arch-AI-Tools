@@ -2790,6 +2790,138 @@ router.post("/gas-price", ...toolMiddleware("gas-price"), async (req: AuthedRequ
   } catch (e) { console.error("[gas-price]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── base-nft-metadata ───────────────────────────────────────────────────────
+router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "base-nft-metadata", 1); if (!ok) return; }
+  const { contractAddress, tokenId } = req.body as { contractAddress?: string; tokenId?: string };
+  if (!contractAddress || !tokenId) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress and tokenId are required", request_id: reqId() });
+    return;
+  }
+  if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
+    return;
+  }
+  try {
+    const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${tokenId}`;
+    const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+    const jwt = await generateJwt({
+      apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+      apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+      requestMethod: "GET",
+      requestHost: "api.cdp.coinbase.com",
+      requestPath,
+    });
+    const r = await fetch(`https://api.cdp.coinbase.com${requestPath}`, {
+      headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) {
+      const errText = await r.text().catch(() => "");
+      console.error("[base-nft-metadata] CDP error:", r.status, errText);
+      res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+      return;
+    }
+    const data = await r.json() as any;
+    res.json({
+      ok: true,
+      contractAddress,
+      tokenId,
+      network: "base",
+      name: data.name ?? data.token?.name ?? null,
+      description: data.description ?? null,
+      image: data.image ?? data.image_url ?? null,
+      attributes: data.attributes ?? data.traits ?? [],
+      token_uri: data.token_uri ?? null,
+      data_source: "Coinbase Developer Platform",
+      request_id: reqId(),
+    });
+  } catch (e) { console.error("[base-nft-metadata]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── eth-resolve-ens ─────────────────────────────────────────────────────────
+router.post("/eth-resolve-ens", ...toolMiddleware("eth-resolve-ens"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "eth-resolve-ens", 1); if (!ok) return; }
+  const { name } = req.body as { name?: string };
+  if (!name || typeof name !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "name is required (e.g. vitalik.eth)", request_id: reqId() });
+    return;
+  }
+  try {
+    const r = await fetch(`https://api.ensideas.com/ens/resolve/${encodeURIComponent(name.trim())}`, {
+      headers: { "Accept": "application/json", "User-Agent": "ArchTools/1.9" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) {
+      const errText = await r.text().catch(() => "");
+      console.error("[eth-resolve-ens] ENSIdeas error:", r.status, errText);
+      res.status(502).json({ ok: false, error: "ens_error", message: `ENS resolver returned ${r.status}`, request_id: reqId() });
+      return;
+    }
+    const data = await r.json() as { address?: string; name?: string; displayName?: string; avatar?: string; error?: string };
+    if (!data.address || data.address === "0x0000000000000000000000000000000000000000") {
+      res.status(404).json({ ok: false, error: "not_found", message: `ENS name '${name}' could not be resolved`, request_id: reqId() });
+      return;
+    }
+    res.json({
+      ok: true,
+      name: data.name ?? name,
+      address: data.address,
+      displayName: data.displayName ?? null,
+      avatar: data.avatar ?? null,
+      data_source: "ENS (via ensideas.com)",
+      request_id: reqId(),
+    });
+  } catch (e) { console.error("[eth-resolve-ens]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── base-block-info ─────────────────────────────────────────────────────────
+router.post("/base-block-info", ...toolMiddleware("base-block-info"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "base-block-info", 1); if (!ok) return; }
+  try {
+    const r = await fetch("https://mainnet.base.org", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBlockByNumber", params: ["latest", false], id: 1 }),
+    });
+    if (!r.ok) {
+      res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
+      return;
+    }
+    const data = await r.json() as { result?: any };
+    const block = data.result;
+    if (!block) {
+      res.status(502).json({ ok: false, error: "rpc_error", message: "No block data returned from Base RPC", request_id: reqId() });
+      return;
+    }
+    const blockNumber = parseInt(block.number, 16);
+    const timestamp = parseInt(block.timestamp, 16);
+    const gasUsed = parseInt(block.gasUsed, 16);
+    const gasLimit = parseInt(block.gasLimit, 16);
+    const txCount = Array.isArray(block.transactions) ? block.transactions.length : 0;
+    const baseFeePerGas = block.baseFeePerGas ? parseInt(block.baseFeePerGas, 16) : null;
+    res.json({
+      ok: true,
+      network: "base",
+      block_number: blockNumber,
+      block_hash: block.hash ?? null,
+      timestamp,
+      datetime: new Date(timestamp * 1000).toISOString(),
+      gas_used: gasUsed,
+      gas_limit: gasLimit,
+      gas_utilization_pct: Math.round((gasUsed / gasLimit) * 10000) / 100,
+      base_fee_per_gas_wei: baseFeePerGas !== null ? baseFeePerGas.toString() : null,
+      base_fee_per_gas_gwei: baseFeePerGas !== null ? Math.round((baseFeePerGas / 1e9) * 1000) / 1000 : null,
+      transaction_count: txCount,
+      miner: block.miner ?? null,
+      data_source: "Base Mainnet RPC",
+      request_id: reqId(),
+    });
+  } catch (e) { console.error("[base-block-info]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with
