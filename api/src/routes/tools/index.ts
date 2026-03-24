@@ -3423,6 +3423,183 @@ router.post("/word-count-stats", ...toolMiddleware("word-count-stats"), async (r
   });
 });
 
+// ─── exchange-rates ──────────────────────────────────────────────────────────
+router.post("/exchange-rates", ...toolMiddleware("exchange-rates"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "exchange-rates", 1); if (!ok) return; }
+  const { base = "USD", target } = req.body as { base?: string; target?: string };
+  try {
+    const baseCurrency = base.toUpperCase().trim();
+    const r = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(baseCurrency)}`, { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `Exchange rate API returned ${r.status}`, request_id: reqId() }); return; }
+    const data = await r.json() as { result?: string; rates?: Record<string, number>; time_last_update_utc?: string };
+    if (data.result !== "success" || !data.rates) { res.status(502).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() }); return; }
+    if (target) {
+      const targetCurrency = target.toUpperCase().trim();
+      const rate = data.rates[targetCurrency];
+      if (rate === undefined) { res.status(422).json({ ok: false, error: "invalid_currency", message: `Currency '${targetCurrency}' not found`, request_id: reqId() }); return; }
+      res.json({ ok: true, base: baseCurrency, target: targetCurrency, rate, timestamp: data.time_last_update_utc ?? null, request_id: reqId() });
+    } else {
+      res.json({ ok: true, base: baseCurrency, rates: data.rates, currency_count: Object.keys(data.rates).length, timestamp: data.time_last_update_utc ?? null, request_id: reqId() });
+    }
+  } catch (e) { console.error("[exchange-rates]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── ip-geolocation ──────────────────────────────────────────────────────────
+router.post("/ip-geolocation", ...toolMiddleware("ip-geolocation"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "ip-geolocation", 1); if (!ok) return; }
+  const { ip } = req.body as { ip?: string };
+  if (!ip) { res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: reqId() }); return; }
+  try {
+    const r = await fetch(`https://ipapi.co/${encodeURIComponent(ip.trim())}/json/`, {
+      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "ArchTools/1.9" },
+    });
+    if (!r.ok) {
+      if (r.status === 429) { res.status(429).json({ ok: false, error: "rate_limited", message: "IP geolocation rate limit hit. Try again shortly.", request_id: reqId() }); return; }
+      res.status(502).json({ ok: false, error: "fetch_error", message: `ipapi.co returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as any;
+    if (data.error) { res.status(422).json({ ok: false, error: "lookup_error", message: data.reason ?? "Invalid IP address", request_id: reqId() }); return; }
+    res.json({
+      ok: true, ip: data.ip ?? ip,
+      city: data.city ?? null, region: data.region ?? null, country: data.country_name ?? null, country_code: data.country_code ?? null,
+      lat: data.latitude ?? null, lon: data.longitude ?? null,
+      org: data.org ?? null, timezone: data.timezone ?? null, currency: data.currency ?? null,
+      asn: data.asn ?? null, postal: data.postal ?? null,
+      request_id: reqId(),
+    });
+  } catch (e) { console.error("[ip-geolocation]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── text-similarity ─────────────────────────────────────────────────────────
+router.post("/text-similarity", ...toolMiddleware("text-similarity"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "text-similarity", 1); if (!ok) return; }
+  const { text1, text2 } = req.body as { text1?: string; text2?: string };
+  if (!text1 || !text2) { res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: reqId() }); return; }
+  // Jaccard similarity (word overlap)
+  const normalize = (t: string) => t.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 0);
+  const words1 = new Set(normalize(text1));
+  const words2 = new Set(normalize(text2));
+  const intersection = new Set([...words1].filter(w => words2.has(w)));
+  const union = new Set([...words1, ...words2]);
+  const similarity = union.size > 0 ? intersection.size / union.size : 0;
+  res.json({
+    ok: true,
+    similarity_score: Math.round(similarity * 10000) / 10000,
+    common_words: [...intersection].sort(),
+    common_count: intersection.size,
+    text1_word_count: words1.size,
+    text2_word_count: words2.size,
+    union_size: union.size,
+    method: "jaccard",
+    request_id: reqId(),
+  });
+});
+
+// ─── base64-operations ───────────────────────────────────────────────────────
+router.post("/base64-operations", ...toolMiddleware("base64-operations"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "base64-operations", 1); if (!ok) return; }
+  const { text, operation = "encode" } = req.body as { text?: string; operation?: string };
+  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  const validOps = ["encode", "decode"];
+  if (!validOps.includes(operation)) { res.status(400).json({ ok: false, error: "invalid_request", message: `operation must be one of: ${validOps.join(", ")}`, request_id: reqId() }); return; }
+  try {
+    let result: string;
+    let bytes: number;
+    if (operation === "encode") {
+      const buf = Buffer.from(text, "utf8");
+      result = buf.toString("base64");
+      bytes = buf.length;
+    } else {
+      const buf = Buffer.from(text, "base64");
+      result = buf.toString("utf8");
+      bytes = buf.length;
+    }
+    res.json({ ok: true, result, operation, bytes, input_length: text.length, output_length: result.length, request_id: reqId() });
+  } catch (e) { res.status(422).json({ ok: false, error: "operation_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── color-convert ───────────────────────────────────────────────────────────
+router.post("/color-convert", ...toolMiddleware("color-convert"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "color-convert", 1); if (!ok) return; }
+  const { color, to } = req.body as { color?: string; to?: string };
+  if (!color || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "color and to are required", request_id: reqId() }); return; }
+  const validFormats = ["hex", "rgb", "hsl"];
+  if (!validFormats.includes(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: `to must be one of: ${validFormats.join(", ")}`, request_id: reqId() }); return; }
+  try {
+    let r: number, g: number, b: number;
+    const input = color.trim();
+    // Parse hex
+    const hexMatch = input.match(/^#?([0-9a-fA-F]{3,8})$/);
+    if (hexMatch) {
+      let hex = hexMatch[1];
+      if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+      r = parseInt(hex.slice(0, 2), 16);
+      g = parseInt(hex.slice(2, 4), 16);
+      b = parseInt(hex.slice(4, 6), 16);
+    }
+    // Parse rgb(r, g, b)
+    else if (input.match(/^rgb/i)) {
+      const m = input.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      if (!m) throw new Error("Invalid RGB format. Use: rgb(255, 0, 0)");
+      r = Math.min(255, parseInt(m[1])); g = Math.min(255, parseInt(m[2])); b = Math.min(255, parseInt(m[3]));
+    }
+    // Parse hsl(h, s%, l%)
+    else if (input.match(/^hsl/i)) {
+      const m = input.match(/([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?/);
+      if (!m) throw new Error("Invalid HSL format. Use: hsl(0, 100%, 50%)");
+      const h = parseFloat(m[1]) / 360;
+      const s = parseFloat(m[2]) / 100;
+      const l = parseFloat(m[3]) / 100;
+      // HSL to RGB conversion
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      if (s === 0) { r = g = b = Math.round(l * 255); }
+      else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+        g = Math.round(hue2rgb(p, q, h) * 255);
+        b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+      }
+    } else {
+      throw new Error("Unrecognized color format. Use hex (#ff0000), rgb(255,0,0), or hsl(0,100%,50%)");
+    }
+    // Convert to target format
+    let result: string;
+    if (to === "hex") {
+      result = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    } else if (to === "rgb") {
+      result = `rgb(${r}, ${g}, ${b})`;
+    } else {
+      // RGB to HSL
+      const rn = r / 255, gn = g / 255, bn = b / 255;
+      const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+        else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+        else h = ((rn - gn) / d + 4) / 6;
+      }
+      result = `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+    }
+    res.json({ ok: true, input: color, to, result, rgb: { r, g, b }, request_id: reqId() });
+  } catch (e) { res.status(422).json({ ok: false, error: "conversion_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with

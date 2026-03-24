@@ -1,0 +1,338 @@
+{
+  "total_tools": 83,
+  "generated_at": "2026-03-24T02:02:57.118Z",
+  "tools": [
+    {
+      "name": "validate-data",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "generate-hash",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "qr-code",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "convert-format",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "transform-text",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "extract-metadata",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "web-scrape",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "extract-page",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "search-web",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "rss-parse",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "ip-lookup",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "whois-lookup",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "email-verify",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "phone-validate",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "currency-convert",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "timezone-convert",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "generate-uuid",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "diff-text",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "readability-score",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "language-detect",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "sentiment-analysis",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "summarize",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "extract-entities",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "regex-generate",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "pii-detect",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "web-search",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "ai-generate",
+      "price_usdc": "0.020"
+    },
+    {
+      "name": "ocr-extract",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "browser-task",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "extract-pdf",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "screenshot-capture",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "html-to-markdown",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "url-shorten",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "webhook-send",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "jsonpath-query",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "image-generate",
+      "price_usdc": "0.030"
+    },
+    {
+      "name": "barcode-generate",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "workflow-agent",
+      "price_usdc": "0.025"
+    },
+    {
+      "name": "crypto-price",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "crypto-ohlcv",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "crypto-market-cap",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "crypto-fear-greed",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "crypto-sentiment",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "crypto-news",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "token-lookup",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "ai-oracle",
+      "price_usdc": "0.025"
+    },
+    {
+      "name": "session-create",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "session-message",
+      "price_usdc": "0.020"
+    },
+    {
+      "name": "text-to-speech",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "transcribe-audio",
+      "price_usdc": "0.012"
+    },
+    {
+      "name": "email-send",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "design-create",
+      "price_usdc": "0.030"
+    },
+    {
+      "name": "domain-check",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "news-search",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "research-report",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "fact-check",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "video-generate",
+      "price_usdc": "0.100"
+    },
+    {
+      "name": "image-remove-bg",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "email-find",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "semantic-search",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "social-post",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "wallet-balance",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "address-history",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "gas-price",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "base-nft-metadata",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "eth-resolve-ens",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "base-block-info",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "defi-tvl",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "crypto-dominance",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "nft-collection-stats",
+      "price_usdc": "0.015"
+    },
+    {
+      "name": "base-tx-decode",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "stock-price",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "weather-current",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "github-repo-stats",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "wikipedia-search",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "url-health-check",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "calculate-compound-interest",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "word-count-stats",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "exchange-rates",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "ip-geolocation",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "text-similarity",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "base64-operations",
+      "price_usdc": "0.010"
+    },
+    {
+      "name": "color-convert",
+      "price_usdc": "0.010"
+    }
+  ]
+}
