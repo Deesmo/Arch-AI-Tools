@@ -22,6 +22,37 @@ interface WalletRecord {
 // Maps agentId → wallet info
 const walletStore = new Map<string, WalletRecord>();
 
+// ─── GET /v1/wallet ───────────────────────────────────────────────────────────
+// Returns the authenticated user's wallet address (from DB, created at signup).
+router.get(
+  "/",
+  requireAuth,
+  async (req: AuthedRequest, res: Response): Promise<void> => {
+    const agentId = req.agent?.id;
+    if (!agentId) {
+      res.status(401).json({ ok: false, error: "unauthorized" });
+      return;
+    }
+
+    try {
+      const agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { walletAddress: true },
+      });
+
+      res.json({
+        ok: true,
+        wallet_address: agent?.walletAddress ?? null,
+        network: "base",
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      logger.error({ agentId, error: message }, "Failed to fetch wallet");
+      res.status(500).json({ ok: false, error: "internal_error" });
+    }
+  }
+);
+
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
 // Creates a new CDP wallet for an authenticated agent.
 // @coinbase/cdp-sdk v1.45 installed. @coinbase/agentkit requires separate install.
@@ -35,8 +66,14 @@ router.post(
       return;
     }
 
-    // Check if agent already has a wallet
-    const existing = walletStore.get(agentId);
+    // Check if agent already has a wallet (DB first, then in-memory fallback)
+    const agentRecord = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { walletAddress: true },
+    });
+    const existing = agentRecord?.walletAddress
+      ? { address: agentRecord.walletAddress, network: "base", label: "" }
+      : walletStore.get(agentId);
     if (existing) {
       res.status(409).json({
         ok: false,
@@ -97,8 +134,12 @@ router.post(
         createdAt: new Date().toISOString(),
       };
 
-      // Store wallet association
+      // Store wallet association (DB + in-memory cache)
       walletStore.set(agentId, walletRecord);
+      await prisma.agent.update({
+        where: { id: agentId },
+        data: { walletAddress: address },
+      }).catch((e: unknown) => logger.warn({ agentId, error: e }, "Failed to persist wallet to DB"));
 
       logger.info({ agentId, address, network: "base" as any }, "Wallet provisioned for agent");
 
@@ -148,7 +189,23 @@ router.get(
       return;
     }
 
-    const wallet = walletStore.get(agentId);
+    // Check in-memory cache first, then fall back to DB
+    let wallet = walletStore.get(agentId);
+    if (!wallet) {
+      const dbAgent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { walletAddress: true, createdAt: true },
+      });
+      if (dbAgent?.walletAddress) {
+        wallet = {
+          address: dbAgent.walletAddress,
+          network: "base",
+          label: `agent-${agentId.slice(0, 8)}`,
+          createdAt: dbAgent.createdAt.toISOString(),
+        };
+        walletStore.set(agentId, wallet); // repopulate cache
+      }
+    }
     if (!wallet) {
       res.status(404).json({
         ok: false,

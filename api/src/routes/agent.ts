@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { sendWelcomeEmail, sendAdminAlert } from "../services/email.js";
+import { logger } from "../lib/logger.js";
+import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -68,11 +70,51 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       const passwordHash = await bcrypt.hash(password, 10);
       await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash } });
     }
-        res.status(201).json({
+
+    // ─── Embedded Wallet Auto-Creation (best-effort, non-fatal) ─────────
+    let walletAddress: string | null = null;
+    try {
+      if (config.cdp.apiKeyId && config.cdp.apiKeySecret) {
+        const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
+        const axios = (await import("axios")).default;
+
+        const axiosClient = axios.create({
+          baseURL: "https://api.cdp.coinbase.com",
+        });
+
+        axiosHooks.withAuth(axiosClient, {
+          apiKeyId: config.cdp.apiKeyId,
+          apiKeySecret: config.cdp.apiKeySecret,
+          walletSecret: config.cdp.walletSecret,
+        });
+
+        const walletResp = await axiosClient.post("/platform/v2/evm/accounts", {
+          name: `user-${agent.id.slice(0, 8)}`,
+        });
+
+        const address = walletResp.data?.address;
+        if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
+          walletAddress = address;
+          await prisma.agent.update({
+            where: { id: agent.id },
+            data: { walletAddress: address },
+          });
+          logger.info({ agentId: agent.id, walletAddress: address }, "Embedded wallet created on signup");
+        }
+      } else {
+        logger.debug("CDP keys not configured — skipping auto wallet creation");
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      logger.warn({ agentId: agent.id, error: errMsg }, "Wallet auto-creation failed (non-fatal)");
+    }
+
+    res.status(201).json({
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
       credits: freeCredits,
+      wallet_address: walletAddress,
       message: `Welcome! You have ${freeCredits} free credits to get started.`,
       docs: "https://archtools.dev",
       request_id: reqId(),
