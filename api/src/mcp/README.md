@@ -12,7 +12,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["@archtools/mcp"],
+      "args": ["@deesmo/arch-tools-mcp"],
       "env": {
         "ARCH_TOOLS_API_KEY": "your_key_here"
       }
@@ -28,7 +28,7 @@ Add to your MCP settings:
 ```json
 {
   "arch-tools": {
-    "command": "npx @archtools/mcp",
+    "command": "npx @deesmo/arch-tools-mcp",
     "env": { "ARCH_TOOLS_API_KEY": "your_key_here" }
   }
 }

@@ -1,18 +1,31 @@
 {
-  "name": "@archtools/mcp",
+  "name": "@deesmo/arch-tools-mcp",
   "version": "1.0.0",
-  "description": "Arch Tools MCP Server — 64 AI tools as MCP actions for Claude, Cursor, VS Code",
-  "main": "server.js",
+  "description": "Arch Tools MCP Server \u2014 64 AI tools as MCP actions for Claude, Cursor, VS Code",
+  "main": "server.ts",
   "bin": {
-    "arch-tools-mcp": "server.js"
+    "arch-tools-mcp": "./run.js"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node run.js",
+    "build": "tsc server.ts --esModuleInterop --module nodenext --moduleResolution nodenext --target es2022 --outDir ."
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "tsx": "^4.0.0"
   },
-  "keywords": ["mcp", "ai", "tools", "x402", "coinbase", "arch-tools"],
+  "keywords": [
+    "mcp",
+    "ai",
+    "tools",
+    "x402",
+    "coinbase",
+    "arch-tools"
+  ],
   "homepage": "https://archtools.dev",
-  "repository": "https://github.com/Deesmo/Arch-AI-Tools"
+  "repository": "https://github.com/Deesmo/Arch-AI-Tools",
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module"
 }
