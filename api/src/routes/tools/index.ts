@@ -3116,6 +3116,313 @@ router.post("/base-tx-decode", ...toolMiddleware("base-tx-decode"), async (req: 
   } catch (e) { console.error("[base-tx-decode]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── stock-price ─────────────────────────────────────────────────────────────
+router.post("/stock-price", ...toolMiddleware("stock-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "stock-price", 1); if (!ok) return; }
+  const { symbol } = req.body as { symbol?: string };
+  if (!symbol || typeof symbol !== "string" || !/^[A-Za-z0-9.\-^=]{1,20}$/.test(symbol.trim())) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. AAPL, TSLA, MSFT)", request_id: reqId() }); return;
+  }
+  const ticker = symbol.trim().toUpperCase();
+  try {
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`, { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) {
+      if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Symbol '${ticker}' not found`, request_id: reqId() }); return; }
+      res.status(502).json({ ok: false, error: "fetch_error", message: `Yahoo Finance returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as any;
+    const result = data?.chart?.result?.[0];
+    if (!result) { res.status(404).json({ ok: false, error: "not_found", message: `No data for symbol '${ticker}'`, request_id: reqId() }); return; }
+    const meta = result.meta ?? {};
+    const price = meta.regularMarketPrice ?? null;
+    const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? null;
+    const change = (price !== null && prevClose !== null) ? Math.round((price - prevClose) * 100) / 100 : null;
+    const changePct = (price !== null && prevClose !== null && prevClose !== 0) ? Math.round(((price - prevClose) / prevClose) * 10000) / 100 : null;
+    const volume = meta.regularMarketVolume ?? null;
+    res.json({
+      ok: true, symbol: ticker,
+      currency: meta.currency ?? "USD",
+      price, previous_close: prevClose,
+      change, change_percent: changePct,
+      volume, market_time: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : null,
+      exchange: meta.exchangeName ?? null,
+      data_source: "Yahoo Finance", request_id: reqId(),
+    });
+  } catch (e) { console.error("[stock-price]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── weather-current ─────────────────────────────────────────────────────────
+router.post("/weather-current", ...toolMiddleware("weather-current"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "weather-current", 1); if (!ok) return; }
+  const { city } = req.body as { city?: string };
+  if (!city || typeof city !== "string" || city.trim().length === 0 || city.trim().length > 100) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "city is required (e.g. New York, London, Tokyo)", request_id: reqId() }); return;
+  }
+  const cityName = city.trim();
+  try {
+    const r = await fetch(`https://wttr.in/${encodeURIComponent(cityName)}?format=j1`, {
+      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "ArchTools/1.0" },
+    });
+    if (!r.ok) {
+      res.status(502).json({ ok: false, error: "fetch_error", message: `wttr.in returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as any;
+    const current = data?.current_condition?.[0];
+    if (!current) { res.status(404).json({ ok: false, error: "not_found", message: `No weather data for '${cityName}'`, request_id: reqId() }); return; }
+    const area = data?.nearest_area?.[0];
+    res.json({
+      ok: true,
+      location: {
+        city: area?.areaName?.[0]?.value ?? cityName,
+        region: area?.region?.[0]?.value ?? null,
+        country: area?.country?.[0]?.value ?? null,
+      },
+      weather: {
+        temp_c: parseInt(current.temp_C) || null,
+        temp_f: parseInt(current.temp_F) || null,
+        feels_like_c: parseInt(current.FeelsLikeC) || null,
+        feels_like_f: parseInt(current.FeelsLikeF) || null,
+        humidity: parseInt(current.humidity) || null,
+        wind_speed_kmph: parseInt(current.windspeedKmph) || null,
+        wind_speed_mph: parseInt(current.windspeedMiles) || null,
+        wind_direction: current.winddir16Point ?? null,
+        condition: current.weatherDesc?.[0]?.value ?? null,
+        uv_index: parseInt(current.uvIndex) || null,
+        visibility_km: parseInt(current.visibility) || null,
+        pressure_mb: parseInt(current.pressure) || null,
+        cloud_cover: parseInt(current.cloudcover) || null,
+      },
+      observation_time: current.observation_time ?? null,
+      data_source: "wttr.in", request_id: reqId(),
+    });
+  } catch (e) { console.error("[weather-current]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── github-repo-stats ───────────────────────────────────────────────────────
+router.post("/github-repo-stats", ...toolMiddleware("github-repo-stats"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "github-repo-stats", 1); if (!ok) return; }
+  const { owner, repo } = req.body as { owner?: string; repo?: string };
+  if (!owner || !repo || typeof owner !== "string" || typeof repo !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "owner and repo are required (e.g. owner: 'facebook', repo: 'react')", request_id: reqId() }); return;
+  }
+  const o = owner.trim();
+  const r = repo.trim();
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(o) || !/^[A-Za-z0-9._-]{1,100}$/.test(r)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid owner or repo name", request_id: reqId() }); return;
+  }
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${encodeURIComponent(o)}/${encodeURIComponent(r)}`, {
+      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "ArchTools/1.0", "Accept": "application/vnd.github+json" },
+    });
+    if (!resp.ok) {
+      if (resp.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Repository '${o}/${r}' not found`, request_id: reqId() }); return; }
+      res.status(502).json({ ok: false, error: "fetch_error", message: `GitHub API returned ${resp.status}`, request_id: reqId() }); return;
+    }
+    const data = await resp.json() as any;
+    res.json({
+      ok: true,
+      repository: {
+        full_name: data.full_name ?? `${o}/${r}`,
+        description: data.description ?? null,
+        language: data.language ?? null,
+        stars: data.stargazers_count ?? 0,
+        forks: data.forks_count ?? 0,
+        open_issues: data.open_issues_count ?? 0,
+        watchers: data.subscribers_count ?? 0,
+        size_kb: data.size ?? null,
+        default_branch: data.default_branch ?? "main",
+        license: data.license?.spdx_id ?? null,
+        topics: data.topics ?? [],
+        created_at: data.created_at ?? null,
+        updated_at: data.updated_at ?? null,
+        pushed_at: data.pushed_at ?? null,
+        is_fork: data.fork ?? false,
+        is_archived: data.archived ?? false,
+        homepage: data.homepage ?? null,
+        html_url: data.html_url ?? null,
+      },
+      data_source: "GitHub API", request_id: reqId(),
+    });
+  } catch (e) { console.error("[github-repo-stats]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── wikipedia-search ────────────────────────────────────────────────────────
+router.post("/wikipedia-search", ...toolMiddleware("wikipedia-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "wikipedia-search", 1); if (!ok) return; }
+  const { query, limit = 3 } = req.body as { query?: string; limit?: number };
+  if (!query || typeof query !== "string" || query.trim().length === 0) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return;
+  }
+  const q = query.trim();
+  const n = Math.min(Math.max(1, limit), 20);
+  try {
+    const r = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=${n}&format=json&origin=*`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `Wikipedia API returned ${r.status}`, request_id: reqId() }); return; }
+    const data = await r.json() as any;
+    const results = (data?.query?.search ?? []).map((item: any) => ({
+      title: item.title,
+      snippet: (item.snippet ?? "").replace(/<[^>]*>/g, ""),
+      page_id: item.pageid,
+      word_count: item.wordcount ?? null,
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, "_"))}`,
+    }));
+    res.json({
+      ok: true,
+      query: q,
+      total_hits: data?.query?.searchinfo?.totalhits ?? results.length,
+      results,
+      data_source: "Wikipedia API",
+      request_id: reqId(),
+    });
+  } catch (e) { console.error("[wikipedia-search]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── url-health-check ────────────────────────────────────────────────────────
+router.post("/url-health-check", ...toolMiddleware("url-health-check"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "url-health-check", 1); if (!ok) return; }
+  const { url } = req.body as { url?: string };
+  if (!url || typeof url !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return;
+  }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
+  try {
+    const start = Date.now();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const r = await fetch(url, {
+      method: "HEAD",
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": "ArchTools-HealthCheck/1.0" },
+    });
+    clearTimeout(timeout);
+    const elapsed = Date.now() - start;
+    res.json({
+      ok: true,
+      url,
+      is_up: r.ok,
+      status_code: r.status,
+      status_text: r.statusText,
+      response_time_ms: elapsed,
+      content_type: r.headers.get("content-type") ?? null,
+      server: r.headers.get("server") ?? null,
+      redirected: r.redirected,
+      final_url: r.url !== url ? r.url : null,
+      request_id: reqId(),
+    });
+  } catch (e: any) {
+    const isTimeout = e?.name === "AbortError";
+    res.json({
+      ok: true,
+      url,
+      is_up: false,
+      status_code: null,
+      status_text: isTimeout ? "TIMEOUT" : "CONNECTION_FAILED",
+      response_time_ms: null,
+      content_type: null,
+      server: null,
+      error: isTimeout ? "Request timed out after 15s" : (e?.message ?? "Connection failed"),
+      request_id: reqId(),
+    });
+  }
+});
+
+// ─── calculate-compound-interest ─────────────────────────────────────────────
+router.post("/calculate-compound-interest", ...toolMiddleware("calculate-compound-interest"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "calculate-compound-interest", 1); if (!ok) return; }
+  const { principal, rate, years, compounds_per_year = 12 } = req.body as { principal?: number; rate?: number; years?: number; compounds_per_year?: number };
+  if (principal === undefined || rate === undefined || years === undefined) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "principal, rate (annual % e.g. 5 for 5%), and years are required", request_id: reqId() }); return;
+  }
+  if (typeof principal !== "number" || typeof rate !== "number" || typeof years !== "number" || typeof compounds_per_year !== "number") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "principal, rate, years, and compounds_per_year must be numbers", request_id: reqId() }); return;
+  }
+  if (principal < 0 || rate < 0 || years < 0 || compounds_per_year < 1 || compounds_per_year > 365) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "Values must be non-negative; compounds_per_year must be 1-365", request_id: reqId() }); return;
+  }
+  const r_dec = rate / 100;
+  const n = compounds_per_year;
+  const t = years;
+  const finalAmount = principal * Math.pow(1 + r_dec / n, n * t);
+  const totalInterest = finalAmount - principal;
+  const effectiveAnnualRate = (Math.pow(1 + r_dec / n, n) - 1) * 100;
+  // Year-by-year breakdown (capped at 50 years)
+  const schedule: Array<{ year: number; balance: number }> = [];
+  const maxYears = Math.min(Math.ceil(t), 50);
+  for (let y = 1; y <= maxYears; y++) {
+    schedule.push({ year: y, balance: Math.round(principal * Math.pow(1 + r_dec / n, n * y) * 100) / 100 });
+  }
+  res.json({
+    ok: true,
+    inputs: { principal, annual_rate_percent: rate, years, compounds_per_year },
+    results: {
+      final_amount: Math.round(finalAmount * 100) / 100,
+      total_interest: Math.round(totalInterest * 100) / 100,
+      effective_annual_rate: Math.round(effectiveAnnualRate * 1000) / 1000,
+      total_return_percent: Math.round((totalInterest / principal) * 10000) / 100,
+    },
+    schedule,
+    request_id: reqId(),
+  });
+});
+
+// ─── word-count-stats ────────────────────────────────────────────────────────
+router.post("/word-count-stats", ...toolMiddleware("word-count-stats"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "word-count-stats", 1); if (!ok) return; }
+  const { text } = req.body as { text?: string };
+  if (!text || typeof text !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return;
+  }
+  if (text.length > 500_000) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "Text too long (max 500,000 characters)", request_id: reqId() }); return;
+  }
+  const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+  const wordCount = words.length;
+  const charCount = text.length;
+  const charCountNoSpaces = text.replace(/\s/g, "").length;
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const sentenceCount = sentences.length;
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  const paragraphCount = paragraphs.length || 1;
+  const avgWordLength = wordCount > 0 ? Math.round((charCountNoSpaces / wordCount) * 100) / 100 : 0;
+  const readingTimeMinutes = Math.round((wordCount / 238) * 10) / 10; // 238 wpm average
+  const speakingTimeMinutes = Math.round((wordCount / 150) * 10) / 10; // 150 wpm speaking
+  // Top words frequency
+  const freq: Record<string, number> = {};
+  for (const w of words) {
+    const lower = w.toLowerCase().replace(/[^a-z0-9'-]/g, "");
+    if (lower.length > 2) freq[lower] = (freq[lower] ?? 0) + 1;
+  }
+  const topWords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count }));
+  res.json({
+    ok: true,
+    stats: {
+      word_count: wordCount,
+      char_count: charCount,
+      char_count_no_spaces: charCountNoSpaces,
+      sentence_count: sentenceCount,
+      paragraph_count: paragraphCount,
+      avg_word_length: avgWordLength,
+      reading_time_minutes: readingTimeMinutes,
+      speaking_time_minutes: speakingTimeMinutes,
+    },
+    top_words: topWords,
+    request_id: reqId(),
+  });
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with
