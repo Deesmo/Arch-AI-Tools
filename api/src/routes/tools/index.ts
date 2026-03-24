@@ -2686,6 +2686,45 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   } catch (e) { console.error("[social-post]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── wallet-balance ──────────────────────────────────────────────────────────
+router.post("/wallet-balance", ...toolMiddleware("wallet-balance"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "wallet-balance", 1); if (!ok) return; }
+  const { address } = req.body as { address?: string };
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "address is required and must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
+    return;
+  }
+  try {
+    const requestPath = `/platform/v2/evm/token-balances/base/${address}`;
+    const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+    const jwt = await generateJwt({
+      apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+      apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+      requestMethod: "GET",
+      requestHost: "api.cdp.coinbase.com",
+      requestPath,
+    });
+    const r = await fetch(`https://api.cdp.coinbase.com${requestPath}`, {
+      headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) {
+      const errText = await r.text().catch(() => "");
+      console.error("[wallet-balance] CDP error:", r.status, errText);
+      res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+      return;
+    }
+    const data = await r.json() as { balances?: any[] };
+    const balances = (data.balances ?? []).map((b: any) => ({
+      token: b.token?.symbol ?? b.symbol ?? "UNKNOWN",
+      name: b.token?.name ?? b.name ?? "",
+      amount: b.amount ?? b.balance ?? "0",
+      decimals: b.token?.decimals ?? b.decimals ?? 18,
+    }));
+    res.json({ ok: true, address, network: "base", balances, count: balances.length, data_source: "Coinbase Developer Platform", request_id: reqId() });
+  } catch (e) { console.error("[wallet-balance]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with
