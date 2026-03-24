@@ -2922,6 +2922,200 @@ router.post("/base-block-info", ...toolMiddleware("base-block-info"), async (req
   } catch (e) { console.error("[base-block-info]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── defi-tvl ────────────────────────────────────────────────────────────────
+router.post("/defi-tvl", ...toolMiddleware("defi-tvl"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "defi-tvl", 1); if (!ok) return; }
+  const { protocol, limit = 10 } = req.body as { protocol?: string; limit?: number };
+  try {
+    if (protocol) {
+      const slug = protocol.toLowerCase().trim();
+      const r = await fetch(`https://api.llama.fi/protocol/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) {
+        if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Protocol '${slug}' not found on DefiLlama`, request_id: reqId() }); return; }
+        res.status(502).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() }); return;
+      }
+      const data = await r.json() as any;
+      res.json({
+        ok: true,
+        protocol: {
+          name: data.name ?? slug,
+          slug: data.slug ?? slug,
+          tvl: data.currentChainTvls ? Object.values(data.currentChainTvls as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : (data.tvl ?? null),
+          category: data.category ?? null,
+          chains: data.chains ?? [],
+          change_1d: data.change_1d ?? null,
+          change_7d: data.change_7d ?? null,
+          url: data.url ?? null,
+          logo: data.logo ?? null,
+        },
+        data_source: "DefiLlama",
+        attribution: "Powered by DefiLlama API — https://defillama.com",
+        request_id: reqId(),
+      });
+    } else {
+      const n = Math.min(Math.max(1, limit), 100);
+      const r = await fetch("https://api.llama.fi/protocols", { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() }); return; }
+      const data = await r.json() as any[];
+      const sorted = data.sort((a: any, b: any) => (b.tvl ?? 0) - (a.tvl ?? 0)).slice(0, n);
+      const protocols = sorted.map((p: any) => ({
+        name: p.name, slug: p.slug, tvl: p.tvl ?? 0, category: p.category ?? null,
+        chain: p.chain ?? null, chains: p.chains ?? [],
+        change_1d: p.change_1d ?? null, change_7d: p.change_7d ?? null,
+      }));
+      res.json({ ok: true, protocols, count: protocols.length, data_source: "DefiLlama", attribution: "Powered by DefiLlama API — https://defillama.com", request_id: reqId() });
+    }
+  } catch (e) { console.error("[defi-tvl]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── crypto-dominance ────────────────────────────────────────────────────────
+router.post("/crypto-dominance", ...toolMiddleware("crypto-dominance"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "crypto-dominance", 1); if (!ok) return; }
+  try {
+    const r = await fetch("https://api.coingecko.com/api/v3/global", { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
+    if (!r.ok) {
+      try {
+        const ccResp = await fetch("https://api.coincap.io/v2/assets?limit=2", { signal: AbortSignal.timeout(8000) });
+        if (ccResp.ok) {
+          const ccData = await ccResp.json() as { data: any[] };
+          const btc = ccData.data?.find((c: any) => c.id === "bitcoin");
+          const eth = ccData.data?.find((c: any) => c.id === "ethereum");
+          res.json({
+            ok: true,
+            btc_dominance: btc?.marketCapDominance ? parseFloat(btc.marketCapDominance) : null,
+            eth_dominance: eth?.marketCapDominance ? parseFloat(eth.marketCapDominance) : null,
+            total_market_cap_usd: null, total_volume_24h_usd: null,
+            source: "coincap_fallback",
+            data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com",
+            request_id: reqId(),
+          }); return;
+        }
+      } catch (_) { /* fall through */ }
+      res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as { data?: { market_cap_percentage?: Record<string, number>; total_market_cap?: Record<string, number>; total_volume?: Record<string, number>; active_cryptocurrencies?: number; markets?: number; market_cap_change_percentage_24h_usd?: number } };
+    const d = data.data;
+    res.json({
+      ok: true,
+      btc_dominance: d?.market_cap_percentage?.btc ?? null,
+      eth_dominance: d?.market_cap_percentage?.eth ?? null,
+      top_10_dominance: d?.market_cap_percentage ? Object.entries(d.market_cap_percentage).slice(0, 10).map(([k, v]) => ({ symbol: k, dominance_pct: Math.round(v * 100) / 100 })) : [],
+      total_market_cap_usd: d?.total_market_cap?.usd ?? null,
+      total_volume_24h_usd: d?.total_volume?.usd ?? null,
+      active_cryptocurrencies: d?.active_cryptocurrencies ?? null,
+      markets: d?.markets ?? null,
+      market_cap_change_24h_pct: d?.market_cap_change_percentage_24h_usd ?? null,
+      data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com",
+      data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms",
+      request_id: reqId(),
+    });
+  } catch (e) { console.error("[crypto-dominance]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── nft-collection-stats ────────────────────────────────────────────────────
+router.post("/nft-collection-stats", ...toolMiddleware("nft-collection-stats"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "nft-collection-stats", 2); if (!ok) return; }
+  const { collection } = req.body as { collection?: string };
+  if (!collection) { res.status(400).json({ ok: false, error: "invalid_request", message: "collection is required (e.g. bored-ape-yacht-club)", request_id: reqId() }); return; }
+  try {
+    const slug = collection.toLowerCase().trim();
+    const parseCollection = (c: any) => ({
+      name: c.name ?? collection, slug: c.slug ?? slug,
+      floor_price_eth: c.floorAsk?.price?.amount?.native ?? null,
+      floor_price_usd: c.floorAsk?.price?.amount?.usd ?? null,
+      volume_24h: c.volume?.["1day"] ?? null, volume_7d: c.volume?.["7day"] ?? null,
+      volume_all_time: c.volume?.allTime ?? null,
+      token_count: c.tokenCount ?? null, owner_count: c.ownerCount ?? null,
+      image: c.image ?? null, description: c.description?.slice(0, 500) ?? null,
+    });
+    // Try by slug first, then by name
+    for (const param of [`slug=${encodeURIComponent(slug)}`, `name=${encodeURIComponent(collection)}`]) {
+      const r = await fetch(`https://api.reservoir.tools/collections/v7?${param}&limit=1`, {
+        headers: { "Accept": "application/json", "User-Agent": "ArchTools/1.9" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (r.ok) {
+        const data = await r.json() as { collections?: any[] };
+        if (data.collections?.length) {
+          res.json({ ok: true, collection: parseCollection(data.collections[0]), data_source: "Reservoir", attribution: "Powered by Reservoir API — https://reservoir.tools", request_id: reqId() });
+          return;
+        }
+      }
+    }
+    res.status(404).json({ ok: false, error: "not_found", message: `NFT collection '${collection}' not found`, request_id: reqId() });
+  } catch (e) { console.error("[nft-collection-stats]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── base-tx-decode ──────────────────────────────────────────────────────────
+router.post("/base-tx-decode", ...toolMiddleware("base-tx-decode"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "base-tx-decode", 1); if (!ok) return; }
+  const { txHash } = req.body as { txHash?: string };
+  if (!txHash || !/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "txHash is required and must be a valid transaction hash (0x + 64 hex chars)", request_id: reqId() }); return;
+  }
+  try {
+    const txResp = await fetch("https://mainnet.base.org", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getTransactionByHash", params: [txHash], id: 1 }),
+    });
+    if (!txResp.ok) { res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${txResp.status}`, request_id: reqId() }); return; }
+    const txData = await txResp.json() as { result?: any };
+    const tx = txData.result;
+    if (!tx) { res.status(404).json({ ok: false, error: "not_found", message: `Transaction '${txHash}' not found on Base`, request_id: reqId() }); return; }
+
+    const receiptResp = await fetch("https://mainnet.base.org", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getTransactionReceipt", params: [txHash], id: 2 }),
+    });
+    let status: string = "pending";
+    let gasUsed: number | null = null;
+    let effectiveGasPrice: number | null = null;
+    if (receiptResp.ok) {
+      const receiptData = await receiptResp.json() as { result?: any };
+      const receipt = receiptData.result;
+      if (receipt) {
+        status = receipt.status === "0x1" ? "success" : receipt.status === "0x0" ? "failed" : "pending";
+        gasUsed = receipt.gasUsed ? parseInt(receipt.gasUsed, 16) : null;
+        effectiveGasPrice = receipt.effectiveGasPrice ? parseInt(receipt.effectiveGasPrice, 16) : null;
+      }
+    }
+
+    const valueWei = tx.value ? BigInt(tx.value) : BigInt(0);
+    const valueEth = Number(valueWei) / 1e18;
+    const gasLimit = tx.gas ? parseInt(tx.gas, 16) : null;
+    const gasPriceWei = tx.gasPrice ? parseInt(tx.gasPrice, 16) : null;
+    const blockNumber = tx.blockNumber ? parseInt(tx.blockNumber, 16) : null;
+    const nonce = tx.nonce ? parseInt(tx.nonce, 16) : null;
+    const inputData = tx.input ?? "0x";
+    const methodSig = inputData.length >= 10 ? inputData.slice(0, 10) : null;
+
+    let txFeeEth: number | null = null;
+    if (gasUsed !== null && effectiveGasPrice !== null) {
+      txFeeEth = (gasUsed * effectiveGasPrice) / 1e18;
+    } else if (gasUsed !== null && gasPriceWei !== null) {
+      txFeeEth = (gasUsed * gasPriceWei) / 1e18;
+    }
+
+    res.json({
+      ok: true, txHash, network: "base", status,
+      from: tx.from ?? null, to: tx.to ?? null,
+      value_wei: valueWei.toString(), value_eth: Math.round(valueEth * 1e8) / 1e8,
+      block_number: blockNumber, nonce,
+      gas_limit: gasLimit, gas_used: gasUsed,
+      gas_price_gwei: gasPriceWei !== null ? Math.round((gasPriceWei / 1e9) * 1000) / 1000 : null,
+      tx_fee_eth: txFeeEth !== null ? Math.round(txFeeEth * 1e8) / 1e8 : null,
+      method_signature: methodSig,
+      has_input_data: inputData !== "0x" && inputData.length > 2,
+      input_data_size: inputData.length > 2 ? (inputData.length - 2) / 2 : 0,
+      data_source: "Base Mainnet RPC", request_id: reqId(),
+    });
+  } catch (e) { console.error("[base-tx-decode]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with
