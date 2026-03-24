@@ -3600,6 +3600,199 @@ router.post("/color-convert", ...toolMiddleware("color-convert"), async (req: Au
   } catch (e) { res.status(422).json({ ok: false, error: "conversion_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── JWT-DECODE ──────────────────────────────────────────────────────────────
+
+router.post("/jwt-decode", ...toolMiddleware("jwt-decode"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "jwt-decode", 1); if (!ok) return; }
+  const { token } = req.body as { token?: string };
+  if (!token || typeof token !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "token is required", request_id: reqId() }); return; }
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2 || parts.length > 3) { res.status(422).json({ ok: false, error: "invalid_token", message: "Token must have 2 or 3 parts separated by dots", request_id: reqId() }); return; }
+    const decodeBase64Url = (s: string): string => {
+      const padded = s.replace(/-/g, "+").replace(/_/g, "/");
+      return Buffer.from(padded, "base64").toString("utf8");
+    };
+    let header: unknown;
+    let payload: unknown;
+    try { header = JSON.parse(decodeBase64Url(parts[0])); } catch { res.status(422).json({ ok: false, error: "invalid_token", message: "Could not decode JWT header", request_id: reqId() }); return; }
+    try { payload = JSON.parse(decodeBase64Url(parts[1])); } catch { res.status(422).json({ ok: false, error: "invalid_token", message: "Could not decode JWT payload", request_id: reqId() }); return; }
+    const signaturePresent = parts.length === 3 && parts[2].length > 0;
+    const exp = (payload as Record<string, unknown>)?.exp;
+    let isExpired: boolean | null = null;
+    let expiryDate: string | null = null;
+    if (typeof exp === "number") {
+      const expiryMs = exp * 1000;
+      isExpired = Date.now() > expiryMs;
+      expiryDate = new Date(expiryMs).toISOString();
+    }
+    res.json({ ok: true, header, payload, signature_present: signaturePresent, is_expired: isExpired, expiry_date: expiryDate, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "decode_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── CSS-MINIFY ──────────────────────────────────────────────────────────────
+
+router.post("/css-minify", ...toolMiddleware("css-minify"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "css-minify", 1); if (!ok) return; }
+  const { css } = req.body as { css?: string };
+  if (!css || typeof css !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "css is required", request_id: reqId() }); return; }
+  try {
+    const originalBytes = Buffer.byteLength(css, "utf8");
+    let minified = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    minified = minified.replace(/\s+/g, " ");
+    minified = minified.replace(/\s*([{}:;,>~+])\s*/g, "$1");
+    minified = minified.replace(/;}/g, "}");
+    minified = minified.trim();
+    const minifiedBytes = Buffer.byteLength(minified, "utf8");
+    const reductionPct = originalBytes > 0 ? Math.round(((originalBytes - minifiedBytes) / originalBytes) * 10000) / 100 : 0;
+    res.json({ ok: true, minified, original_bytes: originalBytes, minified_bytes: minifiedBytes, reduction_pct: reductionPct, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "minify_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── MARKDOWN-TO-HTML ────────────────────────────────────────────────────────
+
+router.post("/markdown-to-html", ...toolMiddleware("markdown-to-html"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "markdown-to-html", 1); if (!ok) return; }
+  const { markdown } = req.body as { markdown?: string };
+  if (!markdown || typeof markdown !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "markdown is required", request_id: reqId() }); return; }
+  try {
+    let html = markdown;
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => `<pre><code${lang ? ` class="language-${lang}"` : ""}>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`);
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    html = html.replace(/^######\s+(.+)$/gm, "<h6>$1</h6>");
+    html = html.replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>");
+    html = html.replace(/^####\s+(.+)$/gm, "<h4>$1</h4>");
+    html = html.replace(/^###\s+(.+)$/gm, "<h3>$1</h3>");
+    html = html.replace(/^##\s+(.+)$/gm, "<h2>$1</h2>");
+    html = html.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+    html = html.replace(/^---$/gm, "<hr>");
+    html = html.replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+    html = html.replace(/^[-*]\s+(.+)$/gm, "<li>$1</li>");
+    html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, "<ul>$1</ul>");
+    html = html.replace(/^(?!<[a-z])((?!^\s*$).+)$/gm, "<p>$1</p>");
+    html = html.replace(/<p>\s*<\/p>/g, "");
+    html = html.trim();
+    res.json({ ok: true, html, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "convert_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── NUMBER-FORMAT ───────────────────────────────────────────────────────────
+
+router.post("/number-format", ...toolMiddleware("number-format"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "number-format", 1); if (!ok) return; }
+  const { number, format, currency = "USD", locale = "en-US" } = req.body as { number?: number; format?: string; currency?: string; locale?: string };
+  if (number === undefined || typeof number !== "number") { res.status(400).json({ ok: false, error: "invalid_request", message: "number is required and must be a number", request_id: reqId() }); return; }
+  const validFormats = ["currency", "percentage", "scientific", "ordinal", "words"];
+  if (!format || !validFormats.includes(format)) { res.status(400).json({ ok: false, error: "invalid_request", message: `format is required and must be one of: ${validFormats.join(", ")}`, request_id: reqId() }); return; }
+  try {
+    let formatted: string;
+    switch (format) {
+      case "currency":
+        formatted = new Intl.NumberFormat(locale, { style: "currency", currency }).format(number);
+        break;
+      case "percentage":
+        formatted = new Intl.NumberFormat(locale, { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number / 100);
+        break;
+      case "scientific":
+        formatted = number.toExponential();
+        break;
+      case "ordinal": {
+        const abs = Math.abs(Math.round(number));
+        const suffixes: Record<number, string> = { 1: "st", 2: "nd", 3: "rd" };
+        const mod100 = abs % 100;
+        const mod10 = abs % 10;
+        const suffix = (mod100 >= 11 && mod100 <= 13) ? "th" : (suffixes[mod10] ?? "th");
+        formatted = `${abs}${suffix}`;
+        break;
+      }
+      case "words": {
+        const ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+        const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+        const n = Math.round(number);
+        if (n === 0) { formatted = "zero"; break; }
+        if (n < 0) { formatted = `negative ${Math.abs(n)}`; break; }
+        if (n < 20) { formatted = ones[n]; break; }
+        if (n < 100) { formatted = tens[Math.floor(n / 10)] + (n % 10 ? "-" + ones[n % 10] : ""); break; }
+        if (n < 1000) { formatted = ones[Math.floor(n / 100)] + " hundred" + (n % 100 ? " and " + (n % 100 < 20 ? ones[n % 100] : tens[Math.floor((n % 100) / 10)] + (n % 10 ? "-" + ones[n % 10] : "")) : ""); break; }
+        formatted = new Intl.NumberFormat(locale).format(n) + " (too large for words)";
+        break;
+      }
+      default: formatted = String(number);
+    }
+    res.json({ ok: true, formatted, raw: number, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "format_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── TIMEZONE-NOW ────────────────────────────────────────────────────────────
+
+router.post("/timezone-now", ...toolMiddleware("timezone-now"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "timezone-now", 1); if (!ok) return; }
+  const { timezone, format = "iso" } = req.body as { timezone?: string; format?: string };
+  if (!timezone || typeof timezone !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "timezone is required (e.g. America/New_York)", request_id: reqId() }); return; }
+  const validFormats = ["iso", "readable", "unix"];
+  if (!validFormats.includes(format)) { res.status(400).json({ ok: false, error: "invalid_request", message: `format must be one of: ${validFormats.join(", ")}`, request_id: reqId() }); return; }
+  try {
+    const now = new Date();
+    const tzFormatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZoneName: "longOffset" });
+    const formatted = tzFormatter.format(now);
+    const offsetMatch = formatted.match(/GMT([+-]\d{2}:\d{2})/);
+    const utcOffset = offsetMatch ? offsetMatch[1] : "unknown";
+    const shortFormatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "short" });
+    const shortParts = shortFormatter.formatToParts(now);
+    const timezoneName = shortParts.find(p => p.type === "timeZoneName")?.value ?? timezone;
+    const jan = new Date(now.getFullYear(), 0, 1);
+    const jul = new Date(now.getFullYear(), 6, 1);
+    const janOffset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "longOffset" }).format(jan);
+    const julOffset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "longOffset" }).format(jul);
+    const isDst = janOffset !== julOffset && formatted.includes(julOffset.match(/GMT([+-]\d{2}:\d{2})/)?.[1] ?? "___NOMATCH___") ? true : janOffset !== julOffset && formatted.includes(janOffset.match(/GMT([+-]\d{2}:\d{2})/)?.[1] ?? "___NOMATCH___") ? false : null;
+    let datetime: string;
+    const readableFormatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+    switch (format) {
+      case "unix": datetime = Math.floor(now.getTime() / 1000).toString(); break;
+      case "readable": datetime = readableFormatter.format(now); break;
+      default: datetime = now.toLocaleString("sv-SE", { timeZone: timezone }).replace(" ", "T"); break;
+    }
+    res.json({ ok: true, datetime, unix_timestamp: Math.floor(now.getTime() / 1000), utc_offset: utcOffset, timezone_name: timezoneName, is_dst: isDst, request_id: reqId() });
+  } catch (e) {
+    const msg = safeErr(e);
+    if (msg.includes("Invalid time zone") || msg.includes("timeZone")) {
+      res.status(422).json({ ok: false, error: "invalid_timezone", message: `Invalid timezone: ${timezone}`, request_id: reqId() });
+    } else {
+      res.status(500).json({ ok: false, error: "timezone_error", message: msg, request_id: reqId() });
+    }
+  }
+});
+
+// ─── HTML-EXTRACT-TEXT ───────────────────────────────────────────────────────
+
+router.post("/html-extract-text", ...toolMiddleware("html-extract-text"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "html-extract-text", 1); if (!ok) return; }
+  const { html } = req.body as { html?: string };
+  if (!html || typeof html !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "html is required", request_id: reqId() }); return; }
+  try {
+    let text = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+    text = text.replace(/<style[\s\S]*?<\/style>/gi, "");
+    text = text.replace(/<[^>]+>/g, " ");
+    text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+    text = text.replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code, 10)));
+    text = text.replace(/&#x([0-9a-fA-F]+);/g, (_m, code) => String.fromCharCode(parseInt(code, 16)));
+    text = text.replace(/\s+/g, " ").trim();
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    res.json({ ok: true, text, word_count: words.length, char_count: text.length, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "extract_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with
