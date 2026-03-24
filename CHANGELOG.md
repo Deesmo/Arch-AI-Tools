@@ -2,6 +2,23 @@
 
 All notable changes to Arch AI Tools will be documented in this file.
 
+## [1.9.0] — 2026-03-23
+
+### Added
+- New tools: wallet-balance (CDP Token Balances API), address-history (CDP Transaction History API), gas-price (Base RPC eth_gasPrice)
+- AgentKit MCP server: api/src/mcp/ added for Claude Desktop, Cursor, VS Code integration
+- Dual-catalog registration: CDP Bazaar + x402.org discovery
+- Bazaar extension: all routes now have discovery metadata via declareDiscoveryExtension
+- RENDER_API_KEY added to GitHub Secrets
+
+### Changed
+- Pricing floor: 61 tools raised to $0.010+ minimum
+- CDP ES256 API key: replaced broken Ed25519 key with ES256 (required by CDP facilitator)
+- Prisma migration completed for x402Payment model
+
+### Fixed
+- CDP env var alias resolution (CDP_API_KEY → CDP_API_KEY_ID) in x402.ts
+
 ## [1.8.0] — 2026-03-15
 
 ### Added

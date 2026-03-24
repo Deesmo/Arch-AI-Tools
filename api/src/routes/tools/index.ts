@@ -2725,6 +2725,71 @@ router.post("/wallet-balance", ...toolMiddleware("wallet-balance"), async (req: 
   } catch (e) { console.error("[wallet-balance]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+// ─── address-history ─────────────────────────────────────────────────────────
+router.post("/address-history", ...toolMiddleware("address-history"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "address-history", 1); if (!ok) return; }
+  const { address, limit = 20 } = req.body as { address?: string; limit?: number };
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "address is required and must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
+    return;
+  }
+  const n = Math.min(Math.max(1, limit), 100);
+  try {
+    const requestPath = `/platform/v2/evm/transaction-history/base/${address}`;
+    const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+    const jwt = await generateJwt({
+      apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+      apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+      requestMethod: "GET",
+      requestHost: "api.cdp.coinbase.com",
+      requestPath,
+    });
+    const r = await fetch(`https://api.cdp.coinbase.com${requestPath}?limit=${n}`, {
+      headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json" },
+    });
+    if (!r.ok) {
+      const errText = await r.text().catch(() => "");
+      console.error("[address-history] CDP error:", r.status, errText);
+      res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+      return;
+    }
+    const data = await r.json() as { transactions?: any[]; next_page_token?: string };
+    const transactions = (data.transactions ?? []).slice(0, n).map((tx: any) => ({
+      hash: tx.transaction_hash ?? tx.hash ?? "",
+      block_number: tx.block_number ?? null,
+      timestamp: tx.block_timestamp ?? tx.timestamp ?? null,
+      from: tx.from_address ?? tx.from ?? "",
+      to: tx.to_address ?? tx.to ?? "",
+      value: tx.value ?? "0",
+      status: tx.status ?? "unknown",
+    }));
+    res.json({ ok: true, address, network: "base", transactions, count: transactions.length, data_source: "Coinbase Developer Platform", request_id: reqId() });
+  } catch (e) { console.error("[address-history]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
+// ─── gas-price ───────────────────────────────────────────────────────────────
+router.post("/gas-price", ...toolMiddleware("gas-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "gas-price", 1); if (!ok) return; }
+  try {
+    const r = await fetch("https://mainnet.base.org", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }),
+    });
+    if (!r.ok) {
+      res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
+      return;
+    }
+    const data = await r.json() as { result?: string };
+    const hexWei = data.result ?? "0x0";
+    const wei = BigInt(hexWei);
+    const gweiNum = Number(wei) / 1e9;
+    res.json({ ok: true, network: "base", gas_price_wei: wei.toString(), gas_price_gwei: Math.round(gweiNum * 1000) / 1000, gas_price_hex: hexWei, data_source: "Base Mainnet RPC", request_id: reqId() });
+  } catch (e) { console.error("[gas-price]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
 // x402scan sends GET to each endpoint and expects 402 Payment Required.
 // Our tools are POST-only, so GET would 404. This catch-all returns 402 with
