@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arch Tools API",
-    "version": "1.8.0",
-    "description": "61 production-ready API tools for AI agents and developers. Web scraping, AI generation, image creation, audio transcription, crypto data, email, domain checks, research, video generation, and more.",
+    "version": "1.10.0",
+    "description": "Production-ready API tools for developers and AI agents. Use one API key across the platform or pay with x402 USDC micropayments.",
     "contact": {
       "url": "https://archtools.dev",
       "email": "support@archtools.dev"

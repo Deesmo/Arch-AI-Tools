@@ -342,6 +342,7 @@ app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirn
 // /wallet → 302 redirect to /fund (302 not 301 — keeps it reversible if /wallet becomes its own page)
 app.get("/wallet", (_req: Request, res: Response) => res.redirect(302, "/fund"));
 app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/use-cases", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/use-cases.html')));
 app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
 app.get("/admin.html", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
@@ -403,6 +404,32 @@ app.get("/success", (_req: Request, res: Response) => {
 // x402 SDK status endpoint
 app.get("/v1/x402/status", (_req: Request, res: Response) => {
   res.json({ ok: true, x402_sdk: getX402SdkStatus() });
+});
+
+app.get("/v1/health/x402", async (_req: Request, res: Response) => {
+  try {
+    const testUrl = `http://localhost:${process.env.PORT ?? 10000}/v1/tools/generate-hash`;
+    const r = await fetch(testUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "gate-test" }),
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => null);
+
+    const gateWorking = r?.status === 402;
+    res.status(gateWorking ? 200 : 503).json({
+      ok: gateWorking,
+      gate_status: gateWorking ? "ok" : "BROKEN",
+      expected_status: 402,
+      actual_status: r?.status ?? "error",
+      message: gateWorking
+        ? "x402 payment gate is working correctly - unauthenticated requests return 402"
+        : "CRITICAL: x402 payment gate is BROKEN - unauthenticated requests are not returning 402",
+      checked_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(503).json({ ok: false, gate_status: "ERROR", message: String(err) });
+  }
 });
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────
