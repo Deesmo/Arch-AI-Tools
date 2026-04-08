@@ -2567,33 +2567,54 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
   const ratioAliases: Record<string, string> = {
-    "16:9": "1280:768",
-    "9:16": "768:1280",
-    "1280:720": "1280:768",
-    "720:1280": "768:1280",
+    "16:9": "1280:720",
+    "9:16": "720:1280",
+    "1280:768": "1280:720",
+    "768:1280": "720:1280",
   };
   const resolvedRatio = ratioAliases[aspect_ratio] ?? aspect_ratio;
-  const validRatios = ["1280:768", "768:1280"];
+  const validRatios = ["1280:720", "720:1280"];
   if (!validRatios.includes(resolvedRatio)) {
-    res.status(400).json({ ok: false, error: "invalid_request", message: "aspect_ratio must be one of: 16:9, 9:16, 1280:768, 768:1280", request_id: reqId() });
+    res.status(400).json({ ok: false, error: "invalid_request", message: "aspect_ratio must be one of: 16:9, 9:16, 1280:720, 720:1280", request_id: reqId() });
     return;
   }
   const runwayKey = process.env.RUNWAY_API_KEY;
   if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
   try {
-    // Start video generation task
-    const startResp = await axios.post("https://api.dev.runwayml.com/v1/text_to_video",
-      { model: "gen3a_turbo", promptText: prompt, duration, ratio: resolvedRatio, watermark: false },
-      {
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
-        timeout: 30000,
-        validateStatus: () => true,
-      });
-    if (startResp.status < 200 || startResp.status >= 300) {
-      const err = typeof startResp.data === "string" ? startResp.data : JSON.stringify(startResp.data);
-      console.error("[video-generate] Runway start error:", startResp.status, err);
-      res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${startResp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+    const candidateModels = [process.env.RUNWAY_VIDEO_MODEL, "gen4.5"].filter((value, index, self): value is string => !!value && self.indexOf(value) === index);
+    let startResp: import("axios").AxiosResponse<{ id?: string }> | null = null;
+    let startError: string | null = null;
+    let selectedModel: string | null = null;
+
+    for (const model of candidateModels) {
+      const attempt = await axios.post("https://api.dev.runwayml.com/v1/text_to_video",
+        { model, promptText: prompt, duration, ratio: resolvedRatio, watermark: false },
+        {
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+          timeout: 30000,
+          validateStatus: () => true,
+        });
+
+      if (attempt.status >= 200 && attempt.status < 300) {
+        startResp = attempt as import("axios").AxiosResponse<{ id?: string }>;
+        selectedModel = model;
+        break;
+      }
+
+      const err = typeof attempt.data === "string" ? attempt.data : JSON.stringify(attempt.data);
+      if (attempt.status === 403 && /not available/i.test(err)) {
+        startError = `Runway model ${model} is not available for this API key`;
+        continue;
+      }
+
+      console.error("[video-generate] Runway start error:", attempt.status, err);
+      res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
+
+    if (!startResp || !selectedModel) {
+      res.status(503).json({ ok: false, error: "not_configured", message: startError ?? "No compatible Runway model is configured for this API key", request_id: reqId() }); return;
+    }
+
     const startData = startResp.data as { id?: string };
     const taskId = startData.id;
     if (!taskId) { res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
@@ -2618,7 +2639,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
     }
     if (!videoUrl) { res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() }); return; }
-    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, task_id: taskId, credits_used: 50, request_id: reqId() });
+    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, model: selectedModel, task_id: taskId, credits_used: 50, request_id: reqId() });
   } catch (e) { console.error("[video-generate]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2714,9 +2735,9 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   const apiSecret = process.env.X_API_SECRET;
   const accessToken = process.env.X_ACCESS_TOKEN;
   const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
-  const bearerToken = process.env.X_USER_ACCESS_TOKEN || process.env.X_BEARER_TOKEN || accessToken;
-  if (!bearerToken && (!apiKey || !apiSecret || !accessToken || !accessTokenSecret)) {
-    res.status(503).json({ ok: false, error: "not_configured", message: "X/Twitter API credentials not configured", request_id: reqId() }); return;
+  const userAccessToken = process.env.X_USER_ACCESS_TOKEN;
+  if (!userAccessToken && (!apiKey || !apiSecret || !accessToken || !accessTokenSecret)) {
+    res.status(503).json({ ok: false, error: "not_configured", message: "X posting requires either X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens", request_id: reqId() }); return;
   }
   try {
     const body: Record<string, unknown> = { text };
@@ -2725,9 +2746,9 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
     const errors: string[] = [];
     let data: { data?: { id?: string; text?: string } } | null = null;
 
-    if (bearerToken) {
+    if (userAccessToken) {
       const bearerResp = await axios.post(url, body, {
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${bearerToken}` },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userAccessToken}` },
         timeout: 15000,
         validateStatus: () => true,
       });
@@ -2772,7 +2793,15 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
 
     if (!data) {
       console.error("[social-post] X auth failed:", errors.join(" | "));
-      res.status(502).json({ ok: false, error: "twitter_error", message: errors.join(" | ") || "X API post failed", request_id: reqId() });
+      const authConfigError = errors.some(msg => /unsupported authentication|oauth1 app permissions/i.test(msg));
+      res.status(authConfigError ? 503 : 502).json({
+        ok: false,
+        error: authConfigError ? "not_configured" : "twitter_error",
+        message: authConfigError
+          ? "X posting is configured with unsupported auth. Use X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or enable write permissions for your OAuth 1.0a app and regenerate the access token."
+          : (errors.join(" | ") || "X API post failed"),
+        request_id: reqId()
+      });
       return;
     }
     const tweetId = data.data?.id ?? "";

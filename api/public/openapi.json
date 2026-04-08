@@ -1943,7 +1943,7 @@
                   },
                   "aspect_ratio": {
                     "type": "string",
-                    "enum": ["16:9", "9:16", "1280:768", "768:1280"],
+                    "enum": ["16:9", "9:16", "1280:720", "720:1280"],
                     "default": "16:9",
                     "description": "Output aspect ratio"
                   }
@@ -2070,6 +2070,7 @@
         "operationId": "socialPost",
         "summary": "Post a tweet to X/Twitter via API v2",
         "tags": ["Communication"],
+        "description": "Requires either X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens with write permissions enabled in the X developer app.",
         "requestBody": {
           "required": true,
           "content": {
