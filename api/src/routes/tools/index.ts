@@ -2735,9 +2735,19 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   const apiSecret = process.env.X_API_SECRET;
   const accessToken = process.env.X_ACCESS_TOKEN;
   const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
-  const userAccessToken = process.env.X_USER_ACCESS_TOKEN;
-  if (!userAccessToken && (!apiKey || !apiSecret || !accessToken || !accessTokenSecret)) {
-    res.status(503).json({ ok: false, error: "not_configured", message: "X posting requires either X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens", request_id: reqId() }); return;
+  const oauth2UserToken =
+    process.env.X_USER_ACCESS_TOKEN
+    ?? process.env.X_OAUTH2_USER_ACCESS_TOKEN
+    ?? (accessToken && !accessTokenSecret ? accessToken : undefined)
+    ?? undefined;
+  const hasOauth1 = !!(apiKey && apiSecret && accessToken && accessTokenSecret);
+  if (!oauth2UserToken && !hasOauth1) {
+    res.status(503).json({
+      ok: false,
+      error: "not_configured",
+      message: "X posting requires either X_USER_ACCESS_TOKEN/X_OAUTH2_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens",
+      request_id: reqId()
+    }); return;
   }
   try {
     const body: Record<string, unknown> = { text };
@@ -2746,9 +2756,9 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
     const errors: string[] = [];
     let data: { data?: { id?: string; text?: string } } | null = null;
 
-    if (userAccessToken) {
+    if (oauth2UserToken) {
       const bearerResp = await axios.post(url, body, {
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${userAccessToken}` },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${oauth2UserToken}` },
         timeout: 15000,
         validateStatus: () => true,
       });
@@ -2760,7 +2770,7 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
       }
     }
 
-    if (!data && apiKey && apiSecret && accessToken && accessTokenSecret) {
+    if (!data && hasOauth1 && apiKey && apiSecret && accessToken && accessTokenSecret) {
       const method = "POST";
       const timestamp = Math.floor(Date.now() / 1000).toString();
       const nonce = crypto.randomBytes(16).toString("hex");
@@ -2798,7 +2808,7 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
         ok: false,
         error: authConfigError ? "not_configured" : "twitter_error",
         message: authConfigError
-          ? "X posting is configured with unsupported auth. Use X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or enable write permissions for your OAuth 1.0a app and regenerate the access token."
+          ? "X posting is configured with unsupported auth. Use X_USER_ACCESS_TOKEN or X_OAUTH2_USER_ACCESS_TOKEN for OAuth 2.0 user context, or enable write permissions for your OAuth 1.0a app and regenerate the access token."
           : (errors.join(" | ") || "X API post failed"),
         request_id: reqId()
       });
