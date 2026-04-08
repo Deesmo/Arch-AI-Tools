@@ -2775,7 +2775,7 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
       const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
       const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
       const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
-      const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
+      const signingKey = `${apiSecret}&${accessTokenSecret}`;
       const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
       const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
       const oauthResp = await axios.post(url, body, {
