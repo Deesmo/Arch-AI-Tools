@@ -1230,22 +1230,26 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": ["data"],
                 "properties": {
-                  "text": {
+                  "data": {
                     "type": "string",
                     "description": "Text or number to encode"
                   },
-                  "format": {
+                  "value": {
                     "type": "string",
-                    "enum": ["CODE128", "EAN13", "UPC", "CODE39", "ITF14"],
-                    "default": "CODE128",
-                    "description": "Barcode format"
+                    "description": "Alias for data"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["code128", "qr"],
+                    "default": "code128",
+                    "description": "Barcode type"
                   },
                   "width": {
                     "type": "integer",
-                    "default": 2,
-                    "description": "Bar width"
+                    "default": 250,
+                    "description": "Output width in pixels"
                   },
                   "height": {
                     "type": "integer",
@@ -1279,15 +1283,18 @@
                     "type": "string",
                     "description": "High-level goal for the workflow agent"
                   },
-                  "tools": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "List of tool names the agent can use"
+                  "context": {
+                    "type": "string",
+                    "description": "Optional additional context for the workflow"
+                  },
+                  "steps": {
+                    "type": "integer",
+                    "default": 3,
+                    "description": "Target number of workflow steps"
                   },
                   "max_steps": {
                     "type": "integer",
-                    "default": 5,
-                    "description": "Maximum number of steps the agent can take"
+                    "description": "Legacy alias for steps"
                   }
                 }
               }
@@ -1550,22 +1557,26 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["namespace"],
                 "properties": {
-                  "system": {
+                  "namespace": {
+                    "type": "string",
+                    "description": "Session namespace or grouping key"
+                  },
+                  "system_prompt": {
                     "type": "string",
                     "description": "System prompt for the session"
                   },
+                  "system": {
+                    "type": "string",
+                    "description": "Legacy alias for system_prompt"
+                  },
                   "model": {
                     "type": "string",
-                    "enum": ["claude", "gpt4", "grok", "gemini"],
-                    "default": "claude",
+                    "enum": ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"],
+                    "default": "claude-sonnet-4-6",
                     "description": "AI model to use"
                   },
-                  "ttl": {
-                    "type": "integer",
-                    "default": 3600,
-                    "description": "Session time-to-live in seconds"
-                  }
                 }
               }
             }
@@ -1846,15 +1857,19 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["topic"],
+                "required": ["query"],
                 "properties": {
-                  "topic": {
+                  "query": {
                     "type": "string",
                     "description": "Research topic or question"
                   },
+                  "topic": {
+                    "type": "string",
+                    "description": "Legacy alias for query"
+                  },
                   "depth": {
                     "type": "string",
-                    "enum": ["brief", "standard", "comprehensive"],
+                    "enum": ["brief", "standard", "deep"],
                     "default": "standard",
                     "description": "Report depth level"
                   },
@@ -1923,8 +1938,14 @@
                   },
                   "duration": {
                     "type": "integer",
-                    "default": 4,
-                    "description": "Video duration in seconds (4 or 10)"
+                    "default": 5,
+                    "description": "Video duration in seconds (5 or 10)"
+                  },
+                  "aspect_ratio": {
+                    "type": "string",
+                    "enum": ["16:9", "9:16", "1280:768", "768:1280"],
+                    "default": "16:9",
+                    "description": "Output aspect ratio"
                   }
                 }
               }

@@ -73,6 +73,12 @@ function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
 }
 
+function extractJsonObject(text: string): string | null {
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  return match ? match[0] : null;
+}
+
 // ─── 1. VALIDATE-DATA ────────────────────────────────────────────────────────
 
 router.post("/validate-data", ...toolMiddleware("validate-data"), async (req: AuthedRequest, res: Response): Promise<void> => {
@@ -1409,7 +1415,9 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     if (!ok) return;
   }
   const barcodeData = (req.body.value ?? req.body.data) as string | undefined;
-  const { type = "code128", width = 250, height = 100 } = req.body as { type?: string; width?: number; height?: number };
+  const requestedType = String(req.body.type ?? req.body.format ?? "code128").toLowerCase();
+  const type = requestedType === "code128" ? "code128" : requestedType;
+  const { width = 250, height = 100 } = req.body as { width?: number; height?: number };
   if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() }); return; }
   const validTypes = ["code128", "qr"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
@@ -1456,7 +1464,9 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
     if (!ok) return;
   }
   if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { goal, context, steps } = req.body as { goal?: string; context?: string; steps?: number };
+  const { goal, context } = req.body as { goal?: string; context?: string };
+  const requestedSteps = Number(req.body.steps ?? req.body.max_steps ?? 3);
+  const stepCount = Number.isFinite(requestedSteps) ? Math.max(1, Math.min(10, Math.floor(requestedSteps))) : 3;
   if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal is required", request_id: reqId() }); return; }
   try {
     const msg = await anthropic.messages.create({
@@ -1464,12 +1474,24 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
       max_tokens: 3000,
       messages: [{
         role: "user",
-        content: `You are an autonomous agent. Complete this goal in ${steps ?? 3} steps, then provide a final answer.\n\nGoal: ${goal}\n${context ? `Context: ${context}` : ""}\n\nReturn ONLY JSON:\n{"steps": [{"step": 1, "action": "...", "result": "..."}], "final_answer": "...", "success": true}`,
+        content: `You are an autonomous agent. Complete this goal in ${stepCount} steps, then provide a final answer.\n\nGoal: ${goal}\n${context ? `Context: ${context}` : ""}\n\nReturn ONLY JSON:\n{"steps": [{"step": 1, "action": "...", "result": "..."}], "final_answer": "...", "success": true}`,
       }],
     });
     const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { steps?: unknown[]; final_answer?: string; success?: boolean };
-    res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
+    const parsedText = extractJsonObject(raw);
+    if (parsedText) {
+      const parsed = JSON.parse(parsedText) as { steps?: unknown[]; final_answer?: string; success?: boolean };
+      res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
+      return;
+    }
+    res.json({
+      ok: true,
+      goal,
+      steps: [{ step: 1, action: "model_response", result: raw.trim() }],
+      final_answer: raw.trim(),
+      success: true,
+      request_id: reqId(),
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: "workflow_error", message: safeErr(e), request_id: reqId() });
   }
@@ -2195,7 +2217,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
 router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "research-report", 15); if (!ok) return; }
-  const query = String(req.body.query ?? req.query.query ?? "").trim();
+  const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
@@ -2397,7 +2419,8 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     const ok = await deductCredits(req, res, "session-create", 5);
     if (!ok) return;
   }
-  const { namespace, system_prompt, model } = req.body as { namespace?: string; system_prompt?: string; model?: string };
+  const { namespace, model } = req.body as { namespace?: string; model?: string };
+  const systemPrompt = req.body.system_prompt ?? req.body.system;
   if (!namespace || typeof namespace !== "string") {
     res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
     return;
@@ -2421,7 +2444,7 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
   const session: SessionData = {
     session_id,
     namespace: namespace.slice(0, 100),
-    system_prompt: system_prompt ? String(system_prompt).slice(0, 4000) : null,
+    system_prompt: systemPrompt ? String(systemPrompt).slice(0, 4000) : null,
     model: resolvedModel,
     messages: [],
     created_at,
@@ -2543,6 +2566,18 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
+  const ratioAliases: Record<string, string> = {
+    "16:9": "1280:768",
+    "9:16": "768:1280",
+    "1280:720": "1280:768",
+    "720:1280": "768:1280",
+  };
+  const resolvedRatio = ratioAliases[aspect_ratio] ?? aspect_ratio;
+  const validRatios = ["1280:768", "768:1280"];
+  if (!validRatios.includes(resolvedRatio)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "aspect_ratio must be one of: 16:9, 9:16, 1280:768, 768:1280", request_id: reqId() });
+    return;
+  }
   const runwayKey = process.env.RUNWAY_API_KEY;
   if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
   try {
@@ -2550,7 +2585,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
     const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
-      body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: aspect_ratio, watermark: false }),
+      body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: resolvedRatio, watermark: false }),
     });
     if (!startResp.ok) {
       const err = await startResp.text();
@@ -2579,7 +2614,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
     }
     if (!videoUrl) { res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() }); return; }
-    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio, task_id: taskId, credits_used: 50, request_id: reqId() });
+    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, task_id: taskId, credits_used: 50, request_id: reqId() });
   } catch (e) { console.error("[video-generate]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2675,48 +2710,67 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   const apiSecret = process.env.X_API_SECRET;
   const accessToken = process.env.X_ACCESS_TOKEN;
   const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
-  if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
+  const bearerToken = process.env.X_USER_ACCESS_TOKEN || process.env.X_BEARER_TOKEN || accessToken;
+  if (!bearerToken && (!apiKey || !apiSecret || !accessToken || !accessTokenSecret)) {
     res.status(503).json({ ok: false, error: "not_configured", message: "X/Twitter API credentials not configured", request_id: reqId() }); return;
   }
   try {
-    // OAuth 1.0a signature generation
-    const method = "POST";
-    const url = "https://api.twitter.com/2/tweets";
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = crypto.randomBytes(16).toString("hex");
-
-    const oauthParams: Record<string, string> = {
-      oauth_consumer_key: apiKey,
-      oauth_nonce: nonce,
-      oauth_signature_method: "HMAC-SHA1",
-      oauth_timestamp: timestamp,
-      oauth_token: accessToken,
-      oauth_version: "1.0",
-    };
-
-    // Create signature base string
-    const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
-    const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-    const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
-    const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
-    const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
-
-    const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
-
     const body: Record<string, unknown> = { text };
     if (reply_to) body.reply = { in_reply_to_tweet_id: reply_to };
+    const url = "https://api.x.com/2/tweets";
+    const errors: string[] = [];
+    let data: { data?: { id?: string; text?: string } } | null = null;
 
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": authHeader },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) {
-      const err = await resp.text();
-      console.error("[social-post] Twitter error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "twitter_error", message: `Twitter API returned ${resp.status}: ${err.slice(0, 300)}`, request_id: reqId() }); return;
+    if (bearerToken) {
+      const bearerResp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${bearerToken}` },
+        body: JSON.stringify(body),
+      });
+      if (bearerResp.ok) {
+        data = await bearerResp.json() as { data?: { id?: string; text?: string } };
+      } else {
+        const err = await bearerResp.text();
+        errors.push(`Bearer auth returned ${bearerResp.status}: ${err.slice(0, 300)}`);
+      }
     }
-    const data = await resp.json() as { data?: { id?: string; text?: string } };
+
+    if (!data && apiKey && apiSecret && accessToken && accessTokenSecret) {
+      const method = "POST";
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const nonce = crypto.randomBytes(16).toString("hex");
+      const oauthParams: Record<string, string> = {
+        oauth_consumer_key: apiKey,
+        oauth_nonce: nonce,
+        oauth_signature_method: "HMAC-SHA1",
+        oauth_timestamp: timestamp,
+        oauth_token: accessToken,
+        oauth_version: "1.0",
+      };
+      const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
+      const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+      const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+      const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
+      const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
+      const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
+      const oauthResp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": authHeader },
+        body: JSON.stringify(body),
+      });
+      if (oauthResp.ok) {
+        data = await oauthResp.json() as { data?: { id?: string; text?: string } };
+      } else {
+        const err = await oauthResp.text();
+        errors.push(`OAuth 1.0a returned ${oauthResp.status}: ${err.slice(0, 300)}`);
+      }
+    }
+
+    if (!data) {
+      console.error("[social-post] X auth failed:", errors.join(" | "));
+      res.status(502).json({ ok: false, error: "twitter_error", message: errors.join(" | ") || "X API post failed", request_id: reqId() });
+      return;
+    }
     const tweetId = data.data?.id ?? "";
     res.json({ ok: true, tweet_id: tweetId, url: tweetId ? `https://x.com/i/web/status/${tweetId}` : "", text: data.data?.text ?? text, credits_used: 5, request_id: reqId() });
   } catch (e) { console.error("[social-post]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
