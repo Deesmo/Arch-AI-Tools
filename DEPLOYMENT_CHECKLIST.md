@@ -53,7 +53,7 @@ After Render creates everything:
    CORS_ORIGIN=https://archtools.dev,https://www.archtools.dev
    DATABASE_URL=<paste from Step 1>
    ADMIN_KEY=<generate a long random string>
-   FREE_MONTHLY_CREDITS=100
+FREE_MONTHLY_CREDITS=250
    RATE_LIMIT_FREE=60
    RATE_LIMIT_PRO=240
    RATE_LIMIT_BUSINESS=1200
@@ -103,7 +103,7 @@ After Render creates everything:
 3. Environment:
    ```
    DATABASE_URL=<same as API service>
-   FREE_MONTHLY_CREDITS=100
+FREE_MONTHLY_CREDITS=250
    ```
 
 ### Step 7: Configure DNS (Cloudflare)
