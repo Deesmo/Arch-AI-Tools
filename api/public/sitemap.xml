@@ -12,9 +12,9 @@
   <url><loc>https://archtools.dev/agents</loc><priority>0.7</priority></url>
   <url><loc>https://archtools.dev/changelog</loc><priority>0.6</priority></url>
   <url><loc>https://archtools.dev/blog</loc><priority>0.6</priority></url>
-<url><loc>https://archtools.dev/docs/getting-started</loc><priority>0.8</priority></url>
+<url><loc>https://archtools.dev/getting-started</loc><priority>0.8</priority></url>
 <url><loc>https://archtools.dev/quickstart</loc><priority>0.8</priority></url>
 <url><loc>https://archtools.dev/changelog-tonight</loc><priority>0.6</priority></url>
 <url><loc>https://archtools.dev/byok</loc><priority>0.8</priority></url>
-<url><loc>https://archtools.dev/langchain-guide</loc><priority>0.8</priority></url>
+<url><loc>https://archtools.dev/use-cases</loc><priority>0.8</priority></url>
 </urlset>

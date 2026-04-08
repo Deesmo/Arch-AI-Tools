@@ -56,6 +56,10 @@ import analyticsRouter from "./routes/analytics.js";
 import statsRouter from "./routes/stats.js";
 
 const app = express();
+const corsOrigins = config.corsOrigin
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
@@ -116,7 +120,14 @@ const registerLimiter = rateLimit({
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: (origin, callback) => {
+    if (!origin || corsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
   exposedHeaders: [
     "Payment-Required",

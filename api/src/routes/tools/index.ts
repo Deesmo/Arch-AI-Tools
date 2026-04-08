@@ -358,7 +358,8 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "search-web", 5);
     if (!ok) return;
   }
-  const { query, num_results = 5 } = req.body as { query?: string; num_results?: number };
+  const { query, limit, num_results } = req.body as { query?: string; limit?: number; num_results?: number };
+  const resultLimit = Math.min(Math.max(1, limit ?? num_results ?? 5), 10);
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
   // BYOK: check for user-provided search keys
   const byokBraveKeySearch = req.headers["x-brave-key"] as string | undefined;
@@ -369,7 +370,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
     if (braveKey) {
       if (byokBraveKeySearch) console.log(`[BYOK] search-web using user-provided brave key`);
       try {
-        const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
+        const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(resultLimit) }), {
           headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
         });
         if (resp.ok) {
@@ -389,7 +390,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
         const resp = await fetch("https://api.tavily.com/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: tavilyKey, query, max_results: Math.min(num_results, 10) }),
+          body: JSON.stringify({ api_key: tavilyKey, query, max_results: resultLimit }),
         });
         if (resp.ok) {
           const data = await resp.json() as { results?: Array<{ title?: string; url?: string; content?: string }> };
@@ -406,7 +407,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
         const resp = await fetch("https://google.serper.dev/search", {
           method: "POST",
           headers: { "X-API-KEY": process.env.SERPER_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({ q: query, num: Math.min(num_results, 10) }),
+          body: JSON.stringify({ q: query, num: resultLimit }),
         });
         if (resp.ok) {
           const data = await resp.json() as { organic?: Array<{ title?: string; link?: string; snippet?: string }> };

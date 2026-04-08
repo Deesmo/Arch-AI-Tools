@@ -631,7 +631,7 @@ const LLMS_TXT = `# Arch Tools
 
 ## Authentication
 All tool endpoints require an API key:
-  Authorization: Bearer YOUR_API_KEY
+  x-api-key: YOUR_API_KEY
 
 Get a free key (100 credits) at ${BASE_URL}/#register
 
@@ -758,10 +758,10 @@ Privacy: ${BASE_URL}/privacy.html
 
 const OPENAPI_STUB = {
   openapi: "3.0.3",
-  info: { title: "Arch Tools API", version: "1.10.0", description: "64 production-ready API tools for developers and AI agents. Dual payment rails: Stripe + x402 USDC on 15+ chains.", contact: { name: "Arch Tools", url: BASE_URL } },
+  info: { title: "Arch Tools API", version: "1.10.0", description: "Production-ready API tools for developers and AI agents. Dual payment rails: credits + x402 USDC micropayments.", contact: { name: "Arch Tools", url: BASE_URL } },
   servers: [{ url: API_BASE }],
   tags: [{ name: "Tools" }, { name: "Agents" }, { name: "Billing" }],
-  components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API Key" } } },
+  components: { securitySchemes: { apiKeyAuth: { type: "apiKey", in: "header", name: "x-api-key" } } },
 };
 
 const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
