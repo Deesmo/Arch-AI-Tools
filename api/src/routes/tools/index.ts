@@ -1947,6 +1947,41 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
   } catch (e) { console.error("[email-send]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
+
+
+// ─── send-email (alias — same logic as email-send) ────────────────────────────
+router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const paid = isX402Paid(req);
+  if (!paid) { const ok = await deductCredits(req, res, "send-email", 3); if (!ok) return; }
+  const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
+  if (!to || !subject || (!body && !html)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return;
+  }
+  if (!to.includes("@")) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return;
+  }
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return;
+  }
+  try {
+    const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
+    const htmlBody = html ?? "<p>" + (body ?? "").replace(/\n/g, "<br>") + "</p>";
+    const textBody = body ?? (html ?? "").replace(/<[^>]+>/g, "");
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: fromAddr, to: [to], subject, html: htmlBody, text: textBody })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({})) as { message?: string };
+      res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() }); return;
+    }
+    const data = await r.json() as { id?: string };
+    res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });
+  } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+});
+
 // ─── design-create ────────────────────────────────────────────────────────────
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
