@@ -9,12 +9,13 @@
  * Config: Set ARCH_TOOLS_API_KEY env var for credit-based access
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Server } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+  type CallToolRequest,
+} from "@modelcontextprotocol/sdk/types";
 
 const ARCH_TOOLS_BASE_URL = process.env.ARCH_TOOLS_URL || "https://archtools.dev";
 const ARCH_TOOLS_API_KEY = process.env.ARCH_TOOLS_API_KEY || "";
@@ -177,7 +178,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   })),
 }));
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
   const { name, arguments: args } = request.params;
   const tool = ARCH_TOOLS.find((t) => t.name === name);
 
