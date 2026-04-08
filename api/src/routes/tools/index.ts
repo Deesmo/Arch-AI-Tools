@@ -2582,17 +2582,19 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
   try {
     // Start video generation task
-    const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
-      body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: resolvedRatio, watermark: false }),
-    });
-    if (!startResp.ok) {
-      const err = await startResp.text();
+    const startResp = await axios.post("https://api.dev.runwayml.com/v1/text_to_video",
+      { model: "gen3a_turbo", promptText: prompt, duration, ratio: resolvedRatio, watermark: false },
+      {
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+        timeout: 30000,
+        validateStatus: () => true,
+      });
+    if (startResp.status < 200 || startResp.status >= 300) {
+      const err = typeof startResp.data === "string" ? startResp.data : JSON.stringify(startResp.data);
       console.error("[video-generate] Runway start error:", startResp.status, err);
       res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${startResp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
-    const startData = await startResp.json() as { id?: string };
+    const startData = startResp.data as { id?: string };
     const taskId = startData.id;
     if (!taskId) { res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
 
@@ -2600,11 +2602,13 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
     let videoUrl: string | null = null;
     for (let i = 0; i < 24; i++) {
       await new Promise(r => setTimeout(r, 5000));
-      const pollResp = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+      const pollResp = await axios.get(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: { "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+        timeout: 15000,
+        validateStatus: () => true,
       });
-      if (!pollResp.ok) continue;
-      const pollData = await pollResp.json() as { status?: string; output?: string[]; failure?: string; failureCode?: string };
+      if (pollResp.status < 200 || pollResp.status >= 300) continue;
+      const pollData = pollResp.data as { status?: string; output?: string[]; failure?: string; failureCode?: string };
       if (pollData.status === "SUCCEEDED" && pollData.output?.length) {
         videoUrl = pollData.output[0];
         break;
@@ -2717,20 +2721,20 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   try {
     const body: Record<string, unknown> = { text };
     if (reply_to) body.reply = { in_reply_to_tweet_id: reply_to };
-    const url = "https://api.x.com/2/tweets";
+    const url = "https://api.twitter.com/2/tweets";
     const errors: string[] = [];
     let data: { data?: { id?: string; text?: string } } | null = null;
 
     if (bearerToken) {
-      const bearerResp = await fetch(url, {
-        method: "POST",
+      const bearerResp = await axios.post(url, body, {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${bearerToken}` },
-        body: JSON.stringify(body),
+        timeout: 15000,
+        validateStatus: () => true,
       });
-      if (bearerResp.ok) {
-        data = await bearerResp.json() as { data?: { id?: string; text?: string } };
+      if (bearerResp.status >= 200 && bearerResp.status < 300) {
+        data = bearerResp.data as { data?: { id?: string; text?: string } };
       } else {
-        const err = await bearerResp.text();
+        const err = typeof bearerResp.data === "string" ? bearerResp.data : JSON.stringify(bearerResp.data);
         errors.push(`Bearer auth returned ${bearerResp.status}: ${err.slice(0, 300)}`);
       }
     }
@@ -2753,15 +2757,15 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
       const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
       const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
       const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
-      const oauthResp = await fetch(url, {
-        method: "POST",
+      const oauthResp = await axios.post(url, body, {
         headers: { "Content-Type": "application/json", "Authorization": authHeader },
-        body: JSON.stringify(body),
+        timeout: 15000,
+        validateStatus: () => true,
       });
-      if (oauthResp.ok) {
-        data = await oauthResp.json() as { data?: { id?: string; text?: string } };
+      if (oauthResp.status >= 200 && oauthResp.status < 300) {
+        data = oauthResp.data as { data?: { id?: string; text?: string } };
       } else {
-        const err = await oauthResp.text();
+        const err = typeof oauthResp.data === "string" ? oauthResp.data : JSON.stringify(oauthResp.data);
         errors.push(`OAuth 1.0a returned ${oauthResp.status}: ${err.slice(0, 300)}`);
       }
     }
