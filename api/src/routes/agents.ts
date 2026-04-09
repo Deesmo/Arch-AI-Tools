@@ -17,6 +17,7 @@ import {
   updateAgentReputation,
   BADGE_THRESHOLDS,
 } from "../services/reputation.js";
+import { validateUrl } from "../lib/ssrf.js";
 
 const router = Router();
 
@@ -243,12 +244,22 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Validate callback URL if provided
     if (callback_url) {
       try {
-        new URL(callback_url);
-      } catch {
+        const parsed = new URL(callback_url);
+        if (parsed.protocol !== "https:") {
+          res.status(400).json({
+            ok: false,
+            error: "invalid_request",
+            message: "Invalid callback URL — must use HTTPS",
+            request_id: reqId(),
+          });
+          return;
+        }
+        await validateUrl(callback_url);
+      } catch (e) {
         res.status(400).json({
           ok: false,
           error: "invalid_request",
-          message: "Invalid callback URL",
+          message: e instanceof Error ? e.message : "Invalid callback URL",
           request_id: reqId(),
         });
         return;
@@ -350,7 +361,32 @@ router.put("/profile", requireAuth, async (req: AuthedRequest, res: Response): P
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (wallet_address !== undefined) updateData.walletAddress = wallet_address;
-    if (callback_url !== undefined) updateData.callbackUrl = callback_url;
+    if (callback_url !== undefined) {
+      if (callback_url !== null && callback_url !== "") {
+        try {
+          const parsed = new URL(callback_url);
+          if (parsed.protocol !== "https:") {
+            res.status(400).json({
+              ok: false,
+              error: "invalid_request",
+              message: "Invalid callback URL — must use HTTPS",
+              request_id: reqId(),
+            });
+            return;
+          }
+          await validateUrl(callback_url);
+        } catch (e) {
+          res.status(400).json({
+            ok: false,
+            error: "invalid_request",
+            message: e instanceof Error ? e.message : "Invalid callback URL",
+            request_id: reqId(),
+          });
+          return;
+        }
+      }
+      updateData.callbackUrl = callback_url;
+    }
     if (is_public !== undefined) updateData.isPublic = is_public;
 
     const updated = await prisma.agent.update({

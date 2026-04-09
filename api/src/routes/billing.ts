@@ -5,6 +5,7 @@ import { requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId } from "../utils/credits.js";
 import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
+import { safeErr } from "../utils/credits.js";
 
 const router = Router();
 
@@ -131,7 +132,13 @@ router.post("/checkout", requireAuth, async (req: AuthedRequest, res: Response):
     });
     res.json({ ok: true, url: session.url, session_id: session.id, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "stripe_error", message: String(e), request_id: reqId() });
+    console.error("Stripe checkout error:", e);
+    res.status(500).json({
+      ok: false,
+      error: "stripe_error",
+      message: "Unable to create checkout session.",
+      request_id: reqId(),
+    });
   }
 });
 
@@ -174,7 +181,13 @@ router.post("/subscribe", requireAuth, async (req: AuthedRequest, res: Response)
     });
     res.json({ ok: true, url: session.url, session_id: session.id, plan: planConfig.id, request_id: reqId() });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "stripe_error", message: String(e), request_id: reqId() });
+    console.error("Stripe subscription error:", e);
+    res.status(500).json({
+      ok: false,
+      error: "stripe_error",
+      message: "Unable to create subscription session.",
+      request_id: reqId(),
+    });
   }
 });
 
