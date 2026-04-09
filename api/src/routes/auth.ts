@@ -57,6 +57,21 @@ export function verifySession(token: string): { sub: string } | null {
   }
 }
 
+async function findAgentByApiKey(apiKey: string) {
+  const prefix = apiKey.slice(0, 12);
+  const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } }).catch(() => null);
+  if (candidate) {
+    if (candidate.apiKeyHash) {
+      const match = await bcrypt.compare(apiKey, candidate.apiKeyHash).catch(() => false);
+      if (match) return candidate;
+    } else if (candidate.apiKey === apiKey) {
+      return candidate;
+    }
+  }
+
+  return prisma.agent.findUnique({ where: { apiKey } }).catch(() => null);
+}
+
 router.post("/login-key", loginLimiter, async (req: Request, res: Response): Promise<void> => {
   const { api_key } = req.body ?? {};
   if (!api_key || typeof api_key !== "string" || !api_key.startsWith("arch_")) {
@@ -64,7 +79,7 @@ router.post("/login-key", loginLimiter, async (req: Request, res: Response): Pro
     return;
   }
 
-  const agent = await prisma.agent.findUnique({ where: { apiKey: api_key } });
+  const agent = await findAgentByApiKey(api_key);
   if (!agent) {
     res.status(401).json({ ok: false, error: "invalid_api_key", message: "Invalid API key." });
     return;
@@ -131,7 +146,7 @@ router.post("/set-password", async (req: Request, res: Response): Promise<void> 
   }
 
   try {
-    const agent = await prisma.agent.findUnique({ where: { apiKey: api_key } });
+    const agent = await findAgentByApiKey(api_key);
     if (!agent) {
       res.status(404).json({ ok: false, error: "not_found" });
       return;
