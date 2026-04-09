@@ -79,6 +79,51 @@ function extractJsonObject(text: string): string | null {
   return match ? match[0] : null;
 }
 
+const BLOCKED_FORWARD_HEADERS = new Set([
+  "authorization",
+  "cookie",
+  "proxy-authorization",
+  "x-api-key",
+  "x-admin-key",
+  "x-auth-token",
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+]);
+
+function sanitizeWebhookHeaders(input: Record<string, string> | undefined): Record<string, string> {
+  const safe: Record<string, string> = {};
+  for (const [rawName, rawValue] of Object.entries(input ?? {})) {
+    const name = rawName.trim();
+    if (!name) continue;
+    const lower = name.toLowerCase();
+    if (BLOCKED_FORWARD_HEADERS.has(lower)) continue;
+    if (!/^[a-z0-9-]{1,64}$/i.test(name)) continue;
+    safe[name] = String(rawValue).slice(0, 500);
+  }
+  return safe;
+}
+
+function getDefaultSender(): string {
+  return process.env.EMAIL_FROM?.trim() || "Arch Tools <no-reply@archtools.dev>";
+}
+
+function sanitizeOutboundEmailHtml(html: string | undefined, body: string | undefined): { htmlBody: string; textBody: string } {
+  const rawHtml = (html ?? "").slice(0, 20_000);
+  const rawBody = (body ?? "").slice(0, 10_000);
+  const escapedBody = rawBody
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
+
+  const htmlBody = rawHtml
+    ? rawHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/\son\w+="[^"]*"/gi, "")
+    : `<p>${escapedBody}</p>`;
+  const textBody = rawBody || rawHtml.replace(/<[^>]+>/g, "").slice(0, 10_000);
+  return { htmlBody, textBody };
+}
+
 // ─── 1. VALIDATE-DATA ────────────────────────────────────────────────────────
 
 router.post("/validate-data", ...toolMiddleware("validate-data"), async (req: AuthedRequest, res: Response): Promise<void> => {
@@ -1293,18 +1338,23 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
   };
   if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
+  if (!webhook_url.startsWith("https://")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must use https", request_id: reqId() }); return; }
   try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-  const allowedMethods = ["POST", "PUT", "PATCH"];
+  const allowedMethods = ["POST"];
   const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
+  const payloadString = JSON.stringify(payload ?? {});
+  if (payloadString.length > 20_000) { res.status(400).json({ ok: false, error: "invalid_request", message: "payload must be 20KB or less", request_id: reqId() }); return; }
+  const safeHeaders = sanitizeWebhookHeaders(customHeaders);
   try {
     const start = Date.now();
     const resp = await axios({
-      method: httpMethod as "POST" | "PUT" | "PATCH",
+      method: httpMethod as "POST",
       url: webhook_url,
       data: payload ?? {},
-      headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...customHeaders },
+      headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...safeHeaders },
       timeout: 10000,
       validateStatus: () => true,
+      maxRedirects: 0,
     });
     res.json({
       ok: true,
@@ -1949,12 +1999,13 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
   const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
   if (!to || !subject || (!body && !html)) { res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return; }
   if (!to.includes("@")) { res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return; }
+  if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
+  if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return; }
   try {
-    const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
-    const htmlBody = html ?? `<p>${(body ?? "").replace(/\n/g, "<br>")}</p>`;
-    const textBody = body ?? html?.replace(/<[^>]+>/g, "") ?? "";
+    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
+    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1983,14 +2034,15 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
   if (!to.includes("@")) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return;
   }
+  if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
+  if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
     res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return;
   }
   try {
-    const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
-    const htmlBody = html ?? "<p>" + (body ?? "").replace(/\n/g, "<br>") + "</p>";
-    const textBody = body ?? (html ?? "").replace(/<[^>]+>/g, "");
+    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
+    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
