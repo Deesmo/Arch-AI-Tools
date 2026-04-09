@@ -223,7 +223,7 @@ export const LOGIN_HTML = `<!DOCTYPE html>
       });
       var d = await r.json();
       if (d.ok) {
-        localStorage.setItem('arch_api_key', key);
+        sessionStorage.setItem('arch_api_key', key);
         setStatus('status-key', '✓ Key validated — redirecting…', false);
         var params = new URLSearchParams(window.location.search);
         var next = params.get('next') || '/dashboard';
