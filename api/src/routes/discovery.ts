@@ -500,16 +500,16 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
       tools: toolList,
       totalTools: toolList.length,
       authentication: {
-        apiKey: { header: "Authorization", format: "Bearer YOUR_API_KEY" },
+        apiKey: { header: "x-api-key", format: "YOUR_API_KEY" },
         x402: { discovery: `${API_BASE}/.well-known/x402` },
         oauth: { authorize: `${API_BASE}/oauth/authorize`, token: `${API_BASE}/oauth/token` },
       },
       pricing: {
-        freeCredits: 100,
+        freeCredits: 250,
         packs: [
-          { name: "Starter", credits: 10000, price: "$9" },
-          { name: "Pro", credits: 60000, price: "$49" },
-          { name: "Business", credits: 250000, price: "$199" },
+          { name: "Starter", credits: 5000, price: "$9" },
+          { name: "Pro", credits: 30000, price: "$49" },
+          { name: "Business", credits: 200000, price: "$199" },
         ],
       },
       discovery: {
@@ -633,7 +633,7 @@ const LLMS_TXT = `# Arch Tools
 All tool endpoints require an API key:
   x-api-key: YOUR_API_KEY
 
-Get a free key (100 credits) at ${BASE_URL}/#register
+Get a free key (250 credits) at ${BASE_URL}/#register
 
 ## x402 Autonomous Payment (no key required)
 AI agents can pay per-call with USDC on Base via the x402 protocol.

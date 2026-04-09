@@ -480,7 +480,7 @@
 
     function genCurl(tool, body, useCase) {
       const base = `curl -X POST https://archtools.dev/v1/tools/${tool} \\
-  -H "Authorization: Bearer $ARCH_API_KEY" \\
+-H "x-api-key: $ARCH_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '${body}'`;
 
@@ -500,7 +500,7 @@ echo "$response" | python3 -m json.tool`;
         return `# Fire multiple calls in parallel
 for query in "AI news" "crypto trends" "tech startups"; do
   curl -s -X POST https://archtools.dev/v1/tools/${tool} \\
-    -H "Authorization: Bearer $ARCH_API_KEY" \\
+-H "x-api-key: $ARCH_API_KEY" \\
     -H "Content-Type: application/json" \\
     -d "{\\"query\\": \\"$query\\"}" &
 done

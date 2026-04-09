@@ -41,7 +41,7 @@
       <div class="logo-mark"><img src="/arch-icon.svg" width="18" height="18" alt="Arch" /></div>
       <span class="logo-name">Arch Tools</span>
     </a>
-    <a href="/signin" class="nav-cta">Get 100 free credits</a>
+<a href="/signin" class="nav-cta">Get 250 free credits</a>
   </nav>
   <div class="main">
     <div class="badge">🔑 BYOK</div>
@@ -52,7 +52,7 @@
     <p>Pass your API key as a request header. Arch Tools detects it automatically and routes your request through your key.</p>
 
     <pre><span style="color:#8A8AFF">curl</span> -X POST https://arch-ai-tools.onrender.com/v1/tools/ai-generate \
-  -H <span style="color:#34d399">"Authorization: Bearer YOUR_ARCH_TOOLS_KEY"</span> \
+-H <span style="color:#34d399">"x-api-key: YOUR_ARCH_TOOLS_KEY"</span> \
   -H <span style="color:#34d399">"x-openai-key: sk-your-openai-key"</span> \
   -H <span style="color:#34d399">"Content-Type: application/json"</span> \
   -d <span style="color:#34d399">'{"prompt": "Summarize this article...", "model": "gpt-4o"}'</span></pre>
@@ -94,7 +94,7 @@ data = response.json()
 
     <div class="cta-box">
       <h2 style="margin:0 0 10px">Try it now</h2>
-      <p style="color:var(--muted);margin-bottom:20px">Start with 100 free credits. No card required. Use BYOK for any provider.</p>
+<p style="color:var(--muted);margin-bottom:20px">Start with 250 free credits. No card required. Use BYOK for any provider.</p>
       <a href="/signin" class="cta-btn">Get your API key →</a>
     </div>
   </div>
