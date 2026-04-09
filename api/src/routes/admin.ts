@@ -177,11 +177,37 @@ router.get("/agents", requireAdmin, async (req: Request, res: Response): Promise
 // GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
 router.get("/lookup", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.query as { email?: string };
+  const reveal = req.query.reveal === "true";
   if (!email) { res.status(400).json({ ok: false, error: "email_required", request_id: reqId() }); return; }
   try {
-    const agent = await prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
+    const agent = await prisma.agent.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        apiKey: true,
+        apiKeyPrefix: true,
+        credits: true,
+        createdAt: true,
+      },
+    });
     if (!agent) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
-    res.json({ ok: true, agent, request_id: reqId() });
+    if (reveal) {
+      logger.warn({ email, adminLookup: true }, "Admin lookup returned full API key");
+    }
+    res.json({
+      ok: true,
+      agent: {
+        id: agent.id,
+        email: agent.email,
+        credits: agent.credits,
+        createdAt: agent.createdAt,
+        apiKeyPrefix: agent.apiKeyPrefix ?? agent.apiKey?.slice(0, 12) ?? null,
+        hasApiKey: Boolean(agent.apiKey),
+        apiKey: reveal ? agent.apiKey : undefined,
+      },
+      request_id: reqId(),
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
