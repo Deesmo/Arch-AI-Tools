@@ -5,6 +5,7 @@ import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl } from "../../lib/ssrf.js";
+import { prisma } from "../../lib/prisma.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
@@ -122,6 +123,51 @@ function sanitizeOutboundEmailHtml(html: string | undefined, body: string | unde
     : `<p>${escapedBody}</p>`;
   const textBody = rawBody || rawHtml.replace(/<[^>]+>/g, "").slice(0, 10_000);
   return { htmlBody, textBody };
+}
+
+const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; business: number }> = {
+  "webhook-send": { free: 10, pro: 50, business: 200 },
+  "email-send": { free: 5, pro: 25, business: 100 },
+  "send-email": { free: 5, pro: 25, business: 100 },
+  "social-post": { free: 3, pro: 15, business: 50 },
+  "video-generate": { free: 3, pro: 20, business: 100 },
+};
+
+async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName: string): Promise<boolean> {
+  const agent = req.agent;
+  if (!agent) {
+    res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() });
+    return false;
+  }
+
+  const limitConfig = SIDE_EFFECT_DAILY_LIMITS[toolName];
+  if (!limitConfig) return true;
+
+  const tier = agent.tier === "business" ? "business" : agent.tier === "pro" ? "pro" : "free";
+  const limit = limitConfig[tier];
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+
+  const count = await prisma.apiRequest.count({
+    where: {
+      agentId: agent.id,
+      toolName,
+      createdAt: { gte: since },
+      status: "SUCCESS",
+    },
+  }).catch(() => 0);
+
+  if (count >= limit) {
+    res.status(429).json({
+      ok: false,
+      error: "daily_limit_reached",
+      message: `Daily limit reached for ${toolName}. ${tier} tier allows ${limit} successful calls per day.`,
+      request_id: reqId(),
+    });
+    return false;
+  }
+
+  return true;
 }
 
 // ─── 1. VALIDATE-DATA ────────────────────────────────────────────────────────
@@ -1327,6 +1373,8 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req: Authed
 router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "webhook-send");
+    if (!withinLimit) return;
     const ok = await deductCredits(req, res, "webhook-send", 2);
     if (!ok) return;
   }
@@ -1995,7 +2043,12 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
 // ─── email-send ───────────────────────────────────────────────────────────────
 router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "email-send", 3); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "email-send");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "email-send", 3);
+    if (!ok) return;
+  }
   const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
   if (!to || !subject || (!body && !html)) { res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return; }
   if (!to.includes("@")) { res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return; }
@@ -2026,7 +2079,12 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
 // ─── send-email (alias — same logic as email-send) ────────────────────────────
 router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "send-email", 3); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "send-email");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "send-email", 3);
+    if (!ok) return;
+  }
   const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
   if (!to || !subject || (!body && !html)) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return;
@@ -2613,7 +2671,12 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 // ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
 router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "video-generate", 50); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "video-generate", 50);
+    if (!ok) return;
+  }
   const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body as { prompt?: string; duration?: number; aspect_ratio?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validDurations = [5, 10];
@@ -2779,7 +2842,12 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
 // ─── 58. SOCIAL-POST (X/Twitter) ─────────────────────────────────────────────
 router.post("/social-post", ...toolMiddleware("social-post"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "social-post", 5); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "social-post");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "social-post", 5);
+    if (!ok) return;
+  }
   const { text, reply_to } = req.body as { text?: string; reply_to?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 280) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 280 characters or less", request_id: reqId() }); return; }
