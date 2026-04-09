@@ -747,7 +747,7 @@
         </div>
         <!-- TRUST BAR - desktop only -->
         <div class="hero-trust-bar">
-          <div class="trust-item"><div class="trust-val g-am">53</div><div class="trust-lbl">Tools</div></div>
+          <div class="trust-item"><div class="trust-val g-am">64</div><div class="trust-lbl">Tools</div></div>
           <div class="trust-item"><div class="trust-val g-cy">&lt;200ms</div><div class="trust-lbl">Response</div></div>
           <div class="trust-item"><div class="trust-val g-bl">15</div><div class="trust-lbl">Chains</div></div>
           <div class="trust-item"><div class="trust-val g-am">FREE</div><div class="trust-lbl">To Start</div></div>
@@ -757,7 +757,7 @@
       <!-- STAT CARDS (preview-d hero right) -->
       <div class="hero-right">
         <div class="sg">
-          <div class="sc sa"><div class="sn g-am">53</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
+          <div class="sc sa"><div class="sn g-am">64</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
           <div class="sc sc2"><div class="sn g-cy" style="font-size:28px">&lt;200ms</div><div class="sl">Avg Response</div><div class="ss">p95 &lt;500ms</div></div>
           <div class="sc"><div class="sn g-bl">15</div><div class="sl">Blockchains</div><div class="ss">USDC · USDT · ETH</div></div>
           <div class="sc"><div class="sn g-am" style="font-size:28px">FREE</div><div class="sl">To Start</div><div class="ss">100 credits included</div><div class="sc-live"><span class="dot"></span>all systems ok</div></div>
@@ -874,7 +874,7 @@
     <div class="stats-inner">
       <div class="stat-item">
         <div class="stat-label-top">API_TOOLS</div>
-        <div class="stat-val g-am">53</div>
+        <div class="stat-val g-am">64</div>
       </div>
       <div class="stat-item">
         <div class="stat-label-top">AI_MODELS</div>
@@ -905,7 +905,7 @@
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Services in Directory</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-bl"><span class="counter" data-target="61">0</span></div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-bl"><span class="counter" data-target="64">0</span></div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">API Endpoints</div>
       </div>
       <div>
@@ -2862,7 +2862,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCodeViewer()});
 // ── MARQUEE: now CSS-only (see @keyframes marquee-left/right in <style>) ──
 </script>
 <script>
-  (async()=>{try{const r=await fetch('/health');if(!r.ok)return;const d=await r.json();const n=d.tools;if(!n||n===53)return;const sv=document.querySelector('.stats-bar .stat-item .stat-val.g-am');if(sv&&sv.closest('.stat-item')?.querySelector('.stat-label-top')?.textContent==='API_TOOLS')sv.textContent=n;const tt=document.querySelector('.hero-trust-bar .trust-item:first-child .trust-val');if(tt)tt.textContent=n;}catch{}})();
+(async()=>{try{const r=await fetch('/health');if(!r.ok)return;const d=await r.json();const n=d.tools;if(!n||n===64)return;const sv=document.querySelector('.stats-bar .stat-item .stat-val.g-am');if(sv&&sv.closest('.stat-item')?.querySelector('.stat-label-top')?.textContent==='API_TOOLS')sv.textContent=n;const tt=document.querySelector('.hero-trust-bar .trust-item:first-child .trust-val');if(tt)tt.textContent=n;}catch{}})();
 </script>
 <script id="arch-hero-lockup-js">
 window.addEventListener("load", function() {
