@@ -901,20 +901,20 @@
   <div class="wrap">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center;">
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span class="counter" data-target="112">0</span>+</div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statServices" class="counter" data-target="112">112</span>+</div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Services in Directory</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-bl"><span class="counter" data-target="64">0</span></div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-bl"><span id="statEndpoints" class="counter" data-target="1988">1,988</span></div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">API Endpoints</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-cy"><span class="counter" data-target="15">0</span>+</div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-cy"><span id="statChains" class="counter" data-target="15">15</span>+</div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Chains Supported</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span class="counter" data-target="5">0</span></div>
-        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Framework SDKs</div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statTools" class="counter" data-target="64">64</span></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">AI Tools</div>
       </div>
     </div>
   </div>
@@ -936,7 +936,7 @@
         var elapsed=now-start;
         var progress=Math.min(elapsed/duration,1);
         var eased=1-Math.pow(1-progress,3);
-        el.textContent=Math.round(eased*target);
+        el.textContent=target>=1000?Math.round(eased*target).toLocaleString():Math.round(eased*target);
         if(progress<1)requestAnimationFrame(tick);
       }
       requestAnimationFrame(tick);
@@ -947,6 +947,21 @@
   },{threshold:0.3});
   var sec=document.getElementById('live-stats');
   if(sec)obs.observe(sec);
+})();
+</script>
+<script>
+(function(){
+  var FALLBACK={services:112,endpoints:1988,chains:15,tools:64};
+  function setStats(s){
+    var m={statServices:s.services,statEndpoints:s.endpoints,statChains:s.chains,statTools:s.tools};
+    Object.keys(m).forEach(function(id){
+      var el=document.getElementById(id);
+      if(el&&m[id]){el.dataset.target=m[id];el.textContent=m[id]>=1000?m[id].toLocaleString():m[id];}
+    });
+  }
+  fetch('/api/v1/x402/directory/stats').then(function(r){return r.json();}).then(function(d){
+    if(d&&d.stats){setStats({services:d.stats.total_services||FALLBACK.services,endpoints:d.stats.total_endpoints||FALLBACK.endpoints,chains:Object.keys(d.stats.chains||{}).length||FALLBACK.chains,tools:64});}
+  }).catch(function(){});
 })();
 </script>
 
