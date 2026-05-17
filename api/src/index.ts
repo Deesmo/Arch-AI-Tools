@@ -69,12 +69,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],  // landing page inline scripts + Chart.js CDN
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://browser.sentry-cdn.com"],  // landing page inline scripts + Chart.js CDN + Sentry browser SDK
       "script-src-attr": ["'unsafe-inline'"],  // allow inline event handlers (onclick etc)
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com"],
+      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com", "https://*.sentry.io", "https://o*.ingest.sentry.io"],
     },
   },
   crossOriginEmbedderPolicy: false,  // needed for fonts/CDN
