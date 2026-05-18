@@ -321,10 +321,10 @@ app.get("/langchain-guide", (_req, res) => res.sendFile(path.join(__dirname, '..
 app.get("/byok", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/byok.html')));
 app.get("/quickstart", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/quickstart.html')));
 app.get("/getting-started", (_req: Request, res: Response) => res.redirect(301, "/docs/getting-started"));
-// /terms — convenience redirect to static terms page
-app.get("/terms", (_req: Request, res: Response) => res.redirect(301, "/terms.html"));
-// /privacy and /legal — convenience redirects to canonical sub-paths
-app.get("/privacy", (_req: Request, res: Response) => res.redirect(301, "/legal/privacy"));
+// /terms — serve the static terms page directly (no 301 hop)
+app.get("/terms", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, "../public/terms.html")));
+// /privacy — serve the static privacy page directly (no 301 hop to /legal/privacy)
+app.get("/privacy", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, "../public/privacy.html")));
 
 // /docs — full API reference page
 app.get("/changelog", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
