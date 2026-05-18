@@ -238,7 +238,7 @@ print(result["output"])</code></pre>
     <ul>
       <li><strong>Credit awareness:</strong> Check <code>X-Credits-Remaining</code> headers to avoid unexpected 402 responses.</li>
       <li><strong>Error handling:</strong> Always check <code>resp.json()["ok"]</code> before accessing data.</li>
-      <li><strong>Rate limits:</strong> Free tier: 10 req/min. Pro: 60 req/min. Business: 300 req/min.</li>
+      <li><strong>Rate limits:</strong> Free tier: 60 req/min. Starter/Pro: 300 req/min. Business: 1,000 req/min.</li>
       <li><strong>BYOK:</strong> Pass your own API keys via headers (e.g., <code>x-anthropic-key</code>) for zero credit cost on AI tools.</li>
       <li><strong>Batch wisely:</strong> Chain tools in sequence — scrape → summarize → sentiment — for powerful analysis pipelines.</li>
       <li><strong>MCP alternative:</strong> For Claude-native agents, consider the <a href="/mcp-setup">MCP integration</a> instead.</li>
