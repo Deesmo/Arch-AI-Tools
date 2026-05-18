@@ -28,7 +28,7 @@
       ],
       "x402_discovery_url": "https://archtools.dev/.well-known/x402",
       "docs_url": "https://archtools.dev/docs",
-      "mcp_url": "https://arch-tools-mcp.onrender.com/sse",
+      "mcp_url": "https://archtools.dev/mcp/sse",
       "status": "active",
       "verified": true,
       "featured": true,

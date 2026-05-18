@@ -4,7 +4,7 @@
 > Base URL: https://archtools.dev
 > Docs: https://archtools.dev/docs
 > OpenAPI: https://archtools.dev/openapi.json
-> MCP SSE: https://arch-tools-mcp.onrender.com/sse
+> MCP SSE: https://archtools.dev/mcp/sse
 > Discovery: https://archtools.dev/v1/tools
 > Agent Card: https://archtools.dev/.well-known/agent.json
 > GitHub: https://github.com/Deesmo/Arch-AI-Tools
@@ -124,8 +124,8 @@ POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps)
 - GET /llms-full.txt — Complete documentation
 
 ## MCP Integration
-- SSE: https://arch-tools-mcp.onrender.com/sse
-- Streamable HTTP: https://arch-tools-mcp.onrender.com/mcp
+- SSE: https://archtools.dev/mcp/sse
+- Streamable HTTP: https://archtools.dev/mcp/mcp
 - Registry: io.github.Deesmo/arch-tools-mcp
 - Compatible: Claude Desktop, Cursor, Windsurf, any MCP client
 

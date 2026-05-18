@@ -378,7 +378,7 @@ POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps).
 ## SDKs
 - Python: `pip install archtools` — https://pypi.org/project/archtools/
 - Node.js: `npm install archtools` — https://www.npmjs.com/package/archtools
-- MCP: https://arch-tools-mcp.onrender.com/sse
+- MCP: https://archtools.dev/mcp/sse
 
 ## Support
 - Docs: https://archtools.dev/docs

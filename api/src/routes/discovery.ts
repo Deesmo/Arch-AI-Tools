@@ -538,8 +538,8 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
         },
       },
       mcp: {
-        sse: "https://arch-tools-mcp.onrender.com/sse",
-        http: "https://arch-tools-mcp.onrender.com/mcp",
+        sse: "https://archtools.dev/mcp/sse",
+        http: "https://archtools.dev/mcp/mcp",
         registry: "io.github.Deesmo/arch-tools-mcp",
       },
     });
@@ -637,7 +637,7 @@ const LLMS_TXT = `# Arch Tools
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
-> MCP SSE: https://arch-tools-mcp.onrender.com/sse
+> MCP SSE: https://archtools.dev/mcp/sse
 
 ## Authentication
 All tool endpoints require an API key:
@@ -756,7 +756,7 @@ GET  /health          — Service health + tool count
 GET  /v1/agent/usage  — Credit balance for your key
 
 ## MCP Integration
-SSE endpoint: https://arch-tools-mcp.onrender.com/sse
+SSE endpoint: https://archtools.dev/mcp/sse
 Registry: io.github.Deesmo/arch-tools-mcp
 Compatible with: Claude Desktop, Cursor, Windsurf, any MCP client
 

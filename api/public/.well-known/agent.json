@@ -122,8 +122,8 @@
     "health": "https://archtools.dev/health",
     "openapi": "https://archtools.dev/openapi.json",
     "x402": "https://archtools.dev/.well-known/x402",
-    "mcp_sse": "https://arch-tools-mcp.onrender.com/sse",
-    "mcp_http": "https://arch-tools-mcp.onrender.com/mcp"
+    "mcp_sse": "https://archtools.dev/mcp/sse",
+    "mcp_http": "https://archtools.dev/mcp/mcp"
   },
   "pricing": {
     "model": "credits",
