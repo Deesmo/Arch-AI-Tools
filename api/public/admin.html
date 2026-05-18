@@ -456,13 +456,61 @@
       await Promise.all([loadStats(), loadAgents()]);
       renderSignupsToday();
       renderUserBreakdown();
+      // loadStats and loadAgents run in parallel, so the median-credits card may
+      // render before allAgents is populated. Re-render the credit grid once
+      // both have settled so the median reflects real data.
+      renderCreditGrid();
+    }
+
+    function renderCreditGrid() {
+      if (!cachedStats) return;
+      const s = cachedStats.summary || {};
+      const creditsInCirc = s.credits_in_circulation || 0;
+      const dailyRequests = cachedStats.daily_requests || [];
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayReqs = dailyRequests.find(dr => dr.date === todayStr);
+      const apiCallsToday = todayReqs ? todayReqs.count : 0;
+      const totalAgents = s.total_agents || 1;
+      let medianCredits = 0;
+      if (Array.isArray(allAgents) && allAgents.length) {
+        const nums = allAgents
+          .map(a => Number(a.credits || 0))
+          .filter(n => Number.isFinite(n))
+          .sort((x, y) => x - y);
+        if (nums.length) {
+          const mid = Math.floor(nums.length / 2);
+          medianCredits = nums.length % 2 === 0 ? Math.round((nums[mid - 1] + nums[mid]) / 2) : nums[mid];
+        }
+      }
+      const el = document.getElementById('credit-grid');
+      if (!el) return;
+      el.innerHTML = `
+          <div class="kpi c-accent">
+            <div class="kpi-label">Credits in Circulation</div>
+            <div class="kpi-value" style="color:var(--accent)">${creditsInCirc.toLocaleString()}</div>
+            <div class="kpi-sub">Across all agents</div>
+          </div>
+          <div class="kpi c-orange">
+            <div class="kpi-label">API Calls Today</div>
+            <div class="kpi-value" style="color:var(--orange)">${apiCallsToday.toLocaleString()}</div>
+            <div class="kpi-sub">Total request count today (UTC)</div>
+          </div>
+          <div class="kpi c-purple">
+            <div class="kpi-label">Median Credits / User</div>
+            <div class="kpi-value" style="color:var(--purple)">${medianCredits.toLocaleString()}</div>
+            <div class="kpi-sub">${totalAgents} total users (median ignores outliers)</div>
+          </div>
+        `;
     }
 
     async function loadStats() {
       try {
         const [statsRes, revenueRes] = await Promise.all([
           fetch(`${API}/v1/admin/stats`, { headers: hdr() }),
-          fetch(`${API}/v1/analytics/revenue`, { headers: hdr() }).catch(() => null)
+          // Analytics router is mounted at /api/v1/analytics in src/index.ts.
+          // The previous URL `/v1/analytics/revenue` always 404'd silently and
+          // the x402 revenue card was stuck at $0.
+          fetch(`${API}/api/v1/analytics/revenue`, { headers: hdr() }).catch(() => null)
         ]);
         const d = await statsRes.json();
         cachedStats = d;
@@ -517,14 +565,22 @@
           </div>
           <div class="kpi c-green">
             <div class="kpi-label">Revenue (Stripe)</div>
-            <div class="kpi-value" style="color:${s.revenue_sample_cents > 0 ? 'var(--green)' : 'var(--muted)'}">$${((s.revenue_sample_cents || 0)/100).toFixed(2)}</div>
-            <div class="kpi-sub">From stats endpoint</div>
+            <div class="kpi-value" style="color:${(s.total_stripe_revenue_cents ?? s.revenue_sample_cents) > 0 ? 'var(--green)' : 'var(--muted)'}">$${(((s.total_stripe_revenue_cents ?? s.revenue_sample_cents) || 0)/100).toFixed(2)}</div>
+            <div class="kpi-sub">${s.total_stripe_purchases != null ? s.total_stripe_purchases + ' purchase' + (s.total_stripe_purchases === 1 ? '' : 's') + ' all-time' : 'From stats endpoint'}</div>
           </div>
         `;
 
         // ── Financial Overview ──
         const purchases = d.recent_purchases || [];
-        const stripeRevenue = purchases.reduce((sum, p) => sum + (p.amountCents || 0), 0) / 100;
+        // Prefer the true all-time Stripe total from the API; fall back to summing
+        // the recent_purchases list (capped at 10) only if the field is missing
+        // (e.g. older API build that hasn't been redeployed yet).
+        const stripeRevenue = s.total_stripe_revenue_cents != null
+          ? (s.total_stripe_revenue_cents / 100)
+          : (purchases.reduce((sum, p) => sum + (p.amountCents || 0), 0) / 100);
+        const stripePurchaseCount = s.total_stripe_purchases != null
+          ? s.total_stripe_purchases
+          : purchases.length;
         const totalRevenue = stripeRevenue + x402Revenue;
         totalRevenueForProfit = totalRevenue;
 
@@ -532,7 +588,7 @@
           <div class="kpi c-green">
             <div class="kpi-label">Stripe Revenue</div>
             <div class="kpi-value" style="color:var(--green)">$${stripeRevenue.toFixed(2)}</div>
-            <div class="kpi-sub">From ${purchases.length} purchase${purchases.length !== 1 ? 's' : ''}</div>
+            <div class="kpi-sub">From ${stripePurchaseCount} purchase${stripePurchaseCount !== 1 ? 's' : ''}</div>
           </div>
           <div class="kpi c-pink">
             <div class="kpi-label">x402 Revenue</div>
@@ -555,9 +611,21 @@
         const dailyRequests = d.daily_requests || [];
         const todayStr = new Date().toISOString().slice(0, 10);
         const todayReqs = dailyRequests.find(dr => dr.date === todayStr);
-        const creditsConsumedToday = todayReqs ? todayReqs.count : 0;
+        const apiCallsToday = todayReqs ? todayReqs.count : 0;
         const totalAgents = s.total_agents || 1;
-        const avgCreditsPerUser = (creditsInCirc / totalAgents).toFixed(0);
+        // Median is more honest than mean here — internal/service accounts
+        // (e.g. internal@archtools.dev with ~1M credits) blow up the mean.
+        let medianCredits = 0;
+        if (Array.isArray(allAgents) && allAgents.length) {
+          const nums = allAgents
+            .map(a => Number(a.credits || 0))
+            .filter(n => Number.isFinite(n))
+            .sort((x, y) => x - y);
+          if (nums.length) {
+            const mid = Math.floor(nums.length / 2);
+            medianCredits = nums.length % 2 === 0 ? Math.round((nums[mid - 1] + nums[mid]) / 2) : nums[mid];
+          }
+        }
 
         document.getElementById('credit-grid').innerHTML = `
           <div class="kpi c-accent">
@@ -566,14 +634,14 @@
             <div class="kpi-sub">Across all agents</div>
           </div>
           <div class="kpi c-orange">
-            <div class="kpi-label">Credits Consumed Today</div>
-            <div class="kpi-value" style="color:var(--orange)">${creditsConsumedToday.toLocaleString()}</div>
-            <div class="kpi-sub">Based on API calls today</div>
+            <div class="kpi-label">API Calls Today</div>
+            <div class="kpi-value" style="color:var(--orange)">${apiCallsToday.toLocaleString()}</div>
+            <div class="kpi-sub">Total request count today (UTC)</div>
           </div>
           <div class="kpi c-purple">
-            <div class="kpi-label">Avg Credits / User</div>
-            <div class="kpi-value" style="color:var(--purple)">${parseInt(avgCreditsPerUser).toLocaleString()}</div>
-            <div class="kpi-sub">${totalAgents} total users</div>
+            <div class="kpi-label">Median Credits / User</div>
+            <div class="kpi-value" style="color:var(--purple)">${medianCredits.toLocaleString()}</div>
+            <div class="kpi-sub">${totalAgents} total users (median ignores outliers)</div>
           </div>
         `;
 
