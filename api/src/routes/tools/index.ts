@@ -46,7 +46,7 @@ function tierRateLimiter(req: AuthedRequest, res: Response, next: NextFunction):
   const key = agent?.apiKey?.slice(0, 20) ?? req.ip ?? "anon";
   const tier = agent?.tier ?? "free";
   const limit = tier === "business" ? config.rateLimits.business
-              : tier === "pro"      ? config.rateLimits.pro
+              : (tier === "pro" || tier === "starter") ? config.rateLimits.pro
               : config.rateLimits.free;
 
   const now = Date.now();
@@ -138,12 +138,12 @@ function sanitizeOutboundEmailHtml(html: string | undefined, body: string | unde
   return { htmlBody, textBody };
 }
 
-const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; business: number }> = {
-  "webhook-send": { free: 10, pro: 50, business: 200 },
-  "email-send": { free: 5, pro: 25, business: 100 },
-  "send-email": { free: 5, pro: 25, business: 100 },
-  "social-post": { free: 3, pro: 15, business: 50 },
-  "video-generate": { free: 3, pro: 20, business: 100 },
+const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; starter: number; business: number }> = {
+  "webhook-send": { free: 10, pro: 50, starter: 50, business: 200 },
+  "email-send": { free: 5, pro: 25, starter: 25, business: 100 },
+  "send-email": { free: 5, pro: 25, starter: 25, business: 100 },
+  "social-post": { free: 3, pro: 15, starter: 15, business: 50 },
+  "video-generate": { free: 3, pro: 20, starter: 20, business: 100 },
 };
 
 async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName: string): Promise<boolean> {
@@ -156,7 +156,7 @@ async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName
   const limitConfig = SIDE_EFFECT_DAILY_LIMITS[toolName];
   if (!limitConfig) return true;
 
-  const tier = agent.tier === "business" ? "business" : agent.tier === "pro" ? "pro" : "free";
+  const tier = agent.tier === "business" ? "business" : agent.tier === "pro" ? "pro" : agent.tier === "starter" ? "starter" : "free";
   const limit = limitConfig[tier];
   const since = new Date();
   since.setHours(0, 0, 0, 0);
