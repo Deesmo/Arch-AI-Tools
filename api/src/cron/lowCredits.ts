@@ -7,7 +7,7 @@ import { sendEmail80PctAlert, sendCreditsDepletedAlert } from "../services/email
 import { logger } from "../lib/logger.js";
 
 // Default initial credits for free tier
-const INITIAL_FREE_CREDITS = 100;
+const INITIAL_FREE_CREDITS = 250;
 
 export async function runLowCreditsCron(): Promise<void> {
   try {
