@@ -2161,17 +2161,20 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
-  const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; style?: string; n?: number };
+  const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; n?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
   const safeSize = validSizes.includes(size) ? size : "1024x1024";
+  // gpt-image-1 quality: low/medium/high
+  const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+  const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: reqId() }); return; }
   try {
     const r = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, size: safeSize, quality, style, n: Math.min(n, 1), response_format: "url" })
+      body: JSON.stringify({ model: "gpt-image-1", prompt, size: safeSize, quality: safeQuality, n: Math.min(n, 1) })
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
@@ -2187,7 +2190,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
           if (sr.ok) {
             const sd = await sr.json() as { image?: string };
             if (sd.image) {
-              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality, style, source: "stability", request_id: reqId() }); return;
+              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return;
             }
           }
         } catch (_) { /* fall through */ }
@@ -2196,7 +2199,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
     const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
-    res.json({ ok: true, images, count: images.length, size: safeSize, quality, style, request_id: reqId() });
+    res.json({ ok: true, images, count: images.length, size: safeSize, quality: safeQuality, request_id: reqId() });
   } catch (e) { console.error("[design-create]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
