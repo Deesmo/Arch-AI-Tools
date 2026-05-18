@@ -240,7 +240,7 @@ router.post("/generate-hash", ...toolMiddleware("generate-hash"), async (req: Au
     if (!ok) return;
   }
   const { text, algorithm = "sha256", encoding = "hex" } = req.body as { text?: string; algorithm?: string; encoding?: string };
-  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  if (!text || typeof text !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required and must be a string", request_id: reqId() }); return; }
   const algos = ["sha256", "sha512", "sha1", "md5", "sha384"];
   if (!algos.includes(algorithm)) { res.status(400).json({ ok: false, error: "invalid_request", message: `algorithm must be one of: ${algos.join(", ")}`, request_id: reqId() }); return; }
   const enc: "hex" | "base64" = (encoding === "base64" ? "base64" : "hex");
