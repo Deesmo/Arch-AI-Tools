@@ -2264,17 +2264,22 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req: A
   req.url = "/design-create";
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
-  const { prompt, size = "1024x1024", quality = "standard" } = req.body as { prompt?: string; size?: string; quality?: string };
+  const { prompt, size = "1024x1024", quality = "medium" } = req.body as { prompt?: string; size?: string; quality?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
   if (!OPENAI_KEY) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: reqId() }); return; }
+  const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+  const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
+  const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
+  const safeSize = validSizes.includes(size) ? size : "1024x1024";
   try {
     const r = await axios.post("https://api.openai.com/v1/images/generations",
-      { model: "dall-e-3", prompt, n: 1, size, quality },
+      { model: "gpt-image-1", prompt, n: 1, size: safeSize, quality: safeQuality },
       { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 }
     );
-    const img = (r.data as { data: Array<{ url: string; revised_prompt: string }> }).data[0];
-    res.json({ ok: true, image_url: img.url, revised_prompt: img.revised_prompt, size, quality, credits_used: 15, request_id: reqId() });
+    const img = (r.data as { data: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }).data[0];
+    const image_url = img.url ?? (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
+    res.json({ ok: true, image_url, revised_prompt: img.revised_prompt ?? null, size: safeSize, quality: safeQuality, request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() }); }
 });
 
