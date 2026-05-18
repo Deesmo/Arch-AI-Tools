@@ -12,10 +12,23 @@ import Anthropic from "@anthropic-ai/sdk";
 import axios from "axios";
 
 const router = Router();
-const _anthropicKey = process.env.ANTHROPIC_API_KEY;
-const anthropic = (_anthropicKey && !_anthropicKey.startsWith("ENTER"))
-  ? new Anthropic({ apiKey: _anthropicKey })
-  : null;
+// Lazy Anthropic client: re-checks env at call time so a key set AFTER boot
+// (e.g. Render env var update) becomes usable without redeploy.
+let _anthropicInstance: Anthropic | null = null;
+let _anthropicLastKey: string | undefined = undefined;
+function getAnthropic(): Anthropic | null {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key || key.startsWith("ENTER")) {
+    _anthropicInstance = null;
+    _anthropicLastKey = key;
+    return null;
+  }
+  if (_anthropicInstance && _anthropicLastKey === key) return _anthropicInstance;
+  _anthropicInstance = new Anthropic({ apiKey: key });
+  _anthropicLastKey = key;
+  return _anthropicInstance;
+}
+// Runtime-only access via getAnthropic(); do not capture the client at module load.
 
 // ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
@@ -529,7 +542,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "web-search", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { query } = req.body as { query?: string };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
   // BYOK: check for user-provided search keys
@@ -571,7 +584,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
     }
     if (!context) { res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable. Pass x-tavily-key or x-brave-key header for BYOK.", request_id: reqId() }); return; }
     // Synthesize with Claude
-    const msg = await anthropic!.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 600,
       messages: [{ role: "user", content: `Answer this query based on the following search context. Be concise and factual.\n\nQuery: ${query}\n\nContext:\n${context}\n\nAnswer:` }],
@@ -848,8 +861,8 @@ router.post("/language-detect", ...toolMiddleware("language-detect"), async (req
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
     // Use Claude for accurate language detection
-    if (anthropic) {
-      const msg = await anthropic.messages.create({
+    if (getAnthropic()) {
+      const msg = await getAnthropic()!.messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 100,
         messages: [{ role: "user", content: `Detect the language of this text. Reply ONLY with a JSON object: {"language": "English", "code": "en", "confidence": 0.99}\n\nText: ${text.slice(0, 500)}` }],
@@ -876,11 +889,11 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
     const ok = await deductCredits(req, res, "sentiment-analysis", 8);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text } = req.body as { text?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
       messages: [{ role: "user", content: `Analyze the sentiment of this text. Return ONLY a JSON object:\n{"sentiment": "positive|negative|neutral|mixed", "score": 0.85, "emotions": {"joy": 0.8, "anger": 0.1, "sadness": 0.0, "fear": 0.0, "surprise": 0.1, "disgust": 0.0}}\n\nText: ${text.slice(0, 2000)}` }],
@@ -901,7 +914,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req: AuthedRequ
     const ok = await deductCredits(req, res, "summarize", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text, style = "paragraph" } = req.body as { text?: string; style?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   const stylePrompts: Record<string, string> = {
@@ -913,7 +926,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req: AuthedRequ
   };
   const prompt = stylePrompts[style] ?? stylePrompts["paragraph"];
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 600,
       messages: [{ role: "user", content: `${prompt}\n\nText to summarize:\n${text.slice(0, 8000)}` }],
@@ -933,11 +946,11 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
     const ok = await deductCredits(req, res, "extract-entities", 8);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text } = req.body as { text?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 800,
       messages: [{ role: "user", content: `Extract named entities from this text. Return ONLY JSON:\n{"people": [], "organizations": [], "locations": [], "dates": [], "money": [], "other": []}\n\nText: ${text.slice(0, 4000)}` }],
@@ -959,11 +972,11 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req: 
     const ok = await deductCredits(req, res, "regex-generate", 8);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { description, examples } = req.body as { description?: string; examples?: string[] };
   if (!description) { res.status(400).json({ ok: false, error: "invalid_request", message: "description is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 500,
       messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY valid JSON (no extra text): {"pattern": "^[a-z]+$", "flags": "i", "explanation": "brief explanation", "test_examples": ["match1", "match2"]}` }],
@@ -987,11 +1000,11 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "pii-detect", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text, redact = false } = req.body as { text?: string; redact?: boolean };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 800,
       messages: [{ role: "user", content: `Detect PII in this text${redact ? " and provide redacted version" : ""}. Return ONLY JSON:\n{"found": [{"type": "email|phone|ssn|credit_card|name|address|dob|ip", "value": "...", "start": 0, "end": 5}], "has_pii": true${redact ? ', "redacted": "text with [EMAIL] placeholders"' : ""}}\n\nText: ${text.slice(0, 4000)}` }],
@@ -1110,7 +1123,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     // ── Claude ──
     if (CLAUDE_MODELS.includes(model)) {
       const anthKey = byokAnthropicKey || process.env.ANTHROPIC_API_KEY;
-      if (!anthKey && !anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() }); return; }
+      if (!anthKey && !getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() }); return; }
       // BYOK: use fetch directly with user's key; otherwise use SDK client
       let msg: any;
       if (byokAnthropicKey) {
@@ -1119,7 +1132,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         if (!r.ok) { res.status(r.status).json({ ok: false, error: "byok_api_error", message: msg?.error?.message || "BYOK Anthropic call failed", request_id: reqId() }); return; }
         msg = { content: msg.content, usage: msg.usage, model: msg.model };
       } else {
-        msg = await anthropic!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+        msg = await getAnthropic()!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
       }
       const text = msg.content.find((b: any) => b.type === "text")?.text ?? "";
       const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
@@ -1139,7 +1152,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     const ok = await deductCredits(req, res, "ocr-extract", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { image_url, image_base64, media_type = "image/jpeg" } = req.body as { image_url?: string; image_base64?: string; media_type?: string };
   if (!image_url && !image_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
   try {
@@ -1157,7 +1170,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
       imgMediaType = "image/jpeg"; // safe default
     }
     const imageContent = { type: "image" as const, source: { type: "base64" as const, media_type: imgMediaType as "image/jpeg", data: imgBase64! } };
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages: [{ role: "user", content: [imageContent, { type: "text", text: "Extract all text from this image. Return the text exactly as it appears, preserving formatting and structure." }] }],
@@ -1178,7 +1191,8 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
     const ok = await deductCredits(req, res, "browser-task", 10);
     if (!ok) return;
   }
-  const { url, action = "extract", selector, text: inputText } = req.body as { url?: string; action?: string; selector?: string; text?: string };
+  const { url, selector, text: inputText } = req.body as { url?: string; selector?: string; text?: string };
+  const action = String(req.body.action ?? req.body.task ?? "extract");
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
@@ -1205,7 +1219,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     const ok = await deductCredits(req, res, "extract-pdf", 6);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { pdf_url, pdf_base64 } = req.body as { pdf_url?: string; pdf_base64?: string };
   if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url or pdf_base64 is required", request_id: reqId() }); return; }
   try {
@@ -1222,7 +1236,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     }
     try {
       // Use messages.create with betas header for PDF document type support
-      const msg = await anthropic.messages.create({
+      const msg = await getAnthropic()!.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4096,
         messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } } as any, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
@@ -1410,7 +1424,9 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
       method: httpMethod,
       status_code: resp.status,
       response_ms: Date.now() - start,
-      response_body: String(resp.data).slice(0, 500),
+      response_body: typeof resp.data === "string"
+        ? resp.data.slice(0, 500)
+        : JSON.stringify(resp.data).slice(0, 500),
       request_id: reqId(),
     });
   } catch (e) {
@@ -1483,11 +1499,11 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: 
     const ok = await deductCredits(req, res, "image-generate", 30);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { prompt, style = "svg", width = 400, height = 300 } = req.body as { prompt?: string; style?: string; width?: number; height?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1500,
       messages: [{
@@ -1512,7 +1528,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const ok = await deductCredits(req, res, "barcode-generate", 2);
     if (!ok) return;
   }
-  const barcodeData = (req.body.value ?? req.body.data) as string | undefined;
+  const barcodeData = (req.body.value ?? req.body.data ?? req.body.text) as string | undefined;
   const requestedType = String(req.body.type ?? req.body.format ?? "code128").toLowerCase();
   const type = requestedType === "code128" ? "code128" : requestedType;
   const { width = 250, height = 100 } = req.body as { width?: number; height?: number };
@@ -1561,13 +1577,14 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
     const ok = await deductCredits(req, res, "workflow-agent", 25);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { goal, context } = req.body as { goal?: string; context?: string };
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  const goal = req.body.goal ?? req.body.task;
+  const { context } = req.body as { context?: string };
   const requestedSteps = Number(req.body.steps ?? req.body.max_steps ?? 3);
   const stepCount = Number.isFinite(requestedSteps) ? Math.max(1, Math.min(10, Math.floor(requestedSteps))) : 3;
-  if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal is required", request_id: reqId() }); return; }
+  if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal (or task) is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 3000,
       messages: [{
@@ -1633,7 +1650,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
   const providers: Array<{ name: string; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
 
-  if (anthropic || oraclByokAnthropicKey) {
+  if (getAnthropic() || oraclByokAnthropicKey) {
     const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
     providers.push({
       name: "anthropic",
@@ -1649,7 +1666,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
           const text = (d.content || []).find((b: any) => b.type === "text")?.text ?? "";
           return { text, model: oracleModel, usage: { input_tokens: d.usage?.input_tokens ?? 0, output_tokens: d.usage?.output_tokens ?? 0 } };
         }
-        const msg = await anthropic!.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
+        const msg = await getAnthropic()!.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
         const text = (msg.content as any[]).filter(b => b.type === "text").map(b => b.text).join("") ?? "";
         return { text, model: oracleModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens } };
       },
@@ -2619,11 +2636,11 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     let responseText = "";
 
     if (CLAUDE_MODELS.includes(model)) {
-      if (!anthropic) {
+      if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
         return;
       }
-      const msg = await anthropic.messages.create({
+      const msg = await getAnthropic()!.messages.create({
         model,
         max_tokens: 2048,
         ...(session.system_prompt ? { system: session.system_prompt } : {}),
@@ -2795,19 +2812,30 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
   const hunterKey = process.env.HUNTER_API_KEY;
   if (!hunterKey) { res.status(503).json({ ok: false, error: "not_configured", message: "HUNTER_API_KEY not configured", request_id: reqId() }); return; }
   try {
+    const hasFullName = !!(first_name && last_name);
+    const endpoint = hasFullName ? "email-finder" : "domain-search";
     const params = new URLSearchParams({ domain, api_key: hunterKey });
-    if (first_name) params.set("first_name", first_name);
-    if (last_name) params.set("last_name", last_name);
-    const resp = await fetch(`https://api.hunter.io/v2/email-finder?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
+    if (hasFullName) {
+      params.set("first_name", first_name!);
+      params.set("last_name", last_name!);
+    }
+    const resp = await fetch(`https://api.hunter.io/v2/${endpoint}?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[email-find] Hunter error:", resp.status, err);
       res.status(502).json({ ok: false, error: "hunter_error", message: `Hunter.io returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
-    const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
-    const result = data.data;
-    if (!result?.email) { res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() }); return; }
-    res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, credits_used: 5, request_id: reqId() });
+    if (hasFullName) {
+      const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
+      const result = data.data;
+      if (!result?.email) { res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() }); return; }
+      res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, match_type: "person", credits_used: 5, request_id: reqId() });
+      return;
+    }
+    const data = await resp.json() as { data?: { emails?: Array<{ value?: string; confidence?: number; first_name?: string; last_name?: string; position?: string; department?: string }> ; organization?: string } };
+    const emails = data.data?.emails ?? [];
+    if (!emails.length) { res.status(404).json({ ok: false, error: "not_found", message: "No emails found for the given domain", request_id: reqId() }); return; }
+    res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 5, request_id: reqId() });
   } catch (e) { console.error("[email-find]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2815,14 +2843,33 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
 router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "semantic-search", 8); if (!ok) return; }
-  const { query, num_results = 5, type = "neural" } = req.body as { query?: string; num_results?: number; type?: string };
+  const { query, num_results = 5, limit, type = "neural", documents } = req.body as { query?: string; num_results?: number; limit?: number; type?: string; documents?: string[] };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  const n = Math.min(Math.max(1, Number(limit ?? num_results ?? 5)), 20);
+
+  if (Array.isArray(documents) && documents.length > 0) {
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const queryTerms = new Set(normalize(query).split(" ").filter(Boolean));
+    const scored = documents.map((doc, index) => {
+      const text = typeof doc === "string" ? doc : JSON.stringify(doc);
+      const norm = normalize(text);
+      const words = new Set(norm.split(" ").filter(Boolean));
+      let overlap = 0;
+      for (const term of queryTerms) if (words.has(term)) overlap += 1;
+      const phraseBoost = norm.includes(normalize(query)) ? 2 : 0;
+      const score = queryTerms.size ? (overlap / queryTerms.size) + phraseBoost : 0;
+      return { index, text: text.slice(0, 1000), score };
+    }).sort((a, b) => b.score - a.score).slice(0, n);
+
+    res.json({ ok: true, query, type: "documents", results: scored, count: scored.length, documents_searched: documents.length, credits_used: 8, request_id: reqId() });
+    return;
+  }
+
   const validTypes = ["neural", "keyword"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
   const exaKey = process.env.EXA_API_KEY;
   if (!exaKey) { res.status(503).json({ ok: false, error: "not_configured", message: "EXA_API_KEY not configured", request_id: reqId() }); return; }
   try {
-    const n = Math.min(Math.max(1, num_results), 20);
     const resp = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${exaKey}` },
