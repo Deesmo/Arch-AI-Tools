@@ -287,6 +287,17 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
   try {
     const yaml = await import("js-yaml");
     let parsed: unknown;
+    // text ↔ base64 shortcut (no structured parse needed)
+    if (from === "text" || from === "string") {
+      if (to === "base64") { res.json({ ok: true, output: Buffer.from(input, "utf8").toString("base64"), from, to, request_id: reqId() }); return; }
+      if (to === "hex") { res.json({ ok: true, output: Buffer.from(input, "utf8").toString("hex"), from, to, request_id: reqId() }); return; }
+      res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot convert text to ${to}. Supported: base64, hex`, request_id: reqId() }); return;
+    }
+    if (from === "base64") {
+      if (to === "text" || to === "string") { res.json({ ok: true, output: Buffer.from(input, "base64").toString("utf8"), from, to, request_id: reqId() }); return; }
+      if (to === "hex") { res.json({ ok: true, output: Buffer.from(input, "base64").toString("hex"), from, to, request_id: reqId() }); return; }
+      res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot convert base64 to ${to}. Supported: text, hex`, request_id: reqId() }); return;
+    }
     if (from === "json") parsed = JSON.parse(input);
     else if (from === "yaml") parsed = yaml.load(input);
     else if (from === "csv") {
@@ -295,7 +306,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     } else if (from === "xml") {
       const xml2js = await import("xml2js");
       parsed = await xml2js.parseStringPromise(input);
-    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}`, request_id: reqId() }); return; }
+    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}. Supported: json, yaml, csv, xml, text, base64`, request_id: reqId() }); return; }
 
     let output: string;
     if (to === "json") output = JSON.stringify(parsed, null, 2);
@@ -307,7 +318,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     } else if (to === "xml") {
       const { create } = await import("xmlbuilder2");
       output = create({ root: parsed as object }).end({ prettyPrint: true });
-    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}`, request_id: reqId() }); return; }
+    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}. Supported: json, yaml, csv, xml`, request_id: reqId() }); return; }
 
     res.json({ ok: true, output, from, to, request_id: reqId() });
   } catch (e) {
@@ -1756,8 +1767,15 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
 const cgHeaders = (): Record<string, string> => {
   const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
   const key = config.coingecko?.apiKey;
-  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-demo-api-key"] = key; // demo key header (upgrade to x-cg-pro-api-key if switching to Pro tier)
+  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-pro-api-key"] = key;
   return h;
+};
+// Use pro endpoint when a CoinGecko API key is configured, otherwise fall back to free tier
+const cgBase = (): string => {
+  const key = config.coingecko?.apiKey;
+  return (key && key.length > 10 && !key.startsWith("REPLACE"))
+    ? "https://pro-api.coingecko.com/api/v3"
+    : "https://api.coingecko.com/api/v3";
 };
 
 // ─── crypto-price ────────────────────────────────────────────────────────────
@@ -1770,7 +1788,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
+    const r = await fetch(`${cgBase()}/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as Record<string, Record<string, number>>;
     if (!data || !data[id]) {
@@ -1793,7 +1811,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
+    const r = await fetch(`${cgBase()}/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const raw = await r.json() as number[][];
     const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
@@ -1812,7 +1830,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const n = Math.min(Math.max(1, limit), 100);
 
     // Try CoinGecko with exponential backoff (Render IPs get rate-limited)
-    const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
+    const cgUrl = `${cgBase()}/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
     const _cgHeaders = cgHeaders();
     type CgCoin = { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number };
     let cgData: CgCoin[] | null = null;
@@ -1891,7 +1909,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
+    const r = await fetch(`${cgBase()}/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
     if (!r.ok) {
       console.warn(`[crypto-sentiment] CoinGecko returned ${r.status} for '${id}'`);
       if (r.status === 429) { res.status(429).json({ ok: false, error: "rate_limited", message: "CoinGecko rate limit hit. Try again in a moment.", request_id: reqId() }); return; }
@@ -1985,7 +2003,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
   const query = (req.body.query ?? req.body.text ?? req.body.symbol) as string | undefined;
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query (or text/symbol) is required", request_id: reqId() }); return; }
   try {
-    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
+    const r = await fetch(`${cgBase()}/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
@@ -3281,7 +3299,7 @@ router.post("/crypto-dominance", ...toolMiddleware("crypto-dominance"), async (r
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-dominance", 1); if (!ok) return; }
   try {
-    const r = await fetch("https://api.coingecko.com/api/v3/global", { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
+    const r = await fetch(`${cgBase()}/global`, { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
     if (!r.ok) {
       try {
         const ccResp = await fetch("https://api.coincap.io/v2/assets?limit=2", { signal: AbortSignal.timeout(8000) });
