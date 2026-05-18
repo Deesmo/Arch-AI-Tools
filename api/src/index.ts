@@ -22,6 +22,7 @@ if (process.env.SENTRY_DSN) {
 // Routes
 import discoveryRouter from "./routes/discovery.js";
 import agentRouter from "./routes/agent.js";
+import { requireAuth, AuthedRequest } from "./middleware/auth.js";
 import toolsRouter from "./routes/tools/index.js";
 import billingRouter from "./routes/billing.js";
 import adminRouter from "./routes/admin.js";
@@ -231,6 +232,14 @@ app.use("/v1/tools", seoRouter);  // Free endpoint proxies
 app.use("/v1/agent/register", registerLimiter);
 // Agent usage & other agent routes — auth brute force protection
 app.use("/v1/agent", authLimiter, agentRouter);
+
+// Aliases — /v1/account and /v1/credits point to the same agent router
+app.use("/v1/account", authLimiter, agentRouter);
+app.get("/v1/credits", requireAuth, async (req: AuthedRequest, res: Response) => {
+  // Thin alias → same as GET /v1/agent/balance
+  req.url = "/balance";
+  agentRouter(req, res, () => res.status(404).json({ ok: false, error: "not_found" }));
+});
 
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
