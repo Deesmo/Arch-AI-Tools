@@ -12,8 +12,8 @@ const router = Router();
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
   { credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { credits: 30000,  amount: 4900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
-  { credits: 200000, amount: 19900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
+  { credits: 20000,  amount: 2500,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { credits: 100000, amount: 7900,  label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
@@ -23,7 +23,7 @@ const SUBSCRIPTION_PLANS = [
     label: "Starter",
     billing: "monthly",
     credits_per_month: 15000,
-    amount: 1900,    // $19/mo
+    amount: 900,     // $9/mo
     // Security: price IDs must be set via environment variables — no hardcoded fallbacks.
     // Set STRIPE_PRICE_SUB_STARTER_MONTHLY in your environment. See .env.example.
     priceId: process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY ?? "",
@@ -50,8 +50,8 @@ const SUBSCRIPTION_PLANS = [
     billing: "annual",
     credits_per_month: 15000,
     credits_per_year: 180000,
-    amount: 18900,   // $189/yr = $15.75/mo (17% off)
-    amount_monthly_equiv: 1575,
+    amount: 9000,    // $90/yr = $7.50/mo (17% off)
+    amount_monthly_equiv: 750,
     priceId: process.env.STRIPE_PRICE_SUB_STARTER_ANNUAL ?? "",
   },
   {
@@ -257,7 +257,7 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         if (!creditsPerMonth) { res.json({ received: true }); return; }
         await prisma.$transaction([
           prisma.purchase.create({ data: { agentId, stripeId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
-          prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId } }),
+          prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId.replace(/-(monthly|annual)$/, '') } }),
         ]);
         console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
         // Fire webhook event (non-blocking)
