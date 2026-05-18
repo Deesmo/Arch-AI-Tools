@@ -13,7 +13,7 @@
 All tool endpoints require an API key:
   Authorization: Bearer YOUR_API_KEY
 
-Get a free key (100 credits) at https://archtools.dev/#register
+Get a free key (250 credits) at https://archtools.dev/#register
 
 ## x402 Autonomous Payment (no key required)
 AI agents can pay per-call with USDC on Base via the x402 protocol.
