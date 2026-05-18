@@ -1778,6 +1778,61 @@ const cgBase = (): string => {
     : "https://api.coingecko.com/api/v3";
 };
 
+// Ticker → CoinGecko slug map. Lets users pass BTC/ETH/etc and have it resolved
+// to the canonical CoinGecko id. Slugs (e.g. "bitcoin") still pass through as-is.
+const TICKER_TO_SLUG: Record<string, string> = {
+  btc: "bitcoin",
+  eth: "ethereum",
+  sol: "solana",
+  xrp: "ripple",
+  ada: "cardano",
+  doge: "dogecoin",
+  matic: "matic-network",
+  avax: "avalanche-2",
+  dot: "polkadot",
+  link: "chainlink",
+  uni: "uniswap",
+  usdt: "tether",
+  usdc: "usd-coin",
+  bnb: "binancecoin",
+  trx: "tron",
+  shib: "shiba-inu",
+  ltc: "litecoin",
+  bch: "bitcoin-cash",
+  atom: "cosmos",
+  near: "near",
+  fil: "filecoin",
+  algo: "algorand",
+  vet: "vechain",
+  icp: "internet-computer",
+  sand: "the-sandbox",
+  mana: "decentraland",
+  ftm: "fantom",
+  hbar: "hedera-hashgraph",
+  etc: "ethereum-classic",
+  xlm: "stellar",
+  aave: "aave",
+  crv: "curve-dao-token",
+  mkr: "maker",
+  comp: "compound-governance-token",
+  ldo: "lido-dao",
+  arb: "arbitrum",
+  op: "optimism",
+};
+
+// Normalize a user-provided token reference. If it looks like a ticker (all-caps
+// original OR found in the ticker map), return the CoinGecko slug. Otherwise
+// pass through as-is so existing slug inputs ("bitcoin") keep working.
+const normalizeCoinId = (input: string): string => {
+  if (!input) return input;
+  const raw = input.trim();
+  const lower = raw.toLowerCase();
+  const isAllCaps = raw === raw.toUpperCase() && /[A-Z]/.test(raw);
+  if (isAllCaps && TICKER_TO_SLUG[lower]) return TICKER_TO_SLUG[lower];
+  if (TICKER_TO_SLUG[lower]) return TICKER_TO_SLUG[lower];
+  return lower;
+};
+
 // ─── crypto-price ────────────────────────────────────────────────────────────
 router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
@@ -1787,7 +1842,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
   const currency = body.currency ?? "usd";
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
   try {
-    const id = symbol.toLowerCase().trim();
+    const id = normalizeCoinId(symbol);
     const r = await fetch(`${cgBase()}/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as Record<string, Record<string, number>>;
@@ -1810,7 +1865,7 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: Auth
   const currency = body.currency ?? "usd";
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required", request_id: reqId() }); return; }
   try {
-    const id = symbol.toLowerCase().trim();
+    const id = normalizeCoinId(symbol);
     const r = await fetch(`${cgBase()}/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const raw = await r.json() as number[][];
@@ -1981,10 +2036,15 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
       for (const r of results) {
         if (r.status === "fulfilled") articles.push(...r.value);
       }
-      // Filter by symbol if provided
+      // Filter by symbol if provided. Match either the raw input or its CoinGecko slug
+      // form, so users passing "BTC" still match articles mentioning "bitcoin".
       if (symbol && articles.length > 0) {
-        const q = symbol.toLowerCase();
-        const filtered = articles.filter(a => a.title.toLowerCase().includes(q));
+        const q = symbol.toLowerCase().trim();
+        const slug = normalizeCoinId(symbol);
+        const filtered = articles.filter(a => {
+          const t = a.title.toLowerCase();
+          return t.includes(q) || (slug && slug !== q && t.includes(slug));
+        });
         if (filtered.length > 0) articles = filtered;
       }
       articles = articles.slice(0, n);
