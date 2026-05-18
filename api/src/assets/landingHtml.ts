@@ -6,7 +6,7 @@ export const LANDING_HTML = `<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arch Tools — Production-Ready API Tools for AI Agents & Developers</title>
-  <meta name="description" content="45 AI-powered API tools for developers and AI agents. Scrape, generate, convert, detect, and more. One API key. 100 free credits/month. No credit card required." />
+  <meta name="description" content="64 AI-powered API tools for developers and AI agents. Scrape, generate, convert, detect, and more. One API key. 250 free credits/month. No credit card required." />
   <meta property="og:title" content="Arch Tools — API Tools for AI Agents" />
   <meta property="og:description" content="Production-ready utility tools for developers and AI agents. Validate, hash, scrape, convert, and generate — all with a single API key." />
   <meta property="og:image" content="https://archtools.dev/og-image.png" />
@@ -832,11 +832,11 @@ export const LANDING_HTML = `<!doctype html>
   <div class="hero-inner">
     <div class="hero-badge">
       <div class="hero-badge-dot"></div>
-      Now live · 45 production tools · 100 free credits/month · No credit card required
+      Now live · 64 production tools · 250 free credits/month · No credit card required
     </div>
-    <h1>45 Tools Your AI Agent<br><span class="grad">Can Call Right Now</span></h1>
+    <h1>64 Tools Your AI Agent<br><span class="grad">Can Call Right Now</span></h1>
     <p class="hero-sub">
-      One API key. 45 ready-to-use tools — scrape websites, generate text with Claude or GPT-4,
+      One API key. 64 ready-to-use tools — scrape websites, generate text with Claude or GPT-4,
       detect PII, convert files, look up crypto prices, extract PDFs, and more.
       Agents pay autonomously in USDC. Developers pay with Stripe. No subscriptions.
     </p>
@@ -1100,7 +1100,7 @@ result = client.tools.invoke(
       <div class="step-num">1</div>
       <div>
         <div class="step-title">Register</div>
-        <div class="step-desc">Enter your email at <a href="/signup" style="color:var(--text);text-decoration:underline">/signup</a> — your API key is generated instantly. 100 free credits added to your account, refreshed monthly.</div>
+        <div class="step-desc">Enter your email at <a href="/signup" style="color:var(--text);text-decoration:underline">/signup</a> — your API key is generated instantly. 250 free credits added to your account, refreshed monthly.</div>
       </div>
     </div>
     <div class="step">
@@ -1197,8 +1197,8 @@ result = client.tools.invoke(
 <div class="divider"></div>
 <section class="section" id="pricing">
   <div class="section-label">Pricing</div>
-  <h2 class="section-title">100 Free Credits Every Month. No Credit Card.</h2>
-  <p class="section-sub">Every account gets 100 free credits on signup, refreshed every month — no card required, no trial expiry.
+  <h2 class="section-title">250 Free Credits Every Month. No Credit Card.</h2>
+  <p class="section-sub">Every account gets 250 free credits on signup, refreshed every month — no card required, no trial expiry.
   Need more? Buy a one-time credit pack. Credits never expire. No subscription ever.</p>
   <div class="pricing-grid">
     <div class="plan-card">
@@ -1210,10 +1210,10 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~1,000 hash calls or 50 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 45 tools</li>
+        <li>All 64 tools</li>
         <li>60 req/min rate limit</li>
         <li>REST + MCP access</li>
-        <li>100 free credits/month</li>
+        <li>250 free credits/month</li>
       </ul>
       <button class="plan-btn plan-btn-ghost" data-pack="starter">Buy Starter Credits</button>
     </div>
@@ -1228,11 +1228,11 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~10,000 hashes or 500 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 45 tools</li>
+        <li>All 64 tools</li>
         <li>240 req/min rate limit</li>
         <li>REST + MCP + SDK access</li>
         <li>API key restrictions</li>
-        <li>100 free credits/month</li>
+        <li>250 free credits/month</li>
       </ul>
       <button class="plan-btn plan-btn-primary" data-pack="pro">Buy Pro Credits →</button>
     </div>
@@ -1246,12 +1246,12 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~100k hashes or 5,000 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 45 tools</li>
+        <li>All 64 tools</li>
         <li>1,200 req/min rate limit</li>
         <li>REST + MCP + SDK access</li>
         <li>IP + origin restrictions</li>
         <li>Daily credit caps per key</li>
-        <li>100 free credits/month</li>
+        <li>250 free credits/month</li>
       </ul>
       <button class="plan-btn plan-btn-ghost" data-pack="business">Buy Business Credits</button>
     </div>

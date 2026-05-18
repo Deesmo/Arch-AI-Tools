@@ -7,7 +7,7 @@
  *
  * The full registration (/v1/agent/register) already gives FREE_MONTHLY_CREDITS
  * (default 1000). This trial endpoint is for quick, minimal onboarding with
- * a smaller credit grant (100 credits) — ideal for embedded signups, widget
+ * a configurable trial credit grant (default 250) — ideal for embedded signups, widget
  * integrations, and partner landing pages.
  */
 
@@ -26,7 +26,7 @@ const router = Router();
 const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "250", 10);
 
 // ─── POST /v1/trial/activate ────────────────────────────────────────────────
-// Creates a trial account with 100 free credits. Simpler than full registration.
+// Creates a trial account with TRIAL_CREDITS free credits (default 250). Simpler than full registration.
 // Requires only an email. Returns API key + trial info.
 router.post("/activate", async (req: Request, res: Response): Promise<void> => {
   const { email: rawEmail, name } = req.body ?? {};

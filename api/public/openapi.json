@@ -2096,6 +2096,85 @@
           "200": { "description": "Posted tweet ID and URL" }
         }
       }
+    },
+    "/v1/tools/send-email": {
+      "post": {
+        "operationId": "sendEmail",
+        "summary": "Send transactional emails via Resend (alias of email-send)",
+        "tags": ["Communication"],
+        "description": "Alias of /v1/tools/email-send. Same parameters and pricing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["to", "subject", "body"],
+                "properties": {
+                  "to": { "type": "string", "description": "Recipient email address" },
+                  "subject": { "type": "string", "description": "Email subject line" },
+                  "body": { "type": "string", "description": "Email body (plain text or HTML)" },
+                  "from": { "type": "string", "description": "Sender address (optional, defaults to verified domain)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Email queued with Resend message ID" }
+        }
+      }
+    },
+    "/v1/tools/generate-image": {
+      "post": {
+        "operationId": "generateImage",
+        "summary": "Generate images from text prompts (alias of design-create)",
+        "tags": ["Image"],
+        "description": "Alias of /v1/tools/design-create. Same parameters and pricing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string", "description": "Text description of the image to generate" },
+                  "size": { "type": "string", "enum": ["1024x1024", "1792x1024", "1024x1792"], "default": "1024x1024" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Generated image URL" }
+        }
+      }
+    },
+    "/v1/tools/check-domain": {
+      "post": {
+        "operationId": "checkDomain",
+        "summary": "Check if a domain is available or registered (alias of domain-check)",
+        "tags": ["Utility"],
+        "description": "Alias of /v1/tools/domain-check. Same parameters and pricing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["domain"],
+                "properties": {
+                  "domain": { "type": "string", "description": "Domain name to check (e.g. example.com)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Domain availability status and registration details" }
+        }
+      }
     }
   }
 }
