@@ -281,9 +281,9 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     const ok = await deductCredits(req, res, "convert-format", 2);
     if (!ok) return;
   }
-  const input = req.body.data ?? req.body.input;
+  const input = req.body.data ?? req.body.input ?? req.body.content;
   const { from, to } = req.body as { from?: string; to?: string };
-  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data), from, and to are required", request_id: reqId() }); return; }
+  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data/content), from, and to are required", request_id: reqId() }); return; }
   try {
     const yaml = await import("js-yaml");
     let parsed: unknown;
@@ -1578,11 +1578,11 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
     if (!ok) return;
   }
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const goal = req.body.goal ?? req.body.task;
+  const goal = req.body.goal ?? req.body.task ?? req.body.objective;
   const { context } = req.body as { context?: string };
   const requestedSteps = Number(req.body.steps ?? req.body.max_steps ?? 3);
   const stepCount = Number.isFinite(requestedSteps) ? Math.max(1, Math.min(10, Math.floor(requestedSteps))) : 3;
-  if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal (or task) is required", request_id: reqId() }); return; }
+  if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal (or task/objective) is required", request_id: reqId() }); return; }
   try {
     const msg = await getAnthropic()!.messages.create({
       model: "claude-sonnet-4-6",
@@ -1982,8 +1982,8 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
 router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "token-lookup", 1); if (!ok) return; }
-  const { query } = req.body as { query?: string };
-  if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  const query = (req.body.query ?? req.body.text ?? req.body.symbol) as string | undefined;
+  if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query (or text/symbol) is required", request_id: reqId() }); return; }
   try {
     const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
