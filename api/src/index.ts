@@ -433,11 +433,46 @@ app.get("/v1/health/x402", async (_req: Request, res: Response) => {
 });
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────
-app.use((_req: Request, res: Response) => {
+app.use((req: Request, res: Response) => {
+  const requestId = crypto.randomUUID();
+  const wantsHtml = req.accepts(["json", "html"]) === "html";
+  if (wantsHtml) {
+    res.status(404).type("html").send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>404 — Page not found | Arch Tools</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#07061a;color:#f0f0f6;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;min-height:100vh}
+  .wrap{max-width:560px;margin:0 auto;padding:80px 24px;text-align:center}
+  .code{font-size:72px;font-weight:800;letter-spacing:-0.06em;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px}
+  h1{font-size:22px;font-weight:700;margin:0 0 12px}
+  p{font-size:14px;line-height:1.6;color:rgba(255,255,255,0.65);margin:0 0 28px}
+  .links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:24px}
+  a.btn{display:inline-block;padding:10px 18px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#22d3ee;text-decoration:none;font-weight:600;font-size:13px}
+  a.btn.primary{background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);border:0;color:#fff}
+  a.btn:hover{background:rgba(255,255,255,0.12)}
+  .rid{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:rgba(255,255,255,0.35);margin-top:20px;word-break:break-all}
+</style></head><body><div class="wrap">
+  <div class="code">404</div>
+  <h1>That page doesn't exist.</h1>
+  <p>The URL you tried isn't a known route. If you came from a link inside Arch Tools, let us know so we can fix it.</p>
+  <div class="links">
+    <a class="btn primary" href="/">Home</a>
+    <a class="btn" href="/docs">Docs</a>
+    <a class="btn" href="/pricing">Pricing</a>
+    <a class="btn" href="/dashboard">Dashboard</a>
+  </div>
+  <div class="rid">request_id: ${requestId}</div>
+</div></body></html>`);
+    return;
+  }
   res.status(404).json({
     ok: false,
     error: "not_found",
-    request_id: crypto.randomUUID(),
+    message: `No route matches ${req.method} ${req.path}. See https://archtools.dev/docs or GET /v1/tools for the list of available tools.`,
+    docs_url: "https://archtools.dev/docs",
+    tools_list_url: "https://archtools.dev/v1/tools",
+    request_id: requestId,
   });
 });
 

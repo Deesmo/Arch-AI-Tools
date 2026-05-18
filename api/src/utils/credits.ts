@@ -22,10 +22,11 @@ export async function deductCredits(
     res.status(402).json({
       ok: false,
       error: "insufficient_credits",
-      message: `This tool costs ${cost} credits. You have ${agent.credits}. Buy more at https://archtools.dev/pricing`,
+      message: `Insufficient credits. You have ${agent.credits} credits but this tool costs ${cost}. Top up at https://archtools.dev/pricing — or earn 500 bonus credits by referring a friend (see /v1/referral/code).`,
       credits_remaining: agent.credits,
       credits_needed: cost,
       upgrade_url: "https://archtools.dev/pricing",
+      referral_url: "https://archtools.dev/v1/referral/code",
       request_id: crypto.randomUUID(),
     });
     return false;

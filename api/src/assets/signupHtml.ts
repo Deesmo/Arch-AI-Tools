@@ -192,7 +192,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
         '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
-        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' free credits</strong>. Refreshed monthly. No subscription required.</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
         '<a href="/dashboard" style="display:block;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#22d3ee;font-weight:700;text-decoration:none;font-size:14px">&#8594; Open Dashboard</a>'
       );
       const copyBtn = document.getElementById('copy-btn');

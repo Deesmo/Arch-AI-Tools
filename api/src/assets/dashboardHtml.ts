@@ -164,6 +164,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         <div class="stat-card">
           <div class="stat-label">Credits Remaining</div>
           <div class="stat-val green"><span id="credits">—</span><span class="stat-unit">cr</span></div>
+          <a href="/pricing" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--accent);text-decoration:none;font-weight:600;letter-spacing:0.02em">Get more credits →</a>
         </div>
         <div class="stat-card">
           <div class="stat-label">Calls Today</div>
