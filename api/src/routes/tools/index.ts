@@ -1764,8 +1764,10 @@ const cgHeaders = (): Record<string, string> => {
 router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-price", 1); if (!ok) return; }
-  const { symbol, currency = "usd" } = req.body as { symbol?: string; currency?: string };
-  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
+  const body = req.body as { symbol?: string; coin?: string; currency?: string };
+  const symbol = body.symbol ?? body.coin;
+  const currency = body.currency ?? "usd";
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
     const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
@@ -1784,8 +1786,11 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
 router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-ohlcv", 2); if (!ok) return; }
-  const { symbol, days = 7, currency = "usd" } = req.body as { symbol?: string; days?: number; currency?: string };
-  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
+  const body = req.body as { symbol?: string; coin?: string; days?: number; currency?: string };
+  const symbol = body.symbol ?? body.coin;
+  const days = body.days ?? 7;
+  const currency = body.currency ?? "usd";
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
     const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
@@ -1910,7 +1915,9 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
 router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-news", 2); if (!ok) return; }
-  const { symbol, limit = 10 } = req.body as { symbol?: string; limit?: number };
+  const body = req.body as { symbol?: string; coin?: string; limit?: number };
+  const symbol = body.symbol ?? body.coin;
+  const limit = body.limit ?? 10;
   const n = Math.min(Math.max(1, limit), 20);
 
   // Helper: parse RSS feed
