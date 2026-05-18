@@ -284,7 +284,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
     const apiKeyPrefix = apiKey.slice(0, 12);
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
-    const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "100", 10);
+    const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "250", 10);
 
     const agent = await prisma.agent.create({
       data: {

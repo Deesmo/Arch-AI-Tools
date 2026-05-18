@@ -23,7 +23,7 @@ import { captureEvent, identifyUser } from "../lib/posthog.js";
 
 const router = Router();
 
-const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "100", 10);
+const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "250", 10);
 
 // ─── POST /v1/trial/activate ────────────────────────────────────────────────
 // Creates a trial account with 100 free credits. Simpler than full registration.

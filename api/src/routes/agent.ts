@@ -50,7 +50,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // The first 12 chars are stored as apiKeyPrefix for fast indexed lookup.
     const apiKeyPrefix = apiKey.slice(0, 12);
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
-    const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "100", 10);
+    const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "250", 10);
 
     const agent = await prisma.agent.create({
       data: {

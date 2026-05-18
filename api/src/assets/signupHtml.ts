@@ -4,7 +4,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arch Tools — Get your API key</title>
-  <meta name="description" content="Create your Arch Tools account. Get your API key instantly — no email verification required. 100 free credits included." />
+  <meta name="description" content="Create your Arch Tools account. Get your API key instantly — no email verification required. 250 free credits included." />
   <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,7 +139,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     <div class="wrap">
       <div class="card">
         <div class="card-title">Get your API key</div>
-        <p class="card-sub">Enter your email — your key is generated instantly. No email verification. No credit card. 100 free credits included, refreshed monthly.</p>
+        <p class="card-sub">Enter your email — your key is generated instantly. No email verification. No credit card. 250 free credits included, refreshed monthly.</p>
 
         <div class="input-row">
           <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
@@ -165,7 +165,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     (function() {
       const params = new URLSearchParams(window.location.search);
       const preKey = params.get('key');
-      const preCredits = parseInt(params.get('credits') || '100', 10);
+      const preCredits = parseInt(params.get('credits') || '250', 10);
       if (preKey && preKey.startsWith('arch_')) {
         showSuccess(preKey, preCredits);
         btn.style.display = 'none';
@@ -232,7 +232,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
               });
             } catch(_) {}
           }
-          showSuccess(data.api_key, data.credits || 100);
+          showSuccess(data.api_key, data.credits || 250);
           btn.style.display = 'none';
           document.getElementById('email').style.display = 'none';
           document.getElementById('password').style.display = 'none';
