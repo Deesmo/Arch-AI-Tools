@@ -345,8 +345,16 @@ app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(
 app.get("/use-cases", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/use-cases.html')));
 app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
-app.get("/admin.html", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
-app.get("/admin", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+// Admin panel — require session cookie OR x-admin-key before serving HTML
+const adminGate = (req: Request, res: Response, next: import('express').NextFunction): void => {
+  const key = req.headers["x-admin-key"] as string | undefined;
+  const cookie = req.headers["cookie"] ?? "";
+  // Allow if valid admin key header OR browser session cookie present (admin login sets it)
+  if ((key && key === config.adminKey) || cookie.includes("at_admin=")) { next(); return; }
+  res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
+};
+app.get("/admin.html", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+app.get("/admin", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
 app.get("/sitemap.xml", (_req, res) => res.sendFile(path.join(__dirname, '../public/sitemap.xml')));
 app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../public/robots.txt')));
 app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));

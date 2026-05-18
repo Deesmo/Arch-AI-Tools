@@ -100,6 +100,16 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
   const overallOk = dbStatus === "connected";
   const checkMs = Date.now() - startMs;
 
+  // Public response — minimal, no internal details
+  // Detailed health available to admin key holders only
+  const adminKey = (_req as import("express").Request & { headers: Record<string, string | string[] | undefined> }).headers["x-admin-key"];
+  const isAdmin = adminKey && adminKey === config.adminKey;
+
+  if (!isAdmin) {
+    res.status(overallOk ? 200 : 503).json({ ok: overallOk });
+    return;
+  }
+
   res.status(overallOk ? 200 : 503).json({
     ok: overallOk,
     service: "arch-tools-api",

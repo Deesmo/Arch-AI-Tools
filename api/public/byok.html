@@ -51,7 +51,7 @@
     <h2>How it works</h2>
     <p>Pass your API key as a request header. Arch Tools detects it automatically and routes your request through your key.</p>
 
-    <pre><span style="color:#8A8AFF">curl</span> -X POST https://arch-ai-tools.onrender.com/v1/tools/ai-generate \
+    <pre><span style="color:#8A8AFF">curl</span> -X POST https://archtools.dev/v1/tools/ai-generate \
 -H <span style="color:#34d399">"x-api-key: YOUR_ARCH_TOOLS_KEY"</span> \
   -H <span style="color:#34d399">"x-openai-key: sk-your-openai-key"</span> \
   -H <span style="color:#34d399">"Content-Type: application/json"</span> \
@@ -75,7 +75,7 @@
     <pre><span style="color:#8A8AFF">import</span> requests
 
 response = requests.post(
-    <span style="color:#34d399">"https://arch-ai-tools.onrender.com/v1/tools/ai-generate"</span>,
+    <span style="color:#34d399">"https://archtools.dev/v1/tools/ai-generate"</span>,
     headers={
         <span style="color:#34d399">"Authorization"</span>: <span style="color:#34d399">"Bearer YOUR_ARCH_TOOLS_KEY"</span>,
         <span style="color:#34d399">"x-anthropic-key"</span>: <span style="color:#34d399">"sk-ant-your-key"</span>,
