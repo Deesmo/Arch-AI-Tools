@@ -2057,51 +2057,48 @@ function showLangTab(lang) {
       <button id="toggle-annual" onclick="setPricingMode('annual')" style="padding:8px 22px;border-radius:9px;border:0;background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">Annual <span style="font-size:10px;color:#00e5b0;font-weight:700;">SAVE 17%</span></button>
     </div>
 
-    <!-- One-time packs -->
+    <!-- One-time top-up packs -->
     <div id="pricing-onetime">
       <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,144,16,0.08);border:1px solid rgba(255,144,16,0.3);border-radius:8px;padding:10px 18px;margin-bottom:28px;font-family:var(--mono);font-size:12px;color:#FF9010;">
         <span>&#128274;</span>
-        <span><strong>Credits never expire.</strong> Pay once, use forever. Every competitor expires credits monthly. We don't.</span>
+        <span><strong>Top-up packs.</strong> Stack on any plan. Credits never expire.</span>
       </div>
       <div class="pricing-grid">
         <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+          <div class="plan-name-mono"><span class="hash">#</span> SMALL PACK</div>
           <div class="plan-price"><span class="currency">$</span>9</div>
           <div class="plan-sub">5,000 credits &middot; never expire</div>
           <ul class="plan-features">
             <li>5,000 credits</li>
-            <li>Full platform access</li>
-            <li>API key included</li>
+            <li>Works on any plan</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-pack="starter">$ buy-starter</button>
+          <button class="plan-cta plan-cta-primary" data-pack="starter">$ buy-5k</button>
         </div>
         <div class="pricing-card featured">
-          <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; BEST VALUE</span></div>
-          <div class="plan-price"><span class="currency">$</span>49</div>
-          <div class="plan-sub">30,000 credits &middot; never expire</div>
+          <div class="plan-name-mono"><span class="hash">#</span> MEDIUM PACK <span class="plan-badge">&#9733; BEST VALUE</span></div>
+          <div class="plan-price"><span class="currency">$</span>25</div>
+          <div class="plan-sub">20,000 credits &middot; never expire</div>
           <ul class="plan-features">
-            <li>30,000 credits</li>
-            <li>Full platform access</li>
-            <li>MCP server access</li>
+            <li>20,000 credits</li>
+            <li>Works on any plan</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-pack="pro">$ buy-pro</button>
+          <button class="plan-cta plan-cta-primary" data-pack="pro">$ buy-20k</button>
         </div>
         <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
-          <div class="plan-price"><span class="currency">$</span>199</div>
-          <div class="plan-sub">200,000 credits &middot; never expire</div>
+          <div class="plan-name-mono"><span class="hash">#</span> LARGE PACK</div>
+          <div class="plan-price"><span class="currency">$</span>79</div>
+          <div class="plan-sub">100,000 credits &middot; never expire</div>
           <ul class="plan-features">
-            <li>200,000 credits</li>
-            <li>Full platform access</li>
-            <li>MCP server access</li>
-            <li>Priority support</li>
+            <li>100,000 credits</li>
+            <li>Works on any plan</li>
+            <li>Credits never expire</li>
             <li>Stripe or USDC</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-pack="business">$ buy-business</button>
+          <button class="plan-cta plan-cta-primary" data-pack="business">$ buy-100k</button>
         </div>
       </div>
     </div>
@@ -2114,17 +2111,17 @@ function showLangTab(lang) {
       </div>
       <div class="pricing-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> DEVELOPER</div>
-          <div class="plan-price"><span class="currency">$</span>19<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+          <div class="plan-price"><span class="currency">$</span>9<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
           <div class="plan-sub">15,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
-            <li>15,000 credits every month</li>
+            <li>15,000 credits every month (hard cap)</li>
             <li>Full platform access</li>
             <li>API key included</li>
             <li>Cancel anytime</li>
             <li>Stripe billing</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-sub="developer-monthly">$ subscribe-developer</button>
+          <button class="plan-cta plan-cta-primary" data-sub="starter-monthly">$ subscribe-starter</button>
         </div>
         <div class="pricing-card featured">
           <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; POPULAR</span></div>
@@ -2175,17 +2172,17 @@ function showLangTab(lang) {
       </div>
       <div class="pricing-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> DEVELOPER</div>
-          <div class="plan-price"><span class="currency">$</span>15.75<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">$189 billed annually &middot; 15,000 credits/month</div>
+          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
+          <div class="plan-price"><span class="currency">$</span>7.50<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">$90 billed annually &middot; 15,000 credits/month</div>
           <ul class="plan-features">
-            <li>15,000 credits every month</li>
+            <li>15,000 credits every month (hard cap)</li>
             <li>Full platform access</li>
             <li>API key included</li>
-            <li>Save $39 vs monthly</li>
+            <li>Save $18 vs monthly</li>
             <li>Cancel anytime</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-sub="developer-annual">$ subscribe-developer-annual</button>
+          <button class="plan-cta plan-cta-primary" data-sub="starter-annual">$ subscribe-starter-annual</button>
         </div>
         <div class="pricing-card featured">
           <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; BEST VALUE</span></div>
