@@ -735,21 +735,60 @@ function buildPaymentRequired(toolName: string, price: string): object {
  * The x402 payment header is a base64-encoded JSON object. We extract the
  * `nonce` field (if present) for replay-attack prevention.
  */
-function extractNonce(paymentHeader: string): string | null {
+export function extractNonce(paymentHeader: string): string | null {
   try {
     const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
     const payload = JSON.parse(decoded) as Record<string, unknown>;
-    const nonce = payload["nonce"];
-    if (typeof nonce === "string" && nonce.length > 0) return nonce;
-    // Some implementations nest under payload.payload
     const inner = payload["payload"];
+    // 1) Standard EIP-3009 location used by @x402/fetch "exact" payments:
+    //    payload.authorization.nonce
     if (inner && typeof inner === "object") {
+      const auth = (inner as Record<string, unknown>)["authorization"];
+      if (auth && typeof auth === "object") {
+        const authNonce = (auth as Record<string, unknown>)["nonce"];
+        if (typeof authNonce === "string" && authNonce.length > 0) return authNonce;
+      }
+      // 2) Some implementations nest under payload.nonce
       const innerNonce = (inner as Record<string, unknown>)["nonce"];
       if (typeof innerNonce === "string" && innerNonce.length > 0) return innerNonce;
     }
+    // 3) Top-level nonce (legacy/non-standard)
+    const nonce = payload["nonce"];
+    if (typeof nonce === "string" && nonce.length > 0) return nonce;
     return null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Derive the dedup TTL for a nonce from the payment's EIP-3009
+ * authorization.validBefore (seconds). The nonce only needs to be remembered
+ * while the authorization is still valid. Clamped to [60s, 24h]; defaults to
+ * 600s when validBefore is absent or unparsable.
+ */
+export function extractNonceTtlSeconds(paymentHeader: string): number {
+  const DEFAULT_TTL = 600;
+  const MIN_TTL = 60;
+  const MAX_TTL = 24 * 60 * 60;
+  try {
+    const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
+    const payload = JSON.parse(decoded) as Record<string, unknown>;
+    const inner = payload["payload"];
+    let validBefore: unknown;
+    if (inner && typeof inner === "object") {
+      const auth = (inner as Record<string, unknown>)["authorization"];
+      if (auth && typeof auth === "object") {
+        validBefore = (auth as Record<string, unknown>)["validBefore"];
+      }
+    }
+    const vb = typeof validBefore === "string" ? Number(validBefore) : typeof validBefore === "number" ? validBefore : NaN;
+    if (!Number.isFinite(vb)) return DEFAULT_TTL;
+    const ttl = Math.floor(vb - Date.now() / 1000);
+    if (!Number.isFinite(ttl)) return DEFAULT_TTL;
+    return Math.min(MAX_TTL, Math.max(MIN_TTL, ttl));
+  } catch {
+    return DEFAULT_TTL;
   }
 }
 
@@ -789,28 +828,34 @@ function extractPaymentNetwork(paymentHeader: string): { network?: string; asset
   }
 }
 
-const NONCE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
+const NONCE_TTL_SECONDS = 600; // default dedup TTL when validBefore is absent
 
 /**
  * Check whether a nonce has been seen before (replay attack detection).
- * Returns true if the nonce is NEW (safe to proceed), false if already used.
- * If Redis is unavailable, falls back to allowing the request (non-blocking).
+ * Returns "new" if the nonce is fresh (stored, safe to proceed), "replay" if
+ * already used, "error" if Redis is configured but unreachable (caller must
+ * fail closed). When REDIS_URL is unset, returns "new" with a warning (dedup
+ * disabled by configuration).
  */
-async function checkAndStoreNonce(nonce: string): Promise<boolean> {
-  if (!redis) {
+export async function checkAndStoreNonce(
+  nonce: string,
+  ttlSeconds: number = NONCE_TTL_SECONDS,
+  redisClient: { set: (...args: any[]) => Promise<any> } | null = redis,
+): Promise<"new" | "replay" | "error"> {
+  if (!redisClient) {
     console.warn("[x402] Redis not configured — nonce deduplication disabled. Set REDIS_URL to enable replay protection.");
-    return true; // allow but warn (only reachable when REDIS_URL unset)
+    return "new"; // allow but warn (only reachable when REDIS_URL unset)
   }
   const key = `x402:nonce:${nonce}`;
   try {
     // SET key "1" NX EX <ttl> — atomic: set only if not exists, returns null if already exists
-    const result = await redis.set(key, "1", "EX", NONCE_TTL_SECONDS, "NX");
-    return result === "OK"; // "OK" = new nonce stored; null = already existed (replay)
+    const result = await redisClient.set(key, "1", "EX", ttlSeconds, "NX");
+    return result === "OK" ? "new" : "replay"; // null = already existed (replay)
   } catch (err) {
     // FAIL-CLOSED: when replay protection is configured (REDIS_URL set) but Redis
     // is unreachable, reject rather than allow a potential replay through.
     console.error(`[x402] Redis unreachable during nonce check — failing closed: ${err instanceof Error ? err.message : String(err)}`);
-    return false;
+    return "error";
   }
 }
 
@@ -1039,25 +1084,27 @@ export function x402Middleware(toolName: string) {
     }
 
     // Nonce-based replay protection.
-    // When REDIS_URL is configured, a nonce is MANDATORY and dedup is enforced
-    // fail-closed. When Redis is not configured, nonce remains optional so the
-    // x402 flow is not DoS'd (provision Redis to activate full replay protection).
+    // A missing nonce never hard-rejects (standard @x402/fetch "exact"
+    // payments carry the nonce at payload.authorization.nonce, which we
+    // extract). When a nonce IS present and REDIS_URL is configured, dedup is
+    // enforced fail-closed; without Redis, dedup is disabled by configuration.
     const nonce = extractNonce(paymentHeader);
-    if (redis && !nonce) {
-      res.status(402).json({
-        ok: false,
-        error: "payment_nonce_required",
-        message: "x402 payments must include a unique nonce for replay protection.",
-      });
-      return;
-    }
     if (nonce) {
-      const isNewNonce = await checkAndStoreNonce(nonce);
-      if (!isNewNonce) {
+      const ttlSeconds = extractNonceTtlSeconds(paymentHeader);
+      const nonceStatus = await checkAndStoreNonce(nonce, ttlSeconds);
+      if (nonceStatus === "replay") {
         res.status(402).json({
           ok: false,
           error: "payment_replay_detected",
           message: "x402 nonce has already been used. Each payment must have a unique nonce.",
+        });
+        return;
+      }
+      if (nonceStatus === "error") {
+        res.status(402).json({
+          ok: false,
+          error: "payment_replay_check_unavailable",
+          message: "Replay protection is temporarily unavailable. Please retry shortly.",
         });
         return;
       }
