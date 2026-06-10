@@ -2687,41 +2687,30 @@ function setPricingMode(mode) {
 }
 
 // Get API key helper (global scope for inline onclick access)
-async function getApiKey(planName) {
-  var apiKey = localStorage.getItem('arch_api_key') || '';
-  if (!apiKey) { window.location.href = '/signup?plan=' + encodeURIComponent(planName || 'free'); return null; }
-  return apiKey.trim();
+// Start a Stripe checkout. Works with a stored API key OR a logged-in
+// browser session (arch_session cookie). 401 -> send to login and come back.
+async function startCheckout(endpoint, body) {
+  var apiKey = (localStorage.getItem('arch_api_key') || '').trim();
+  var headers = { 'Content-Type': 'application/json' };
+  if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+  try {
+    var res = await fetch(endpoint, { method: 'POST', headers: headers, credentials: 'include', body: JSON.stringify(body) });
+    if (res.status === 401) {
+      if (apiKey) localStorage.removeItem('arch_api_key');
+      window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+      return;
+    }
+    var data = await res.json();
+    if (data.url) { window.location.href = data.url; }
+    else { alert('Error: ' + (data.message || 'Could not create checkout session.')); }
+  } catch(e) { alert('Something went wrong. Please try again.'); }
 }
 
 // Stripe checkout for one-time packs (global scope for inline onclick access)
-async function buyPack(packName) {
-  var apiKey = await getApiKey(packName); if (!apiKey) return;
-  try {
-    var res = await fetch('/v1/billing/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ pack: packName })
-    });
-    var data = await res.json();
-    if (data.url) { window.location.href = data.url; }
-    else { alert('Error: ' + (data.message || 'Could not create checkout session. Check your API key.')); }
-  } catch(e) { alert('Something went wrong. Please try again.'); }
-}
+function buyPack(packName) { return startCheckout('/v1/billing/checkout', { pack: packName }); }
 
 // Stripe checkout for subscriptions (global scope for inline onclick access)
-async function buySubscription(planId) {
-  var apiKey = await getApiKey(planId); if (!apiKey) return;
-  try {
-    var res = await fetch('/v1/billing/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ plan: planId })
-    });
-    var data = await res.json();
-    if (data.url) { window.location.href = data.url; }
-    else { alert('Error: ' + (data.message || 'Could not create subscription session. Check your API key.')); }
-  } catch(e) { alert('Something went wrong. Please try again.'); }
-}
+function buySubscription(planId) { return startCheckout('/v1/billing/subscribe', { plan: planId }); }
 
 // Safari-safe: wrap all DOM-dependent code in DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {

@@ -23,7 +23,7 @@ About Arch Tools:
 Pricing:
 - Free tier: 250 credits on signup, refreshed monthly, no credit card required
 - Credit packs and subscription plans are available — see archtools.dev/pricing for current pricing and credit amounts
-- Subscriptions: Developer $19/mo, Pro $49/mo, Business $149/mo (annual plans available at a discount)
+- Subscriptions: Starter $9/mo, Pro $49/mo, Business $149/mo (annual plans available at a discount)
 - Referral program: refer a friend and earn 500 bonus credits when they sign up
 - Each tool costs between 1-50 credits per call (most are 5-10 credits)
 - BYOK (Bring Your Own Key): use your own API keys for AI providers to skip credit costs on AI tools

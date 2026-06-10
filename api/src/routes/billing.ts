@@ -138,8 +138,10 @@ router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: R
   if (!stripe) { res.status(503).json({ ok: false, error: "not_configured", message: "Stripe not configured", request_id: reqId() }); return; }
 
   const { pack } = req.body as { pack?: string };
-  const packKey = (pack ?? "").toLowerCase();
-  const packConfig = CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey));
+  const packKey = (pack ?? "").toLowerCase().trim();
+  const packConfig = packKey
+    ? CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey))
+    : undefined;
   if (!packConfig) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "pack must be one of: starter, pro, business", request_id: reqId() });
     return;
