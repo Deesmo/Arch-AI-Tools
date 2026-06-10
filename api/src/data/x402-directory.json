@@ -12,7 +12,7 @@
       "tokens_supported": ["USDC", "USDT", "ETH", "BNB", "NEAR", "SOL", "TAO", "UNI"],
       "pricing_model": "per-request",
       "price_range": { "min": "$0.001", "max": "$0.10" },
-      "total_endpoints": 65,
+      "total_endpoints": 64,
       "endpoints": [
         { "path": "/v1/tools/ai-generate", "method": "POST", "price": "$0.020", "description": "AI text generation via Claude" },
         { "path": "/v1/tools/web-scrape", "method": "POST", "price": "$0.005", "description": "Scrape any public URL" },

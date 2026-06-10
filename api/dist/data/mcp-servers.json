@@ -2,7 +2,7 @@
   {
     "id": "arch-tools",
     "name": "Arch Tools",
-    "description": "58 production-ready API tools for AI agents — web search, image generation, crypto prices, fact-checking, research reports, and more. First platform with x402 autonomous payments.",
+    "description": "64 production-ready API tools for AI agents — web search, image generation, crypto prices, fact-checking, research reports, and more. First platform with x402 autonomous payments.",
     "author": "Arch AI",
     "package": "npm:arch-tools-mcp",
     "repository": "https://github.com/Deesmo/Arch-AI-Tools",
