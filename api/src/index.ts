@@ -70,12 +70,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://browser.sentry-cdn.com"],  // landing page inline scripts + Chart.js CDN + Sentry browser SDK
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://browser.sentry-cdn.com", "https://www.clarity.ms", "https://*.clarity.ms", "https://assets.apollo.io", "https://cdnjs.cloudflare.com", "https://static.cloudflareinsights.com"],  // inline scripts + Chart.js + Sentry + MS Clarity + Apollo + Prism (cdnjs) + Cloudflare Insights
       "script-src-attr": ["'unsafe-inline'"],  // allow inline event handlers (onclick etc)
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com", "https://*.sentry.io", "https://o*.ingest.sentry.io"],
+      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com", "https://*.sentry.io", "https://*.ingest.sentry.io", "https://www.clarity.ms", "https://*.clarity.ms", "https://assets.apollo.io", "https://*.apollo.io", "https://cloudflareinsights.com"],
     },
   },
   crossOriginEmbedderPolicy: false,  // needed for fonts/CDN
