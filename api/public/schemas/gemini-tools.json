@@ -1489,6 +1489,71 @@
               }
             }
           }
+        },
+        {
+          "name": "check_domain",
+          "description": "Check if a domain is available or registered via RDAP. No API key needed.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "domain"
+            ],
+            "properties": {
+              "domain": {
+                "type": "string",
+                "description": "Domain name to check, e.g. example.com"
+              }
+            }
+          }
+        },
+        {
+          "name": "generate_image",
+          "description": "Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792).",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "prompt"
+            ],
+            "properties": {
+              "prompt": {
+                "type": "string",
+                "description": "Text prompt describing the image"
+              },
+              "size": {
+                "type": "string",
+                "description": "1024x1024, 1792x1024, or 1024x1792"
+              }
+            }
+          }
+        },
+        {
+          "name": "send_email",
+          "description": "Send transactional emails via Resend — plain text or HTML.",
+          "parameters": {
+            "type": "object",
+            "required": [
+              "to",
+              "subject"
+            ],
+            "properties": {
+              "to": {
+                "type": "string",
+                "description": "Recipient email address"
+              },
+              "subject": {
+                "type": "string",
+                "description": "Email subject"
+              },
+              "text": {
+                "type": "string",
+                "description": "Plain-text body"
+              },
+              "html": {
+                "type": "string",
+                "description": "HTML body"
+              }
+            }
+          }
         }
       ]
     }

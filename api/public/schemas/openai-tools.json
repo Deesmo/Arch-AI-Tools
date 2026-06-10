@@ -1670,6 +1670,85 @@
           }
         }
       }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "check_domain",
+        "description": "Check if a domain is available or registered via RDAP. No API key needed.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Domain name to check, e.g. example.com"
+            }
+          },
+          "required": [
+            "domain"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "generate_image",
+        "description": "Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792).",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "Text prompt describing the image"
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "1024x1024",
+                "1792x1024",
+                "1024x1792"
+              ],
+              "description": "Image size"
+            }
+          },
+          "required": [
+            "prompt"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "send_email",
+        "description": "Send transactional emails via Resend — plain text or HTML.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "Recipient email address"
+            },
+            "subject": {
+              "type": "string",
+              "description": "Email subject"
+            },
+            "text": {
+              "type": "string",
+              "description": "Plain-text body"
+            },
+            "html": {
+              "type": "string",
+              "description": "HTML body"
+            }
+          },
+          "required": [
+            "to",
+            "subject"
+          ]
+        }
+      }
     }
   ]
 }
