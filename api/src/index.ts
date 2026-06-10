@@ -610,4 +610,20 @@ setInterval(async () => {
   } catch { /* non-fatal */ }
 }, 24 * 60 * 60 * 1000);
 
+// MCP anonymous-demo pool auto-top-off — hourly, hard-capped per month.
+// First line of defense = per-IP/global daily anon caps in the MCP server;
+// this is the bounded-credit backstop (see src/cron/demoTopoff.ts).
+setInterval(async () => {
+  try {
+    const { runDemoTopoff } = await import("./cron/demoTopoff");
+    await runDemoTopoff();
+  } catch { /* non-fatal */ }
+}, 60 * 60 * 1000);
+setTimeout(async () => {
+  try {
+    const { runDemoTopoff } = await import("./cron/demoTopoff");
+    await runDemoTopoff();
+  } catch { /* non-fatal */ }
+}, 90 * 1000); // one kick shortly after boot
+
 export default app;
