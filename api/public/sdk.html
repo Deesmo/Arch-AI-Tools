@@ -194,59 +194,7 @@
     </div>
   </div>
 
-  <!-- PLATFORM DOWNLOADS -->
-  <div class="section">
-    <div class="section-title">CLI Downloads</div>
-    <div class="section-sub">Standalone binaries — no Node.js required. Download, chmod, run.</div>
-    <div class="platform-grid">
-
-      <!-- WINDOWS -->
-      <div class="platform-card">
-        <div class="platform-icon win">🪟</div>
-        <div class="platform-name">Windows</div>
-        <div class="platform-desc">Native x64 binary for Windows 10 and 11. Run from PowerShell or CMD.</div>
-        <div class="platform-version">arch-tools-cli-win-x64.exe · v1.7.0</div>
-        <a class="dl-btn dl-btn-primary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-win-x64.exe">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download .exe
-        </a>
-        <button class="dl-btn dl-btn-secondary" onclick="copyText('arch-tools-cli-win-x64.exe')">Copy filename</button>
-      </div>
-
-      <!-- MAC -->
-      <div class="platform-card">
-        <div class="platform-icon mac">🍎</div>
-        <div class="platform-name">macOS</div>
-        <div class="platform-desc">Universal binary for Apple Silicon (M1/M2/M3) and Intel Macs.</div>
-        <div class="platform-version">arch-tools-cli-macos · v1.7.0</div>
-        <a class="dl-btn dl-btn-primary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-macos-arm64">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Apple Silicon (M1/M2/M3)
-        </a>
-        <a class="dl-btn dl-btn-secondary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-macos-x64" style="margin-top:0;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,0.06);color:var(--text);transition:all 0.15s;">Intel (x64)</a>
-      </div>
-
-      <!-- LINUX -->
-      <div class="platform-card">
-        <div class="platform-icon linux">🐧</div>
-        <div class="platform-name">Linux</div>
-        <div class="platform-desc">x64 and ARM64 binaries for Debian, Ubuntu, RHEL, Alpine, and more.</div>
-        <div class="platform-version">arch-tools-cli-linux · v1.7.0</div>
-        <a class="dl-btn dl-btn-primary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-linux-x64">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          x64 Binary
-        </a>
-        <a class="dl-btn dl-btn-secondary" href="https://github.com/Deesmo/Arch-AI-Tools/releases/latest/download/arch-tools-cli-linux-arm64" style="margin-top:0;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,0.06);color:var(--text);transition:all 0.15s;">ARM64 (Raspberry Pi / servers)</a>
-      </div>
-
-    </div>
-
-    <!-- Install note -->
-    <div style="margin-top:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px 24px;">
-      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;">After downloading on Mac/Linux, make it executable:</div>
-      <div class="code-line" style="font-size:12px;color:var(--green);">chmod +x arch-tools-cli-* &amp;&amp; ./arch-tools-cli-* --help</div>
-    </div>
-  </div>
+  <!-- CLI downloads section hidden 2026-06-10: no public GitHub releases exist yet (repo is private). Restore when binaries are published. -->
 
   <!-- MCP SERVER -->
   <div class="mcp-card">
@@ -397,7 +345,6 @@ resp, _ := http.DefaultClient.Do(req)</pre>
         <a href="/">Home</a>
         <a href="/docs">Docs</a>
         <a href="/openapi.json">OpenAPI</a>
-        <a href="https://github.com/Deesmo/Arch-AI-Tools" target="_blank">GitHub</a>
         <a href="/terms.html">Terms</a>
         <a href="/privacy.html">Privacy</a>
       </div>
