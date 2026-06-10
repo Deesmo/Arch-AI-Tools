@@ -170,6 +170,17 @@
     .mobile-menu a:hover{color:var(--text);}
     .mobile-menu.open{display:flex;}
     @media(max-width:768px){.nav-links{display:none!important;}.hamburger{display:block;}}
+    /* Small phones: shrink nav pieces so logo + sign-in + CTA + hamburger fit in 375px
+       (!important required to beat the inline styles on the sign-in / CTA links) */
+    @media(max-width:420px){
+      nav .wrap{padding:0 12px;}
+      .nav-inner > div{gap:4px!important;}
+      .logo{font-size:14px;gap:6px;}
+      .logo-mark{width:26px;height:26px;}
+      nav a[href="/login"]{font-size:11px!important;padding:6px 9px!important;}
+      nav a.nav-cta{font-size:11px!important;padding:6px 10px!important;}
+      .hamburger{padding:4px;}
+    }
 
     /* HERO */
     .hero{padding:40px 0 64px;display:grid;grid-template-columns:60fr 40fr;gap:32px;align-items:center;}
@@ -480,7 +491,9 @@
     ══════════════════════════════════════════════════ */
     @media (max-width: 768px) {
       /* Live stats counter - 2x2 grid on mobile */
-      #live-stats .wrap > div { grid-template-columns: 1fr 1fr; gap: 16px; }
+      /* !important needed: the grid div uses an inline style (repeat(4,1fr)) which
+         otherwise wins and forces 4 min-content columns -> horizontal overflow on phones */
+      #live-stats .wrap > div { grid-template-columns: 1fr 1fr !important; gap: 16px; }
       /* Sections */
       section { padding: 56px 0; }
 
