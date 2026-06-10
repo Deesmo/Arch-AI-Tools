@@ -40,7 +40,7 @@ async function requireAuthOrSession(req: AuthedRequest, res: Response, next: Nex
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
   { id: "starter",  credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { id: "pro",      credits: 20000,  amount: 2500,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { id: "pro",      credits: 20000,  amount: 4900,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
   { id: "business", credits: 100000, amount: 19900, label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
 
