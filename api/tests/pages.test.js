@@ -47,6 +47,7 @@ async function run() {
   console.log('── Public Pages ──');
   const publicPages = [
     '/',
+    '/pricing',
     '/directory',
     '/fund',
     '/playground',
@@ -78,7 +79,6 @@ async function run() {
   // ── Auth-Protected Pages (302 redirect expected) ──
   console.log('\n── Auth-Protected Pages (expect 302) ──');
   const authPages = [
-    '/pricing',
     '/dashboard',
   ];
   for (const page of authPages) {
