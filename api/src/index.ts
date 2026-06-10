@@ -175,6 +175,19 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
   if (err) res.redirect(301, '/arch-icon.svg?v=2');
 }));
 
+// ─── Admin HTML guard — block static serving of admin.html (adminGate route below handles authorized access) ───
+app.use((req: Request, res: Response, next: import('express').NextFunction): void => {
+  if (req.path === "/admin.html" && req.method === "GET") {
+    const key = req.headers["x-admin-key"] as string | undefined;
+    const cookie = req.headers["cookie"] ?? "";
+    if (!((key && key === config.adminKey) || cookie.includes("at_admin="))) {
+      res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
+      return;
+    }
+  }
+  next();
+});
+
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
