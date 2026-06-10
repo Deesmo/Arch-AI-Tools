@@ -11,7 +11,7 @@ import "dotenv/config";
 import { prisma } from "../lib/prisma.js";
 import { sendMonthlyRefreshEmail } from "../services/email.js";
 async function main() {
-    const credits = Number(process.env.FREE_MONTHLY_CREDITS || 100);
+    const credits = Number(process.env.FREE_MONTHLY_CREDITS || 250);
     if (credits <= 0) {
         console.log("FREE_MONTHLY_CREDITS is 0 — skipping refresh");
         return;

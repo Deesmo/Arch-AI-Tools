@@ -4,15 +4,30 @@ import { x402Middleware } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
 import { config } from "../../config.js";
 import { validateUrl } from "../../lib/ssrf.js";
+import { prisma } from "../../lib/prisma.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
 import axios from "axios";
 const router = Router();
-const _anthropicKey = process.env.ANTHROPIC_API_KEY;
-const anthropic = (_anthropicKey && !_anthropicKey.startsWith("ENTER"))
-    ? new Anthropic({ apiKey: _anthropicKey })
-    : null;
+// Lazy Anthropic client: re-checks env at call time so a key set AFTER boot
+// (e.g. Render env var update) becomes usable without redeploy.
+let _anthropicInstance = null;
+let _anthropicLastKey = undefined;
+function getAnthropic() {
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (!key || key.startsWith("ENTER")) {
+        _anthropicInstance = null;
+        _anthropicLastKey = key;
+        return null;
+    }
+    if (_anthropicInstance && _anthropicLastKey === key)
+        return _anthropicInstance;
+    _anthropicInstance = new Anthropic({ apiKey: key });
+    _anthropicLastKey = key;
+    return _anthropicInstance;
+}
+// Runtime-only access via getAnthropic(); do not capture the client at module load.
 // ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
 const requestCounts = new Map();
 // Clean up expired rate limit entries every 5 minutes to prevent memory leak
@@ -28,7 +43,7 @@ function tierRateLimiter(req, res, next) {
     const key = agent?.apiKey?.slice(0, 20) ?? req.ip ?? "anon";
     const tier = agent?.tier ?? "free";
     const limit = tier === "business" ? config.rateLimits.business
-        : tier === "pro" ? config.rateLimits.pro
+        : (tier === "pro" || tier === "starter") ? config.rateLimits.pro
             : config.rateLimits.free;
     const now = Date.now();
     const record = requestCounts.get(key);
@@ -60,6 +75,105 @@ function toolMiddleware(toolName) {
 }
 function isX402Paid(req) {
     return !!req.x402Paid;
+}
+// ─── BYOK discount: tools called with user-provided provider keys charge 20% ───
+const BYOK_HEADER_NAMES = [
+    "x-anthropic-key", "x-openai-key", "x-xai-key", "x-google-key",
+    "x-firecrawl-key", "x-brave-key", "x-tavily-key", "x-exa-key",
+    "x-elevenlabs-key", "x-removebg-key", "x-runway-key",
+];
+function hasByokKeys(req) {
+    return BYOK_HEADER_NAMES.some((h) => !!req.headers[h]);
+}
+function byokAdjustedCost(req, cost) {
+    return hasByokKeys(req) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
+}
+function extractJsonObject(text) {
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    return match ? match[0] : null;
+}
+const BLOCKED_FORWARD_HEADERS = new Set([
+    "authorization",
+    "cookie",
+    "proxy-authorization",
+    "x-api-key",
+    "x-admin-key",
+    "x-auth-token",
+    "x-forwarded-for",
+    "x-forwarded-host",
+    "x-forwarded-proto",
+]);
+function sanitizeWebhookHeaders(input) {
+    const safe = {};
+    for (const [rawName, rawValue] of Object.entries(input ?? {})) {
+        const name = rawName.trim();
+        if (!name)
+            continue;
+        const lower = name.toLowerCase();
+        if (BLOCKED_FORWARD_HEADERS.has(lower))
+            continue;
+        if (!/^[a-z0-9-]{1,64}$/i.test(name))
+            continue;
+        safe[name] = String(rawValue).slice(0, 500);
+    }
+    return safe;
+}
+function getDefaultSender() {
+    return process.env.EMAIL_FROM?.trim() || "Arch Tools <no-reply@archtools.dev>";
+}
+function sanitizeOutboundEmailHtml(html, body) {
+    const rawHtml = (html ?? "").slice(0, 20_000);
+    const rawBody = (body ?? "").slice(0, 10_000);
+    const escapedBody = rawBody
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+    const htmlBody = rawHtml
+        ? rawHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/\son\w+="[^"]*"/gi, "")
+        : `<p>${escapedBody}</p>`;
+    const textBody = rawBody || rawHtml.replace(/<[^>]+>/g, "").slice(0, 10_000);
+    return { htmlBody, textBody };
+}
+const SIDE_EFFECT_DAILY_LIMITS = {
+    "webhook-send": { free: 10, pro: 50, starter: 50, business: 200 },
+    "email-send": { free: 5, pro: 25, starter: 25, business: 100 },
+    "send-email": { free: 5, pro: 25, starter: 25, business: 100 },
+    "social-post": { free: 3, pro: 15, starter: 15, business: 50 },
+    "video-generate": { free: 3, pro: 20, starter: 20, business: 100 },
+};
+async function enforceDailyToolLimit(req, res, toolName) {
+    const agent = req.agent;
+    if (!agent) {
+        res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() });
+        return false;
+    }
+    const limitConfig = SIDE_EFFECT_DAILY_LIMITS[toolName];
+    if (!limitConfig)
+        return true;
+    const tier = agent.tier === "business" ? "business" : agent.tier === "pro" ? "pro" : agent.tier === "starter" ? "starter" : "free";
+    const limit = limitConfig[tier];
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    const count = await prisma.apiRequest.count({
+        where: {
+            agentId: agent.id,
+            toolName,
+            createdAt: { gte: since },
+            status: "SUCCESS",
+        },
+    }).catch(() => 0);
+    if (count >= limit) {
+        res.status(429).json({
+            ok: false,
+            error: "daily_limit_reached",
+            message: `Daily limit reached for ${toolName}. ${tier} tier allows ${limit} successful calls per day.`,
+            request_id: reqId(),
+        });
+        return false;
+    }
+    return true;
 }
 // ─── 1. VALIDATE-DATA ────────────────────────────────────────────────────────
 router.post("/validate-data", ...toolMiddleware("validate-data"), async (req, res) => {
@@ -131,8 +245,8 @@ router.post("/generate-hash", ...toolMiddleware("generate-hash"), async (req, re
             return;
     }
     const { text, algorithm = "sha256", encoding = "hex" } = req.body;
-    if (!text) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
+    if (!text || typeof text !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required and must be a string", request_id: reqId() });
         return;
     }
     const algos = ["sha256", "sha512", "sha1", "md5", "sha384"];
@@ -181,15 +295,40 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, 
         if (!ok)
             return;
     }
-    const input = req.body.data ?? req.body.input;
+    const input = req.body.data ?? req.body.input ?? req.body.content;
     const { from, to } = req.body;
     if (!input || !from || !to) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data), from, and to are required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data/content), from, and to are required", request_id: reqId() });
         return;
     }
     try {
         const yaml = await import("js-yaml");
         let parsed;
+        // text ↔ base64 shortcut (no structured parse needed)
+        if (from === "text" || from === "string") {
+            if (to === "base64") {
+                res.json({ ok: true, output: Buffer.from(input, "utf8").toString("base64"), from, to, request_id: reqId() });
+                return;
+            }
+            if (to === "hex") {
+                res.json({ ok: true, output: Buffer.from(input, "utf8").toString("hex"), from, to, request_id: reqId() });
+                return;
+            }
+            res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot convert text to ${to}. Supported: base64, hex`, request_id: reqId() });
+            return;
+        }
+        if (from === "base64") {
+            if (to === "text" || to === "string") {
+                res.json({ ok: true, output: Buffer.from(input, "base64").toString("utf8"), from, to, request_id: reqId() });
+                return;
+            }
+            if (to === "hex") {
+                res.json({ ok: true, output: Buffer.from(input, "base64").toString("hex"), from, to, request_id: reqId() });
+                return;
+            }
+            res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot convert base64 to ${to}. Supported: text, hex`, request_id: reqId() });
+            return;
+        }
         if (from === "json")
             parsed = JSON.parse(input);
         else if (from === "yaml")
@@ -203,7 +342,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, 
             parsed = await xml2js.parseStringPromise(input);
         }
         else {
-            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}`, request_id: reqId() });
+            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}. Supported: json, yaml, csv, xml, text, base64`, request_id: reqId() });
             return;
         }
         let output;
@@ -221,7 +360,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req, 
             output = create({ root: parsed }).end({ prettyPrint: true });
         }
         else {
-            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}`, request_id: reqId() });
+            res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}. Supported: json, yaml, csv, xml`, request_id: reqId() });
             return;
         }
         res.json({ ok: true, output, from, to, request_id: reqId() });
@@ -449,7 +588,8 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
         if (!ok)
             return;
     }
-    const { query, num_results = 5 } = req.body;
+    const { query, limit, num_results } = req.body;
+    const resultLimit = Math.min(Math.max(1, limit ?? num_results ?? 5), 10);
     if (!query) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
         return;
@@ -464,7 +604,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
             if (byokBraveKeySearch)
                 console.log(`[BYOK] search-web using user-provided brave key`);
             try {
-                const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
+                const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(resultLimit) }), {
                     headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
                 });
                 if (resp.ok) {
@@ -487,7 +627,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                 const resp = await fetch("https://api.tavily.com/search", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ api_key: tavilyKey, query, max_results: Math.min(num_results, 10) }),
+                    body: JSON.stringify({ api_key: tavilyKey, query, max_results: resultLimit }),
                 });
                 if (resp.ok) {
                     const data = await resp.json();
@@ -506,7 +646,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req, res) => 
                 const resp = await fetch("https://google.serper.dev/search", {
                     method: "POST",
                     headers: { "X-API-KEY": process.env.SERPER_API_KEY, "Content-Type": "application/json" },
-                    body: JSON.stringify({ q: query, num: Math.min(num_results, 10) }),
+                    body: JSON.stringify({ q: query, num: resultLimit }),
                 });
                 if (resp.ok) {
                     const data = await resp.json();
@@ -533,7 +673,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -588,7 +728,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req, res) => 
             return;
         }
         // Synthesize with Claude
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 600,
             messages: [{ role: "user", content: `Answer this query based on the following search context. Be concise and factual.\n\nQuery: ${query}\n\nContext:\n${context}\n\nAnswer:` }],
@@ -927,8 +1067,8 @@ router.post("/language-detect", ...toolMiddleware("language-detect"), async (req
     }
     try {
         // Use Claude for accurate language detection
-        if (anthropic) {
-            const msg = await anthropic.messages.create({
+        if (getAnthropic()) {
+            const msg = await getAnthropic().messages.create({
                 model: "claude-haiku-4-5-20251001",
                 max_tokens: 100,
                 messages: [{ role: "user", content: `Detect the language of this text. Reply ONLY with a JSON object: {"language": "English", "code": "en", "confidence": 0.99}\n\nText: ${text.slice(0, 500)}` }],
@@ -956,7 +1096,7 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -966,7 +1106,7 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
         return;
     }
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 300,
             messages: [{ role: "user", content: `Analyze the sentiment of this text. Return ONLY a JSON object:\n{"sentiment": "positive|negative|neutral|mixed", "score": 0.85, "emotions": {"joy": 0.8, "anger": 0.1, "sadness": 0.0, "fear": 0.0, "surprise": 0.1, "disgust": 0.0}}\n\nText: ${text.slice(0, 2000)}` }],
@@ -987,7 +1127,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req, res) => {
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1005,7 +1145,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req, res) => {
     };
     const prompt = stylePrompts[style] ?? stylePrompts["paragraph"];
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 600,
             messages: [{ role: "user", content: `${prompt}\n\nText to summarize:\n${text.slice(0, 8000)}` }],
@@ -1025,7 +1165,7 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1035,7 +1175,7 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
         return;
     }
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 800,
             messages: [{ role: "user", content: `Extract named entities from this text. Return ONLY JSON:\n{"people": [], "organizations": [], "locations": [], "dates": [], "money": [], "other": []}\n\nText: ${text.slice(0, 4000)}` }],
@@ -1057,7 +1197,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1067,7 +1207,7 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req, 
         return;
     }
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 500,
             messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY valid JSON (no extra text): {"pattern": "^[a-z]+$", "flags": "i", "explanation": "brief explanation", "test_examples": ["match1", "match2"]}` }],
@@ -1091,7 +1231,7 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req, res) => 
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1101,7 +1241,7 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req, res) => 
         return;
     }
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 800,
             messages: [{ role: "user", content: `Detect PII in this text${redact ? " and provide redacted version" : ""}. Return ONLY JSON:\n{"found": [{"type": "email|phone|ssn|credit_card|name|address|dob|ip", "value": "...", "start": 0, "end": 5}], "has_pii": true${redact ? ', "redacted": "text with [EMAIL] placeholders"' : ""}}\n\nText: ${text.slice(0, 4000)}` }],
@@ -1132,13 +1272,18 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
     const byokTavilyKey = req.headers["x-tavily-key"];
     const byokExaKey = req.headers["x-exa-key"];
     const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey || byokBraveKey || byokTavilyKey || byokExaKey || byokFirecrawlKey);
+    const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body;
     const paid = isX402Paid(req);
-    if (!paid && !hasByok) {
-        const ok = await deductCredits(req, res, "ai-generate", 20);
+    if (!paid) {
+        // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000
+        const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
+        let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
+        if (hasByok)
+            aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
+        const ok = await deductCredits(req, res, "ai-generate", aiGenCost);
         if (!ok)
             return;
     }
-    const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body;
     if (!prompt) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
@@ -1154,7 +1299,17 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         res.status(400).json({ ok: false, error: "invalid_mode", message: `mode must be one of: ${validModes.join(", ")}. Or provide an explicit model instead.`, request_id: reqId() });
         return;
     }
-    const model = explicitModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
+    // Friendly alias mapping — openapi.json advertises these short names
+    const MODEL_ALIASES = {
+        "claude": "claude-sonnet-4-6",
+        "gpt": "gpt-4o",
+        "gpt4": "gpt-4o",
+        "gpt-4": "gpt-4o",
+        "gemini": "gemini-2.0-flash",
+        "grok": "grok-3",
+    };
+    const requestedModel = explicitModel ? (MODEL_ALIASES[explicitModel.toLowerCase()] ?? explicitModel) : undefined;
+    const model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
     const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
     const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
     const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
@@ -1220,13 +1375,13 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
         // Validate model
         const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
         if (!allModels.includes(model)) {
-            res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: reqId() });
+            res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: claude, gpt4, gemini, grok, ${allModels.join(", ")}`, request_id: reqId() });
             return;
         }
         // ── Claude ──
         if (CLAUDE_MODELS.includes(model)) {
             const anthKey = byokAnthropicKey || process.env.ANTHROPIC_API_KEY;
-            if (!anthKey && !anthropic) {
+            if (!anthKey && !getAnthropic()) {
                 res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() });
                 return;
             }
@@ -1242,7 +1397,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req, res) =
                 msg = { content: msg.content, usage: msg.usage, model: msg.model };
             }
             else {
-                msg = await anthropic.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+                msg = await getAnthropic().messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
             }
             const text = msg.content.find((b) => b.type === "text")?.text ?? "";
             const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
@@ -1262,7 +1417,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1282,7 +1437,16 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
                 res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
                 return;
             }
-            const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024 });
+            let imgResp;
+            try {
+                imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)", "Accept": "image/*" } });
+            }
+            catch (dlErr) {
+                const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
+                console.error("[ocr-extract] image download failed:", st ?? dlErr);
+                res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() });
+                return;
+            }
             imgBase64 = Buffer.from(imgResp.data).toString("base64");
             imgMediaType = (imgResp.headers["content-type"] || "image/jpeg").split(";")[0].trim();
         }
@@ -1292,7 +1456,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req, res) =
             imgMediaType = "image/jpeg"; // safe default
         }
         const imageContent = { type: "image", source: { type: "base64", media_type: imgMediaType, data: imgBase64 } };
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 2000,
             messages: [{ role: "user", content: [imageContent, { type: "text", text: "Extract all text from this image. Return the text exactly as it appears, preserving formatting and structure." }] }],
@@ -1313,7 +1477,8 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req, res)
         if (!ok)
             return;
     }
-    const { url, action = "extract", selector, text: inputText } = req.body;
+    const { url, selector, text: inputText } = req.body;
+    const action = String(req.body.action ?? req.body.task ?? "extract");
     if (!url) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
         return;
@@ -1350,7 +1515,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1379,7 +1544,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req, res) =
         }
         try {
             // Use messages.create with betas header for PDF document type support
-            const msg = await anthropic.messages.create({
+            const msg = await getAnthropic().messages.create({
                 model: "claude-sonnet-4-6",
                 max_tokens: 4096,
                 messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
@@ -1568,6 +1733,9 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req, res) =
 router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
+        const withinLimit = await enforceDailyToolLimit(req, res, "webhook-send");
+        if (!withinLimit)
+            return;
         const ok = await deductCredits(req, res, "webhook-send", 2);
         if (!ok)
             return;
@@ -1582,6 +1750,10 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
         res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() });
         return;
     }
+    if (!webhook_url.startsWith("https://")) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must use https", request_id: reqId() });
+        return;
+    }
     try {
         await validateUrl(webhook_url);
     }
@@ -1589,17 +1761,24 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
         res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
         return;
     }
-    const allowedMethods = ["POST", "PUT", "PATCH"];
+    const allowedMethods = ["POST"];
     const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
+    const payloadString = JSON.stringify(payload ?? {});
+    if (payloadString.length > 20_000) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "payload must be 20KB or less", request_id: reqId() });
+        return;
+    }
+    const safeHeaders = sanitizeWebhookHeaders(customHeaders);
     try {
         const start = Date.now();
         const resp = await axios({
             method: httpMethod,
             url: webhook_url,
             data: payload ?? {},
-            headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...customHeaders },
+            headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...safeHeaders },
             timeout: 10000,
             validateStatus: () => true,
+            maxRedirects: 0,
         });
         res.json({
             ok: true,
@@ -1607,7 +1786,9 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req, res)
             method: httpMethod,
             status_code: resp.status,
             response_ms: Date.now() - start,
-            response_body: String(resp.data).slice(0, 500),
+            response_body: typeof resp.data === "string"
+                ? resp.data.slice(0, 500)
+                : JSON.stringify(resp.data).slice(0, 500),
             request_id: reqId(),
         });
     }
@@ -1691,7 +1872,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, 
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
@@ -1701,7 +1882,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req, 
         return;
     }
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 1500,
             messages: [{
@@ -1726,8 +1907,10 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
         if (!ok)
             return;
     }
-    const barcodeData = (req.body.value ?? req.body.data);
-    const { type = "code128", width = 250, height = 100 } = req.body;
+    const barcodeData = (req.body.value ?? req.body.data ?? req.body.text);
+    const requestedType = String(req.body.type ?? req.body.format ?? "code128").toLowerCase();
+    const type = requestedType === "code128" ? "code128" : requestedType;
+    const { width = 250, height = 100 } = req.body;
     if (!barcodeData) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() });
         return;
@@ -1780,27 +1963,42 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req, 
         if (!ok)
             return;
     }
-    if (!anthropic) {
+    if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
         return;
     }
-    const { goal, context, steps } = req.body;
+    const goal = req.body.goal ?? req.body.task ?? req.body.objective;
+    const { context } = req.body;
+    const requestedSteps = Number(req.body.steps ?? req.body.max_steps ?? 3);
+    const stepCount = Number.isFinite(requestedSteps) ? Math.max(1, Math.min(10, Math.floor(requestedSteps))) : 3;
     if (!goal) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "goal is required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "goal (or task/objective) is required", request_id: reqId() });
         return;
     }
     try {
-        const msg = await anthropic.messages.create({
+        const msg = await getAnthropic().messages.create({
             model: "claude-sonnet-4-6",
             max_tokens: 3000,
             messages: [{
                     role: "user",
-                    content: `You are an autonomous agent. Complete this goal in ${steps ?? 3} steps, then provide a final answer.\n\nGoal: ${goal}\n${context ? `Context: ${context}` : ""}\n\nReturn ONLY JSON:\n{"steps": [{"step": 1, "action": "...", "result": "..."}], "final_answer": "...", "success": true}`,
+                    content: `You are an autonomous agent. Complete this goal in ${stepCount} steps, then provide a final answer.\n\nGoal: ${goal}\n${context ? `Context: ${context}` : ""}\n\nReturn ONLY JSON:\n{"steps": [{"step": 1, "action": "...", "result": "..."}], "final_answer": "...", "success": true}`,
                 }],
         });
         const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
-        const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-        res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
+        const parsedText = extractJsonObject(raw);
+        if (parsedText) {
+            const parsed = JSON.parse(parsedText);
+            res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
+            return;
+        }
+        res.json({
+            ok: true,
+            goal,
+            steps: [{ step: 1, action: "model_response", result: raw.trim() }],
+            final_answer: raw.trim(),
+            success: true,
+            request_id: reqId(),
+        });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "workflow_error", message: safeErr(e), request_id: reqId() });
@@ -1836,7 +2034,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
     const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
     // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
     const providers = [];
-    if (anthropic || oraclByokAnthropicKey) {
+    if (getAnthropic() || oraclByokAnthropicKey) {
         const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
         providers.push({
             name: "anthropic",
@@ -1853,7 +2051,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req, res) => {
                     const text = (d.content || []).find((b) => b.type === "text")?.text ?? "";
                     return { text, model: oracleModel, usage: { input_tokens: d.usage?.input_tokens ?? 0, output_tokens: d.usage?.output_tokens ?? 0 } };
                 }
-                const msg = await anthropic.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
+                const msg = await getAnthropic().messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
                 const text = msg.content.filter(b => b.type === "text").map(b => b.text).join("") ?? "";
                 return { text, model: oracleModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens } };
             },
@@ -1940,8 +2138,71 @@ const cgHeaders = () => {
     const h = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
     const key = config.coingecko?.apiKey;
     if (key && key.length > 10 && !key.startsWith("REPLACE"))
-        h["x-cg-demo-api-key"] = key; // demo key header (upgrade to x-cg-pro-api-key if switching to Pro tier)
+        h["x-cg-pro-api-key"] = key;
     return h;
+};
+// Use pro endpoint when a CoinGecko API key is configured, otherwise fall back to free tier
+const cgBase = () => {
+    const key = config.coingecko?.apiKey;
+    return (key && key.length > 10 && !key.startsWith("REPLACE"))
+        ? "https://pro-api.coingecko.com/api/v3"
+        : "https://api.coingecko.com/api/v3";
+};
+// Ticker → CoinGecko slug map. Lets users pass BTC/ETH/etc and have it resolved
+// to the canonical CoinGecko id. Slugs (e.g. "bitcoin") still pass through as-is.
+const TICKER_TO_SLUG = {
+    btc: "bitcoin",
+    eth: "ethereum",
+    sol: "solana",
+    xrp: "ripple",
+    ada: "cardano",
+    doge: "dogecoin",
+    matic: "matic-network",
+    avax: "avalanche-2",
+    dot: "polkadot",
+    link: "chainlink",
+    uni: "uniswap",
+    usdt: "tether",
+    usdc: "usd-coin",
+    bnb: "binancecoin",
+    trx: "tron",
+    shib: "shiba-inu",
+    ltc: "litecoin",
+    bch: "bitcoin-cash",
+    atom: "cosmos",
+    near: "near",
+    fil: "filecoin",
+    algo: "algorand",
+    vet: "vechain",
+    icp: "internet-computer",
+    sand: "the-sandbox",
+    mana: "decentraland",
+    ftm: "fantom",
+    hbar: "hedera-hashgraph",
+    etc: "ethereum-classic",
+    xlm: "stellar",
+    aave: "aave",
+    crv: "curve-dao-token",
+    mkr: "maker",
+    comp: "compound-governance-token",
+    ldo: "lido-dao",
+    arb: "arbitrum",
+    op: "optimism",
+};
+// Normalize a user-provided token reference. If it looks like a ticker (all-caps
+// original OR found in the ticker map), return the CoinGecko slug. Otherwise
+// pass through as-is so existing slug inputs ("bitcoin") keep working.
+const normalizeCoinId = (input) => {
+    if (!input)
+        return input;
+    const raw = input.trim();
+    const lower = raw.toLowerCase();
+    const isAllCaps = raw === raw.toUpperCase() && /[A-Z]/.test(raw);
+    if (isAllCaps && TICKER_TO_SLUG[lower])
+        return TICKER_TO_SLUG[lower];
+    if (TICKER_TO_SLUG[lower])
+        return TICKER_TO_SLUG[lower];
+    return lower;
 };
 // ─── crypto-price ────────────────────────────────────────────────────────────
 router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req, res) => {
@@ -1951,14 +2212,16 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req, res)
         if (!ok)
             return;
     }
-    const { symbol, currency = "usd" } = req.body;
+    const body = req.body;
+    const symbol = body.symbol ?? body.coin;
+    const currency = body.currency ?? "usd";
     if (!symbol) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required (e.g. bitcoin, ethereum)", request_id: reqId() });
         return;
     }
     try {
-        const id = symbol.toLowerCase().trim();
-        const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
+        const id = normalizeCoinId(symbol);
+        const r = await fetch(`${cgBase()}/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
         if (!r.ok) {
             res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
             return;
@@ -1983,14 +2246,17 @@ router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req, res)
         if (!ok)
             return;
     }
-    const { symbol, days = 7, currency = "usd" } = req.body;
+    const body = req.body;
+    const symbol = body.symbol ?? body.coin;
+    const days = body.days ?? 7;
+    const currency = body.currency ?? "usd";
     if (!symbol) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required", request_id: reqId() });
         return;
     }
     try {
-        const id = symbol.toLowerCase().trim();
-        const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
+        const id = normalizeCoinId(symbol);
+        const r = await fetch(`${cgBase()}/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
         if (!r.ok) {
             res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() });
             return;
@@ -2017,7 +2283,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     try {
         const n = Math.min(Math.max(1, limit), 100);
         // Try CoinGecko with exponential backoff (Render IPs get rate-limited)
-        const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
+        const cgUrl = `${cgBase()}/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
         const _cgHeaders = cgHeaders();
         let cgData = null;
         for (const delay of [0, 1500, 3000]) {
@@ -2117,7 +2383,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
     }
     try {
         const id = symbol.toLowerCase().trim();
-        const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
+        const r = await fetch(`${cgBase()}/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
         if (!r.ok) {
             console.warn(`[crypto-sentiment] CoinGecko returned ${r.status} for '${id}'`);
             if (r.status === 429) {
@@ -2157,7 +2423,9 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req, res) =
         if (!ok)
             return;
     }
-    const { symbol, limit = 10 } = req.body;
+    const body = req.body;
+    const symbol = body.symbol ?? body.coin;
+    const limit = body.limit ?? 10;
     const n = Math.min(Math.max(1, limit), 20);
     // Helper: parse RSS feed
     const parseRss = async (feedUrl, sourceName) => {
@@ -2202,10 +2470,15 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req, res) =
                 if (r.status === "fulfilled")
                     articles.push(...r.value);
             }
-            // Filter by symbol if provided
+            // Filter by symbol if provided. Match either the raw input or its CoinGecko slug
+            // form, so users passing "BTC" still match articles mentioning "bitcoin".
             if (symbol && articles.length > 0) {
-                const q = symbol.toLowerCase();
-                const filtered = articles.filter(a => a.title.toLowerCase().includes(q));
+                const q = symbol.toLowerCase().trim();
+                const slug = normalizeCoinId(symbol);
+                const filtered = articles.filter(a => {
+                    const t = a.title.toLowerCase();
+                    return t.includes(q) || (slug && slug !== q && t.includes(slug));
+                });
                 if (filtered.length > 0)
                     articles = filtered;
             }
@@ -2225,13 +2498,13 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req, res)
         if (!ok)
             return;
     }
-    const { query } = req.body;
+    const query = (req.body.query ?? req.body.text ?? req.body.symbol);
     if (!query) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_request", message: "query (or text/symbol) is required", request_id: reqId() });
         return;
     }
     try {
-        const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
+        const r = await fetch(`${cgBase()}/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
         if (!r.ok) {
             res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
             return;
@@ -2246,12 +2519,6 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req, res)
 });
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, res) => {
-    const paid = isX402Paid(req);
-    if (!paid) {
-        const ok = await deductCredits(req, res, "text-to-speech", 10);
-        if (!ok)
-            return;
-    }
     const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body;
     if (!text) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
@@ -2260,6 +2527,14 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, 
     if (text.length > 5000) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() });
         return;
+    }
+    const paid = isX402Paid(req);
+    if (!paid) {
+        // Metered by length: 25 base + 8 credits per 100 chars (covers ElevenLabs COGS)
+        const ttsCost = byokAdjustedCost(req, 25 + 8 * Math.ceil(text.length / 100));
+        const ok = await deductCredits(req, res, "text-to-speech", ttsCost);
+        if (!ok)
+            return;
     }
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
@@ -2291,7 +2566,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req, 
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "transcribe-audio", 12);
+        const ok = await deductCredits(req, res, "transcribe-audio", byokAdjustedCost(req, 25));
         if (!ok)
             return;
     }
@@ -2351,6 +2626,9 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
 router.post("/email-send", ...toolMiddleware("email-send"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
+        const withinLimit = await enforceDailyToolLimit(req, res, "email-send");
+        if (!withinLimit)
+            return;
         const ok = await deductCredits(req, res, "email-send", 3);
         if (!ok)
             return;
@@ -2364,15 +2642,22 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req, res) => 
         res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() });
         return;
     }
+    if (/[,\n\r]/.test(to)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() });
+        return;
+    }
+    if (subject.length > 200) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() });
+        return;
+    }
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
         res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() });
         return;
     }
     try {
-        const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
-        const htmlBody = html ?? `<p>${(body ?? "").replace(/\n/g, "<br>")}</p>`;
-        const textBody = body ?? html?.replace(/<[^>]+>/g, "") ?? "";
+        const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
+        const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
         const r = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -2392,6 +2677,59 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req, res) => 
         res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
     }
 });
+// ─── send-email (alias — same logic as email-send) ────────────────────────────
+router.post("/send-email", ...toolMiddleware("send-email"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const withinLimit = await enforceDailyToolLimit(req, res, "send-email");
+        if (!withinLimit)
+            return;
+        const ok = await deductCredits(req, res, "send-email", 3);
+        if (!ok)
+            return;
+    }
+    const { to, subject, body, from, html } = req.body;
+    if (!to || !subject || (!body && !html)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() });
+        return;
+    }
+    if (!to.includes("@")) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() });
+        return;
+    }
+    if (/[,\n\r]/.test(to)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() });
+        return;
+    }
+    if (subject.length > 200) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() });
+        return;
+    }
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) {
+        res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() });
+        return;
+    }
+    try {
+        const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
+        const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
+        const r = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ from: fromAddr, to: [to], subject, html: htmlBody, text: textBody })
+        });
+        if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
 // ─── design-create ────────────────────────────────────────────────────────────
 router.post("/design-create", ...toolMiddleware("design-create"), async (req, res) => {
     const paid = isX402Paid(req);
@@ -2400,13 +2738,16 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req, re
         if (!ok)
             return;
     }
-    const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body;
+    const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body;
     if (!prompt) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
     }
     const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
     const safeSize = validSizes.includes(size) ? size : "1024x1024";
+    // gpt-image-1 quality: low/medium/high
+    const qualityMap = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+    const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
         res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: reqId() });
@@ -2416,7 +2757,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req, re
         const r = await fetch("https://api.openai.com/v1/images/generations", {
             method: "POST",
             headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model: "dall-e-3", prompt, size: safeSize, quality, style, n: Math.min(n, 1), response_format: "url" })
+            body: JSON.stringify({ model: "gpt-image-1", prompt, size: safeSize, quality: safeQuality, n: Math.min(n, 1) })
         });
         if (!r.ok) {
             const err = await r.json().catch(() => ({}));
@@ -2432,7 +2773,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req, re
                     if (sr.ok) {
                         const sd = await sr.json();
                         if (sd.image) {
-                            res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality, style, source: "stability", request_id: reqId() });
+                            res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() });
                             return;
                         }
                     }
@@ -2444,7 +2785,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req, re
         }
         const data = await r.json();
         const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
-        res.json({ ok: true, images, count: images.length, size: safeSize, quality, style, request_id: reqId() });
+        res.json({ ok: true, images, count: images.length, size: safeSize, quality: safeQuality, request_id: reqId() });
     }
     catch (e) {
         console.error("[design-create]", e);
@@ -2525,7 +2866,7 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req, r
         if (!ok)
             return;
     }
-    const { prompt, size = "1024x1024", quality = "standard" } = req.body;
+    const { prompt, size = "1024x1024", quality = "medium" } = req.body;
     if (!prompt) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
         return;
@@ -2535,10 +2876,15 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req, r
         res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: reqId() });
         return;
     }
+    const qualityMap = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+    const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
+    const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
+    const safeSize = validSizes.includes(size) ? size : "1024x1024";
     try {
-        const r = await axios.post("https://api.openai.com/v1/images/generations", { model: "dall-e-3", prompt, n: 1, size, quality }, { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 });
+        const r = await axios.post("https://api.openai.com/v1/images/generations", { model: "gpt-image-1", prompt, n: 1, size: safeSize, quality: safeQuality }, { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 });
         const img = r.data.data[0];
-        res.json({ ok: true, image_url: img.url, revised_prompt: img.revised_prompt, size, quality, credits_used: 15, request_id: reqId() });
+        const image_url = img.url ?? (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
+        res.json({ ok: true, image_url, revised_prompt: img.revised_prompt ?? null, size: safeSize, quality: safeQuality, request_id: reqId() });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() });
@@ -2649,11 +2995,11 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req, res) =
 router.post("/research-report", ...toolMiddleware("research-report"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "research-report", 15);
+        const ok = await deductCredits(req, res, "research-report", byokAdjustedCost(req, 40));
         if (!ok)
             return;
     }
-    const query = String(req.body.query ?? req.query.query ?? "").trim();
+    const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
     const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
     if (!query)
         return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
@@ -2844,7 +3190,8 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req, 
         if (!ok)
             return;
     }
-    const { namespace, system_prompt, model } = req.body;
+    const { namespace, model } = req.body;
+    const systemPrompt = req.body.system_prompt ?? req.body.system;
     if (!namespace || typeof namespace !== "string") {
         res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
         return;
@@ -2854,10 +3201,11 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req, 
         smart: "claude-sonnet-4-6",
         deep: "claude-opus-4-6",
     };
-    const resolvedModel = model ?? "claude-sonnet-4-6";
+    const SESSION_MODEL_ALIASES = { "claude": "claude-sonnet-4-6", "gpt": "gpt-4o", "gpt4": "gpt-4o", "gpt-4": "gpt-4o" };
+    const resolvedModel = model ? (SESSION_MODEL_ALIASES[model.toLowerCase()] ?? model) : "claude-sonnet-4-6";
     const ALLOWED = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"];
     if (!ALLOWED.includes(resolvedModel)) {
-        res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: ${ALLOWED.join(", ")}`, request_id: reqId() });
+        res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: claude, gpt4, ${ALLOWED.join(", ")}`, request_id: reqId() });
         return;
     }
     const session_id = `sess_${crypto.randomUUID().replace(/-/g, "")}`;
@@ -2865,7 +3213,7 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req, 
     const session = {
         session_id,
         namespace: namespace.slice(0, 100),
-        system_prompt: system_prompt ? String(system_prompt).slice(0, 4000) : null,
+        system_prompt: systemPrompt ? String(systemPrompt).slice(0, 4000) : null,
         model: resolvedModel,
         messages: [],
         created_at,
@@ -2920,11 +3268,11 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     try {
         let responseText = "";
         if (CLAUDE_MODELS.includes(model)) {
-            if (!anthropic) {
+            if (!getAnthropic()) {
                 res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
                 return;
             }
-            const msg = await anthropic.messages.create({
+            const msg = await getAnthropic().messages.create({
                 model,
                 max_tokens: 2048,
                 ...(session.system_prompt ? { system: session.system_prompt } : {}),
@@ -2970,12 +3318,6 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 });
 // ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
 router.post("/video-generate", ...toolMiddleware("video-generate"), async (req, res) => {
-    const paid = isX402Paid(req);
-    if (!paid) {
-        const ok = await deductCredits(req, res, "video-generate", 50);
-        if (!ok)
-            return;
-    }
     const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body;
     if (!prompt) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() });
@@ -2986,25 +3328,64 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req, 
         res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() });
         return;
     }
+    // Scaled by duration at 125 credits/second, 500 minimum (5s = 625, 10s = 1250)
+    const videoCost = byokAdjustedCost(req, Math.max(500, duration * 125));
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
+        if (!withinLimit)
+            return;
+        const ok = await deductCredits(req, res, "video-generate", videoCost);
+        if (!ok)
+            return;
+    }
+    const ratioAliases = {
+        "16:9": "1280:720",
+        "9:16": "720:1280",
+        "1280:768": "1280:720",
+        "768:1280": "720:1280",
+    };
+    const resolvedRatio = ratioAliases[aspect_ratio] ?? aspect_ratio;
+    const validRatios = ["1280:720", "720:1280"];
+    if (!validRatios.includes(resolvedRatio)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "aspect_ratio must be one of: 16:9, 9:16, 1280:720, 720:1280", request_id: reqId() });
+        return;
+    }
     const runwayKey = process.env.RUNWAY_API_KEY;
     if (!runwayKey) {
         res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() });
         return;
     }
     try {
-        // Start video generation task
-        const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
-            body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: aspect_ratio, watermark: false }),
-        });
-        if (!startResp.ok) {
-            const err = await startResp.text();
-            console.error("[video-generate] Runway start error:", startResp.status, err);
-            res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${startResp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+        const candidateModels = [process.env.RUNWAY_VIDEO_MODEL, "gen4.5"].filter((value, index, self) => !!value && self.indexOf(value) === index);
+        let startResp = null;
+        let startError = null;
+        let selectedModel = null;
+        for (const model of candidateModels) {
+            const attempt = await axios.post("https://api.dev.runwayml.com/v1/text_to_video", { model, promptText: prompt, duration, ratio: resolvedRatio, watermark: false }, {
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+                timeout: 30000,
+                validateStatus: () => true,
+            });
+            if (attempt.status >= 200 && attempt.status < 300) {
+                startResp = attempt;
+                selectedModel = model;
+                break;
+            }
+            const err = typeof attempt.data === "string" ? attempt.data : JSON.stringify(attempt.data);
+            if (attempt.status === 403 && /not available/i.test(err)) {
+                startError = `Runway model ${model} is not available for this API key`;
+                continue;
+            }
+            console.error("[video-generate] Runway start error:", attempt.status, err);
+            res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() });
             return;
         }
-        const startData = await startResp.json();
+        if (!startResp || !selectedModel) {
+            res.status(503).json({ ok: false, error: "not_configured", message: startError ?? "No compatible Runway model is configured for this API key", request_id: reqId() });
+            return;
+        }
+        const startData = startResp.data;
         const taskId = startData.id;
         if (!taskId) {
             res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() });
@@ -3014,12 +3395,14 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req, 
         let videoUrl = null;
         for (let i = 0; i < 24; i++) {
             await new Promise(r => setTimeout(r, 5000));
-            const pollResp = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+            const pollResp = await axios.get(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
                 headers: { "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+                timeout: 15000,
+                validateStatus: () => true,
             });
-            if (!pollResp.ok)
+            if (pollResp.status < 200 || pollResp.status >= 300)
                 continue;
-            const pollData = await pollResp.json();
+            const pollData = pollResp.data;
             if (pollData.status === "SUCCEEDED" && pollData.output?.length) {
                 videoUrl = pollData.output[0];
                 break;
@@ -3033,7 +3416,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req, 
             res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() });
             return;
         }
-        res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio, task_id: taskId, credits_used: 50, request_id: reqId() });
+        res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, model: selectedModel, task_id: taskId, credits_used: paid ? 0 : videoCost, request_id: reqId() });
     }
     catch (e) {
         console.error("[video-generate]", e);
@@ -3044,16 +3427,16 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req, 
 router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
-        const ok = await deductCredits(req, res, "image-remove-bg", 10);
+        const ok = await deductCredits(req, res, "image-remove-bg", byokAdjustedCost(req, 350));
         if (!ok)
             return;
     }
-    const { image_url, size = "auto" } = req.body;
-    if (!image_url) {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "image_url is required", request_id: reqId() });
+    const { image_url, image_base64: inputBase64, size = "auto" } = req.body;
+    if (!image_url && !inputBase64) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() });
         return;
     }
-    const validSizes = ["auto", "preview", "hd"];
+    const validSizes = ["auto", "preview", "hd", "full"];
     if (!validSizes.includes(size)) {
         res.status(400).json({ ok: false, error: "invalid_request", message: `size must be one of: ${validSizes.join(", ")}`, request_id: reqId() });
         return;
@@ -3064,28 +3447,61 @@ router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req
         return;
     }
     try {
+        // Download the image ourselves and send base64 to RemoveBG. RemoveBG's own
+        // image_url fetcher is frequently blocked/429'd by CDNs (e.g. Wikimedia),
+        // which made valid requests fail.
+        let imgB64 = inputBase64;
+        if (image_url && !imgB64) {
+            try {
+                await validateUrl(image_url);
+            }
+            catch (err) {
+                res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
+                return;
+            }
+            try {
+                const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 20000, maxContentLength: 22 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)" } });
+                imgB64 = Buffer.from(imgResp.data).toString("base64");
+            }
+            catch (dlErr) {
+                const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
+                res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() });
+                return;
+            }
+        }
         const resp = await fetch("https://api.remove.bg/v1.0/removebg", {
             method: "POST",
             headers: { "X-Api-Key": removebgKey, "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({ image_url, size, format: "png", type: "auto" }),
+            body: JSON.stringify({ image_file_b64: imgB64, size: size === "hd" ? "full" : size, format: "png", type: "auto" }),
+            signal: AbortSignal.timeout(45000),
         });
         if (!resp.ok) {
             const err = await resp.text();
             console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
-            res.status(502).json({ ok: false, error: "removebg_error", message: `RemoveBG returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+            // NOTE: never return 502 from origin — Cloudflare replaces origin 502
+            // bodies with its own error page, hiding our JSON from the client.
+            let detail = err.slice(0, 300);
+            try {
+                const j = JSON.parse(err);
+                detail = j.errors?.[0]?.title ?? detail;
+            }
+            catch { /* keep raw */ }
+            const status = resp.status >= 400 && resp.status < 500 ? 400 : 503;
+            res.status(status).json({ ok: false, error: "removebg_error", message: `RemoveBG rejected the request (${resp.status}): ${detail.slice(0, 200)}`, request_id: reqId() });
             return;
         }
         const data = await resp.json();
         const imageBase64 = data.data?.result_b64 ?? "";
         if (!imageBase64) {
-            res.status(502).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() });
+            res.status(503).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() });
             return;
         }
         res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 10, request_id: reqId() });
     }
     catch (e) {
         console.error("[image-remove-bg]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+        const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+        res.status(isTimeout ? 503 : 500).json({ ok: false, error: isTimeout ? "upstream_timeout" : "fetch_error", message: isTimeout ? "RemoveBG did not respond in time. Please retry." : safeErr(e), request_id: reqId() });
     }
 });
 // ─── 56. EMAIL-FIND (Hunter.io) ──────────────────────────────────────────────
@@ -3107,29 +3523,51 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req, res) => 
         return;
     }
     try {
+        const hasFullName = !!(first_name && last_name);
+        const endpoint = hasFullName ? "email-finder" : "domain-search";
         const params = new URLSearchParams({ domain, api_key: hunterKey });
-        if (first_name)
+        if (hasFullName) {
             params.set("first_name", first_name);
-        if (last_name)
             params.set("last_name", last_name);
-        const resp = await fetch(`https://api.hunter.io/v2/email-finder?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
+        }
+        const resp = await fetch(`https://api.hunter.io/v2/${endpoint}?${params.toString()}`, { signal: AbortSignal.timeout(15000) });
         if (!resp.ok) {
             const err = await resp.text();
             console.error("[email-find] Hunter error:", resp.status, err);
-            res.status(502).json({ ok: false, error: "hunter_error", message: `Hunter.io returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() });
+            // NOTE: never return 502 from origin — Cloudflare replaces origin 502 bodies
+            // with its own error page, hiding our JSON from the client.
+            let detail = err.slice(0, 300);
+            try {
+                const j = JSON.parse(err);
+                detail = j.errors?.[0]?.details ?? detail;
+            }
+            catch { /* keep raw */ }
+            const status = resp.status >= 400 && resp.status < 500 ? 400 : 503;
+            res.status(status).json({ ok: false, error: "hunter_error", message: `Hunter.io rejected the request (${resp.status}): ${detail.slice(0, 200)}`, request_id: reqId() });
+            return;
+        }
+        if (hasFullName) {
+            const data = await resp.json();
+            const result = data.data;
+            if (!result?.email) {
+                res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() });
+                return;
+            }
+            res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, match_type: "person", credits_used: 5, request_id: reqId() });
             return;
         }
         const data = await resp.json();
-        const result = data.data;
-        if (!result?.email) {
-            res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() });
+        const emails = data.data?.emails ?? [];
+        if (!emails.length) {
+            res.status(404).json({ ok: false, error: "not_found", message: "No emails found for the given domain", request_id: reqId() });
             return;
         }
-        res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, credits_used: 5, request_id: reqId() });
+        res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 5, request_id: reqId() });
     }
     catch (e) {
         console.error("[email-find]", e);
-        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+        const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+        res.status(isTimeout ? 503 : 500).json({ ok: false, error: isTimeout ? "upstream_timeout" : "fetch_error", message: isTimeout ? "Hunter.io did not respond in time. Please retry." : safeErr(e), request_id: reqId() });
     }
 });
 // ─── 57. SEMANTIC-SEARCH (Exa) ───────────────────────────────────────────────
@@ -3140,9 +3578,28 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
         if (!ok)
             return;
     }
-    const { query, num_results = 5, type = "neural" } = req.body;
+    const { query, num_results = 5, limit, type = "neural", documents } = req.body;
     if (!query) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
+        return;
+    }
+    const n = Math.min(Math.max(1, Number(limit ?? num_results ?? 5)), 20);
+    if (Array.isArray(documents) && documents.length > 0) {
+        const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+        const queryTerms = new Set(normalize(query).split(" ").filter(Boolean));
+        const scored = documents.map((doc, index) => {
+            const text = typeof doc === "string" ? doc : JSON.stringify(doc);
+            const norm = normalize(text);
+            const words = new Set(norm.split(" ").filter(Boolean));
+            let overlap = 0;
+            for (const term of queryTerms)
+                if (words.has(term))
+                    overlap += 1;
+            const phraseBoost = norm.includes(normalize(query)) ? 2 : 0;
+            const score = queryTerms.size ? (overlap / queryTerms.size) + phraseBoost : 0;
+            return { index, text: text.slice(0, 1000), score };
+        }).sort((a, b) => b.score - a.score).slice(0, n);
+        res.json({ ok: true, query, type: "documents", results: scored, count: scored.length, documents_searched: documents.length, credits_used: 8, request_id: reqId() });
         return;
     }
     const validTypes = ["neural", "keyword"];
@@ -3156,7 +3613,6 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
         return;
     }
     try {
-        const n = Math.min(Math.max(1, num_results), 20);
         const resp = await fetch("https://api.exa.ai/search", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${exaKey}` },
@@ -3181,6 +3637,9 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
 router.post("/social-post", ...toolMiddleware("social-post"), async (req, res) => {
     const paid = isX402Paid(req);
     if (!paid) {
+        const withinLimit = await enforceDailyToolLimit(req, res, "social-post");
+        if (!withinLimit)
+            return;
         const ok = await deductCredits(req, res, "social-post", 5);
         if (!ok)
             return;
@@ -3198,52 +3657,1530 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req, res) =
     const apiSecret = process.env.X_API_SECRET;
     const accessToken = process.env.X_ACCESS_TOKEN;
     const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
-    if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
-        res.status(503).json({ ok: false, error: "not_configured", message: "X/Twitter API credentials not configured", request_id: reqId() });
+    const oauth2UserToken = process.env.X_USER_ACCESS_TOKEN
+        ?? process.env.X_OAUTH2_USER_ACCESS_TOKEN
+        ?? (accessToken && !accessTokenSecret ? accessToken : undefined)
+        ?? undefined;
+    const hasOauth1 = !!(apiKey && apiSecret && accessToken && accessTokenSecret);
+    if (!oauth2UserToken && !hasOauth1) {
+        res.status(503).json({
+            ok: false,
+            error: "not_configured",
+            message: "X posting requires either X_USER_ACCESS_TOKEN/X_OAUTH2_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens",
+            request_id: reqId()
+        });
         return;
     }
     try {
-        // OAuth 1.0a signature generation
-        const method = "POST";
-        const url = "https://api.twitter.com/2/tweets";
-        const timestamp = Math.floor(Date.now() / 1000).toString();
-        const nonce = crypto.randomBytes(16).toString("hex");
-        const oauthParams = {
-            oauth_consumer_key: apiKey,
-            oauth_nonce: nonce,
-            oauth_signature_method: "HMAC-SHA1",
-            oauth_timestamp: timestamp,
-            oauth_token: accessToken,
-            oauth_version: "1.0",
-        };
-        // Create signature base string
-        const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
-        const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-        const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
-        const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
-        const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
-        const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
         const body = { text };
         if (reply_to)
             body.reply = { in_reply_to_tweet_id: reply_to };
-        const resp = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": authHeader },
-            body: JSON.stringify(body),
-        });
-        if (!resp.ok) {
-            const err = await resp.text();
-            console.error("[social-post] Twitter error:", resp.status, err);
-            res.status(502).json({ ok: false, error: "twitter_error", message: `Twitter API returned ${resp.status}: ${err.slice(0, 300)}`, request_id: reqId() });
+        const url = "https://api.twitter.com/2/tweets";
+        const errors = [];
+        let data = null;
+        if (oauth2UserToken) {
+            const bearerResp = await axios.post(url, body, {
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${oauth2UserToken}` },
+                timeout: 15000,
+                validateStatus: () => true,
+            });
+            if (bearerResp.status >= 200 && bearerResp.status < 300) {
+                data = bearerResp.data;
+            }
+            else {
+                const err = typeof bearerResp.data === "string" ? bearerResp.data : JSON.stringify(bearerResp.data);
+                errors.push(`Bearer auth returned ${bearerResp.status}: ${err.slice(0, 300)}`);
+            }
+        }
+        if (!data && hasOauth1 && apiKey && apiSecret && accessToken && accessTokenSecret) {
+            const method = "POST";
+            const timestamp = Math.floor(Date.now() / 1000).toString();
+            const nonce = crypto.randomBytes(16).toString("hex");
+            const oauthParams = {
+                oauth_consumer_key: apiKey,
+                oauth_nonce: nonce,
+                oauth_signature_method: "HMAC-SHA1",
+                oauth_timestamp: timestamp,
+                oauth_token: accessToken,
+                oauth_version: "1.0",
+            };
+            const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
+            const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+            const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+            const signingKey = `${apiSecret}&${accessTokenSecret}`;
+            const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
+            const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
+            const oauthResp = await axios.post(url, body, {
+                headers: { "Content-Type": "application/json", "Authorization": authHeader },
+                timeout: 15000,
+                validateStatus: () => true,
+            });
+            if (oauthResp.status >= 200 && oauthResp.status < 300) {
+                data = oauthResp.data;
+            }
+            else {
+                const err = typeof oauthResp.data === "string" ? oauthResp.data : JSON.stringify(oauthResp.data);
+                errors.push(`OAuth 1.0a returned ${oauthResp.status}: ${err.slice(0, 300)}`);
+            }
+        }
+        if (!data) {
+            console.error("[social-post] X auth failed:", errors.join(" | "));
+            const authConfigError = errors.some(msg => /unsupported authentication|oauth1 app permissions/i.test(msg));
+            res.status(authConfigError ? 503 : 502).json({
+                ok: false,
+                error: authConfigError ? "not_configured" : "twitter_error",
+                message: authConfigError
+                    ? "X posting is configured with unsupported auth. Use X_USER_ACCESS_TOKEN or X_OAUTH2_USER_ACCESS_TOKEN for OAuth 2.0 user context, or enable write permissions for your OAuth 1.0a app and regenerate the access token."
+                    : (errors.join(" | ") || "X API post failed"),
+                request_id: reqId()
+            });
             return;
         }
-        const data = await resp.json();
         const tweetId = data.data?.id ?? "";
         res.json({ ok: true, tweet_id: tweetId, url: tweetId ? `https://x.com/i/web/status/${tweetId}` : "", text: data.data?.text ?? text, credits_used: 5, request_id: reqId() });
     }
     catch (e) {
         console.error("[social-post]", e);
         res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── wallet-balance ──────────────────────────────────────────────────────────
+router.post("/wallet-balance", ...toolMiddleware("wallet-balance"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "wallet-balance", 1);
+        if (!ok)
+            return;
+    }
+    const { address } = req.body;
+    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "address is required and must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
+        return;
+    }
+    try {
+        const requestPath = `/platform/v2/evm/token-balances/base/${address}`;
+        const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+        const jwt = await generateJwt({
+            apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+            apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+            requestMethod: "GET",
+            requestHost: "api.cdp.coinbase.com",
+            requestPath,
+        });
+        const r = await fetch(`https://api.cdp.coinbase.com${requestPath}`, {
+            headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json" },
+        });
+        if (!r.ok) {
+            const errText = await r.text().catch(() => "");
+            console.error("[wallet-balance] CDP error:", r.status, errText);
+            res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const balances = (data.balances ?? []).map((b) => ({
+            token: b.token?.symbol ?? b.symbol ?? "UNKNOWN",
+            name: b.token?.name ?? b.name ?? "",
+            amount: b.amount ?? b.balance ?? "0",
+            decimals: b.token?.decimals ?? b.decimals ?? 18,
+        }));
+        res.json({ ok: true, address, network: "base", balances, count: balances.length, data_source: "Coinbase Developer Platform", request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[wallet-balance]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── address-history ─────────────────────────────────────────────────────────
+router.post("/address-history", ...toolMiddleware("address-history"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "address-history", 1);
+        if (!ok)
+            return;
+    }
+    const { address, limit = 20 } = req.body;
+    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "address is required and must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
+        return;
+    }
+    const n = Math.min(Math.max(1, limit), 100);
+    try {
+        const requestPath = `/platform/v2/evm/transaction-history/base/${address}`;
+        const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+        const jwt = await generateJwt({
+            apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+            apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+            requestMethod: "GET",
+            requestHost: "api.cdp.coinbase.com",
+            requestPath,
+        });
+        const r = await fetch(`https://api.cdp.coinbase.com${requestPath}?limit=${n}`, {
+            headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json" },
+        });
+        if (!r.ok) {
+            const errText = await r.text().catch(() => "");
+            console.error("[address-history] CDP error:", r.status, errText);
+            res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const transactions = (data.transactions ?? []).slice(0, n).map((tx) => ({
+            hash: tx.transaction_hash ?? tx.hash ?? "",
+            block_number: tx.block_number ?? null,
+            timestamp: tx.block_timestamp ?? tx.timestamp ?? null,
+            from: tx.from_address ?? tx.from ?? "",
+            to: tx.to_address ?? tx.to ?? "",
+            value: tx.value ?? "0",
+            status: tx.status ?? "unknown",
+        }));
+        res.json({ ok: true, address, network: "base", transactions, count: transactions.length, data_source: "Coinbase Developer Platform", request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[address-history]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── gas-price ───────────────────────────────────────────────────────────────
+router.post("/gas-price", ...toolMiddleware("gas-price"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "gas-price", 1);
+        if (!ok)
+            return;
+    }
+    try {
+        const r = await fetch("https://mainnet.base.org", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }),
+        });
+        if (!r.ok) {
+            res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const hexWei = data.result ?? "0x0";
+        const wei = BigInt(hexWei);
+        const gweiNum = Number(wei) / 1e9;
+        res.json({ ok: true, network: "base", gas_price_wei: wei.toString(), gas_price_gwei: Math.round(gweiNum * 1000) / 1000, gas_price_hex: hexWei, data_source: "Base Mainnet RPC", request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[gas-price]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── base-nft-metadata ───────────────────────────────────────────────────────
+router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "base-nft-metadata", 1);
+        if (!ok)
+            return;
+    }
+    const { contractAddress, tokenId } = req.body;
+    if (!contractAddress || !tokenId) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress and tokenId are required", request_id: reqId() });
+        return;
+    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
+        return;
+    }
+    try {
+        const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${tokenId}`;
+        const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+        const jwt = await generateJwt({
+            apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+            apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+            requestMethod: "GET",
+            requestHost: "api.cdp.coinbase.com",
+            requestPath,
+        });
+        const r = await fetch(`https://api.cdp.coinbase.com${requestPath}`, {
+            headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json" },
+        });
+        if (!r.ok) {
+            const errText = await r.text().catch(() => "");
+            console.error("[base-nft-metadata] CDP error:", r.status, errText);
+            res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        res.json({
+            ok: true,
+            contractAddress,
+            tokenId,
+            network: "base",
+            name: data.name ?? data.token?.name ?? null,
+            description: data.description ?? null,
+            image: data.image ?? data.image_url ?? null,
+            attributes: data.attributes ?? data.traits ?? [],
+            token_uri: data.token_uri ?? null,
+            data_source: "Coinbase Developer Platform",
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[base-nft-metadata]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── eth-resolve-ens ─────────────────────────────────────────────────────────
+router.post("/eth-resolve-ens", ...toolMiddleware("eth-resolve-ens"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "eth-resolve-ens", 1);
+        if (!ok)
+            return;
+    }
+    const { name } = req.body;
+    if (!name || typeof name !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "name is required (e.g. vitalik.eth)", request_id: reqId() });
+        return;
+    }
+    try {
+        const r = await fetch(`https://api.ensideas.com/ens/resolve/${encodeURIComponent(name.trim())}`, {
+            headers: { "Accept": "application/json", "User-Agent": "ArchTools/1.9" },
+            signal: AbortSignal.timeout(10000),
+        });
+        if (!r.ok) {
+            const errText = await r.text().catch(() => "");
+            console.error("[eth-resolve-ens] ENSIdeas error:", r.status, errText);
+            res.status(502).json({ ok: false, error: "ens_error", message: `ENS resolver returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        if (!data.address || data.address === "0x0000000000000000000000000000000000000000") {
+            res.status(404).json({ ok: false, error: "not_found", message: `ENS name '${name}' could not be resolved`, request_id: reqId() });
+            return;
+        }
+        res.json({
+            ok: true,
+            name: data.name ?? name,
+            address: data.address,
+            displayName: data.displayName ?? null,
+            avatar: data.avatar ?? null,
+            data_source: "ENS (via ensideas.com)",
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[eth-resolve-ens]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── base-block-info ─────────────────────────────────────────────────────────
+router.post("/base-block-info", ...toolMiddleware("base-block-info"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "base-block-info", 1);
+        if (!ok)
+            return;
+    }
+    try {
+        const r = await fetch("https://mainnet.base.org", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBlockByNumber", params: ["latest", false], id: 1 }),
+        });
+        if (!r.ok) {
+            res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const block = data.result;
+        if (!block) {
+            res.status(502).json({ ok: false, error: "rpc_error", message: "No block data returned from Base RPC", request_id: reqId() });
+            return;
+        }
+        const blockNumber = parseInt(block.number, 16);
+        const timestamp = parseInt(block.timestamp, 16);
+        const gasUsed = parseInt(block.gasUsed, 16);
+        const gasLimit = parseInt(block.gasLimit, 16);
+        const txCount = Array.isArray(block.transactions) ? block.transactions.length : 0;
+        const baseFeePerGas = block.baseFeePerGas ? parseInt(block.baseFeePerGas, 16) : null;
+        res.json({
+            ok: true,
+            network: "base",
+            block_number: blockNumber,
+            block_hash: block.hash ?? null,
+            timestamp,
+            datetime: new Date(timestamp * 1000).toISOString(),
+            gas_used: gasUsed,
+            gas_limit: gasLimit,
+            gas_utilization_pct: Math.round((gasUsed / gasLimit) * 10000) / 100,
+            base_fee_per_gas_wei: baseFeePerGas !== null ? baseFeePerGas.toString() : null,
+            base_fee_per_gas_gwei: baseFeePerGas !== null ? Math.round((baseFeePerGas / 1e9) * 1000) / 1000 : null,
+            transaction_count: txCount,
+            miner: block.miner ?? null,
+            data_source: "Base Mainnet RPC",
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[base-block-info]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── defi-tvl ────────────────────────────────────────────────────────────────
+router.post("/defi-tvl", ...toolMiddleware("defi-tvl"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "defi-tvl", 1);
+        if (!ok)
+            return;
+    }
+    const { protocol, limit = 10 } = req.body;
+    try {
+        if (protocol) {
+            const slug = protocol.toLowerCase().trim();
+            const r = await fetch(`https://api.llama.fi/protocol/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
+            if (!r.ok) {
+                if (r.status === 404) {
+                    res.status(404).json({ ok: false, error: "not_found", message: `Protocol '${slug}' not found on DefiLlama`, request_id: reqId() });
+                    return;
+                }
+                res.status(502).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() });
+                return;
+            }
+            const data = await r.json();
+            res.json({
+                ok: true,
+                protocol: {
+                    name: data.name ?? slug,
+                    slug: data.slug ?? slug,
+                    tvl: data.currentChainTvls ? Object.values(data.currentChainTvls).reduce((a, b) => a + b, 0) : (data.tvl ?? null),
+                    category: data.category ?? null,
+                    chains: data.chains ?? [],
+                    change_1d: data.change_1d ?? null,
+                    change_7d: data.change_7d ?? null,
+                    url: data.url ?? null,
+                    logo: data.logo ?? null,
+                },
+                data_source: "DefiLlama",
+                attribution: "Powered by DefiLlama API — https://defillama.com",
+                request_id: reqId(),
+            });
+        }
+        else {
+            const n = Math.min(Math.max(1, limit), 100);
+            const r = await fetch("https://api.llama.fi/protocols", { signal: AbortSignal.timeout(10000) });
+            if (!r.ok) {
+                res.status(502).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() });
+                return;
+            }
+            const data = await r.json();
+            const sorted = data.sort((a, b) => (b.tvl ?? 0) - (a.tvl ?? 0)).slice(0, n);
+            const protocols = sorted.map((p) => ({
+                name: p.name, slug: p.slug, tvl: p.tvl ?? 0, category: p.category ?? null,
+                chain: p.chain ?? null, chains: p.chains ?? [],
+                change_1d: p.change_1d ?? null, change_7d: p.change_7d ?? null,
+            }));
+            res.json({ ok: true, protocols, count: protocols.length, data_source: "DefiLlama", attribution: "Powered by DefiLlama API — https://defillama.com", request_id: reqId() });
+        }
+    }
+    catch (e) {
+        console.error("[defi-tvl]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── crypto-dominance ────────────────────────────────────────────────────────
+router.post("/crypto-dominance", ...toolMiddleware("crypto-dominance"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "crypto-dominance", 1);
+        if (!ok)
+            return;
+    }
+    try {
+        const r = await fetch(`${cgBase()}/global`, { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
+        if (!r.ok) {
+            try {
+                const ccResp = await fetch("https://api.coincap.io/v2/assets?limit=2", { signal: AbortSignal.timeout(8000) });
+                if (ccResp.ok) {
+                    const ccData = await ccResp.json();
+                    const btc = ccData.data?.find((c) => c.id === "bitcoin");
+                    const eth = ccData.data?.find((c) => c.id === "ethereum");
+                    res.json({
+                        ok: true,
+                        btc_dominance: btc?.marketCapDominance ? parseFloat(btc.marketCapDominance) : null,
+                        eth_dominance: eth?.marketCapDominance ? parseFloat(eth.marketCapDominance) : null,
+                        total_market_cap_usd: null, total_volume_24h_usd: null,
+                        source: "coincap_fallback",
+                        data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com",
+                        request_id: reqId(),
+                    });
+                    return;
+                }
+            }
+            catch (_) { /* fall through */ }
+            res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const d = data.data;
+        res.json({
+            ok: true,
+            btc_dominance: d?.market_cap_percentage?.btc ?? null,
+            eth_dominance: d?.market_cap_percentage?.eth ?? null,
+            top_10_dominance: d?.market_cap_percentage ? Object.entries(d.market_cap_percentage).slice(0, 10).map(([k, v]) => ({ symbol: k, dominance_pct: Math.round(v * 100) / 100 })) : [],
+            total_market_cap_usd: d?.total_market_cap?.usd ?? null,
+            total_volume_24h_usd: d?.total_volume?.usd ?? null,
+            active_cryptocurrencies: d?.active_cryptocurrencies ?? null,
+            markets: d?.markets ?? null,
+            market_cap_change_24h_pct: d?.market_cap_change_percentage_24h_usd ?? null,
+            data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com",
+            data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms",
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[crypto-dominance]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── nft-collection-stats ────────────────────────────────────────────────────
+router.post("/nft-collection-stats", ...toolMiddleware("nft-collection-stats"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "nft-collection-stats", 2);
+        if (!ok)
+            return;
+    }
+    const { collection } = req.body;
+    if (!collection) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "collection is required (e.g. bored-ape-yacht-club)", request_id: reqId() });
+        return;
+    }
+    try {
+        const slug = collection.toLowerCase().trim();
+        const parseCollection = (c) => ({
+            name: c.name ?? collection, slug: c.slug ?? slug,
+            floor_price_eth: c.floorAsk?.price?.amount?.native ?? null,
+            floor_price_usd: c.floorAsk?.price?.amount?.usd ?? null,
+            volume_24h: c.volume?.["1day"] ?? null, volume_7d: c.volume?.["7day"] ?? null,
+            volume_all_time: c.volume?.allTime ?? null,
+            token_count: c.tokenCount ?? null, owner_count: c.ownerCount ?? null,
+            image: c.image ?? null, description: c.description?.slice(0, 500) ?? null,
+        });
+        // Try by slug first, then by name
+        for (const param of [`slug=${encodeURIComponent(slug)}`, `name=${encodeURIComponent(collection)}`]) {
+            const r = await fetch(`https://api.reservoir.tools/collections/v7?${param}&limit=1`, {
+                headers: { "Accept": "application/json", "User-Agent": "ArchTools/1.9" },
+                signal: AbortSignal.timeout(10000),
+            });
+            if (r.ok) {
+                const data = await r.json();
+                if (data.collections?.length) {
+                    res.json({ ok: true, collection: parseCollection(data.collections[0]), data_source: "Reservoir", attribution: "Powered by Reservoir API — https://reservoir.tools", request_id: reqId() });
+                    return;
+                }
+            }
+        }
+        res.status(404).json({ ok: false, error: "not_found", message: `NFT collection '${collection}' not found`, request_id: reqId() });
+    }
+    catch (e) {
+        console.error("[nft-collection-stats]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── base-tx-decode ──────────────────────────────────────────────────────────
+router.post("/base-tx-decode", ...toolMiddleware("base-tx-decode"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "base-tx-decode", 1);
+        if (!ok)
+            return;
+    }
+    const { txHash } = req.body;
+    if (!txHash || !/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "txHash is required and must be a valid transaction hash (0x + 64 hex chars)", request_id: reqId() });
+        return;
+    }
+    try {
+        const txResp = await fetch("https://mainnet.base.org", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getTransactionByHash", params: [txHash], id: 1 }),
+        });
+        if (!txResp.ok) {
+            res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${txResp.status}`, request_id: reqId() });
+            return;
+        }
+        const txData = await txResp.json();
+        const tx = txData.result;
+        if (!tx) {
+            res.status(404).json({ ok: false, error: "not_found", message: `Transaction '${txHash}' not found on Base`, request_id: reqId() });
+            return;
+        }
+        const receiptResp = await fetch("https://mainnet.base.org", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getTransactionReceipt", params: [txHash], id: 2 }),
+        });
+        let status = "pending";
+        let gasUsed = null;
+        let effectiveGasPrice = null;
+        if (receiptResp.ok) {
+            const receiptData = await receiptResp.json();
+            const receipt = receiptData.result;
+            if (receipt) {
+                status = receipt.status === "0x1" ? "success" : receipt.status === "0x0" ? "failed" : "pending";
+                gasUsed = receipt.gasUsed ? parseInt(receipt.gasUsed, 16) : null;
+                effectiveGasPrice = receipt.effectiveGasPrice ? parseInt(receipt.effectiveGasPrice, 16) : null;
+            }
+        }
+        const valueWei = tx.value ? BigInt(tx.value) : BigInt(0);
+        const valueEth = Number(valueWei) / 1e18;
+        const gasLimit = tx.gas ? parseInt(tx.gas, 16) : null;
+        const gasPriceWei = tx.gasPrice ? parseInt(tx.gasPrice, 16) : null;
+        const blockNumber = tx.blockNumber ? parseInt(tx.blockNumber, 16) : null;
+        const nonce = tx.nonce ? parseInt(tx.nonce, 16) : null;
+        const inputData = tx.input ?? "0x";
+        const methodSig = inputData.length >= 10 ? inputData.slice(0, 10) : null;
+        let txFeeEth = null;
+        if (gasUsed !== null && effectiveGasPrice !== null) {
+            txFeeEth = (gasUsed * effectiveGasPrice) / 1e18;
+        }
+        else if (gasUsed !== null && gasPriceWei !== null) {
+            txFeeEth = (gasUsed * gasPriceWei) / 1e18;
+        }
+        res.json({
+            ok: true, txHash, network: "base", status,
+            from: tx.from ?? null, to: tx.to ?? null,
+            value_wei: valueWei.toString(), value_eth: Math.round(valueEth * 1e8) / 1e8,
+            block_number: blockNumber, nonce,
+            gas_limit: gasLimit, gas_used: gasUsed,
+            gas_price_gwei: gasPriceWei !== null ? Math.round((gasPriceWei / 1e9) * 1000) / 1000 : null,
+            tx_fee_eth: txFeeEth !== null ? Math.round(txFeeEth * 1e8) / 1e8 : null,
+            method_signature: methodSig,
+            has_input_data: inputData !== "0x" && inputData.length > 2,
+            input_data_size: inputData.length > 2 ? (inputData.length - 2) / 2 : 0,
+            data_source: "Base Mainnet RPC", request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[base-tx-decode]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── stock-price ─────────────────────────────────────────────────────────────
+router.post("/stock-price", ...toolMiddleware("stock-price"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "stock-price", 1);
+        if (!ok)
+            return;
+    }
+    const { symbol } = req.body;
+    if (!symbol || typeof symbol !== "string" || !/^[A-Za-z0-9.\-^=]{1,20}$/.test(symbol.trim())) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. AAPL, TSLA, MSFT)", request_id: reqId() });
+        return;
+    }
+    const ticker = symbol.trim().toUpperCase();
+    try {
+        const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`, { signal: AbortSignal.timeout(10000) });
+        if (!r.ok) {
+            if (r.status === 404) {
+                res.status(404).json({ ok: false, error: "not_found", message: `Symbol '${ticker}' not found`, request_id: reqId() });
+                return;
+            }
+            res.status(502).json({ ok: false, error: "fetch_error", message: `Yahoo Finance returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const result = data?.chart?.result?.[0];
+        if (!result) {
+            res.status(404).json({ ok: false, error: "not_found", message: `No data for symbol '${ticker}'`, request_id: reqId() });
+            return;
+        }
+        const meta = result.meta ?? {};
+        const price = meta.regularMarketPrice ?? null;
+        const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? null;
+        const change = (price !== null && prevClose !== null) ? Math.round((price - prevClose) * 100) / 100 : null;
+        const changePct = (price !== null && prevClose !== null && prevClose !== 0) ? Math.round(((price - prevClose) / prevClose) * 10000) / 100 : null;
+        const volume = meta.regularMarketVolume ?? null;
+        res.json({
+            ok: true, symbol: ticker,
+            currency: meta.currency ?? "USD",
+            price, previous_close: prevClose,
+            change, change_percent: changePct,
+            volume, market_time: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : null,
+            exchange: meta.exchangeName ?? null,
+            data_source: "Yahoo Finance", request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[stock-price]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── weather-current ─────────────────────────────────────────────────────────
+router.post("/weather-current", ...toolMiddleware("weather-current"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "weather-current", 1);
+        if (!ok)
+            return;
+    }
+    const { city } = req.body;
+    if (!city || typeof city !== "string" || city.trim().length === 0 || city.trim().length > 100) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "city is required (e.g. New York, London, Tokyo)", request_id: reqId() });
+        return;
+    }
+    const cityName = city.trim();
+    try {
+        const r = await fetch(`https://wttr.in/${encodeURIComponent(cityName)}?format=j1`, {
+            signal: AbortSignal.timeout(10000),
+            headers: { "User-Agent": "ArchTools/1.0" },
+        });
+        if (!r.ok) {
+            res.status(502).json({ ok: false, error: "fetch_error", message: `wttr.in returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const current = data?.current_condition?.[0];
+        if (!current) {
+            res.status(404).json({ ok: false, error: "not_found", message: `No weather data for '${cityName}'`, request_id: reqId() });
+            return;
+        }
+        const area = data?.nearest_area?.[0];
+        res.json({
+            ok: true,
+            location: {
+                city: area?.areaName?.[0]?.value ?? cityName,
+                region: area?.region?.[0]?.value ?? null,
+                country: area?.country?.[0]?.value ?? null,
+            },
+            weather: {
+                temp_c: parseInt(current.temp_C) || null,
+                temp_f: parseInt(current.temp_F) || null,
+                feels_like_c: parseInt(current.FeelsLikeC) || null,
+                feels_like_f: parseInt(current.FeelsLikeF) || null,
+                humidity: parseInt(current.humidity) || null,
+                wind_speed_kmph: parseInt(current.windspeedKmph) || null,
+                wind_speed_mph: parseInt(current.windspeedMiles) || null,
+                wind_direction: current.winddir16Point ?? null,
+                condition: current.weatherDesc?.[0]?.value ?? null,
+                uv_index: parseInt(current.uvIndex) || null,
+                visibility_km: parseInt(current.visibility) || null,
+                pressure_mb: parseInt(current.pressure) || null,
+                cloud_cover: parseInt(current.cloudcover) || null,
+            },
+            observation_time: current.observation_time ?? null,
+            data_source: "wttr.in", request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[weather-current]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── github-repo-stats ───────────────────────────────────────────────────────
+router.post("/github-repo-stats", ...toolMiddleware("github-repo-stats"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "github-repo-stats", 1);
+        if (!ok)
+            return;
+    }
+    const { owner, repo } = req.body;
+    if (!owner || !repo || typeof owner !== "string" || typeof repo !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "owner and repo are required (e.g. owner: 'facebook', repo: 'react')", request_id: reqId() });
+        return;
+    }
+    const o = owner.trim();
+    const r = repo.trim();
+    if (!/^[A-Za-z0-9._-]{1,100}$/.test(o) || !/^[A-Za-z0-9._-]{1,100}$/.test(r)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid owner or repo name", request_id: reqId() });
+        return;
+    }
+    try {
+        const resp = await fetch(`https://api.github.com/repos/${encodeURIComponent(o)}/${encodeURIComponent(r)}`, {
+            signal: AbortSignal.timeout(10000),
+            headers: { "User-Agent": "ArchTools/1.0", "Accept": "application/vnd.github+json" },
+        });
+        if (!resp.ok) {
+            if (resp.status === 404) {
+                res.status(404).json({ ok: false, error: "not_found", message: `Repository '${o}/${r}' not found`, request_id: reqId() });
+                return;
+            }
+            res.status(502).json({ ok: false, error: "fetch_error", message: `GitHub API returned ${resp.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await resp.json();
+        res.json({
+            ok: true,
+            repository: {
+                full_name: data.full_name ?? `${o}/${r}`,
+                description: data.description ?? null,
+                language: data.language ?? null,
+                stars: data.stargazers_count ?? 0,
+                forks: data.forks_count ?? 0,
+                open_issues: data.open_issues_count ?? 0,
+                watchers: data.subscribers_count ?? 0,
+                size_kb: data.size ?? null,
+                default_branch: data.default_branch ?? "main",
+                license: data.license?.spdx_id ?? null,
+                topics: data.topics ?? [],
+                created_at: data.created_at ?? null,
+                updated_at: data.updated_at ?? null,
+                pushed_at: data.pushed_at ?? null,
+                is_fork: data.fork ?? false,
+                is_archived: data.archived ?? false,
+                homepage: data.homepage ?? null,
+                html_url: data.html_url ?? null,
+            },
+            data_source: "GitHub API", request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[github-repo-stats]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── wikipedia-search ────────────────────────────────────────────────────────
+router.post("/wikipedia-search", ...toolMiddleware("wikipedia-search"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "wikipedia-search", 1);
+        if (!ok)
+            return;
+    }
+    const { query, limit = 3 } = req.body;
+    if (!query || typeof query !== "string" || query.trim().length === 0) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() });
+        return;
+    }
+    const q = query.trim();
+    const n = Math.min(Math.max(1, limit), 20);
+    try {
+        const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=${n}&format=json&origin=*`, { signal: AbortSignal.timeout(10000) });
+        if (!r.ok) {
+            res.status(502).json({ ok: false, error: "fetch_error", message: `Wikipedia API returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        const results = (data?.query?.search ?? []).map((item) => ({
+            title: item.title,
+            snippet: (item.snippet ?? "").replace(/<[^>]*>/g, ""),
+            page_id: item.pageid,
+            word_count: item.wordcount ?? null,
+            url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, "_"))}`,
+        }));
+        res.json({
+            ok: true,
+            query: q,
+            total_hits: data?.query?.searchinfo?.totalhits ?? results.length,
+            results,
+            data_source: "Wikipedia API",
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[wikipedia-search]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── url-health-check ────────────────────────────────────────────────────────
+router.post("/url-health-check", ...toolMiddleware("url-health-check"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "url-health-check", 1);
+        if (!ok)
+            return;
+    }
+    const { url } = req.body;
+    if (!url || typeof url !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() });
+        return;
+    }
+    try {
+        await validateUrl(url);
+    }
+    catch (err) {
+        res.status(400).json({ ok: false, error: "invalid_url", message: err.message, request_id: reqId() });
+        return;
+    }
+    try {
+        const start = Date.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const r = await fetch(url, {
+            method: "HEAD",
+            signal: controller.signal,
+            redirect: "follow",
+            headers: { "User-Agent": "ArchTools-HealthCheck/1.0" },
+        });
+        clearTimeout(timeout);
+        const elapsed = Date.now() - start;
+        res.json({
+            ok: true,
+            url,
+            is_up: r.ok,
+            status_code: r.status,
+            status_text: r.statusText,
+            response_time_ms: elapsed,
+            content_type: r.headers.get("content-type") ?? null,
+            server: r.headers.get("server") ?? null,
+            redirected: r.redirected,
+            final_url: r.url !== url ? r.url : null,
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        const isTimeout = e?.name === "AbortError";
+        res.json({
+            ok: true,
+            url,
+            is_up: false,
+            status_code: null,
+            status_text: isTimeout ? "TIMEOUT" : "CONNECTION_FAILED",
+            response_time_ms: null,
+            content_type: null,
+            server: null,
+            error: isTimeout ? "Request timed out after 15s" : (e?.message ?? "Connection failed"),
+            request_id: reqId(),
+        });
+    }
+});
+// ─── calculate-compound-interest ─────────────────────────────────────────────
+router.post("/calculate-compound-interest", ...toolMiddleware("calculate-compound-interest"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "calculate-compound-interest", 1);
+        if (!ok)
+            return;
+    }
+    const { principal, rate, years, compounds_per_year = 12 } = req.body;
+    if (principal === undefined || rate === undefined || years === undefined) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "principal, rate (annual % e.g. 5 for 5%), and years are required", request_id: reqId() });
+        return;
+    }
+    if (typeof principal !== "number" || typeof rate !== "number" || typeof years !== "number" || typeof compounds_per_year !== "number") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "principal, rate, years, and compounds_per_year must be numbers", request_id: reqId() });
+        return;
+    }
+    if (principal < 0 || rate < 0 || years < 0 || compounds_per_year < 1 || compounds_per_year > 365) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Values must be non-negative; compounds_per_year must be 1-365", request_id: reqId() });
+        return;
+    }
+    const r_dec = rate / 100;
+    const n = compounds_per_year;
+    const t = years;
+    const finalAmount = principal * Math.pow(1 + r_dec / n, n * t);
+    const totalInterest = finalAmount - principal;
+    const effectiveAnnualRate = (Math.pow(1 + r_dec / n, n) - 1) * 100;
+    // Year-by-year breakdown (capped at 50 years)
+    const schedule = [];
+    const maxYears = Math.min(Math.ceil(t), 50);
+    for (let y = 1; y <= maxYears; y++) {
+        schedule.push({ year: y, balance: Math.round(principal * Math.pow(1 + r_dec / n, n * y) * 100) / 100 });
+    }
+    res.json({
+        ok: true,
+        inputs: { principal, annual_rate_percent: rate, years, compounds_per_year },
+        results: {
+            final_amount: Math.round(finalAmount * 100) / 100,
+            total_interest: Math.round(totalInterest * 100) / 100,
+            effective_annual_rate: Math.round(effectiveAnnualRate * 1000) / 1000,
+            total_return_percent: Math.round((totalInterest / principal) * 10000) / 100,
+        },
+        schedule,
+        request_id: reqId(),
+    });
+});
+// ─── word-count-stats ────────────────────────────────────────────────────────
+router.post("/word-count-stats", ...toolMiddleware("word-count-stats"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "word-count-stats", 1);
+        if (!ok)
+            return;
+    }
+    const { text } = req.body;
+    if (!text || typeof text !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
+        return;
+    }
+    if (text.length > 500_000) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "Text too long (max 500,000 characters)", request_id: reqId() });
+        return;
+    }
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length;
+    const charCount = text.length;
+    const charCountNoSpaces = text.replace(/\s/g, "").length;
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const sentenceCount = sentences.length;
+    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    const paragraphCount = paragraphs.length || 1;
+    const avgWordLength = wordCount > 0 ? Math.round((charCountNoSpaces / wordCount) * 100) / 100 : 0;
+    const readingTimeMinutes = Math.round((wordCount / 238) * 10) / 10; // 238 wpm average
+    const speakingTimeMinutes = Math.round((wordCount / 150) * 10) / 10; // 150 wpm speaking
+    // Top words frequency
+    const freq = {};
+    for (const w of words) {
+        const lower = w.toLowerCase().replace(/[^a-z0-9'-]/g, "");
+        if (lower.length > 2)
+            freq[lower] = (freq[lower] ?? 0) + 1;
+    }
+    const topWords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count }));
+    res.json({
+        ok: true,
+        stats: {
+            word_count: wordCount,
+            char_count: charCount,
+            char_count_no_spaces: charCountNoSpaces,
+            sentence_count: sentenceCount,
+            paragraph_count: paragraphCount,
+            avg_word_length: avgWordLength,
+            reading_time_minutes: readingTimeMinutes,
+            speaking_time_minutes: speakingTimeMinutes,
+        },
+        top_words: topWords,
+        request_id: reqId(),
+    });
+});
+// ─── exchange-rates ──────────────────────────────────────────────────────────
+router.post("/exchange-rates", ...toolMiddleware("exchange-rates"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "exchange-rates", 1);
+        if (!ok)
+            return;
+    }
+    const { base = "USD", target } = req.body;
+    try {
+        const baseCurrency = base.toUpperCase().trim();
+        const r = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(baseCurrency)}`, { signal: AbortSignal.timeout(10000) });
+        if (!r.ok) {
+            res.status(502).json({ ok: false, error: "fetch_error", message: `Exchange rate API returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        if (data.result !== "success" || !data.rates) {
+            res.status(502).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() });
+            return;
+        }
+        if (target) {
+            const targetCurrency = target.toUpperCase().trim();
+            const rate = data.rates[targetCurrency];
+            if (rate === undefined) {
+                res.status(422).json({ ok: false, error: "invalid_currency", message: `Currency '${targetCurrency}' not found`, request_id: reqId() });
+                return;
+            }
+            res.json({ ok: true, base: baseCurrency, target: targetCurrency, rate, timestamp: data.time_last_update_utc ?? null, request_id: reqId() });
+        }
+        else {
+            res.json({ ok: true, base: baseCurrency, rates: data.rates, currency_count: Object.keys(data.rates).length, timestamp: data.time_last_update_utc ?? null, request_id: reqId() });
+        }
+    }
+    catch (e) {
+        console.error("[exchange-rates]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── ip-geolocation ──────────────────────────────────────────────────────────
+router.post("/ip-geolocation", ...toolMiddleware("ip-geolocation"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "ip-geolocation", 1);
+        if (!ok)
+            return;
+    }
+    const { ip } = req.body;
+    if (!ip) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: reqId() });
+        return;
+    }
+    try {
+        const r = await fetch(`https://ipapi.co/${encodeURIComponent(ip.trim())}/json/`, {
+            signal: AbortSignal.timeout(10000),
+            headers: { "User-Agent": "ArchTools/1.9" },
+        });
+        if (!r.ok) {
+            if (r.status === 429) {
+                res.status(429).json({ ok: false, error: "rate_limited", message: "IP geolocation rate limit hit. Try again shortly.", request_id: reqId() });
+                return;
+            }
+            res.status(502).json({ ok: false, error: "fetch_error", message: `ipapi.co returned ${r.status}`, request_id: reqId() });
+            return;
+        }
+        const data = await r.json();
+        if (data.error) {
+            res.status(422).json({ ok: false, error: "lookup_error", message: data.reason ?? "Invalid IP address", request_id: reqId() });
+            return;
+        }
+        res.json({
+            ok: true, ip: data.ip ?? ip,
+            city: data.city ?? null, region: data.region ?? null, country: data.country_name ?? null, country_code: data.country_code ?? null,
+            lat: data.latitude ?? null, lon: data.longitude ?? null,
+            org: data.org ?? null, timezone: data.timezone ?? null, currency: data.currency ?? null,
+            asn: data.asn ?? null, postal: data.postal ?? null,
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("[ip-geolocation]", e);
+        res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── text-similarity ─────────────────────────────────────────────────────────
+router.post("/text-similarity", ...toolMiddleware("text-similarity"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "text-similarity", 1);
+        if (!ok)
+            return;
+    }
+    const { text1, text2 } = req.body;
+    if (!text1 || !text2) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text1 and text2 are required", request_id: reqId() });
+        return;
+    }
+    // Jaccard similarity (word overlap)
+    const normalize = (t) => t.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 0);
+    const words1 = new Set(normalize(text1));
+    const words2 = new Set(normalize(text2));
+    const intersection = new Set([...words1].filter(w => words2.has(w)));
+    const union = new Set([...words1, ...words2]);
+    const similarity = union.size > 0 ? intersection.size / union.size : 0;
+    res.json({
+        ok: true,
+        similarity_score: Math.round(similarity * 10000) / 10000,
+        common_words: [...intersection].sort(),
+        common_count: intersection.size,
+        text1_word_count: words1.size,
+        text2_word_count: words2.size,
+        union_size: union.size,
+        method: "jaccard",
+        request_id: reqId(),
+    });
+});
+// ─── base64-operations ───────────────────────────────────────────────────────
+router.post("/base64-operations", ...toolMiddleware("base64-operations"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "base64-operations", 1);
+        if (!ok)
+            return;
+    }
+    const { text, operation = "encode" } = req.body;
+    if (!text) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() });
+        return;
+    }
+    const validOps = ["encode", "decode"];
+    if (!validOps.includes(operation)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `operation must be one of: ${validOps.join(", ")}`, request_id: reqId() });
+        return;
+    }
+    try {
+        let result;
+        let bytes;
+        if (operation === "encode") {
+            const buf = Buffer.from(text, "utf8");
+            result = buf.toString("base64");
+            bytes = buf.length;
+        }
+        else {
+            const buf = Buffer.from(text, "base64");
+            result = buf.toString("utf8");
+            bytes = buf.length;
+        }
+        res.json({ ok: true, result, operation, bytes, input_length: text.length, output_length: result.length, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(422).json({ ok: false, error: "operation_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── color-convert ───────────────────────────────────────────────────────────
+router.post("/color-convert", ...toolMiddleware("color-convert"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "color-convert", 1);
+        if (!ok)
+            return;
+    }
+    const { color, to } = req.body;
+    if (!color || !to) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "color and to are required", request_id: reqId() });
+        return;
+    }
+    const validFormats = ["hex", "rgb", "hsl"];
+    if (!validFormats.includes(to)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `to must be one of: ${validFormats.join(", ")}`, request_id: reqId() });
+        return;
+    }
+    try {
+        let r, g, b;
+        const input = color.trim();
+        // Parse hex
+        const hexMatch = input.match(/^#?([0-9a-fA-F]{3,8})$/);
+        if (hexMatch) {
+            let hex = hexMatch[1];
+            if (hex.length === 3)
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            r = parseInt(hex.slice(0, 2), 16);
+            g = parseInt(hex.slice(2, 4), 16);
+            b = parseInt(hex.slice(4, 6), 16);
+        }
+        // Parse rgb(r, g, b)
+        else if (input.match(/^rgb/i)) {
+            const m = input.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+            if (!m)
+                throw new Error("Invalid RGB format. Use: rgb(255, 0, 0)");
+            r = Math.min(255, parseInt(m[1]));
+            g = Math.min(255, parseInt(m[2]));
+            b = Math.min(255, parseInt(m[3]));
+        }
+        // Parse hsl(h, s%, l%)
+        else if (input.match(/^hsl/i)) {
+            const m = input.match(/([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?/);
+            if (!m)
+                throw new Error("Invalid HSL format. Use: hsl(0, 100%, 50%)");
+            const h = parseFloat(m[1]) / 360;
+            const s = parseFloat(m[2]) / 100;
+            const l = parseFloat(m[3]) / 100;
+            // HSL to RGB conversion
+            const hue2rgb = (p, q, t) => {
+                if (t < 0)
+                    t += 1;
+                if (t > 1)
+                    t -= 1;
+                if (t < 1 / 6)
+                    return p + (q - p) * 6 * t;
+                if (t < 1 / 2)
+                    return q;
+                if (t < 2 / 3)
+                    return p + (q - p) * (2 / 3 - t) * 6;
+                return p;
+            };
+            if (s === 0) {
+                r = g = b = Math.round(l * 255);
+            }
+            else {
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+                g = Math.round(hue2rgb(p, q, h) * 255);
+                b = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+            }
+        }
+        else {
+            throw new Error("Unrecognized color format. Use hex (#ff0000), rgb(255,0,0), or hsl(0,100%,50%)");
+        }
+        // Convert to target format
+        let result;
+        if (to === "hex") {
+            result = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+        }
+        else if (to === "rgb") {
+            result = `rgb(${r}, ${g}, ${b})`;
+        }
+        else {
+            // RGB to HSL
+            const rn = r / 255, gn = g / 255, bn = b / 255;
+            const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+            let h = 0, s = 0;
+            const l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                if (max === rn)
+                    h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+                else if (max === gn)
+                    h = ((bn - rn) / d + 2) / 6;
+                else
+                    h = ((rn - gn) / d + 4) / 6;
+            }
+            result = `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+        }
+        res.json({ ok: true, input: color, to, result, rgb: { r, g, b }, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(422).json({ ok: false, error: "conversion_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── JWT-DECODE ──────────────────────────────────────────────────────────────
+router.post("/jwt-decode", ...toolMiddleware("jwt-decode"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "jwt-decode", 1);
+        if (!ok)
+            return;
+    }
+    const { token } = req.body;
+    if (!token || typeof token !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "token is required", request_id: reqId() });
+        return;
+    }
+    try {
+        const parts = token.split(".");
+        if (parts.length < 2 || parts.length > 3) {
+            res.status(422).json({ ok: false, error: "invalid_token", message: "Token must have 2 or 3 parts separated by dots", request_id: reqId() });
+            return;
+        }
+        const decodeBase64Url = (s) => {
+            const padded = s.replace(/-/g, "+").replace(/_/g, "/");
+            return Buffer.from(padded, "base64").toString("utf8");
+        };
+        let header;
+        let payload;
+        try {
+            header = JSON.parse(decodeBase64Url(parts[0]));
+        }
+        catch {
+            res.status(422).json({ ok: false, error: "invalid_token", message: "Could not decode JWT header", request_id: reqId() });
+            return;
+        }
+        try {
+            payload = JSON.parse(decodeBase64Url(parts[1]));
+        }
+        catch {
+            res.status(422).json({ ok: false, error: "invalid_token", message: "Could not decode JWT payload", request_id: reqId() });
+            return;
+        }
+        const signaturePresent = parts.length === 3 && parts[2].length > 0;
+        const exp = payload?.exp;
+        let isExpired = null;
+        let expiryDate = null;
+        if (typeof exp === "number") {
+            const expiryMs = exp * 1000;
+            isExpired = Date.now() > expiryMs;
+            expiryDate = new Date(expiryMs).toISOString();
+        }
+        res.json({ ok: true, header, payload, signature_present: signaturePresent, is_expired: isExpired, expiry_date: expiryDate, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "decode_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── CSS-MINIFY ──────────────────────────────────────────────────────────────
+router.post("/css-minify", ...toolMiddleware("css-minify"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "css-minify", 1);
+        if (!ok)
+            return;
+    }
+    const { css } = req.body;
+    if (!css || typeof css !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "css is required", request_id: reqId() });
+        return;
+    }
+    try {
+        const originalBytes = Buffer.byteLength(css, "utf8");
+        let minified = css.replace(/\/\*[\s\S]*?\*\//g, "");
+        minified = minified.replace(/\s+/g, " ");
+        minified = minified.replace(/\s*([{}:;,>~+])\s*/g, "$1");
+        minified = minified.replace(/;}/g, "}");
+        minified = minified.trim();
+        const minifiedBytes = Buffer.byteLength(minified, "utf8");
+        const reductionPct = originalBytes > 0 ? Math.round(((originalBytes - minifiedBytes) / originalBytes) * 10000) / 100 : 0;
+        res.json({ ok: true, minified, original_bytes: originalBytes, minified_bytes: minifiedBytes, reduction_pct: reductionPct, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "minify_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── MARKDOWN-TO-HTML ────────────────────────────────────────────────────────
+router.post("/markdown-to-html", ...toolMiddleware("markdown-to-html"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "markdown-to-html", 1);
+        if (!ok)
+            return;
+    }
+    const { markdown } = req.body;
+    if (!markdown || typeof markdown !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "markdown is required", request_id: reqId() });
+        return;
+    }
+    try {
+        let html = markdown;
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => `<pre><code${lang ? ` class="language-${lang}"` : ""}>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`);
+        html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+        html = html.replace(/^######\s+(.+)$/gm, "<h6>$1</h6>");
+        html = html.replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>");
+        html = html.replace(/^####\s+(.+)$/gm, "<h4>$1</h4>");
+        html = html.replace(/^###\s+(.+)$/gm, "<h3>$1</h3>");
+        html = html.replace(/^##\s+(.+)$/gm, "<h2>$1</h2>");
+        html = html.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
+        html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
+        html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+        html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+        html = html.replace(/^---$/gm, "<hr>");
+        html = html.replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>");
+        html = html.replace(/^[-*]\s+(.+)$/gm, "<li>$1</li>");
+        html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, "<ul>$1</ul>");
+        html = html.replace(/^(?!<[a-z])((?!^\s*$).+)$/gm, "<p>$1</p>");
+        html = html.replace(/<p>\s*<\/p>/g, "");
+        html = html.trim();
+        res.json({ ok: true, html, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "convert_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── NUMBER-FORMAT ───────────────────────────────────────────────────────────
+router.post("/number-format", ...toolMiddleware("number-format"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "number-format", 1);
+        if (!ok)
+            return;
+    }
+    const { number, format, currency = "USD", locale = "en-US" } = req.body;
+    if (number === undefined || typeof number !== "number") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "number is required and must be a number", request_id: reqId() });
+        return;
+    }
+    const validFormats = ["currency", "percentage", "scientific", "ordinal", "words"];
+    if (!format || !validFormats.includes(format)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `format is required and must be one of: ${validFormats.join(", ")}`, request_id: reqId() });
+        return;
+    }
+    try {
+        let formatted;
+        switch (format) {
+            case "currency":
+                formatted = new Intl.NumberFormat(locale, { style: "currency", currency }).format(number);
+                break;
+            case "percentage":
+                formatted = new Intl.NumberFormat(locale, { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number / 100);
+                break;
+            case "scientific":
+                formatted = number.toExponential();
+                break;
+            case "ordinal": {
+                const abs = Math.abs(Math.round(number));
+                const suffixes = { 1: "st", 2: "nd", 3: "rd" };
+                const mod100 = abs % 100;
+                const mod10 = abs % 10;
+                const suffix = (mod100 >= 11 && mod100 <= 13) ? "th" : (suffixes[mod10] ?? "th");
+                formatted = `${abs}${suffix}`;
+                break;
+            }
+            case "words": {
+                const ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+                const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+                const n = Math.round(number);
+                if (n === 0) {
+                    formatted = "zero";
+                    break;
+                }
+                if (n < 0) {
+                    formatted = `negative ${Math.abs(n)}`;
+                    break;
+                }
+                if (n < 20) {
+                    formatted = ones[n];
+                    break;
+                }
+                if (n < 100) {
+                    formatted = tens[Math.floor(n / 10)] + (n % 10 ? "-" + ones[n % 10] : "");
+                    break;
+                }
+                if (n < 1000) {
+                    formatted = ones[Math.floor(n / 100)] + " hundred" + (n % 100 ? " and " + (n % 100 < 20 ? ones[n % 100] : tens[Math.floor((n % 100) / 10)] + (n % 10 ? "-" + ones[n % 10] : "")) : "");
+                    break;
+                }
+                formatted = new Intl.NumberFormat(locale).format(n) + " (too large for words)";
+                break;
+            }
+            default: formatted = String(number);
+        }
+        res.json({ ok: true, formatted, raw: number, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "format_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// ─── TIMEZONE-NOW ────────────────────────────────────────────────────────────
+router.post("/timezone-now", ...toolMiddleware("timezone-now"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "timezone-now", 1);
+        if (!ok)
+            return;
+    }
+    const { timezone, format = "iso" } = req.body;
+    if (!timezone || typeof timezone !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "timezone is required (e.g. America/New_York)", request_id: reqId() });
+        return;
+    }
+    const validFormats = ["iso", "readable", "unix"];
+    if (!validFormats.includes(format)) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `format must be one of: ${validFormats.join(", ")}`, request_id: reqId() });
+        return;
+    }
+    try {
+        const now = new Date();
+        const tzFormatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZoneName: "longOffset" });
+        const formatted = tzFormatter.format(now);
+        const offsetMatch = formatted.match(/GMT([+-]\d{2}:\d{2})/);
+        const utcOffset = offsetMatch ? offsetMatch[1] : "unknown";
+        const shortFormatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "short" });
+        const shortParts = shortFormatter.formatToParts(now);
+        const timezoneName = shortParts.find(p => p.type === "timeZoneName")?.value ?? timezone;
+        const jan = new Date(now.getFullYear(), 0, 1);
+        const jul = new Date(now.getFullYear(), 6, 1);
+        const janOffset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "longOffset" }).format(jan);
+        const julOffset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "longOffset" }).format(jul);
+        const isDst = janOffset !== julOffset && formatted.includes(julOffset.match(/GMT([+-]\d{2}:\d{2})/)?.[1] ?? "___NOMATCH___") ? true : janOffset !== julOffset && formatted.includes(janOffset.match(/GMT([+-]\d{2}:\d{2})/)?.[1] ?? "___NOMATCH___") ? false : null;
+        let datetime;
+        const readableFormatter = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+        switch (format) {
+            case "unix":
+                datetime = Math.floor(now.getTime() / 1000).toString();
+                break;
+            case "readable":
+                datetime = readableFormatter.format(now);
+                break;
+            default:
+                datetime = now.toLocaleString("sv-SE", { timeZone: timezone }).replace(" ", "T");
+                break;
+        }
+        res.json({ ok: true, datetime, unix_timestamp: Math.floor(now.getTime() / 1000), utc_offset: utcOffset, timezone_name: timezoneName, is_dst: isDst, request_id: reqId() });
+    }
+    catch (e) {
+        const msg = safeErr(e);
+        if (msg.includes("Invalid time zone") || msg.includes("timeZone")) {
+            res.status(422).json({ ok: false, error: "invalid_timezone", message: `Invalid timezone: ${timezone}`, request_id: reqId() });
+        }
+        else {
+            res.status(500).json({ ok: false, error: "timezone_error", message: msg, request_id: reqId() });
+        }
+    }
+});
+// ─── HTML-EXTRACT-TEXT ───────────────────────────────────────────────────────
+router.post("/html-extract-text", ...toolMiddleware("html-extract-text"), async (req, res) => {
+    const paid = isX402Paid(req);
+    if (!paid) {
+        const ok = await deductCredits(req, res, "html-extract-text", 1);
+        if (!ok)
+            return;
+    }
+    const { html } = req.body;
+    if (!html || typeof html !== "string") {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "html is required", request_id: reqId() });
+        return;
+    }
+    try {
+        let text = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+        text = text.replace(/<style[\s\S]*?<\/style>/gi, "");
+        text = text.replace(/<[^>]+>/g, " ");
+        text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+        text = text.replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code, 10)));
+        text = text.replace(/&#x([0-9a-fA-F]+);/g, (_m, code) => String.fromCharCode(parseInt(code, 16)));
+        text = text.replace(/\s+/g, " ").trim();
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        res.json({ ok: true, text, word_count: words.length, char_count: text.length, request_id: reqId() });
+    }
+    catch (e) {
+        res.status(500).json({ ok: false, error: "extract_error", message: safeErr(e), request_id: reqId() });
     }
 });
 // ─── GET handler for x402scan compatibility ─────────────────────────────────

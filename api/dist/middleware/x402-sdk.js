@@ -14,11 +14,11 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
-// Bazaar + discovery extensions disabled — they cause dynamic import blocking on every request
-// import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions";
+// Bazaar discovery extensions — static import (evaluated once at startup, zero per-request overhead)
+import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import { config } from "../config.js";
-import { X402_PRICES } from "./x402.js";
+import { X402_PRICES, TOOL_OUTPUT_SCHEMAS } from "./x402.js";
 // Solana mainnet CAIP-2 identifier
 const SOLANA_MAINNET_CAIP2 = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 // ─── Build x402 SDK route config from our pricing table ──────────────────────
@@ -32,8 +32,7 @@ function buildSdkRoutes() {
         : "eip155:8453"; // Default to Base mainnet
     const routes = {};
     for (const [toolName, price] of Object.entries(X402_PRICES)) {
-        // Discovery extensions disabled (Bazaar causes blocking dynamic imports)
-        // const postDiscovery = declareDiscoveryExtension({...});
+        // Bazaar discovery declarations built per-tool below in buildSdkRoutes();
         // Build accepts[] array with all supported networks for this tool
         const accepts = [];
         // EVM: Base mainnet (primary)
@@ -67,12 +66,27 @@ function buildSdkRoutes() {
             });
         }
         // Routes are relative to /v1/tools (the mount point in index.ts)
-        // app.use("/v1/tools", x402SdkMiddleware) strips the /v1/tools prefix
         const routeKey = `POST /${toolName}`;
+        // Build Bazaar discovery metadata from TOOL_OUTPUT_SCHEMAS
+        const schema = TOOL_OUTPUT_SCHEMAS[toolName];
+        const extensions = {};
+        if (schema) {
+            const discoveryConfig = {
+                output: {
+                    example: { result: "success", data: {} },
+                    schema: schema.output || { type: "object" },
+                },
+            };
+            if (schema.input?.bodyFields) {
+                discoveryConfig.input = { example: {}, schema: { properties: schema.input.bodyFields, type: "object" } };
+                discoveryConfig.bodyType = "json";
+            }
+            Object.assign(extensions, declareDiscoveryExtension(discoveryConfig));
+        }
         routes[routeKey] = {
             accepts,
             description: `Arch Tools — ${toolName}`,
-            // No extensions — Bazaar extension causes blocking dynamic imports per-request
+            extensions,
         };
     }
     return routes;
@@ -81,6 +95,7 @@ function buildSdkRoutes() {
 let _sdkMiddleware = null;
 let _initError = null;
 let _resourceServer = null;
+let _x402OrgServer = null;
 /**
  * Initialize the x402 SDK middleware.
  * Call this once at startup. Returns true if successful.
@@ -94,31 +109,39 @@ export function initX402Sdk() {
     // X402_SDK_ENABLED gate removed — SDK is now always active when WALLET_ADDRESS is set.
     // The SDK is the primary payment middleware; custom x402.ts is fallback only.
     try {
+        const evmNetwork = config.x402.network === "base-sepolia"
+            ? "eip155:84532"
+            : "eip155:8453";
         // Use @coinbase/x402's createFacilitatorConfig for proper CDP JWT auth
         // This handles JWT generation automatically for verify/settle/supported calls
-        const hasCdpKeys = !!(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET);
+        // Support both naming conventions: CDP_API_KEY_ID or CDP_API_KEY, CDP_API_KEY_SECRET or CDP_API_SECRET
+        const cdpKeyId = process.env.CDP_API_KEY_ID || process.env.CDP_API_KEY;
+        const cdpKeySecret = process.env.CDP_API_KEY_SECRET || process.env.CDP_API_SECRET;
+        const hasCdpKeys = !!(cdpKeyId && cdpKeySecret);
         let facilitatorClient;
         if (hasCdpKeys) {
             // CDP facilitator with proper JWT auth via @coinbase/x402
-            const cdpConfig = createFacilitatorConfig(process.env.CDP_API_KEY_ID, process.env.CDP_API_KEY_SECRET);
+            const cdpConfig = createFacilitatorConfig(cdpKeyId, cdpKeySecret);
             facilitatorClient = new HTTPFacilitatorClient(cdpConfig);
             console.log(`[x402-sdk] Using CDP facilitator with JWT auth`);
         }
         else {
-            // Fallback to x402.org (testnet only)
+            // No CDP keys — use x402.org as primary
             const facilitatorUrl = config.x402.facilitatorUrl || "https://x402.org/facilitator";
             facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl });
-            console.log(`[x402-sdk] Using fallback facilitator: ${facilitatorUrl}`);
+            console.log(`[x402-sdk] Using x402.org facilitator (no CDP keys configured)`);
         }
-        const evmNetwork = config.x402.network === "base-sepolia"
-            ? "eip155:84532"
-            : "eip155:8453";
+        // Secondary facilitator: always register x402.org for dual-catalog coverage
+        // This ensures tools appear in BOTH CDP Bazaar AND x402.org discovery catalog
+        const x402OrgClient = new HTTPFacilitatorClient({ url: "https://x402.org/facilitator" });
+        _x402OrgServer = new x402ResourceServer(x402OrgClient)
+            .register(evmNetwork, new ExactEvmScheme())
+            .registerExtension(bazaarResourceServerExtension);
         const resourceServer = new x402ResourceServer(facilitatorClient)
             .register(evmNetwork, new ExactEvmScheme()) // Base mainnet
             .register("eip155:137", new ExactEvmScheme()) // Polygon mainnet
-            .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()); // Solana mainnet (feePayer from CDP /supported)
-        // NOTE: Bazaar extension NOT registered — it causes route-level blocking via dynamic import on every request
-        // Re-enable only after verifying bazaar doesn't block in this Express setup
+            .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme()) // Solana mainnet
+            .registerExtension(bazaarResourceServerExtension); // Bazaar discovery catalog (CDP)
         const routes = buildSdkRoutes();
         const routeCount = Object.keys(routes).length;
         if (routeCount === 0) {
@@ -133,7 +156,7 @@ export function initX402Sdk() {
         true);
         _resourceServer = resourceServer;
         const solanaWallet = process.env.SOLANA_WALLET_ADDRESS;
-        console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes`);
+        console.log(`[x402-sdk] ✅ Initialized with ${routeCount} routes (dual-catalog: CDP Bazaar + x402.org)`);
         console.log(`[x402-sdk]    Networks: ${evmNetwork} (Base), eip155:137 (Polygon)${solanaWallet ? `, ${SOLANA_MAINNET_CAIP2} (Solana)` : ''}`);
         console.log(`[x402-sdk]    CDP auth: ${hasCdpKeys ? 'JWT' : 'none (testnet)'}`);
         if (config.x402.walletAddress)
@@ -190,14 +213,22 @@ export async function warmX402Sdk() {
     if (!_resourceServer)
         return;
     try {
-        // Trigger the facilitator /supported call by making a dummy internal request
-        // The SDK caches the response for all future requests
+        // Warm primary facilitator (CDP or x402.org depending on config)
         await _resourceServer.initialize?.();
-        console.log("[x402-sdk] Pre-warm complete — CDP /supported fetched");
+        console.log("[x402-sdk] Pre-warm complete — primary facilitator /supported fetched");
     }
     catch (err) {
-        // Non-fatal — SDK will re-try on first real request
         console.warn("[x402-sdk] Pre-warm failed (non-fatal):", err.message);
+    }
+    // Also warm x402.org secondary facilitator for dual-catalog coverage
+    if (_x402OrgServer) {
+        try {
+            await _x402OrgServer.initialize?.();
+            console.log("[x402-sdk] x402.org secondary warm complete");
+        }
+        catch (err) {
+            console.warn("[x402-sdk] x402.org warm failed (non-fatal):", err.message);
+        }
     }
 }
 export function getX402SdkStatus() {

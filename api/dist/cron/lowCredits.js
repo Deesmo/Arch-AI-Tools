@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { sendEmail80PctAlert, sendCreditsDepletedAlert } from "../services/email.js";
 import { logger } from "../lib/logger.js";
 // Default initial credits for free tier
-const INITIAL_FREE_CREDITS = 100;
+const INITIAL_FREE_CREDITS = 250;
 export async function runLowCreditsCron() {
     try {
         // Agents at 80% consumption (≤20 credits remaining, >0)

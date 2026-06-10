@@ -7,7 +7,7 @@
  *
  * The full registration (/v1/agent/register) already gives FREE_MONTHLY_CREDITS
  * (default 1000). This trial endpoint is for quick, minimal onboarding with
- * a smaller credit grant (100 credits) — ideal for embedded signups, widget
+ * a configurable trial credit grant (default 250) — ideal for embedded signups, widget
  * integrations, and partner landing pages.
  */
 import { Router } from "express";
@@ -17,12 +17,13 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import crypto from "crypto";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification } from "../lib/verification.js";
 import bcrypt from "bcryptjs";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
 const router = Router();
-const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "100", 10);
+const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "", 10) || SIGNUP_FREE_CREDITS;
 // ─── POST /v1/trial/activate ────────────────────────────────────────────────
-// Creates a trial account with 100 free credits. Simpler than full registration.
+// Creates a trial account with TRIAL_CREDITS free credits (default 250). Simpler than full registration.
 // Requires only an email. Returns API key + trial info.
 router.post("/activate", async (req, res) => {
     const { email: rawEmail, name } = req.body ?? {};
@@ -42,6 +43,15 @@ router.post("/activate", async (req, res) => {
             ok: false,
             error: "invalid_email",
             message: "Invalid email format.",
+            request_id: reqId(),
+        });
+        return;
+    }
+    if (isDisposableEmail(email)) {
+        res.status(400).json({
+            ok: false,
+            error: "disposable_email",
+            message: "Disposable email addresses are not allowed. Please use a real email address.",
             request_id: reqId(),
         });
         return;
@@ -73,16 +83,25 @@ router.post("/activate", async (req, res) => {
                 tier: "free",
             },
         });
-        logger.info({ agentId: agent.id, email, credits: TRIAL_CREDITS }, "Trial account activated");
+        // Email verification gate: credits stay pending until email verified
+        try {
+            await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
+        }
+        catch (e) {
+            logger.warn({ agentId: agent.id, error: String(e) }, "Verification setup failed");
+        }
+        logger.info({ agentId: agent.id, email, credits: TRIAL_CREDITS }, "Trial account activated (pending email verification)");
         captureEvent(agent.id, "trial_activated", { email, credits: TRIAL_CREDITS });
         identifyUser(agent.id, { email, tier: "free", credits: TRIAL_CREDITS, source: "trial" });
         res.status(201).json({
             ok: true,
             agent_id: agent.id,
             api_key: apiKey,
-            credits: TRIAL_CREDITS,
+            credits: 0,
+            pending_credits: TRIAL_CREDITS,
+            email_verification_required: true,
             tier: "free",
-            message: `Trial activated! You have ${TRIAL_CREDITS} free credits. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
+            message: `Trial created! Check your email to verify your address — your ${TRIAL_CREDITS} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
             upgrade_url: "https://archtools.dev/pricing",
             docs: "https://archtools.dev/docs",
             request_id: reqId(),

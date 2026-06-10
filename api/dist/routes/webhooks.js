@@ -12,6 +12,7 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { WEBHOOK_EVENTS, fireWebhookEvent } from "../services/webhooks.js";
+import { validateUrl } from "../lib/ssrf.js";
 const router = Router();
 // All webhook management routes require authentication
 router.use(requireAuth);
@@ -34,9 +35,15 @@ router.post("/register", async (req, res) => {
             res.status(400).json({ ok: false, error: "invalid_request", message: "Webhook URL must use HTTPS", request_id: reqId() });
             return;
         }
+        await validateUrl(url);
     }
-    catch {
-        res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid URL format", request_id: reqId() });
+    catch (e) {
+        res.status(400).json({
+            ok: false,
+            error: "invalid_request",
+            message: e instanceof Error ? e.message : "Invalid URL format",
+            request_id: reqId()
+        });
         return;
     }
     // Validate events

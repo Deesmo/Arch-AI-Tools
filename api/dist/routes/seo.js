@@ -22,11 +22,11 @@ const NAV = `<nav style="background:#0f172a;padding:12px 24px;display:flex;align
 </nav>`;
 const CTA = `<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;margin-top:32px;text-align:center">
   <h3 style="color:#fff;margin:0 0 8px">Want this via API?</h3>
-  <p style="color:#94a3b8;margin:0 0 16px;font-size:14px">Access all 30 tools programmatically. Get 100 free credits — no credit card required.</p>
+  <p style="color:#94a3b8;margin:0 0 16px;font-size:14px">Access all 64 tools programmatically. Get 250 free credits — no credit card required.</p>
   <a href="https://archtools.dev/signup" style="background:#6366f1;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Get Free API Key →</a>
 </div>`;
 const FOOTER = `<footer style="text-align:center;padding:32px;color:#475569;font-size:13px">
-  <p>© ${new Date().getFullYear()} Arch Tools · <a href="https://archtools.dev" style="color:#6366f1">archtools.dev</a> · 30 API tools for developers and AI agents</p>
+  <p>© ${new Date().getFullYear()} Arch Tools · <a href="https://archtools.dev" style="color:#6366f1">archtools.dev</a> · 64 API tools for developers and AI agents</p>
 </footer>`;
 // GET /tools/qr-code — Free QR Code Generator
 router.get("/qr-code", (_req, res) => {

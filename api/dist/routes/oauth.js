@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import crypto, { timingSafeEqual } from "crypto";
+import bcrypt from "bcryptjs";
 const router = Router();
 // HTML escape to prevent XSS injection in consent page
 function esc(s) {
@@ -112,9 +113,14 @@ router.post("/authorize", async (req, res) => {
         res.status(400).json({ ok: false, error: "invalid_client" });
         return;
     }
-    // Verify agent credentials
-    const agent = await prisma.agent.findFirst({ where: { email, apiKey } }).catch(() => null);
-    if (!agent) {
+    // Verify agent credentials against either hashed or legacy plaintext API keys.
+    const agent = await prisma.agent.findUnique({ where: { email } }).catch(() => null);
+    const validAgent = agent
+        ? (agent.apiKeyHash
+            ? await bcrypt.compare(apiKey, agent.apiKeyHash).catch(() => false)
+            : agent.apiKey === apiKey)
+        : false;
+    if (!agent || !validAgent) {
         res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method, "Invalid email or API key. Check your credentials at archtools.dev."));
         return;
     }
