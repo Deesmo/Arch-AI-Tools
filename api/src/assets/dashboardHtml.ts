@@ -312,7 +312,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         // Update quickstart with actual key
         var qs = document.getElementById("quickstart-code");
         var displayKey = maskKey(token);
-        qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash \\\n  -H "x-api-key: ' + displayKey + '" \\\n  -H "Content-Type: application/json" \\\n  -d \'{{"text":"hello world","algorithm":"sha256"}}\'';
+        var SQ = String.fromCharCode(39);
+        var BSNL = String.fromCharCode(92, 10) + '  ';
+        qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash' + BSNL + '-H "x-api-key: ' + displayKey + '"' + BSNL + '-H "Content-Type: application/json"' + BSNL + '-d ' + SQ + '{"text":"hello world","algorithm":"sha256"}' + SQ;
 
         // Hide the key entry card entirely after successful load
         document.getElementById("key-entry-card").style.display = "none";
