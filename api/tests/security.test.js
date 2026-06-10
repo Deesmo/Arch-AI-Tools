@@ -31,8 +31,17 @@ async function main() {
   console.log("M1 — normalizeEmailIdentity:");
   test("lowercases and trims", () =>
     assert.strictEqual(normalizeEmailIdentity("  User@Example.COM "), "user@example.com"));
-  test("strips +alias", () =>
-    assert.strictEqual(normalizeEmailIdentity("user+spam1@example.com"), "user@example.com"));
+  test("strips +alias for gmail ONLY", () =>
+    assert.strictEqual(normalizeEmailIdentity("user+spam1@gmail.com"), "user@gmail.com"));
+  test("does NOT strip +alias for non-gmail (local part literal)", () =>
+    assert.strictEqual(normalizeEmailIdentity("user+spam1@example.com"), "user+spam1@example.com"));
+  test("non-gmail +alias variants stay DISTINCT identities", () => {
+    const a = normalizeEmailIdentity("a+x@fastmail.com");
+    const b = normalizeEmailIdentity("a+y@fastmail.com");
+    assert.notStrictEqual(a, b);
+    assert.strictEqual(a, "a+x@fastmail.com");
+    assert.strictEqual(b, "a+y@fastmail.com");
+  });
   test("strips dots for gmail", () =>
     assert.strictEqual(normalizeEmailIdentity("u.s.e.r@gmail.com"), "user@gmail.com"));
   test("googlemail canonicalizes to gmail", () =>
@@ -46,6 +55,49 @@ async function main() {
     assert.strictEqual(a, b);
     assert.strictEqual(b, c);
   });
+
+  // ── M1b: atomic identity claim (SignupIdentity unique guard) ────────────
+  // Exercises the REAL claimSignupIdentity path with prisma.$executeRaw
+  // stubbed to simulate Postgres ON CONFLICT semantics: first INSERT for a
+  // normalized identity returns 1 (claimed), subsequent inserts return 0.
+  const verification = await import(
+    path.join(__dirname, "..", "dist", "lib", "verification.js")
+  );
+  const prismaMod = await import(
+    path.join(__dirname, "..", "dist", "lib", "prisma.js")
+  );
+  const realExecuteRaw = prismaMod.prisma.$executeRaw;
+  const claimedIdentities = new Set();
+  prismaMod.prisma.$executeRaw = async (strings, ...values) => {
+    // values[0] is the normalized email bound into the INSERT
+    const normalized = values[0];
+    if (claimedIdentities.has(normalized)) return 0; // ON CONFLICT DO NOTHING
+    claimedIdentities.add(normalized);
+    return 1;
+  };
+
+  console.log("M1b — atomic SignupIdentity claim:");
+  await (async () => {
+    try {
+      const first = await verification.claimSignupIdentity("farmer@gmail.com");
+      test("first claim for an identity succeeds (gets free grant)", () =>
+        assert.strictEqual(first, true));
+      const dupAlias = await verification.claimSignupIdentity("f.a.r.m.e.r+2@gmail.com");
+      test("concurrent/duplicate gmail-variant claim is REJECTED by unique guard", () =>
+        assert.strictEqual(dupAlias, false));
+      const exactDup = await verification.claimSignupIdentity("farmer@gmail.com");
+      test("exact duplicate claim is REJECTED by unique guard", () =>
+        assert.strictEqual(exactDup, false));
+      const fmA = await verification.claimSignupIdentity("a+x@fastmail.com");
+      const fmB = await verification.claimSignupIdentity("a+y@fastmail.com");
+      test("distinct non-gmail +alias identities BOTH claim (not collapsed)", () => {
+        assert.strictEqual(fmA, true);
+        assert.strictEqual(fmB, true);
+      });
+    } finally {
+      prismaMod.prisma.$executeRaw = realExecuteRaw;
+    }
+  })();
 
   // ── H1: settle-guard predicate ────────────────────────────────────────────
   // Mirrors: const settled = !!settleResult && (settleResult.success === true || !!settleResult.transaction);

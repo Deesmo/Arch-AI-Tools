@@ -43,10 +43,12 @@ const SIGNUP_MAX_PER_IP_PER_DAY = parseInt(process.env.SIGNUP_MAX_PER_IP_PER_DAY
 
 /**
  * Normalize an email to a canonical identity for grant-eligibility checks:
- * - lowercase + trim
- * - strip +alias from the local part (user+x@d → user@d)
- * - for gmail/googlemail: strip dots in the local part and canonicalize
- *   the domain to gmail.com (u.s.e.r@googlemail → user@gmail.com)
+ * - lowercase + trim (all domains)
+ * - gmail.com / googlemail.com ONLY: strip +alias, strip dots in the local
+ *   part, and canonicalize the domain to gmail.com
+ *   (u.s.e.r+x@googlemail.com → user@gmail.com)
+ * - every other domain: the local part is treated LITERALLY — + and dots are
+ *   significant (a+x@fastmail.com and a+y@fastmail.com are distinct identities)
  */
 export function normalizeEmailIdentity(email: string): string {
   const lowered = email.toLowerCase().trim();
@@ -54,13 +56,38 @@ export function normalizeEmailIdentity(email: string): string {
   if (at < 0) return lowered;
   let local = lowered.slice(0, at);
   let domain = lowered.slice(at + 1);
-  const plus = local.indexOf("+");
-  if (plus >= 0) local = local.slice(0, plus);
   if (domain === "gmail.com" || domain === "googlemail.com") {
+    const plus = local.indexOf("+");
+    if (plus >= 0) local = local.slice(0, plus);
     local = local.replace(/\./g, "");
     domain = "gmail.com";
   }
   return `${local}@${domain}`;
+}
+
+/**
+ * Atomically claim the free-grant slot for a normalized email identity.
+ * INSERT … ON CONFLICT DO NOTHING against the UNIQUE "SignupIdentity" table —
+ * the database is the arbiter, so concurrent signups for the same identity
+ * cannot both win (no SELECT-then-INSERT race).
+ *
+ * Returns true if this identity claimed the grant (first claim), false if it
+ * was already claimed. Fails OPEN (true) on unexpected DB errors so a guard
+ * outage never blocks legitimate signups (per-IP cap + Agent-table checks
+ * remain as defense-in-depth).
+ */
+export async function claimSignupIdentity(email: string): Promise<boolean> {
+  const normalized = normalizeEmailIdentity(email);
+  try {
+    const inserted = await prisma.$executeRaw`
+      INSERT INTO "SignupIdentity" ("normalized_email")
+      VALUES (${normalized})
+      ON CONFLICT ("normalized_email") DO NOTHING`;
+    return inserted > 0;
+  } catch (e) {
+    logger.warn({ error: String(e) }, "SignupIdentity claim failed (failing open)");
+    return true;
+  }
 }
 
 // Per-IP signup counter (in-process, daily window). Conservative blast-radius
@@ -76,8 +103,9 @@ export async function enforceSignupLimits(
   email: string,
   ip: string | undefined
 ): Promise<{ status: number; error: string; message: string } | null> {
-  // 1. Per-normalized-email cap: collapse +aliases and gmail dot-variants so
-  //    user+1@gmail.com and u.s.e.r@gmail.com count as the same identity.
+  // 1. Per-normalized-email cap against EXISTING Agent rows (defense-in-depth;
+  //    the atomic guard is the SignupIdentity unique insert at grant time).
+  //    Gmail/googlemail collapse +alias and dots; all other domains literal.
   const normalized = normalizeEmailIdentity(email);
   try {
     const rows = await prisma.$queryRaw<{ count: bigint }[]>`
@@ -85,7 +113,7 @@ export async function enforceSignupLimits(
       WHERE (
         CASE WHEN lower(split_part(email, '@', 2)) IN ('gmail.com', 'googlemail.com')
           THEN replace(split_part(split_part(lower(email), '@', 1), '+', 1), '.', '') || '@gmail.com'
-          ELSE split_part(split_part(lower(email), '@', 1), '+', 1) || '@' || lower(split_part(email, '@', 2))
+          ELSE lower(split_part(email, '@', 1)) || '@' || lower(split_part(email, '@', 2))
         END
       ) = ${normalized}`;
     const existingCount = Number(rows[0]?.count ?? 0);
@@ -130,18 +158,33 @@ export async function enforceSignupLimits(
  * Set up the verification gate for a freshly-created agent:
  * moves `creditsToGate` into pendingCredits, issues a token, sends the email.
  * Non-fatal on email failure (token can be re-issued via /v1/verify-email/resend).
+ *
+ * The free-credit grant is gated by an ATOMIC claim on the normalized email
+ * identity (SignupIdentity unique insert). If the identity already claimed a
+ * grant, the signup still succeeds but 0 credits are gated.
+ * Returns the number of credits actually gated.
  */
 export async function issueEmailVerification(
   agentId: string,
   email: string,
   creditsToGate: number
-): Promise<void> {
+): Promise<number> {
+  // Atomic DB-level guard: only the FIRST signup for a normalized identity
+  // gets the free grant. Concurrent duplicates lose the unique-insert race.
+  let gated = creditsToGate;
+  if (creditsToGate > 0) {
+    const claimed = await claimSignupIdentity(email);
+    if (!claimed) {
+      gated = 0;
+      logger.warn({ agentId, email }, "Free-credit grant skipped — normalized identity already claimed a grant");
+    }
+  }
   const token = crypto.randomBytes(32).toString("hex");
   await prisma.agent.update({
     where: { id: agentId },
     data: {
       credits: 0,
-      pendingCredits: creditsToGate,
+      pendingCredits: gated,
       emailVerified: false,
       verifyToken: token,
       verifyTokenExpiry: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
@@ -151,6 +194,7 @@ export async function issueEmailVerification(
   sendVerificationEmail({ to: email, verifyUrl }).catch((e) => {
     logger.warn({ agentId, error: String(e) }, "Verification email send failed");
   });
+  return gated;
 }
 
 /**

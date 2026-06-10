@@ -101,26 +101,28 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Email verification gate: credits stay pending until email verified
+    // Email verification gate: credits stay pending until email verified.
+    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    let gatedCredits = TRIAL_CREDITS;
     try {
-      await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
+      gatedCredits = await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
     } catch (e) {
       logger.warn({ agentId: agent.id, error: String(e) }, "Verification setup failed");
     }
 
-    logger.info({ agentId: agent.id, email, credits: TRIAL_CREDITS }, "Trial account activated (pending email verification)");
-    captureEvent(agent.id, "trial_activated", { email, credits: TRIAL_CREDITS });
-    identifyUser(agent.id, { email, tier: "free", credits: TRIAL_CREDITS, source: "trial" });
+    logger.info({ agentId: agent.id, email, credits: gatedCredits }, "Trial account activated (pending email verification)");
+    captureEvent(agent.id, "trial_activated", { email, credits: gatedCredits });
+    identifyUser(agent.id, { email, tier: "free", credits: gatedCredits, source: "trial" });
 
     res.status(201).json({
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
       credits: 0,
-      pending_credits: TRIAL_CREDITS,
+      pending_credits: gatedCredits,
       email_verification_required: true,
       tier: "free",
-      message: `Trial created! Check your email to verify your address — your ${TRIAL_CREDITS} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
+      message: `Trial created! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
       upgrade_url: "https://archtools.dev/pricing",
       docs: "https://archtools.dev/docs",
       request_id: reqId(),

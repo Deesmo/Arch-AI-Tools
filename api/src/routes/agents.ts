@@ -322,9 +322,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Email verification gate: credits stay pending until email verified
+    // Email verification gate: credits stay pending until email verified.
+    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    let gatedCredits = freeCredits;
     try {
-      await issueEmailVerification(agent.id, email, freeCredits);
+      gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
     } catch (e) {
       console.error("Verification setup failed (granting credits directly):", e);
     }
@@ -334,12 +336,12 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       agent_id: agent.id,
       api_key: apiKey,
       credits: 0,
-      pending_credits: freeCredits,
+      pending_credits: gatedCredits,
       email_verification_required: true,
       reputation_score: 50,
       badge: "none",
       profile_url: `https://archtools.dev/api/v1/agents/${agent.id}`,
-      message: `Welcome! Check your email to verify your address — your ${freeCredits} free credits activate on verification. Your public profile is live.`,
+      message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. Your public profile is live.`,
       docs: "https://archtools.dev/agents",
       request_id: reqId(),
     });
