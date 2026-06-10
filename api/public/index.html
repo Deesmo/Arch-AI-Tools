@@ -2794,7 +2794,7 @@ function setPricingMode(mode) {
 
 // Get API key helper (global scope for inline onclick access)
 async function getApiKey(planName) {
-  var apiKey = localStorage.getItem('arch_api_key') || '';
+  var apiKey = sessionStorage.getItem('arch_api_key') || localStorage.getItem('arch_api_key') || '';
   if (!apiKey) { window.location.href = '/signup?plan=' + encodeURIComponent(planName || 'free'); return null; }
   return apiKey.trim();
 }
@@ -2883,6 +2883,7 @@ async function handleRegister() {
       input.value = '';
       var apiKey = data.api_key;
       try { localStorage.setItem('arch_api_key', apiKey); } catch(e) {}
+      try { sessionStorage.setItem('arch_api_key', apiKey); } catch(e) {}
       btn.textContent = '$ redirecting...';
       // Redirect to signup success page so user sees key prominently with copy button
       window.location.href = '/signup?key=' + encodeURIComponent(apiKey) + '&credits=' + (data.credits || 100);

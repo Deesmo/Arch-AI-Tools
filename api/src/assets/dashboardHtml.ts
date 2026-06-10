@@ -215,6 +215,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <script>
     function doSignOut() {
       sessionStorage.removeItem("arch_api_key");
+      try { localStorage.removeItem("arch_api_key"); } catch(_) {}
       window.location.href = "/auth/logout";
     }
 
@@ -274,7 +275,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         fullKey = token;
-        if (token) sessionStorage.setItem("arch_api_key", token);
+        if (token) { sessionStorage.setItem("arch_api_key", token); try { localStorage.setItem("arch_api_key", token); } catch(_) {} }
         setStatus("\u2713 Loaded", "var(--green)");
 
         // Show masked key
@@ -347,6 +348,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         // Consume key from URL immediately — strip from history so it never leaks
         history.replaceState({}, "", "/dashboard");
         sessionStorage.setItem("arch_api_key", qKey);
+        try { localStorage.setItem("arch_api_key", qKey); } catch(_) {}
         document.getElementById("key-input").value = qKey;
         document.getElementById("loading-card").style.display = "none";
         await loadDashboard();
@@ -361,6 +363,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             // Sentinel fix: clear stale localStorage key before loading session key
             // Prevents cross-account key bleed if /auth/api-key fails transiently
             sessionStorage.removeItem("arch_api_key");
+            try { localStorage.removeItem("arch_api_key"); } catch(_) {}
             try {
               var keyResp = await fetch("/auth/api-key", { credentials: "include" });
               if (keyResp.ok) {
@@ -368,6 +371,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
                 if (kd.ok && kd.api_key) {
                   document.getElementById("key-input").value = kd.api_key;
                   sessionStorage.setItem("arch_api_key", kd.api_key);
+                  try { localStorage.setItem("arch_api_key", kd.api_key); } catch(_) {}
                   document.getElementById("loading-card").style.display = "none";
                   sessionStorage.removeItem("_dash_auth_attempt");
                   await loadDashboard();
@@ -386,6 +390,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       } catch(_) {}
       // Secondary: localStorage (returning users who used API key tab, no active session)
       var saved = sessionStorage.getItem("arch_api_key");
+      if (!saved) { try { saved = localStorage.getItem("arch_api_key"); } catch(_) {} }
       if (saved) {
         document.getElementById("key-input").value = saved;
         document.getElementById("loading-card").style.display = "none";
