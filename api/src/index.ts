@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { config } from "./config.js";
@@ -391,6 +392,8 @@ app.get("/changelog-tonight", (_req: Request, _res: Response) => _res.sendFile(p
 app.get("/agents", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/agents-landing.html')));
 // /register → /signup redirect (common developer habit)
 app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
+// /get-api-key → /signup redirect (homepage CTA target)
+app.get("/get-api-key", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 
 app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/usage.html')));
 app.get("/status", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/status.html')));
@@ -464,6 +467,19 @@ app.get("/v1/health/x402", async (_req: Request, res: Response) => {
   } catch (err) {
     res.status(503).json({ ok: false, gate_status: "ERROR", message: String(err) });
   }
+});
+
+// ─── Extensionless HTML fallback ─────────────────────────────────────────────
+// Serves /integrations, /docs-x402-guide, /faq, etc. when public/<name>.html exists
+// and no explicit route matched above. GET/HEAD only; single path segment only.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const m = /^\/([A-Za-z0-9_-]+)$/.exec(req.path);
+  if (!m) return next();
+  const file = path.join(__dirname, "../public", `${m[1]}.html`);
+  if (!fs.existsSync(file)) return next();
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
+  res.sendFile(file, (err) => { if (err) next(); });
 });
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────

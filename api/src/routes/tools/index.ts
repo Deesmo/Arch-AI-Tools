@@ -1064,7 +1064,17 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   if (mode && !validModes.includes(mode)) {
     res.status(400).json({ ok: false, error: "invalid_mode", message: `mode must be one of: ${validModes.join(", ")}. Or provide an explicit model instead.`, request_id: reqId() }); return;
   }
-  const model = explicitModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
+  // Friendly alias mapping — openapi.json advertises these short names
+  const MODEL_ALIASES: Record<string, string> = {
+    "claude": "claude-sonnet-4-6",
+    "gpt": "gpt-4o",
+    "gpt4": "gpt-4o",
+    "gpt-4": "gpt-4o",
+    "gemini": "gemini-2.0-flash",
+    "grok": "grok-3",
+  };
+  const requestedModel = explicitModel ? (MODEL_ALIASES[explicitModel.toLowerCase()] ?? explicitModel) : undefined;
+  const model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
   const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
 
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
@@ -1127,7 +1137,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     // Validate model
     const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
     if (!allModels.includes(model)) {
-      res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: reqId() });
+      res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: claude, gpt4, gemini, grok, ${allModels.join(", ")}`, request_id: reqId() });
       return;
     }
 
@@ -1171,7 +1181,14 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     let imgMediaType: string = media_type;
     if (image_url && !image_base64) {
       try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024 });
+      let imgResp;
+      try {
+        imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)", "Accept": "image/*" } });
+      } catch (dlErr) {
+        const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
+        console.error("[ocr-extract] image download failed:", st ?? dlErr);
+        res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() }); return;
+      }
       imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
       imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim();
     }
@@ -2651,10 +2668,11 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     smart: "claude-sonnet-4-6",
     deep: "claude-opus-4-6",
   };
-  const resolvedModel = model ?? "claude-sonnet-4-6";
+  const SESSION_MODEL_ALIASES: Record<string, string> = { "claude": "claude-sonnet-4-6", "gpt": "gpt-4o", "gpt4": "gpt-4o", "gpt-4": "gpt-4o" };
+  const resolvedModel = model ? (SESSION_MODEL_ALIASES[model.toLowerCase()] ?? model) : "claude-sonnet-4-6";
   const ALLOWED = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"];
   if (!ALLOWED.includes(resolvedModel)) {
-    res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: ${ALLOWED.join(", ")}`, request_id: reqId() });
+    res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: claude, gpt4, ${ALLOWED.join(", ")}`, request_id: reqId() });
     return;
   }
 
@@ -2872,28 +2890,52 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
 router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", 10); if (!ok) return; }
-  const { image_url, size = "auto" } = req.body as { image_url?: string; size?: string };
-  if (!image_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url is required", request_id: reqId() }); return; }
-  const validSizes = ["auto", "preview", "hd"];
+  const { image_url, image_base64: inputBase64, size = "auto" } = req.body as { image_url?: string; image_base64?: string; size?: string };
+  if (!image_url && !inputBase64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
+  const validSizes = ["auto", "preview", "hd", "full"];
   if (!validSizes.includes(size)) { res.status(400).json({ ok: false, error: "invalid_request", message: `size must be one of: ${validSizes.join(", ")}`, request_id: reqId() }); return; }
   const removebgKey = process.env.REMOVEBG_API_KEY;
   if (!removebgKey) { res.status(503).json({ ok: false, error: "not_configured", message: "REMOVEBG_API_KEY not configured", request_id: reqId() }); return; }
   try {
+    // Download the image ourselves and send base64 to RemoveBG. RemoveBG's own
+    // image_url fetcher is frequently blocked/429'd by CDNs (e.g. Wikimedia),
+    // which made valid requests fail.
+    let imgB64 = inputBase64;
+    if (image_url && !imgB64) {
+      try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
+      try {
+        const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 20000, maxContentLength: 22 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)" } });
+        imgB64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
+      } catch (dlErr) {
+        const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
+        res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() }); return;
+      }
+    }
     const resp = await fetch("https://api.remove.bg/v1.0/removebg", {
       method: "POST",
       headers: { "X-Api-Key": removebgKey, "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ image_url, size, format: "png", type: "auto" }),
+      body: JSON.stringify({ image_file_b64: imgB64, size: size === "hd" ? "full" : size, format: "png", type: "auto" }),
+      signal: AbortSignal.timeout(45000),
     });
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "removebg_error", message: `RemoveBG returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      // NOTE: never return 502 from origin — Cloudflare replaces origin 502
+      // bodies with its own error page, hiding our JSON from the client.
+      let detail = err.slice(0, 300);
+      try { const j = JSON.parse(err) as { errors?: Array<{ title?: string }> }; detail = j.errors?.[0]?.title ?? detail; } catch { /* keep raw */ }
+      const status = resp.status >= 400 && resp.status < 500 ? 400 : 503;
+      res.status(status).json({ ok: false, error: "removebg_error", message: `RemoveBG rejected the request (${resp.status}): ${detail.slice(0, 200)}`, request_id: reqId() }); return;
     }
     const data = await resp.json() as { data?: { result_b64?: string; foreground_top?: number; foreground_left?: number; foreground_width?: number; foreground_height?: number } };
     const imageBase64 = data.data?.result_b64 ?? "";
-    if (!imageBase64) { res.status(502).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() }); return; }
+    if (!imageBase64) { res.status(503).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() }); return; }
     res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 10, request_id: reqId() });
-  } catch (e) { console.error("[image-remove-bg]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+  } catch (e) {
+    console.error("[image-remove-bg]", e);
+    const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    res.status(isTimeout ? 503 : 500).json({ ok: false, error: isTimeout ? "upstream_timeout" : "fetch_error", message: isTimeout ? "RemoveBG did not respond in time. Please retry." : safeErr(e), request_id: reqId() });
+  }
 });
 
 // ─── 56. EMAIL-FIND (Hunter.io) ──────────────────────────────────────────────
@@ -2912,11 +2954,16 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
       params.set("first_name", first_name!);
       params.set("last_name", last_name!);
     }
-    const resp = await fetch(`https://api.hunter.io/v2/${endpoint}?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
+    const resp = await fetch(`https://api.hunter.io/v2/${endpoint}?${params.toString()}`, { signal: AbortSignal.timeout(15000) });
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[email-find] Hunter error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "hunter_error", message: `Hunter.io returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      // NOTE: never return 502 from origin — Cloudflare replaces origin 502 bodies
+      // with its own error page, hiding our JSON from the client.
+      let detail = err.slice(0, 300);
+      try { const j = JSON.parse(err) as { errors?: Array<{ details?: string }> }; detail = j.errors?.[0]?.details ?? detail; } catch { /* keep raw */ }
+      const status = resp.status >= 400 && resp.status < 500 ? 400 : 503;
+      res.status(status).json({ ok: false, error: "hunter_error", message: `Hunter.io rejected the request (${resp.status}): ${detail.slice(0, 200)}`, request_id: reqId() }); return;
     }
     if (hasFullName) {
       const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
@@ -2929,7 +2976,11 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
     const emails = data.data?.emails ?? [];
     if (!emails.length) { res.status(404).json({ ok: false, error: "not_found", message: "No emails found for the given domain", request_id: reqId() }); return; }
     res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 5, request_id: reqId() });
-  } catch (e) { console.error("[email-find]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+  } catch (e) {
+    console.error("[email-find]", e);
+    const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    res.status(isTimeout ? 503 : 500).json({ ok: false, error: isTimeout ? "upstream_timeout" : "fetch_error", message: isTimeout ? "Hunter.io did not respond in time. Please retry." : safeErr(e), request_id: reqId() });
+  }
 });
 
 // ─── 57. SEMANTIC-SEARCH (Exa) ───────────────────────────────────────────────
