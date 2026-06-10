@@ -180,6 +180,7 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
   dotfiles: 'allow', // allow .well-known directory to be served
+  redirect: false, // don't 301 /integrations -> /integrations/ (dir of SDK files); let the extensionless fallback serve integrations.html
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, must-revalidate');
