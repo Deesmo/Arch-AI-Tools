@@ -69,8 +69,26 @@ async function main() {
   const realExecuteRaw = prismaMod.prisma.$executeRaw;
   const claimedIdentities = new Set();
   prismaMod.prisma.$executeRaw = async (strings, ...values) => {
-    // values[0] is the normalized email bound into the INSERT
-    const normalized = values[0];
+    // Simulate the REAL Postgres table from the migration DDL: enforce that
+    // every NOT NULL column WITHOUT a DB default is explicitly present in
+    // the INSERT column list with a non-null bound value. This is exactly
+    // the check that would have caught the missing-id NOT NULL violation
+    // (Prisma @default(cuid()) does NOT apply to raw SQL).
+    const sql = strings.join("$");
+    const colMatch = sql.match(/INSERT\s+INTO\s+"SignupIdentity"\s*\(([^)]*)\)/i);
+    assert.ok(colMatch, "raw INSERT must target SignupIdentity with an explicit column list");
+    const cols = colMatch[1].split(",").map((c) => c.trim().replace(/"/g, ""));
+    // NOT NULL columns with no DB default in 20260610_signup_identity DDL:
+    const requiredCols = ["id", "normalized_email"]; // created_at has DEFAULT CURRENT_TIMESTAMP
+    for (const rc of requiredCols) {
+      assert.ok(cols.includes(rc), `INSERT must supply NOT NULL column "${rc}" (no DB default)`);
+    }
+    assert.strictEqual(values.length, cols.length, "each INSERT column must have a bound value");
+    cols.forEach((c, i) => {
+      assert.ok(values[i] !== null && values[i] !== undefined && values[i] !== "",
+        `bound value for NOT NULL column "${c}" must be non-empty`);
+    });
+    const normalized = values[cols.indexOf("normalized_email")];
     if (claimedIdentities.has(normalized)) return 0; // ON CONFLICT DO NOTHING
     claimedIdentities.add(normalized);
     return 1;

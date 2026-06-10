@@ -78,13 +78,24 @@ export function normalizeEmailIdentity(email: string): string {
  */
 export async function claimSignupIdentity(email: string): Promise<boolean> {
   const normalized = normalizeEmailIdentity(email);
+  // Prisma's @default(cuid()) does NOT apply to raw SQL, and the migration
+  // defines "id" as TEXT NOT NULL with no DB default — so the id MUST be
+  // supplied explicitly here. created_at has DEFAULT CURRENT_TIMESTAMP in
+  // the migration, so id + normalized_email covers every NOT NULL column.
+  const id = crypto.randomUUID();
   try {
     const inserted = await prisma.$executeRaw`
-      INSERT INTO "SignupIdentity" ("normalized_email")
-      VALUES (${normalized})
+      INSERT INTO "SignupIdentity" ("id", "normalized_email")
+      VALUES (${id}, ${normalized})
       ON CONFLICT ("normalized_email") DO NOTHING`;
+    // Deterministic, non-throwing outcomes:
+    //   1 row inserted  → new claim → grant credits (true)
+    //   0 rows (ON CONFLICT) → identity already claimed → gate credits (false)
     return inserted > 0;
   } catch (e) {
+    // Fail open ONLY on genuinely unexpected DB errors (connection loss,
+    // outage). The normal duplicate path never throws — ON CONFLICT DO
+    // NOTHING resolves to 0 rows above, so it can never reach this branch.
     logger.warn({ error: String(e) }, "SignupIdentity claim failed (failing open)");
     return true;
   }
