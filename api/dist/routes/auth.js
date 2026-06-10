@@ -50,19 +50,15 @@ export function verifySession(token) {
     }
 }
 async function findAgentByApiKey(apiKey) {
+    // Plaintext keys are no longer stored — prefix lookup + bcrypt compare only.
     const prefix = apiKey.slice(0, 12);
     const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } }).catch(() => null);
-    if (candidate) {
-        if (candidate.apiKeyHash) {
-            const match = await bcrypt.compare(apiKey, candidate.apiKeyHash).catch(() => false);
-            if (match)
-                return candidate;
-        }
-        else if (candidate.apiKey === apiKey) {
+    if (candidate?.apiKeyHash) {
+        const match = await bcrypt.compare(apiKey, candidate.apiKeyHash).catch(() => false);
+        if (match)
             return candidate;
-        }
     }
-    return prisma.agent.findUnique({ where: { apiKey } }).catch(() => null);
+    return null;
 }
 router.post("/login-key", loginLimiter, async (req, res) => {
     const { api_key } = req.body ?? {};
@@ -197,8 +193,10 @@ router.get("/api-key", async (req, res) => {
         res.status(401).json({ ok: false, error: "agent_not_found" });
         return;
     }
-    const masked = agent.apiKey.substring(0, 8) + "●".repeat(agent.apiKey.length - 12) + agent.apiKey.slice(-4);
-    res.json({ ok: true, api_key_masked: masked, api_key: agent.apiKey });
+    // Plaintext keys are no longer stored — only the prefix can be shown.
+    // Full keys are returned exactly once at registration/rotation.
+    const masked = agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null;
+    res.json({ ok: true, api_key_masked: masked, api_key: null, message: "Full API keys are shown only once at creation. Rotate via POST /v1/agent/keys/rotate if you lost yours." });
 });
 export default router;
 router.post("/forgot-password", forgotLimiter, async (req, res) => {

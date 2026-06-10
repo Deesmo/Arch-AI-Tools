@@ -17,7 +17,7 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import crypto from "crypto";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
 import bcrypt from "bcryptjs";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
 const router = Router();
@@ -68,13 +68,19 @@ router.post("/activate", async (req, res) => {
             });
             return;
         }
+        // Anti-farming: normalized-email identity + per-IP daily signup caps
+        const limitBlock = await enforceSignupLimits(email, req.ip);
+        if (limitBlock) {
+            res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
+            return;
+        }
         // Create trial account with limited credits
         const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
         const apiKeyPrefix = apiKey.slice(0, 12);
         const apiKeyHash = await bcrypt.hash(apiKey, 10);
+        // Only prefix + hash are persisted — the raw key is returned ONCE below.
         const agent = await prisma.agent.create({
             data: {
-                apiKey,
                 apiKeyPrefix,
                 apiKeyHash,
                 email,
@@ -83,25 +89,27 @@ router.post("/activate", async (req, res) => {
                 tier: "free",
             },
         });
-        // Email verification gate: credits stay pending until email verified
+        // Email verification gate: credits stay pending until email verified.
+        // Grant is atomically claimed per normalized identity (SignupIdentity).
+        let gatedCredits = TRIAL_CREDITS;
         try {
-            await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
+            gatedCredits = await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
         }
         catch (e) {
             logger.warn({ agentId: agent.id, error: String(e) }, "Verification setup failed");
         }
-        logger.info({ agentId: agent.id, email, credits: TRIAL_CREDITS }, "Trial account activated (pending email verification)");
-        captureEvent(agent.id, "trial_activated", { email, credits: TRIAL_CREDITS });
-        identifyUser(agent.id, { email, tier: "free", credits: TRIAL_CREDITS, source: "trial" });
+        logger.info({ agentId: agent.id, email, credits: gatedCredits }, "Trial account activated (pending email verification)");
+        captureEvent(agent.id, "trial_activated", { email, credits: gatedCredits });
+        identifyUser(agent.id, { email, tier: "free", credits: gatedCredits, source: "trial" });
         res.status(201).json({
             ok: true,
             agent_id: agent.id,
             api_key: apiKey,
             credits: 0,
-            pending_credits: TRIAL_CREDITS,
+            pending_credits: gatedCredits,
             email_verification_required: true,
             tier: "free",
-            message: `Trial created! Check your email to verify your address — your ${TRIAL_CREDITS} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
+            message: `Trial created! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
             upgrade_url: "https://archtools.dev/pricing",
             docs: "https://archtools.dev/docs",
             request_id: reqId(),

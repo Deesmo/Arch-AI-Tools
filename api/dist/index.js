@@ -154,6 +154,18 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
     if (err)
         res.redirect(301, '/arch-icon.svg?v=2');
 }));
+// ─── Admin HTML guard — block static serving of admin.html (adminGate route below handles authorized access) ───
+app.use((req, res, next) => {
+    if (req.path === "/admin.html" && req.method === "GET") {
+        const key = req.headers["x-admin-key"];
+        const cookie = req.headers["cookie"] ?? "";
+        if (!((key && key === config.adminKey) || cookie.includes("at_admin="))) {
+            res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
+            return;
+        }
+    }
+    next();
+});
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
@@ -536,5 +548,22 @@ setInterval(async () => {
     }
     catch { /* non-fatal */ }
 }, 24 * 60 * 60 * 1000);
+// MCP anonymous-demo pool auto-top-off — hourly, hard-capped per month.
+// First line of defense = per-IP/global daily anon caps in the MCP server;
+// this is the bounded-credit backstop (see src/cron/demoTopoff.ts).
+setInterval(async () => {
+    try {
+        const { runDemoTopoff } = await import("./cron/demoTopoff");
+        await runDemoTopoff();
+    }
+    catch { /* non-fatal */ }
+}, 60 * 60 * 1000);
+setTimeout(async () => {
+    try {
+        const { runDemoTopoff } = await import("./cron/demoTopoff");
+        await runDemoTopoff();
+    }
+    catch { /* non-fatal */ }
+}, 90 * 1000); // one kick shortly after boot
 export default app;
 //# sourceMappingURL=index.js.map

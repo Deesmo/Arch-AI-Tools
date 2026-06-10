@@ -40,21 +40,17 @@ async function requireFacilitatorAuth(req, res, next) {
         return;
     }
     try {
-        // Look up by raw key first (for backward compat), then by hash
-        let provider = await prisma.facilitatorProvider.findUnique({
-            where: { apiKey },
+        // Plaintext keys are no longer stored — hash-based lookup only
+        // (iterate — in production, use a prefix index).
+        let provider = null;
+        const candidates = await prisma.facilitatorProvider.findMany({
+            where: { active: true },
+            select: { id: true, name: true, apiKeyHash: true, walletAddress: true, feePercent: true, networks: true },
         });
-        if (!provider) {
-            // Try hash-based lookup (iterate — in production, use a prefix index)
-            const candidates = await prisma.facilitatorProvider.findMany({
-                where: { active: true },
-                select: { id: true, name: true, apiKeyHash: true, walletAddress: true, feePercent: true, networks: true },
-            });
-            for (const c of candidates) {
-                if (c.apiKeyHash && await bcrypt.compare(apiKey, c.apiKeyHash)) {
-                    provider = await prisma.facilitatorProvider.findUnique({ where: { id: c.id } });
-                    break;
-                }
+        for (const c of candidates) {
+            if (c.apiKeyHash && await bcrypt.compare(apiKey, c.apiKeyHash)) {
+                provider = await prisma.facilitatorProvider.findUnique({ where: { id: c.id } });
+                break;
             }
         }
         if (!provider || !provider.active) {
@@ -334,12 +330,11 @@ router.post("/register", async (req, res) => {
         if (requestedNetworks.length === 0) {
             requestedNetworks.push("eip155:8453");
         }
-        // Create provider
+        // Create provider — only the bcrypt hash is persisted; raw key returned ONCE below.
         const provider = await prisma.facilitatorProvider.create({
             data: {
                 name,
                 email,
-                apiKey,
                 apiKeyHash,
                 walletAddress,
                 webhookUrl: webhookUrl || null,

@@ -33,7 +33,8 @@ async function requireAuthOrSession(req: AuthedRequest, res: Response, next: Nex
     res.status(401).json({ ok: false, error: "unauthorized", message: "Session invalid. Sign in again at /login", request_id: reqId() });
     return;
   }
-  req.agent = { id: agent.id, apiKey: agent.apiKey, email: agent.email ?? "", credits: agent.credits, tier: agent.tier, totalCalls: agent.totalCalls };
+  // Plaintext keys are no longer stored — session-authenticated requests carry no API key.
+  req.agent = { id: agent.id, apiKey: "", email: agent.email ?? "", credits: agent.credits, tier: agent.tier, totalCalls: agent.totalCalls };
   next();
 }
 
