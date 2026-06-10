@@ -39,10 +39,10 @@ For agent-to-agent integrations:
 
 ## Credit System
 Tools cost credits per call. Credits never expire. Non-transferable.
-- Free tier: 250 credits on registration
-- Starter Pack: 10,000 credits — $9 ($0.0009/credit)
-- Pro Pack: 60,000 credits — $49 ($0.00082/credit)
-- Business Pack: 250,000 credits — $199 ($0.00080/credit)
+- Free tier: 100 credits on registration
+- Starter Pack: 3,000 credits — $9 ($0.0030/credit)
+- Pro Pack: 25,000 credits — $49 ($0.00196/credit)
+- Business Pack: 125,000 credits — $199 ($0.00159/credit)
 
 ## Tool Reference
 

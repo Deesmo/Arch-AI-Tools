@@ -13,7 +13,7 @@
 All tool endpoints require an API key:
   Authorization: Bearer YOUR_API_KEY
 
-Get a free key (250 credits) at https://archtools.dev/#register
+Get a free key (100 credits) at https://archtools.dev/#register
 
 ## x402 Autonomous Payment (no key required)
 AI agents can pay per-call with USDC on Base via the x402 protocol.
@@ -22,14 +22,14 @@ Discovery: https://archtools.dev/.well-known/x402
 Protocol: https://x402.org
 
 ## Credit Pricing
-- Starter Pack: 10,000 credits — $9 ($0.0009/credit)
-- Pro Pack: 60,000 credits — $49 ($0.00082/credit)
-- Business Pack: 250,000 credits — $199 ($0.00080/credit)
+- Starter Pack: 3,000 credits — $9 ($0.0030/credit)
+- Pro Pack: 25,000 credits — $49 ($0.00196/credit)
+- Business Pack: 125,000 credits — $199 ($0.00159/credit)
 
 ## Tool Categories
 
 ### AI & NLP
-- [AI Generate](https://archtools.dev/v1/tools/ai-generate): Text generation via Claude Sonnet (20 credits)
+- [AI Generate](https://archtools.dev/v1/tools/ai-generate): Text generation via Claude Sonnet (20+ credits, scales with max_tokens)
 - [AI Oracle](https://archtools.dev/v1/tools/ai-oracle): Premium reasoning with structured analysis (25 credits)
 - [Summarize](https://archtools.dev/v1/tools/summarize): 5 styles — bullets, tldr, executive (10 credits)
 - [Sentiment Analysis](https://archtools.dev/v1/tools/sentiment-analysis): Sentiment + 6 emotions (8 credits)
@@ -37,7 +37,7 @@ Protocol: https://x402.org
 - [Language Detect](https://archtools.dev/v1/tools/language-detect): 100+ languages with confidence (3 credits)
 - [Regex Generate](https://archtools.dev/v1/tools/regex-generate): Natural language → validated regex (8 credits)
 - [PII Detect](https://archtools.dev/v1/tools/pii-detect): Detect and redact PII (10 credits)
-- [Research Report](https://archtools.dev/v1/tools/research-report): Structured research on any topic (15 credits)
+- [Research Report](https://archtools.dev/v1/tools/research-report): Structured research on any topic (40 credits)
 - [Fact Check](https://archtools.dev/v1/tools/fact-check): Verify claims against web sources (10 credits)
 - [Semantic Search](https://archtools.dev/v1/tools/semantic-search): Neural web search via Exa AI (8 credits)
 
@@ -67,11 +67,11 @@ Protocol: https://x402.org
 ### Media & Design
 - [Image Generate](https://archtools.dev/v1/tools/image-generate): SVG from text prompts (15 credits)
 - [Design Create](https://archtools.dev/v1/tools/design-create): DALL-E 3 image generation (15 credits)
-- [Video Generate](https://archtools.dev/v1/tools/video-generate): Runway Gen-3 video (50 credits)
-- [Image Remove BG](https://archtools.dev/v1/tools/image-remove-bg): Remove background (10 credits)
+- [Video Generate](https://archtools.dev/v1/tools/video-generate): Runway Gen-3 video (500+ credits, scales with duration)
+- [Image Remove BG](https://archtools.dev/v1/tools/image-remove-bg): Remove background (350 credits)
 - [OCR Extract](https://archtools.dev/v1/tools/ocr-extract): Extract text from images (10 credits)
-- [Text to Speech](https://archtools.dev/v1/tools/text-to-speech): ElevenLabs TTS (5 credits)
-- [Transcribe Audio](https://archtools.dev/v1/tools/transcribe-audio): Whisper transcription (8 credits)
+- [Text to Speech](https://archtools.dev/v1/tools/text-to-speech): ElevenLabs TTS (25+ credits, metered by length)
+- [Transcribe Audio](https://archtools.dev/v1/tools/transcribe-audio): Whisper transcription (25 credits)
 
 ### Data & Validation
 - [Validate Data](https://archtools.dev/v1/tools/validate-data): JSON Schema validation (1 credit)
