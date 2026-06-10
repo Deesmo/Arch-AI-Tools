@@ -39,9 +39,9 @@ async function requireAuthOrSession(req: AuthedRequest, res: Response, next: Nex
 
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
-  { id: "starter",  credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { id: "pro",      credits: 20000,  amount: 4900,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
-  { id: "business", credits: 100000, amount: 19900, label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
+  { id: "starter",  credits: 3000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
+  { id: "pro",      credits: 25000,  amount: 4900,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { id: "business", credits: 125000, amount: 19900, label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
@@ -50,57 +50,35 @@ const SUBSCRIPTION_PLANS = [
     id: "starter-monthly",
     label: "Starter",
     billing: "monthly",
-    credits_per_month: 15000,
-    amount: 900,     // $9/mo
+    credits_per_month: 10000,
+    amount: 1900,    // $19/mo
     // Security: price IDs must be set via environment variables — no hardcoded fallbacks.
-    // Set STRIPE_PRICE_SUB_STARTER_MONTHLY in your environment. See .env.example.
-    priceId: process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY ?? "",
+    // V2 price ($19) created 2026-06-10; old $9 price archived after cutover.
+    priceId: process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY_V2 ?? process.env.STRIPE_PRICE_SUB_STARTER_MONTHLY ?? "",
   },
   {
     id: "pro-monthly",
     label: "Pro",
     billing: "monthly",
-    credits_per_month: 50000,
+    credits_per_month: 30000,
     amount: 4900,    // $49/mo
     priceId: process.env.STRIPE_PRICE_SUB_PRO_MONTHLY ?? "",
+  },
+  {
+    id: "growth-monthly",
+    label: "Growth",
+    billing: "monthly",
+    credits_per_month: 75000,
+    amount: 9900,    // $99/mo
+    priceId: process.env.STRIPE_PRICE_SUB_GROWTH_MONTHLY ?? "",
   },
   {
     id: "business-monthly",
     label: "Business",
     billing: "monthly",
-    credits_per_month: 200000,
-    amount: 14900,   // $149/mo
-    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY ?? "",
-  },
-  {
-    id: "starter-annual",
-    label: "Starter",
-    billing: "annual",
-    credits_per_month: 15000,
-    credits_per_year: 180000,
-    amount: 9000,    // $90/yr = $7.50/mo (17% off)
-    amount_monthly_equiv: 750,
-    priceId: process.env.STRIPE_PRICE_SUB_STARTER_ANNUAL ?? "",
-  },
-  {
-    id: "pro-annual",
-    label: "Pro",
-    billing: "annual",
-    credits_per_month: 50000,
-    credits_per_year: 600000,
-    amount: 48800,   // $488/yr = $40.67/mo (17% off)
-    amount_monthly_equiv: 4067,
-    priceId: process.env.STRIPE_PRICE_SUB_PRO_ANNUAL ?? "",
-  },
-  {
-    id: "business-annual",
-    label: "Business",
-    billing: "annual",
-    credits_per_month: 200000,
-    credits_per_year: 2400000,
-    amount: 148400,  // $1484/yr = $123.67/mo (17% off)
-    amount_monthly_equiv: 12367,
-    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_ANNUAL ?? "",
+    credits_per_month: 175000,
+    amount: 19900,   // $199/mo
+    priceId: process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY_V2 ?? process.env.STRIPE_PRICE_SUB_BUSINESS_MONTHLY ?? "",
   },
 ];
 

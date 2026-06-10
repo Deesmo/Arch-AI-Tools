@@ -87,6 +87,19 @@ function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
 }
 
+// ─── BYOK discount: tools called with user-provided provider keys charge 20% ───
+const BYOK_HEADER_NAMES = [
+  "x-anthropic-key", "x-openai-key", "x-xai-key", "x-google-key",
+  "x-firecrawl-key", "x-brave-key", "x-tavily-key", "x-exa-key",
+  "x-elevenlabs-key", "x-removebg-key", "x-runway-key",
+];
+function hasByokKeys(req: Request): boolean {
+  return BYOK_HEADER_NAMES.some((h) => !!req.headers[h]);
+}
+function byokAdjustedCost(req: Request, cost: number): number {
+  return hasByokKeys(req) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
+}
+
 function extractJsonObject(text: string): string | null {
   const cleaned = text.replace(/```json|```/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
@@ -1049,12 +1062,16 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   const byokExaKey = req.headers["x-exa-key"] as string | undefined;
   const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey || byokBraveKey || byokTavilyKey || byokExaKey || byokFirecrawlKey);
 
+  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   const paid = isX402Paid(req);
-  if (!paid && !hasByok) {
-    const ok = await deductCredits(req, res, "ai-generate", 20);
+  if (!paid) {
+    // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000
+    const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
+    let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
+    if (hasByok) aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
+    const ok = await deductCredits(req, res, "ai-generate", aiGenCost);
     if (!ok) return;
   }
-  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
   if (prompt.length > MAX_PROMPT) { res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() }); return; }
@@ -2090,11 +2107,16 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
 
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: AuthedRequest, res: Response): Promise<void> => {
-  const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 10); if (!ok) return; }
   const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body as { text?: string; voice_id?: string; model_id?: string; stability?: number; similarity_boost?: number };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 5000) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() }); return; }
+  const paid = isX402Paid(req);
+  if (!paid) {
+    // Metered by length: 25 base + 8 credits per 100 chars (covers ElevenLabs COGS)
+    const ttsCost = byokAdjustedCost(req, 25 + 8 * Math.ceil(text.length / 100));
+    const ok = await deductCredits(req, res, "text-to-speech", ttsCost);
+    if (!ok) return;
+  }
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() }); return; }
   try {
@@ -2117,7 +2139,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
 // ─── transcribe-audio ─────────────────────────────────────────────────────────
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 12); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", byokAdjustedCost(req, 25)); if (!ok) return; }
   const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -2453,7 +2475,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
 router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "research-report", 15); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", byokAdjustedCost(req, 40)); if (!ok) return; }
   const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
@@ -2798,17 +2820,19 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 
 // ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
 router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
-  const paid = isX402Paid(req);
-  if (!paid) {
-    const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
-    if (!withinLimit) return;
-    const ok = await deductCredits(req, res, "video-generate", 50);
-    if (!ok) return;
-  }
   const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body as { prompt?: string; duration?: number; aspect_ratio?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
+  // Scaled by duration at 125 credits/second, 500 minimum (5s = 625, 10s = 1250)
+  const videoCost = byokAdjustedCost(req, Math.max(500, duration * 125));
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "video-generate", videoCost);
+    if (!ok) return;
+  }
   const ratioAliases: Record<string, string> = {
     "16:9": "1280:720",
     "9:16": "720:1280",
@@ -2882,14 +2906,14 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
     }
     if (!videoUrl) { res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() }); return; }
-    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, model: selectedModel, task_id: taskId, credits_used: 50, request_id: reqId() });
+    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, model: selectedModel, task_id: taskId, credits_used: paid ? 0 : videoCost, request_id: reqId() });
   } catch (e) { console.error("[video-generate]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── 55. IMAGE-REMOVE-BG (RemoveBG) ──────────────────────────────────────────
 router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", 10); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", byokAdjustedCost(req, 350)); if (!ok) return; }
   const { image_url, image_base64: inputBase64, size = "auto" } = req.body as { image_url?: string; image_base64?: string; size?: string };
   if (!image_url && !inputBase64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
   const validSizes = ["auto", "preview", "hd", "full"];
