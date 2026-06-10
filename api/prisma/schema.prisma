@@ -47,6 +47,8 @@ model Agent {
   // back-references — required for Prisma v5 relations
   apiRequests  ApiRequest[]
   purchases    Purchase[]
+
+  @@index([apiKeyPrefix])
 }
 
 enum ToolPlan {
