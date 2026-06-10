@@ -3,7 +3,7 @@
   "info": {
     "title": "Arch Tools API",
     "version": "1.11.0",
-    "description": "64 AI-powered tools in a single API — web scraping, AI generation, crypto data, NLP, research, image generation, and more. Pay per use with API key or x402 USDC micropayments. Full platform at https://archtools.dev",
+    "description": "64 AI-powered tools in a single API \u2014 web scraping, AI generation, crypto data, NLP, research, image generation, and more. Pay per use with API key or x402 USDC micropayments. Full platform at https://archtools.dev",
     "contact": {
       "name": "Arch Tools Support",
       "url": "https://archtools.dev/developers",
@@ -623,7 +623,7 @@
     "/v1/tools/summarize": {
       "post": {
         "operationId": "summarize",
-        "summary": "Summarize text in 5 styles (bullets, tldr, executive…)",
+        "summary": "Summarize text in 5 styles (bullets, tldr, executive\u2026)",
         "tags": [
           "AI"
         ],
@@ -1048,7 +1048,7 @@
     "/v1/tools/sentiment-analysis": {
       "post": {
         "operationId": "sentimentAnalysis",
-        "summary": "Sentiment + emotion detection (joy, anger, fear…)",
+        "summary": "Sentiment + emotion detection (joy, anger, fear\u2026)",
         "tags": [
           "NLP"
         ],
@@ -3045,7 +3045,7 @@
     "/v1/tools/send-email": {
       "post": {
         "operationId": "sendEmail",
-        "summary": "Send transactional emails via Resend — plain text or HTML",
+        "summary": "Send transactional emails via Resend \u2014 plain text or HTML",
         "tags": [
           "Utility"
         ],

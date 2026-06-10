@@ -24,7 +24,7 @@
     "name": "How to Migrate from Skyfire to Arch Tools",
     "description": "Step-by-step guide for migrating AI agent payment infrastructure from Skyfire to Arch Tools",
     "step": [
-{"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 250 free credits"},
+{"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits"},
       {"@type": "HowToStep", "name": "Replace SDK", "text": "Swap skyfire-seller-sdk-node with a simple fetch call to Arch Tools endpoints"},
       {"@type": "HowToStep", "name": "Update Payment Flow", "text": "Switch from KYAPay JWT tokens to x402 payment headers or API key auth"},
       {"@type": "HowToStep", "name": "Test", "text": "Run your agent against Arch Tools — 64 tools available immediately"}
@@ -157,7 +157,7 @@
     <!-- TL;DR -->
     <div id="tldr" class="callout-green callout">
       <strong>⚡ TL;DR — Switch in 3 Steps</strong><br><br>
-      1. <a href="/#register" style="color:var(--green);">Get an Arch Tools API key</a> (free, 250 credits included)<br>
+      1. <a href="/#register" style="color:var(--green);">Get an Arch Tools API key</a> (free, 100 credits included)<br>
       2. Replace Skyfire SDK calls with simple <code>fetch()</code> to <code>archtools.dev/v1/tools/*</code><br>
       3. For autonomous agent payments: use x402 headers instead of KYAPay tokens<br><br>
       That's it. 64 tools available immediately. No wallet setup, no KYA registration, no USDC pre-loading.
@@ -215,7 +215,7 @@
         <tr>
           <td class="feature">Free Tier</td>
           <td><span class="cross">No</span></td>
-<td><span class="check">250 free credits on signup</span></td>
+<td><span class="check">100 free credits on signup</span></td>
         </tr>
         <tr>
           <td class="feature">MCP Support</td>
@@ -297,7 +297,7 @@
     <div class="timeline">
       <div class="timeline-step">
         <h4><span class="step-num">1</span> Get Your API Key</h4>
-<p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 250 free credits. No credit card, no wallet, no KYA registration needed.</p>
+<p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 100 free credits. No credit card, no wallet, no KYA registration needed.</p>
       </div>
 
       <div class="timeline-step">
@@ -452,14 +452,14 @@ const data = await response.json();
     <p>64 production-ready tools. Check the full <a href="/directory" style="color:var(--purple);">tool directory</a> — categories include AI generation, web scraping, crypto, file conversion, security, email, and more.</p>
 
     <h3>Is there a free tier?</h3>
-<p>Yes — every account gets 250 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
+<p>Yes — every account gets 100 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
   </article>
 </div>
 
 <div class="wrap">
   <div class="cta-section">
     <h2>Ready to switch?</h2>
-<p>Get your API key, 250 free credits, and access to all 64 tools — in 30 seconds.</p>
+<p>Get your API key, 100 free credits, and access to all 64 tools — in 30 seconds.</p>
     <a class="btn" href="/#register">$ get-api-key →</a>
     <a class="btn-ghost" href="/directory">Browse Tools</a>
   </div>

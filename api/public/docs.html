@@ -393,7 +393,7 @@ curl https://archtools.dev/api/v1/x402/pricing/web-scrape
     <p>Register, get your key, and make your first call in under 60 seconds:</p>
     <div class="code-wrap">
       <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-      <pre><code class="language-bash"># 1. Register (key delivered instantly, no email verification)
+      <pre><code class="language-bash"># 1. Register (key delivered instantly; verify email to activate credits)
 curl -X POST https://archtools.dev/v1/agent/register \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","plan":"free"}'
@@ -409,16 +409,17 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
     <!-- CREDITS -->
     <!-- ═══════════════════════════════════════════════ -->
     <h2 id="credits">Credits &amp; Rate Limits</h2>
-    <p>Every new account gets <strong>250 free credits</strong> on signup. Tools cost 1–30 credits per call depending on complexity.</p>
+    <p>Every new account gets <strong>100 free credits</strong> on signup. Tools cost 1–30 credits per call depending on complexity.</p>
     <table class="params-table" style="margin-bottom:16px">
       <tr><th>Tier</th><th>Price</th><th>Credits</th><th>Rate Limit</th><th>Daily Limit</th></tr>
-      <tr><td>Free</td><td>$0</td><td>250/month</td><td>60 req/min</td><td>500 req/day</td></tr>
-      <tr><td>Starter</td><td>$9/mo</td><td>15,000/month</td><td>300 req/min</td><td>20,000 req/day</td></tr>
-      <tr><td>Pro</td><td>$49/mo</td><td>50,000/month</td><td>300 req/min</td><td>20,000 req/day</td></tr>
-      <tr><td>Business</td><td>$149/mo</td><td>200,000/month</td><td>1,000 req/min</td><td>100,000 req/day</td></tr>
+      <tr><td>Free</td><td>$0</td><td>100 on signup</td><td>60 req/min</td><td>500 req/day</td></tr>
+      <tr><td>Starter</td><td>$19/mo</td><td>10,000/month</td><td>300 req/min</td><td>20,000 req/day</td></tr>
+      <tr><td>Pro</td><td>$49/mo</td><td>30,000/month</td><td>300 req/min</td><td>20,000 req/day</td></tr>
+      <tr><td>Growth</td><td>$99/mo</td><td>75,000/month</td><td>600 req/min</td><td>50,000 req/day</td></tr>
+      <tr><td>Business</td><td>$199/mo</td><td>175,000/month</td><td>1,000 req/min</td><td>100,000 req/day</td></tr>
       <tr><td>Enterprise</td><td><a href="mailto:support@archtools.dev">Contact Us</a></td><td>Custom</td><td>Custom</td><td>Custom</td></tr>
     </table>
-    <p>Top-up packs: <strong>$9</strong> / 5K · <strong>$49</strong> / 20K · <strong>$199</strong> / 100K. Check usage: <span class="inline-code">GET /v1/agent/usage</span></p>
+    <p>Top-up packs: <strong>$9</strong> / 3K · <strong>$49</strong> / 25K · <strong>$199</strong> / 125K. Check usage: <span class="inline-code">GET /v1/agent/usage</span></p>
 
     <!-- ═══════════════════════════════════════════════ -->
     <!-- ERRORS -->
@@ -2078,15 +2079,15 @@ var prices = {
   "email-verify":"0.003","phone-validate":"0.002","currency-convert":"0.002","timezone-convert":"0.001",
   "generate-uuid":"0.001","diff-text":"0.002","readability-score":"0.002","language-detect":"0.003",
   "sentiment-analysis":"0.008","summarize":"0.010","extract-entities":"0.008","regex-generate":"0.008",
-  "pii-detect":"0.010","web-search":"0.010","ai-generate":"0.020","ocr-extract":"0.010",
+  "pii-detect":"0.010","web-search":"0.010","ai-generate":"0.040","ocr-extract":"0.010",
   "browser-task":"0.010","extract-pdf":"0.006","screenshot-capture":"0.010","html-to-markdown":"0.003",
   "url-shorten":"0.001","webhook-send":"0.002","jsonpath-query":"0.001","image-generate":"0.030",
   "barcode-generate":"0.002","workflow-agent":"0.025","crypto-price":"0.001","crypto-ohlcv":"0.002",
   "crypto-market-cap":"0.001","crypto-fear-greed":"0.001","crypto-sentiment":"0.002","crypto-news":"0.002",
   "token-lookup":"0.001","ai-oracle":"0.025","session-create":"0.005","session-message":"0.020",
-  "text-to-speech":"0.010","transcribe-audio":"0.012","email-send":"0.003","design-create":"0.030",
-  "domain-check":"0.002","news-search":"0.003","research-report":"0.015","fact-check":"0.010",
-  "video-generate":"0.100","image-remove-bg":"0.010","email-find":"0.005","semantic-search":"0.008",
+  "text-to-speech":"0.100","transcribe-audio":"0.025","email-send":"0.003","design-create":"0.030",
+  "domain-check":"0.002","news-search":"0.003","research-report":"0.040","fact-check":"0.010",
+  "video-generate":"0.750","image-remove-bg":"0.350","email-find":"0.005","semantic-search":"0.008",
   "social-post":"0.005"
 };
 

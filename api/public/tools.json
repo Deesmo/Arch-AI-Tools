@@ -29,17 +29,17 @@
     "packs": [
       {
         "name": "Starter",
-        "credits": 10000,
+        "credits": 3000,
         "price": 9
       },
       {
         "name": "Pro",
-        "credits": 60000,
+        "credits": 25000,
         "price": 49
       },
       {
         "name": "Business",
-        "credits": 250000,
+        "credits": 125000,
         "price": 199
       }
     ]
@@ -690,7 +690,7 @@
     },
     {
       "name": "email-send",
-      "description": "Send transactional emails via Resend — plain text or HTML",
+      "description": "Send transactional emails via Resend \u2014 plain text or HTML",
       "endpoint": "https://archtools.dev/v1/tools/email-send",
       "method": "POST",
       "credits": 3,
@@ -953,7 +953,7 @@
     },
     {
       "name": "generate-image",
-      "description": "Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792).",
+      "description": "Generate images from text prompts via DALL-E 3 (1024\u00d71024, 1792\u00d71024, 1024\u00d71792).",
       "endpoint": "/v1/tools/generate-image",
       "method": "POST",
       "credits": 15,
@@ -1098,7 +1098,7 @@
       "description": "Remove background from any image via RemoveBG",
       "endpoint": "https://archtools.dev/v1/tools/image-remove-bg",
       "method": "POST",
-      "credits": 10,
+      "credits": 350,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -1459,7 +1459,7 @@
       "description": "Generate a structured research report on any topic",
       "endpoint": "https://archtools.dev/v1/tools/research-report",
       "method": "POST",
-      "credits": 15,
+      "credits": 40,
       "category": "ai",
       "parameters": {
         "type": "object",
@@ -1657,7 +1657,7 @@
     },
     {
       "name": "send-email",
-      "description": "Send transactional emails via Resend — plain text or HTML.",
+      "description": "Send transactional emails via Resend \u2014 plain text or HTML.",
       "endpoint": "/v1/tools/send-email",
       "method": "POST",
       "credits": 3,
@@ -1691,7 +1691,7 @@
     },
     {
       "name": "sentiment-analysis",
-      "description": "Sentiment + emotion detection (joy, anger, fear…)",
+      "description": "Sentiment + emotion detection (joy, anger, fear\u2026)",
       "endpoint": "https://archtools.dev/v1/tools/sentiment-analysis",
       "method": "POST",
       "credits": 8,
@@ -1825,7 +1825,7 @@
     },
     {
       "name": "summarize",
-      "description": "Summarize in 5 styles (bullets, tldr, executive…)",
+      "description": "Summarize in 5 styles (bullets, tldr, executive\u2026)",
       "endpoint": "https://archtools.dev/v1/tools/summarize",
       "method": "POST",
       "credits": 10,
@@ -1872,7 +1872,7 @@
       "description": "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)",
       "endpoint": "https://archtools.dev/v1/tools/text-to-speech",
       "method": "POST",
-      "credits": 5,
+      "credits": 25,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -1983,7 +1983,7 @@
       "description": "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)",
       "endpoint": "https://archtools.dev/v1/tools/transcribe-audio",
       "method": "POST",
-      "credits": 8,
+      "credits": 25,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -2016,7 +2016,7 @@
     },
     {
       "name": "transform-text",
-      "description": "Transform text (10 modes: slug, camel, base64…)",
+      "description": "Transform text (10 modes: slug, camel, base64\u2026)",
       "endpoint": "https://archtools.dev/v1/tools/transform-text",
       "method": "POST",
       "credits": 3,
@@ -2124,7 +2124,7 @@
       "description": "AI video generation from text prompts via Runway Gen-3",
       "endpoint": "https://archtools.dev/v1/tools/video-generate",
       "method": "POST",
-      "credits": 50,
+      "credits": 500,
       "category": "media",
       "parameters": {
         "type": "object",

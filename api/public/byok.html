@@ -41,12 +41,12 @@
       <div class="logo-mark"><img src="/arch-icon.svg" width="18" height="18" alt="Arch" /></div>
       <span class="logo-name">Arch Tools</span>
     </a>
-<a href="/signin" class="nav-cta">Get 250 free credits</a>
+<a href="/signin" class="nav-cta">Get 100 free credits</a>
   </nav>
   <div class="main">
     <div class="badge">🔑 BYOK</div>
     <h1>Bring Your Own Key</h1>
-    <p class="intro">Use your own API keys with Arch Tools. When you pass your own key, no Arch Tools credits are deducted — you pay the provider directly at their rates.</p>
+    <p class="intro">Use your own API keys with Arch Tools. When you pass your own key, tools charge just 20% of their normal credit cost — you pay the provider directly at their rates.</p>
 
     <h2>How it works</h2>
     <p>Pass your API key as a request header. Arch Tools detects it automatically and routes your request through your key.</p>
@@ -57,7 +57,7 @@
   -H <span style="color:#34d399">"Content-Type: application/json"</span> \
   -d <span style="color:#34d399">'{"prompt": "Summarize this article...", "model": "gpt-4o"}'</span></pre>
 
-    <p>The response includes <code>"byok": true</code> confirming your key was used and no credits were deducted.</p>
+    <p>The response includes <code>"byok": true</code> confirming your key was used — only 20% of the normal credit cost was deducted.</p>
 
     <h2>Supported providers & headers</h2>
     <div class="provider-grid">
@@ -90,11 +90,11 @@ data = response.json()
 <span style="color:#8A8AFF">print</span>(data[<span style="color:#34d399">"byok"</span>])        <span style="color:#5A5A8A"># True — your key was used</span></pre>
 
     <h2>Benefits of BYOK</h2>
-    <p>Use your existing API contracts and spend less on Arch Tools credits for heavy LLM usage. BYOK is ideal for agents running high-volume inference — you get Arch Tools' infrastructure (MCP server, structured outputs, error handling) with your own model billing.</p>
+    <p>Use your existing API contracts and pay just 20% of normal credit costs for heavy LLM usage. BYOK is ideal for agents running high-volume inference — you get Arch Tools' infrastructure (MCP server, structured outputs, error handling) with your own model billing.</p>
 
     <div class="cta-box">
       <h2 style="margin:0 0 10px">Try it now</h2>
-<p style="color:var(--muted);margin-bottom:20px">Start with 250 free credits. No card required. Use BYOK for any provider.</p>
+<p style="color:var(--muted);margin-bottom:20px">Start with 100 free credits. No card required. Use BYOK for any provider.</p>
       <a href="/signin" class="cta-btn">Get your API key →</a>
     </div>
   </div>

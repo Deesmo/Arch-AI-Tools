@@ -92,7 +92,7 @@
         "name": "How much does Arch Tools cost?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Credits cost $0.001 each. You get 250 free credits to start with no credit card required."
+          "text": "Credits cost $0.001 each. You get 100 free credits to start with no credit card required."
         }
       },
       {
@@ -816,7 +816,7 @@
           <div class="sc sa"><div class="sn g-am">64</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
           <div class="sc sc2"><div class="sn g-cy" style="font-size:28px">&lt;200ms</div><div class="sl">Avg Response</div><div class="ss">p95 &lt;500ms</div></div>
           <div class="sc"><div class="sn g-bl">15</div><div class="sl">Blockchains</div><div class="ss">USDC · USDT · ETH</div></div>
-          <div class="sc"><div class="sn g-am" style="font-size:28px">FREE</div><div class="sl">To Start</div><div class="ss">250 credits included</div><div class="sc-live"><span class="dot"></span>all systems ok</div></div>
+          <div class="sc"><div class="sn g-am" style="font-size:28px">FREE</div><div class="sl">To Start</div><div class="ss">100 credits included</div><div class="sc-live"><span class="dot"></span>all systems ok</div></div>
         </div>
       </div>
     </div>
@@ -1166,7 +1166,7 @@
         <div class="step-icon">🔑</div>
         <div class="step-num">Step 01</div>
         <div class="step-title">Register &amp; get your key</div>
-        <div class="step-desc">Sign up with your email. You instantly receive an API key and 250 free credits - no credit card required to start.</div>
+        <div class="step-desc">Sign up with your email. You instantly receive an API key and 100 free credits - no credit card required to start.</div>
       </div>
       <div class="step-card">
         <div class="step-icon">⟠</div>
@@ -1195,7 +1195,7 @@
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:12px;padding:20px 22px;">
             <div style="font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Step 1 - Get your key</div>
-            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> - your API key is shown on screen instantly. 250 free credits included, no credit card required.</p>
+            <p style="font-size:14px;color:var(--muted);margin:0 0 12px;line-height:1.6;">Register at <strong style="color:var(--text);">archtools.dev/signup</strong> - your API key is shown on screen instantly. 100 free credits included, no credit card required.</p>
             <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--amber);text-decoration:none;border:1px solid rgba(255,144,16,0.3);border-radius:6px;padding:6px 12px;background:rgba(255,144,16,0.07);transition:all 0.15s;">Get free API key →</a>
           </div>
           <div style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.2);border-radius:12px;padding:20px 22px;">
@@ -2089,14 +2089,13 @@ function showLangTab(lang) {
 <section id="pricing" style="background:rgba(12,11,34,0.3);border-top:1px solid var(--border);">
   <div class="wrap">
     <div class="section-tag">Pricing</div>
-    <h2 class="section-title" id="pricing-heading">250 Free Credits Every Month. No Credit Card.</h2>
+    <h2 class="section-title" id="pricing-heading">100 Free Credits on Signup. No Credit Card.</h2>
     <p class="section-sub" id="pricing-sub">Buy once, use whenever. Credits never expire. Or subscribe monthly and auto-refill. You choose.</p>
 
     <!-- Billing toggle -->
     <div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:4px;width:fit-content;margin-left:auto;margin-right:auto;">
       <button id="toggle-onetime" onclick="setPricingMode('onetime')" style="padding:8px 22px;border-radius:9px;border:0;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">One-Time</button>
       <button id="toggle-monthly" onclick="setPricingMode('monthly')" style="padding:8px 22px;border-radius:9px;border:0;background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">Monthly</button>
-      <button id="toggle-annual" onclick="setPricingMode('annual')" style="padding:8px 22px;border-radius:9px;border:0;background:transparent;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;transition:all 0.15s;">Annual <span style="font-size:10px;color:#00e5b0;font-weight:700;">SAVE 17%</span></button>
     </div>
 
     <!-- One-time top-up packs -->
@@ -2109,38 +2108,38 @@ function showLangTab(lang) {
         <div class="pricing-card">
           <div class="plan-name-mono"><span class="hash">#</span> SMALL PACK</div>
           <div class="plan-price"><span class="currency">$</span>9</div>
-          <div class="plan-sub">5,000 credits &middot; never expire</div>
+          <div class="plan-sub">3,000 credits &middot; never expire</div>
           <ul class="plan-features">
-            <li>5,000 credits</li>
+            <li>3,000 credits</li>
             <li>Works on any plan</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-pack="starter">$ buy-5k</button>
+          <button class="plan-cta plan-cta-primary" data-pack="starter">$ buy-3k</button>
         </div>
         <div class="pricing-card featured">
           <div class="plan-name-mono"><span class="hash">#</span> MEDIUM PACK <span class="plan-badge">&#9733; BEST VALUE</span></div>
           <div class="plan-price"><span class="currency">$</span>49</div>
-          <div class="plan-sub">20,000 credits &middot; never expire</div>
+          <div class="plan-sub">25,000 credits &middot; never expire</div>
           <ul class="plan-features">
-            <li>20,000 credits</li>
+            <li>25,000 credits</li>
             <li>Works on any plan</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-pack="pro">$ buy-20k</button>
+          <button class="plan-cta plan-cta-primary" data-pack="pro">$ buy-25k</button>
         </div>
         <div class="pricing-card">
           <div class="plan-name-mono"><span class="hash">#</span> LARGE PACK</div>
           <div class="plan-price"><span class="currency">$</span>199</div>
-          <div class="plan-sub">100,000 credits &middot; never expire</div>
+          <div class="plan-sub">125,000 credits &middot; never expire</div>
           <ul class="plan-features">
-            <li>100,000 credits</li>
+            <li>125,000 credits</li>
             <li>Works on any plan</li>
             <li>Credits never expire</li>
             <li>Stripe or USDC</li>
           </ul>
-          <button class="plan-cta plan-cta-primary" data-pack="business">$ buy-100k</button>
+          <button class="plan-cta plan-cta-primary" data-pack="business">$ buy-125k</button>
         </div>
       </div>
     </div>
@@ -2151,13 +2150,13 @@ function showLangTab(lang) {
         <span>&#8635;</span>
         <span><strong>Auto-refills every month.</strong> Set it and forget it. Cancel anytime.</span>
       </div>
-      <div class="pricing-grid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="pricing-grid" style="grid-template-columns:repeat(5,1fr);">
         <div class="pricing-card">
           <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
-          <div class="plan-price"><span class="currency">$</span>9<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">15,000 credits/month &middot; auto-renews</div>
+          <div class="plan-price"><span class="currency">$</span>19<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">10,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
-            <li>15,000 credits every month (hard cap)</li>
+            <li>10,000 credits every month</li>
             <li>Full platform access</li>
             <li>API key included</li>
             <li>Cancel anytime</li>
@@ -2168,9 +2167,9 @@ function showLangTab(lang) {
         <div class="pricing-card featured">
           <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; POPULAR</span></div>
           <div class="plan-price"><span class="currency">$</span>49<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">50,000 credits/month &middot; auto-renews</div>
+          <div class="plan-sub">30,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
-            <li>50,000 credits every month</li>
+            <li>30,000 credits every month</li>
             <li>Full platform access</li>
             <li>MCP server access</li>
             <li>Cancel anytime</li>
@@ -2179,14 +2178,27 @@ function showLangTab(lang) {
           <button class="plan-cta plan-cta-primary" data-sub="pro-monthly">$ subscribe-pro</button>
         </div>
         <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
-          <div class="plan-price"><span class="currency">$</span>149<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">200,000 credits/month &middot; auto-renews</div>
+          <div class="plan-name-mono"><span class="hash">#</span> GROWTH</div>
+          <div class="plan-price"><span class="currency">$</span>99<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">75,000 credits/month &middot; auto-renews</div>
           <ul class="plan-features">
-            <li>200,000 credits every month</li>
+            <li>75,000 credits every month</li>
             <li>Full platform access</li>
             <li>MCP server access</li>
             <li>Priority support</li>
+            <li>Stripe billing</li>
+          </ul>
+          <button class="plan-cta plan-cta-primary" data-sub="growth-monthly">$ subscribe-growth</button>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
+          <div class="plan-price"><span class="currency">$</span>199<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
+          <div class="plan-sub">175,000 credits/month &middot; auto-renews</div>
+          <ul class="plan-features">
+            <li>175,000 credits every month</li>
+            <li>Full platform access</li>
+            <li>MCP server access</li>
+            <li>Priority support + SLA</li>
             <li>Stripe billing</li>
           </ul>
           <button class="plan-cta plan-cta-primary" data-sub="business-monthly">$ subscribe-business</button>
@@ -2206,66 +2218,6 @@ function showLangTab(lang) {
       </div>
     </div>
 
-    <!-- Annual subscription -->
-    <div id="pricing-annual" style="display:none">
-      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,229,176,0.08);border:1px solid rgba(0,229,176,0.25);border-radius:8px;padding:10px 18px;margin-bottom:28px;font-family:var(--mono);font-size:12px;color:#00e5b0;">
-        <span>&#10003;</span>
-        <span><strong>17% off vs monthly.</strong> Save ~2 months. Billed once per year. Cancel anytime.</span>
-      </div>
-      <div class="pricing-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> STARTER</div>
-          <div class="plan-price"><span class="currency">$</span>7.50<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">$90 billed annually &middot; 15,000 credits/month</div>
-          <ul class="plan-features">
-            <li>15,000 credits every month (hard cap)</li>
-            <li>Full platform access</li>
-            <li>API key included</li>
-            <li>Save $18 vs monthly</li>
-            <li>Cancel anytime</li>
-          </ul>
-          <button class="plan-cta plan-cta-primary" data-sub="starter-annual">$ subscribe-starter-annual</button>
-        </div>
-        <div class="pricing-card featured">
-          <div class="plan-name-mono"><span class="hash">#</span> PRO <span class="plan-badge">&#9733; BEST VALUE</span></div>
-          <div class="plan-price"><span class="currency">$</span>40.67<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">$488 billed annually &middot; 50,000 credits/month</div>
-          <ul class="plan-features">
-            <li>50,000 credits every month</li>
-            <li>Full platform access</li>
-            <li>MCP server access</li>
-            <li>Save $100 vs monthly</li>
-            <li>Cancel anytime</li>
-          </ul>
-          <button class="plan-cta plan-cta-primary" data-sub="pro-annual">$ subscribe-pro-annual</button>
-        </div>
-        <div class="pricing-card">
-          <div class="plan-name-mono"><span class="hash">#</span> BUSINESS</div>
-          <div class="plan-price"><span class="currency">$</span>123.67<span style="font-size:16px;font-weight:400;color:rgba(255,255,255,0.5)">/mo</span></div>
-          <div class="plan-sub">$1,484 billed annually &middot; 200,000 credits/month</div>
-          <ul class="plan-features">
-            <li>200,000 credits every month</li>
-            <li>Full platform access</li>
-            <li>MCP server access</li>
-            <li>Save $304 vs monthly</li>
-            <li>Cancel anytime</li>
-          </ul>
-          <button class="plan-cta plan-cta-primary" data-sub="business-annual">$ subscribe-business-annual</button>
-        </div>
-        <div class="pricing-card" style="border-color:rgba(34,211,238,0.3);">
-          <div class="plan-name-mono"><span class="hash">#</span> ENTERPRISE</div>
-          <div class="plan-price" style="font-size:28px;margin-top:8px;">Contact Us</div>
-          <div class="plan-sub">Custom volume &middot; tailored to you</div>
-          <ul class="plan-features">
-            <li>Custom volume</li>
-            <li>SLA</li>
-            <li>Priority support</li>
-            <li>Annual billing</li>
-          </ul>
-          <a href="mailto:support@archtools.dev" class="plan-cta plan-cta-primary" style="text-decoration:none;text-align:center;display:block;">$ contact-sales</a>
-        </div>
-      </div>
-    </div>
 
   </div>
 </section>
@@ -2310,7 +2262,7 @@ function showLangTab(lang) {
             <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">60s</td>
           </tr>
           <tr style="background:rgba(255,40,150,0.03);">
-            <td style="padding:14px 16px;font-weight:600;color:var(--pink);">Business · $149</td>
+            <td style="padding:14px 16px;font-weight:600;color:var(--pink);">Business · $199</td>
             <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">1,000</td>
             <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">30,000</td>
             <td style="padding:14px 16px;text-align:center;font-family:var(--mono);color:var(--text);">100</td>
@@ -2328,7 +2280,7 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Real numbers</div>
     <h2 class="section-title">What does $9 actually buy?</h2>
-    <p class="section-sub" style="max-width:560px;">5,000 credits, never expire. Here's what that looks like in practice - pick any tool, run it, repeat until empty.</p>
+    <p class="section-sub" style="max-width:560px;">3,000 credits, never expire. Here's what that looks like in practice - pick any tool, run it, repeat until empty.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:36px;">
       <div style="background:rgba(255,144,16,0.06);border:1px solid rgba(255,144,16,0.2);border-radius:14px;padding:24px 22px;">
         <div style="font-family:var(--mono);font-size:36px;font-weight:700;color:var(--amber);line-height:1;">1,000</div>
@@ -2441,7 +2393,7 @@ function showLangTab(lang) {
       <tbody>
         <tr style="background:rgba(136,68,255,0.06);border:1px solid rgba(136,68,255,0.35);border-radius:8px;">
           <td style="padding:14px 16px;font-weight:700;color:var(--text);white-space:nowrap;">⚡ Arch Tools</td>
-          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">$9 / $9/mo</td>
+          <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">$9 / $19/mo</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);font-weight:700;">Full platform</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Native</td>
           <td style="padding:14px 16px;text-align:center;color:var(--green);">✓ Yes</td>
@@ -2490,7 +2442,7 @@ function showLangTab(lang) {
       </tbody>
     </table>
     </div>
-    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">AbstractAPI starts around $20 per tool each month, while Arch Tools starts at $9 one-time or $9/mo for the full platform.</p>
+    <p style="text-align:center;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--dimmer);">AbstractAPI starts around $20 per tool each month, while Arch Tools starts at $9 one-time or $19/mo for the full platform.</p>
   </div>
 </section>
 
@@ -2499,12 +2451,12 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Start building</div>
     <h2 class="section-title">Your agent needs tools. Not more API accounts.</h2>
-    <p class="section-sub">Register in 10 seconds. 250 free credits, no card required. Your agent can be calling tools in under a minute.</p>
+    <p class="section-sub">Register in 10 seconds. 100 free credits, no card required. Your agent can be calling tools in under a minute.</p>
     <div class="register-form">
       <input class="register-input" type="email" placeholder="agent@example.com" id="reg-email" autocomplete="email" aria-label="Email address">
       <button type="button" class="btn-primary" id="register-btn">$ register</button>
     </div>
-    <div class="register-note">250 free credits on signup · No credit card required · Cancel anytime</div>
+    <div class="register-note">100 free credits on signup · No credit card required · Cancel anytime</div>
     <div id="reg-toast" class="reg-toast" style="display:none;" aria-live="polite"></div>
   </div>
 </section>
@@ -2523,7 +2475,7 @@ function showLangTab(lang) {
     </div>
     <div class="qs-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:36px;">
       <div class="code-block" style="margin:0;">
-        <span class="t-line"><span class="code-comment"># Register - get 250 free credits</span></span>
+        <span class="t-line"><span class="code-comment"># Register - get 100 free credits</span></span>
         <span class="t-line"><span class="t-prompt">$</span> curl -X POST https://archtools.dev/v1/agent/register \</span>
         <span class="t-line">&nbsp;&nbsp;-H <span class="code-str">"Content-Type: application/json"</span> \</span>
         <span class="t-line">&nbsp;&nbsp;-d <span class="code-str">'{"email":"you@example.com"}'</span></span>
@@ -2605,7 +2557,7 @@ function showLangTab(lang) {
           Is there a free tier? What do I actually get?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with your email - no credit card needed - and you instantly receive <strong style="color:var(--green);">250 free credits</strong>, refreshed every month. That's enough for substantial testing across web, utility, and AI tools before spending a dollar. No time limit, no expiry, no upsell wall. Use it to test the platform thoroughly. When you're ready to scale, one-time credit packs start at $9.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with your email - no credit card needed - and you instantly receive <strong style="color:var(--green);">100 free credits</strong>, refreshed every month. That's enough for substantial testing across web, utility, and AI tools before spending a dollar. No time limit, no expiry, no upsell wall. Use it to test the platform thoroughly. When you're ready to scale, one-time credit packs start at $9.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">
@@ -2695,7 +2647,7 @@ function showLangTab(lang) {
         <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Pricing & Monitoring</div>
         <ul style="list-style:none;padding:0;">
           <li style="font-size:12px;color:var(--muted);padding:3px 0 3px 14px;position:relative;"><span style="position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--green);"></span>Starter / Pro / Business subscriptions</li>
-<li style="font-size:12px;color:var(--muted);padding:3px 0 3px 14px;position:relative;"><span style="position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--green);"></span>250 free credits on signup</li>
+<li style="font-size:12px;color:var(--muted);padding:3px 0 3px 14px;position:relative;"><span style="position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--green);"></span>100 free credits on signup</li>
           <li style="font-size:12px;color:var(--muted);padding:3px 0 3px 14px;position:relative;"><span style="position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--green);"></span>Sentry frontend monitoring</li>
         </ul>
       </div>
@@ -2786,7 +2738,7 @@ function setPricingMode(mode) {
   });
   var h = document.getElementById('pricing-heading');
   var s = document.getElementById('pricing-sub');
-  if (mode === 'onetime' && h) { h.textContent = '250 Free Credits Every Month. No Credit Card.'; if (s) s.textContent = 'Buy once, use forever. Credits never expire. Every competitor deletes your credits monthly. We don\u2019t.'; }
+  if (mode === 'onetime' && h) { h.textContent = '100 Free Credits on Signup. No Credit Card.'; if (s) s.textContent = 'Buy once, use forever. Credits never expire. Every competitor deletes your credits monthly. We don\u2019t.'; }
   if (mode === 'monthly' && h) { h.textContent = 'Monthly credits. Auto-refill. Cancel anytime.'; if (s) s.textContent = 'Subscribe and never run out. Your credits refresh every month automatically.'; }
   if (mode === 'annual' && h) { h.textContent = 'Annual billing. 17% off. Save ~2 months.'; if (s) s.textContent = 'Pay once a year and save ~2 months vs monthly. Same auto-refill, better rate.'; }
 }
