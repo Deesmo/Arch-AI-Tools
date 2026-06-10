@@ -7,7 +7,7 @@ import { logger } from "../lib/logger.js";
 import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits } from "../lib/verification.js";
 
 const router = Router();
 
@@ -48,6 +48,13 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         message: "Email already registered. Use your existing API key.",
         request_id: reqId(),
       });
+      return;
+    }
+
+    // Anti-farming: normalized-email identity + per-IP daily signup caps
+    const limitBlock = await enforceSignupLimits(email, req.ip);
+    if (limitBlock) {
+      res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
       return;
     }
 
@@ -115,9 +122,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       logger.warn({ agentId: agent.id, error: errMsg }, "Wallet auto-creation failed (non-fatal)");
     }
 
-    // Email verification gate: credits stay pending until email verified
+    // Email verification gate: credits stay pending until email verified.
+    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    let gatedCredits = freeCredits;
     try {
-      await issueEmailVerification(agent.id, email, freeCredits);
+      gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
     } catch (e) {
       console.error("Verification setup failed (granting credits directly):", e);
     }
@@ -127,10 +136,10 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       agent_id: agent.id,
       api_key: apiKey,
       credits: 0,
-      pending_credits: freeCredits,
+      pending_credits: gatedCredits,
       email_verification_required: true,
       wallet_address: walletAddress,
-      message: `Welcome! Check your email to verify your address — your ${freeCredits} free credits activate on verification.`,
+      message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification.`,
       docs: "https://archtools.dev",
       request_id: reqId(),
     });

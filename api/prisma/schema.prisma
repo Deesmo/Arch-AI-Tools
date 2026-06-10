@@ -51,6 +51,15 @@ model Agent {
   @@index([apiKeyPrefix])
 }
 
+// Atomic free-grant guard: one row per normalized email identity. The UNIQUE
+// constraint makes free-credit eligibility a DB-level decision (no TOCTOU).
+// Starts empty — populated going forward; existing Agent rows are untouched.
+model SignupIdentity {
+  id              String   @id @default(cuid())
+  normalizedEmail String   @unique @map("normalized_email")
+  createdAt       DateTime @default(now()) @map("created_at")
+}
+
 enum ToolPlan {
   free
   starter
