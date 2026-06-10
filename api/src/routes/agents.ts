@@ -18,7 +18,7 @@ import {
   BADGE_THRESHOLDS,
 } from "../services/reputation.js";
 import { validateUrl } from "../lib/ssrf.js";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
 
 const router = Router();
 
@@ -286,6 +286,13 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         message: "Email already registered. Use your existing API key or update your profile.",
         request_id: reqId(),
       });
+      return;
+    }
+
+    // Anti-farming: normalized-email identity + per-IP daily signup caps
+    const limitBlock = await enforceSignupLimits(email, req.ip);
+    if (limitBlock) {
+      res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
       return;
     }
 

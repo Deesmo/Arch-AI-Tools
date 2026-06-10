@@ -18,7 +18,7 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import crypto from "crypto";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
 import bcrypt from "bcryptjs";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
 
@@ -74,6 +74,13 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
         message: "This email already has an account. Log in at https://archtools.dev/login",
         request_id: reqId(),
       });
+      return;
+    }
+
+    // Anti-farming: normalized-email identity + per-IP daily signup caps
+    const limitBlock = await enforceSignupLimits(email, req.ip);
+    if (limitBlock) {
+      res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
       return;
     }
 

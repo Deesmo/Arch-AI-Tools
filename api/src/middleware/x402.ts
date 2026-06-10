@@ -799,12 +799,19 @@ const NONCE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 async function checkAndStoreNonce(nonce: string): Promise<boolean> {
   if (!redis) {
     console.warn("[x402] Redis not configured — nonce deduplication disabled. Set REDIS_URL to enable replay protection.");
-    return true; // allow but warn
+    return true; // allow but warn (only reachable when REDIS_URL unset)
   }
   const key = `x402:nonce:${nonce}`;
-  // SET key "1" NX EX <ttl> — atomic: set only if not exists, returns null if already exists
-  const result = await redis.set(key, "1", "EX", NONCE_TTL_SECONDS, "NX");
-  return result === "OK"; // "OK" = new nonce stored; null = already existed (replay)
+  try {
+    // SET key "1" NX EX <ttl> — atomic: set only if not exists, returns null if already exists
+    const result = await redis.set(key, "1", "EX", NONCE_TTL_SECONDS, "NX");
+    return result === "OK"; // "OK" = new nonce stored; null = already existed (replay)
+  } catch (err) {
+    // FAIL-CLOSED: when replay protection is configured (REDIS_URL set) but Redis
+    // is unreachable, reject rather than allow a potential replay through.
+    console.error(`[x402] Redis unreachable during nonce check — failing closed: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
+  }
 }
 
 async function verifyPayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ isValid: boolean; payer?: string }> {
@@ -900,7 +907,7 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
   }
 }
 
-async function settlePayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ transaction?: string; network?: string; payer?: string } | null> {
+async function settlePayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ success?: boolean; transaction?: string; network?: string; payer?: string } | null> {
   const facilitatorUrl = getFacilitatorUrl();
   if (!facilitatorUrl) return null;
   try {
@@ -975,6 +982,7 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
     );
     console.log(`[x402] Settle response: ${JSON.stringify(res.data)}`);
     return {
+      success: res.data?.success === true,
       transaction: res.data?.transaction ?? res.data?.txHash ?? undefined,
       network: res.data?.network ?? undefined,
       payer: res.data?.payer ?? undefined,
@@ -1030,9 +1038,19 @@ export function x402Middleware(toolName: string) {
       return;
     }
 
-    // Optional nonce-based replay protection (non-standard but useful).
-    // Do NOT reject payments that omit a nonce — the spec doesn't require one.
+    // Nonce-based replay protection.
+    // When REDIS_URL is configured, a nonce is MANDATORY and dedup is enforced
+    // fail-closed. When Redis is not configured, nonce remains optional so the
+    // x402 flow is not DoS'd (provision Redis to activate full replay protection).
     const nonce = extractNonce(paymentHeader);
+    if (redis && !nonce) {
+      res.status(402).json({
+        ok: false,
+        error: "payment_nonce_required",
+        message: "x402 payments must include a unique nonce for replay protection.",
+      });
+      return;
+    }
     if (nonce) {
       const isNewNonce = await checkAndStoreNonce(nonce);
       if (!isNewNonce) {
@@ -1084,6 +1102,33 @@ export function x402Middleware(toolName: string) {
 
     // Settle payment using spec-compliant format
     const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
+
+    // SECURITY: require an actual successful settlement before serving the tool.
+    // A null result (facilitator error/unconfigured) or a settle response without
+    // success/transaction means funds did NOT move — do not serve, do not mark paid.
+    const settled = !!settleResult && (settleResult.success === true || !!settleResult.transaction);
+    if (!settled) {
+      // Free the nonce so the agent can retry the payment
+      if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+      try {
+        await prisma.x402Payment.create({
+          data: {
+            toolName,
+            amountUsdc: price,
+            network: (paymentRequirements as any).network ?? config.x402.network,
+            status: "settle_failed",
+          },
+        });
+      } catch {
+        // Non-fatal
+      }
+      res.status(402).json({
+        ok: false,
+        error: "payment_settlement_failed",
+        message: "x402 payment could not be settled. You have not been charged — please retry.",
+      });
+      return;
+    }
 
     // Log the x402 payment
     try {
