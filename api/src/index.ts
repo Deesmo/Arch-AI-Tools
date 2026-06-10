@@ -322,6 +322,12 @@ app.get("/dashboard", (req: Request, res: Response) => {
   return res.type("text/html").send(DASHBOARD_HTML);
 });
 
+// Convenience redirects for billing/usage paths referenced in emails & docs
+app.get("/billing", (_req: Request, res: Response) => res.redirect(302, "/pricing"));
+app.get("/dashboard/usage", (_req: Request, res: Response) => res.redirect(302, "/dashboard"));
+app.get("/dashboard/billing", (_req: Request, res: Response) => res.redirect(302, "/pricing"));
+app.get("/dashboard/byok", (_req: Request, res: Response) => res.redirect(302, "/byok"));
+
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — full pricing page
 app.get("/pricing", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/pricing.html')));

@@ -1,7 +1,8 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma.js";
 import { stripe } from "../lib/stripe.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { verifySession } from "./auth.js";
 import { reqId } from "../utils/credits.js";
 import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
@@ -9,11 +10,38 @@ import { safeErr } from "../utils/credits.js";
 
 const router = Router();
 
+/**
+ * Auth that accepts EITHER an API key (Authorization/x-api-key, via requireAuth)
+ * OR a logged-in browser session (arch_session cookie). Lets the pricing page
+ * buy buttons work for users who signed in with email/password and never
+ * pasted their API key into localStorage.
+ */
+async function requireAuthOrSession(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
+  const hasApiKeyAuth = Boolean(req.headers.authorization?.startsWith("Bearer ") || req.headers["x-api-key"]);
+  if (hasApiKeyAuth || (req as unknown as { x402Paid?: boolean }).x402Paid) {
+    requireAuth(req, res, next);
+    return;
+  }
+  const token = (req as unknown as { cookies?: Record<string, string> }).cookies?.["arch_session"];
+  const payload = token ? verifySession(token) : null;
+  if (!payload) {
+    res.status(401).json({ ok: false, error: "unauthorized", message: "Sign in or provide an API key (Authorization: Bearer <key>)", request_id: reqId() });
+    return;
+  }
+  const agent = await prisma.agent.findUnique({ where: { id: payload.sub } }).catch(() => null);
+  if (!agent) {
+    res.status(401).json({ ok: false, error: "unauthorized", message: "Session invalid. Sign in again at /login", request_id: reqId() });
+    return;
+  }
+  req.agent = { id: agent.id, apiKey: agent.apiKey, email: agent.email ?? "", credits: agent.credits, tier: agent.tier, totalCalls: agent.totalCalls };
+  next();
+}
+
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
-  { credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { credits: 20000,  amount: 2500,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
-  { credits: 100000, amount: 7900,  label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
+  { id: "starter",  credits: 5000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
+  { id: "pro",      credits: 20000,  amount: 2500,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { id: "business", credits: 100000, amount: 19900, label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
@@ -104,13 +132,14 @@ router.get("/plans", (_req: Request, res: Response): void => {
 });
 
 // POST /v1/billing/checkout — one-time pack checkout
-router.post("/checkout", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   if (!stripe) { res.status(503).json({ ok: false, error: "not_configured", message: "Stripe not configured", request_id: reqId() }); return; }
 
   const { pack } = req.body as { pack?: string };
-  const packConfig = CREDIT_PACKS.find(p => p.label.toLowerCase().startsWith((pack ?? "").toLowerCase()));
+  const packKey = (pack ?? "").toLowerCase();
+  const packConfig = CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey));
   if (!packConfig) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "pack must be one of: starter, pro, business", request_id: reqId() });
     return;
@@ -143,7 +172,7 @@ router.post("/checkout", requireAuth, async (req: AuthedRequest, res: Response):
 });
 
 // POST /v1/billing/subscribe — subscription checkout
-router.post("/subscribe", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.post("/subscribe", requireAuthOrSession, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   if (!stripe) { res.status(503).json({ ok: false, error: "not_configured", message: "Stripe not configured", request_id: reqId() }); return; }

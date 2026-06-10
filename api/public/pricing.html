@@ -121,7 +121,7 @@
             <li>300 requests/minute</li>
             <li>Email support</li>
           </ul>
-          <a href="/dashboard" class="btn btn-outline" style="width:100%">Choose Starter</a>
+          <a href="#" data-sub="starter-monthly" class="btn btn-outline" style="width:100%">Choose Starter</a>
         </div>
         <div class="pricing-card featured">
           <div class="badge">Most Popular</div>
@@ -134,7 +134,7 @@
             <li>300 requests/minute</li>
             <li>Priority support</li>
           </ul>
-          <a href="/dashboard" class="btn btn-primary" style="width:100%">Choose Pro</a>
+          <a href="#" data-sub="pro-monthly" class="btn btn-primary" style="width:100%">Choose Pro</a>
         </div>
         <div class="pricing-card">
           <h3>Business</h3>
@@ -146,7 +146,7 @@
             <li>1,000 requests/minute</li>
             <li>Priority support + SLA</li>
           </ul>
-          <a href="/dashboard" class="btn btn-outline" style="width:100%">Choose Business</a>
+          <a href="#" data-sub="business-monthly" class="btn btn-outline" style="width:100%">Choose Business</a>
         </div>
       </div>
     </div>
@@ -165,7 +165,7 @@
             <li>Works on any plan</li>
             <li>Credits never expire</li>
           </ul>
-          <a href="/dashboard" class="btn btn-outline" style="width:100%">Buy 5K Credits</a>
+          <a href="#" data-pack="starter" class="btn btn-outline" style="width:100%">Buy 5K Credits</a>
         </div>
         <div class="pricing-card">
           <h3>Medium Pack</h3>
@@ -176,7 +176,7 @@
             <li>Works on any plan</li>
             <li>Credits never expire</li>
           </ul>
-          <a href="/dashboard" class="btn btn-outline" style="width:100%">Buy 20K Credits</a>
+          <a href="#" data-pack="pro" class="btn btn-outline" style="width:100%">Buy 20K Credits</a>
         </div>
         <div class="pricing-card">
           <h3>Large Pack</h3>
@@ -187,7 +187,7 @@
             <li>Works on any plan</li>
             <li>Credits never expire</li>
           </ul>
-          <a href="/dashboard" class="btn btn-outline" style="width:100%">Buy 100K Credits</a>
+          <a href="#" data-pack="business" class="btn btn-outline" style="width:100%">Buy 100K Credits</a>
         </div>
       </div>
     </div>
@@ -289,5 +289,33 @@
       <p style="margin-top:8px"><a href="/docs">Docs</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a></p>
     </div>
   </footer>
+<script>
+// Stripe checkout — works with stored API key OR logged-in session cookie.
+async function startCheckout(endpoint, body) {
+  var apiKey = '';
+  try { apiKey = (sessionStorage.getItem('arch_api_key') || localStorage.getItem('arch_api_key') || '').trim(); } catch(e) {}
+  var headers = { 'Content-Type': 'application/json' };
+  if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+  try {
+    var res = await fetch(endpoint, { method: 'POST', headers: headers, credentials: 'include', body: JSON.stringify(body) });
+    if (res.status === 401) {
+      if (apiKey) { try { localStorage.removeItem('arch_api_key'); sessionStorage.removeItem('arch_api_key'); } catch(e) {} }
+      window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+      return;
+    }
+    var data = await res.json();
+    if (data.url) { window.location.href = data.url; }
+    else { alert('Error: ' + (data.message || 'Could not create checkout session.')); }
+  } catch(e) { alert('Something went wrong. Please try again.'); }
+}
+function buyPack(packName) { return startCheckout('/v1/billing/checkout', { pack: packName }); }
+function buySubscription(planId) { return startCheckout('/v1/billing/subscribe', { plan: planId }); }
+document.addEventListener('click', function(e) {
+  var p = e.target.closest('[data-pack]');
+  if (p) { e.preventDefault(); buyPack(p.dataset.pack); return; }
+  var sb = e.target.closest('[data-sub]');
+  if (sb) { e.preventDefault(); buySubscription(sb.dataset.sub); }
+});
+</script>
 </body>
 </html>
