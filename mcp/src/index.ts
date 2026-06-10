@@ -16,6 +16,60 @@ import express from "express";
 
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
+
+// ─── Anonymous demo limits ───────────────────────────────────────────────────
+// Anonymous (no client API key) tool calls are served from a small internal
+// demo pool and are hard-capped. Real usage requires the caller's own Arch
+// Tools API key via `x-api-key` or `Authorization: Bearer` header.
+const ANON_DAILY_LIMIT_PER_IP = Number(process.env.MCP_ANON_DAILY_LIMIT_PER_IP || 5);
+const ANON_DAILY_LIMIT_GLOBAL = Number(process.env.MCP_ANON_DAILY_LIMIT_GLOBAL || 50);
+
+const anonUsage = new Map<string, number>();
+let anonGlobalCount = 0;
+let anonUsageDay = "";
+
+function checkAnonAllowance(ip: string): { allowed: boolean; reason?: string } {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== anonUsageDay) {
+    anonUsage.clear();
+    anonGlobalCount = 0;
+    anonUsageDay = today;
+  }
+  if (anonGlobalCount >= ANON_DAILY_LIMIT_GLOBAL) {
+    return { allowed: false, reason: "Anonymous demo pool exhausted for today." };
+  }
+  const used = anonUsage.get(ip) || 0;
+  if (used >= ANON_DAILY_LIMIT_PER_IP) {
+    return { allowed: false, reason: `Anonymous demo limit reached (${ANON_DAILY_LIMIT_PER_IP} calls/day).` };
+  }
+  anonUsage.set(ip, used + 1);
+  anonGlobalCount++;
+  return { allowed: true };
+}
+
+const AUTH_REQUIRED_MESSAGE = JSON.stringify({
+  error: "api_key_required",
+  message: "Anonymous demo limit reached. Pass your Arch Tools API key via the `x-api-key` header (or `Authorization: Bearer <key>`) to continue. Get a free key with signup credits at https://archtools.dev/signup",
+  signup: "https://archtools.dev/signup",
+  docs: "https://archtools.dev/docs",
+}, null, 2);
+
+function extractClientKey(req: express.Request): string {
+  const xKey = req.headers["x-api-key"];
+  if (typeof xKey === "string" && xKey.trim()) return xKey.trim();
+  const auth = req.headers.authorization;
+  if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+    const k = auth.slice(7).trim();
+    if (k) return k;
+  }
+  return "";
+}
+
+function clientIp(req: express.Request): string {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd.length) return fwd.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
 const transport = process.env.MCP_TRANSPORT || "stdio"; // "stdio" or "sse"
 // Render-safe: prefer PORT when running as a web service
 const ssePort = Number(process.env.PORT || process.env.MCP_SSE_PORT || 3001);
@@ -41,10 +95,10 @@ async function getTools(): Promise<ToolDef[]> {
   return toolCache;
 }
 
-async function invokeTool(toolName: string, input: any) {
+async function invokeTool(toolName: string, input: any, keyOverride?: string) {
   const res = await fetch(`${baseUrl}/v1/tools/${toolName}`, {
     method: "POST",
-    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+    headers: { "x-api-key": keyOverride || apiKey, "Content-Type": "application/json" },
     body: JSON.stringify(input ?? {}),
   });
   if (!res.ok) {
@@ -175,7 +229,8 @@ function getPromptMessages(name: string, args: Record<string, string>) {
 }
 
 // ─── Server factory (low-level Server for full schema control) ───────────────
-async function createServer(): Promise<Server> {
+// auth: per-session client API key (empty = anonymous demo) + IP for rate limiting.
+async function createServer(auth?: { clientKey: string; ip: string }): Promise<Server> {
   const server = new Server(
     { name: "arch-tools-mcp", version: "1.8.0" },
     {
@@ -196,9 +251,17 @@ async function createServer(): Promise<Server> {
 
   // tools/call
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    // SSE sessions: enforce auth/demo limits. stdio (auth undefined) uses env key as before.
+    if (auth && !auth.clientKey) {
+      const allowance = checkAnonAllowance(auth.ip);
+      if (!allowance.allowed) {
+        return { content: [{ type: "text" as const, text: AUTH_REQUIRED_MESSAGE }], isError: true };
+      }
+    }
     const result = await invokeTool(
       request.params.name,
-      request.params.arguments ?? {}
+      request.params.arguments ?? {},
+      auth?.clientKey || undefined
     );
     return { content: [{ type: "text" as const, text: result }] };
   });
@@ -275,7 +338,15 @@ async function handleStreamablePost(req: express.Request, res: express.Response)
         break;
 
       case "tools/call": {
-        const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {});
+        const clientKey = extractClientKey(req);
+        if (!clientKey) {
+          const allowance = checkAnonAllowance(clientIp(req));
+          if (!allowance.allowed) {
+            send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true } });
+            break;
+          }
+        }
+        const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, clientKey || undefined);
         send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
         break;
       }
@@ -334,8 +405,8 @@ async function main() {
 
     // ─── SSE transport (legacy / Claude Desktop / Cursor / mcp-remote) ────────
 
-    app.get("/sse", async (_req, res) => {
-      const sessionServer = await createServer();
+    app.get("/sse", async (req, res) => {
+      const sessionServer = await createServer({ clientKey: extractClientKey(req), ip: clientIp(req) });
       const sseTransport = new SSEServerTransport("/messages", res);
       transports.set(sseTransport.sessionId, { transport: sseTransport, server: sessionServer });
       res.on("close", () => transports.delete(sseTransport.sessionId));
@@ -385,7 +456,10 @@ async function main() {
             version: "1.8.0",
             description: `${tools.length} production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.`
           },
-          authentication: { required: false },
+          authentication: {
+            required: false,
+            description: "Optional for a small daily demo allowance. For full access pass your Arch Tools API key via `x-api-key` or `Authorization: Bearer <key>`. Free key: https://archtools.dev/signup"
+          },
           tools: tools.map(buildToolEntry),
           resources: RESOURCES,
           prompts: PROMPTS
