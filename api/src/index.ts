@@ -65,6 +65,17 @@ const corsOrigins = config.corsOrigin
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
 
+// ─── Canonical-host redirect: *.onrender.com → archtools.dev ─────────────────
+// Keeps the Render origin from being indexed/used directly. /health stays
+// exempt so Render health checks keep passing.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const host = (req.headers.host ?? "").toLowerCase();
+  if (host.endsWith(".onrender.com") && req.path !== "/health") {
+    return res.redirect(301, `https://archtools.dev${req.originalUrl}`);
+  }
+  next();
+});
+
 // ─── Security headers (helmet) ────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {

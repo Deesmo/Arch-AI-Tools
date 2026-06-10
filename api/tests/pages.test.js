@@ -112,6 +112,37 @@ async function run() {
     await testPage(file, 200);
   }
 
+  // ── Canonical host redirect (onrender.com → archtools.dev) ──
+  console.log('\n── Canonical Host Redirect ──');
+  const RENDER_ORIGIN = process.env.TEST_RENDER_ORIGIN || 'https://arch-ai-tools.onrender.com';
+  try {
+    const r = await fetch(`${RENDER_ORIGIN}/pricing`, { redirect: 'manual' });
+    const loc = r.headers.get('location') || '';
+    if (r.status === 301 && loc.startsWith('https://archtools.dev/pricing')) {
+      passed++;
+      console.log(`  ✅ 301 ${RENDER_ORIGIN}/pricing → ${loc}`);
+    } else {
+      throw new Error(`expected 301 → https://archtools.dev/pricing, got ${r.status} → ${loc}`);
+    }
+  } catch (err) {
+    failed++;
+    failures.push({ path: `${RENDER_ORIGIN}/pricing`, error: err.message });
+    console.log(`  ❌ ${RENDER_ORIGIN}/pricing — ${err.message}`);
+  }
+  try {
+    const r = await fetch(`${RENDER_ORIGIN}/health`, { redirect: 'manual' });
+    if (r.status === 200) {
+      passed++;
+      console.log(`  ✅ 200 ${RENDER_ORIGIN}/health (exempt from redirect)`);
+    } else {
+      throw new Error(`expected 200, got ${r.status}`);
+    }
+  } catch (err) {
+    failed++;
+    failures.push({ path: `${RENDER_ORIGIN}/health`, error: err.message });
+    console.log(`  ❌ ${RENDER_ORIGIN}/health — ${err.message}`);
+  }
+
   // ── Summary ──
   const elapsed = Date.now() - start;
   console.log(`\n${'─'.repeat(50)}`);
