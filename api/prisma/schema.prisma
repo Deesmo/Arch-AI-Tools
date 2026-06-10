@@ -38,6 +38,12 @@ model Agent {
   totalSpentUsdc  Float        @default(0) @map("total_spent_usdc")
   isPublic        Boolean      @default(true) @map("is_public")  // show on leaderboard/profile
 
+  // ─── Email verification gate (credits activate on verify) ──────────────────
+  emailVerified     Boolean    @default(false) @map("email_verified")
+  verifyToken       String?    @map("verify_token")
+  verifyTokenExpiry DateTime?  @map("verify_token_expiry")
+  pendingCredits    Int        @default(0) @map("pending_credits")
+
   // back-references — required for Prisma v5 relations
   apiRequests  ApiRequest[]
   purchases    Purchase[]

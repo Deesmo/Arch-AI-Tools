@@ -7,6 +7,7 @@ import { logger } from "../lib/logger.js";
 import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken } from "../lib/verification.js";
 
 const router = Router();
 
@@ -22,6 +23,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRe.test(email)) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email format", request_id: reqId() });
+    return;
+  }
+
+  if (isDisposableEmail(email)) {
+    res.status(400).json({ ok: false, error: "disposable_email", message: "Disposable email addresses are not allowed. Please use a real email address.", request_id: reqId() });
     return;
   }
 
@@ -50,7 +56,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // The first 12 chars are stored as apiKeyPrefix for fast indexed lookup.
     const apiKeyPrefix = apiKey.slice(0, 12);
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
-    const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "250", 10);
+    const freeCredits = SIGNUP_FREE_CREDITS;
 
     const agent = await prisma.agent.create({
       data: {
@@ -109,13 +115,22 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       logger.warn({ agentId: agent.id, error: errMsg }, "Wallet auto-creation failed (non-fatal)");
     }
 
+    // Email verification gate: credits stay pending until email verified
+    try {
+      await issueEmailVerification(agent.id, email, freeCredits);
+    } catch (e) {
+      console.error("Verification setup failed (granting credits directly):", e);
+    }
+
     res.status(201).json({
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
-      credits: freeCredits,
+      credits: 0,
+      pending_credits: freeCredits,
+      email_verification_required: true,
       wallet_address: walletAddress,
-      message: `Welcome! You have ${freeCredits} free credits to get started.`,
+      message: `Welcome! Check your email to verify your address — your ${freeCredits} free credits activate on verification.`,
       docs: "https://archtools.dev",
       request_id: reqId(),
     });
@@ -148,6 +163,22 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     }
   } catch (e) {
     console.error("Register error:", e);
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
+// GET /v1/agent/verify-email?token=... — activates pending credits
+router.get("/verify-email", async (req: Request, res: Response): Promise<void> => {
+  const token = String(req.query.token ?? "");
+  try {
+    const result = await verifyEmailToken(token);
+    if (!result) {
+      res.status(400).send(`<!doctype html><html><body style="font-family:sans-serif;background:#07061a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Link invalid or expired</h1><p>Please request a new verification email from your <a href="https://archtools.dev/dashboard" style="color:#9d8cff">dashboard</a>.</p></div></body></html>`);
+      return;
+    }
+    res.send(`<!doctype html><html><body style="font-family:sans-serif;background:#07061a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>✅ Email verified!</h1><p>${result.creditsActivated} credits are now active on your account.</p><p><a href="https://archtools.dev/dashboard" style="color:#9d8cff">Go to dashboard →</a></p></div></body></html>`);
+  } catch (e) {
+    console.error("verify-email error:", e);
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
 });
