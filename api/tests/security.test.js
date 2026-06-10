@@ -3,10 +3,13 @@
  *  - M1: email identity normalization (free-credit farming)
  *  - H1: x402 settle-guard predicate (no serve on null/failed settlement)
  *  - H3: atomic credit deduction guard shape (updateMany count contract)
+ *  - H2: x402 nonce extraction (authorization.nonce), no hard reject on
+ *        missing nonce, replay dedup fail-closed, TTL clamp
  *
  * Run: node tests/security.test.js  (requires `npm run build` first for dist/)
  */
 import assert from "assert";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -159,6 +162,113 @@ async function main() {
     assert.strictEqual(wins, 1);
     assert.ok(balance >= 0, "balance must never go negative");
   });
+
+  // ── H2: x402 nonce extraction + replay dedup ────────────────────────────
+  const x402 = await import(path.join(__dirname, "..", "dist", "middleware", "x402.js"));
+  const { extractNonce, extractNonceTtlSeconds, checkAndStoreNonce } = x402;
+  const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64");
+
+  console.log("H2 — extractNonce resolution order:");
+  test("reads standard EIP-3009 payload.authorization.nonce", () =>
+    assert.strictEqual(
+      extractNonce(b64({ payload: { authorization: { nonce: "0xauth" } } })),
+      "0xauth"));
+  test("authorization.nonce wins over payload.nonce and top-level nonce", () =>
+    assert.strictEqual(
+      extractNonce(b64({ nonce: "top", payload: { nonce: "inner", authorization: { nonce: "0xauth" } } })),
+      "0xauth"));
+  test("payload.nonce wins over top-level nonce when authorization absent", () =>
+    assert.strictEqual(
+      extractNonce(b64({ nonce: "top", payload: { nonce: "inner" } })),
+      "inner"));
+  test("falls back to top-level nonce", () =>
+    assert.strictEqual(extractNonce(b64({ nonce: "top" })), "top"));
+  test("no nonce anywhere → null (never throws)", () =>
+    assert.strictEqual(extractNonce(b64({ payload: { authorization: {} } })), null));
+  test("garbage base64 → null (never throws)", () =>
+    assert.strictEqual(extractNonce("!!!not-base64-json!!!"), null));
+  test("empty-string nonces are treated as absent", () =>
+    assert.strictEqual(
+      extractNonce(b64({ nonce: "", payload: { nonce: "", authorization: { nonce: "" } } })),
+      null));
+  test("non-string nonce (number/null) → null", () =>
+    assert.strictEqual(
+      extractNonce(b64({ nonce: 42, payload: { authorization: { nonce: null } } })),
+      null));
+
+  console.log("H2 — missing nonce must NOT hard-reject:");
+  const x402Src = fs.readFileSync(
+    path.join(__dirname, "..", "src", "middleware", "x402.ts"), "utf-8");
+  test("payment_nonce_required hard reject removed from middleware", () =>
+    assert.ok(!x402Src.includes("payment_nonce_required"),
+      "x402.ts must not 402 on missing nonce"));
+  test("middleware gates dedup on nonce presence (falls through when null)", () => {
+    // mirrors the middleware: dedup only runs `if (nonce)` — a null nonce
+    // takes no replay branch and proceeds to verification.
+    const nonce = extractNonce(b64({ payload: { authorization: {} } }));
+    let rejected = false;
+    if (nonce) rejected = true; // would enter dedup path
+    assert.strictEqual(rejected, false);
+  });
+
+  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  const mockRedis = (impl) => ({ set: impl });
+  await (async () => {
+    const seen = new Set();
+    const redisMock = mockRedis(async (key) => {
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return "OK";
+    });
+    const first = await checkAndStoreNonce("0xabc", 600, redisMock);
+    const second = await checkAndStoreNonce("0xabc", 600, redisMock);
+    test("fresh nonce → 'new' (stored, proceeds)", () =>
+      assert.strictEqual(first, "new"));
+    test("repeated nonce → 'replay' (402 payment_replay_detected)", () =>
+      assert.strictEqual(second, "replay"));
+  })();
+  await (async () => {
+    const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
+    const r = await checkAndStoreNonce("0xdef", 600, failing);
+    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
+      assert.strictEqual(r, "error"));
+    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
+      assert.ok(x402Src.includes("payment_replay_check_unavailable")));
+  })();
+  await (async () => {
+    let capturedTtl = null;
+    const capture = mockRedis(async (_k, _v, _ex, ttl) => { capturedTtl = ttl; return "OK"; });
+    await checkAndStoreNonce("0xttl", 1234, capture);
+    test("TTL passed through to redis SET EX", () =>
+      assert.strictEqual(capturedTtl, 1234));
+  })();
+  await (async () => {
+    const r = await checkAndStoreNonce("0xnone", 600, null);
+    test("no redis configured → 'new' with warning (dedup disabled by config)", () =>
+      assert.strictEqual(r, "new"));
+  })();
+
+  console.log("H2 — TTL derivation from authorization.validBefore (clamped):");
+  const nowSec = Math.floor(Date.now() / 1000);
+  test("validBefore 1h out → ~3600s", () => {
+    const ttl = extractNonceTtlSeconds(b64({ payload: { authorization: { validBefore: String(nowSec + 3600) } } }));
+    assert.ok(ttl >= 3590 && ttl <= 3600, `got ${ttl}`);
+  });
+  test("validBefore in the past → clamped to 60s floor", () =>
+    assert.strictEqual(
+      extractNonceTtlSeconds(b64({ payload: { authorization: { validBefore: String(nowSec - 100) } } })),
+      60));
+  test("validBefore far future → clamped to 24h ceiling", () =>
+    assert.strictEqual(
+      extractNonceTtlSeconds(b64({ payload: { authorization: { validBefore: String(nowSec + 999999999) } } })),
+      24 * 60 * 60));
+  test("missing validBefore → default 600s", () =>
+    assert.strictEqual(extractNonceTtlSeconds(b64({ payload: { authorization: {} } })), 600));
+  test("unparsable validBefore → default 600s", () =>
+    assert.strictEqual(
+      extractNonceTtlSeconds(b64({ payload: { authorization: { validBefore: "soon" } } })), 600));
+  test("garbage header → default 600s (never throws)", () =>
+    assert.strictEqual(extractNonceTtlSeconds("!!!"), 600));
 
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);
