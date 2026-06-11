@@ -89,9 +89,9 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
     const apiKeyPrefix = apiKey.slice(0, 12);
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
 
+    // Only prefix + hash are persisted — the raw key is returned ONCE below.
     const agent = await prisma.agent.create({
       data: {
-        apiKey,
         apiKeyPrefix,
         apiKeyHash,
         email,

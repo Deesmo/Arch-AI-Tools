@@ -59,15 +59,14 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     }
 
     const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
-    // Security: store a bcrypt hash of the API key (saltRounds=10) for secure comparison.
-    // The first 12 chars are stored as apiKeyPrefix for fast indexed lookup.
+    // Security: only the bcrypt hash (saltRounds=10) + 12-char prefix are persisted.
+    // The raw key is returned to the user ONCE in this response and never stored.
     const apiKeyPrefix = apiKey.slice(0, 12);
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
     const freeCredits = SIGNUP_FREE_CREDITS;
 
     const agent = await prisma.agent.create({
       data: {
-        apiKey,
         apiKeyPrefix,
         apiKeyHash,
         email,
@@ -270,9 +269,10 @@ router.post("/keys/rotate", requireAuth, async (req: AuthedRequest, res: Respons
     const newPrefix = newKey.slice(0, 12);
     const newHash = await bcrypt.default.hash(newKey, 10);
 
+    // Only prefix + hash are persisted — the raw key is returned ONCE below.
     await prisma.agent.update({
       where: { id: agent.id },
-      data: { apiKey: newKey, apiKeyPrefix: newPrefix, apiKeyHash: newHash },
+      data: { apiKeyPrefix: newPrefix, apiKeyHash: newHash },
     });
 
     res.json({
@@ -294,16 +294,17 @@ router.delete("/keys/:prefix", requireAuth, async (req: AuthedRequest, res: Resp
   const { prefix } = req.params;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   
-  // For now, can only revoke own current key prefix
+  // For now, can only revoke own current key prefix (req.agent.apiKey is the
+  // caller-presented key verified by requireAuth — plaintext is not stored).
   if (!agent.apiKey?.startsWith(String(prefix))) {
     res.status(403).json({ ok: false, error: "forbidden", message: "Can only revoke your own key", request_id: reqId() });
     return;
   }
 
-  // Invalidate by setting apiKey to empty — forces re-registration
+  // Invalidate by clearing the stored hash + prefix — no key can match.
   await prisma.agent.update({
     where: { id: agent.id },
-    data: { apiKey: `revoked_${prefix}`, apiKeyHash: "" },
+    data: { apiKeyPrefix: null, apiKeyHash: null },
   }).catch(() => {});
 
   res.json({ ok: true, message: "API key revoked. Generate a new key via POST /v1/agent/keys/rotate.", request_id: reqId() });

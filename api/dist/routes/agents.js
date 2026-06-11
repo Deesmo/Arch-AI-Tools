@@ -12,7 +12,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { BADGE_THRESHOLDS, } from "../services/reputation.js";
 import { validateUrl } from "../lib/ssrf.js";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
 const router = Router();
 // ─── Badge emoji helper ──────────────────────────────────────────────────────
 const BADGE_EMOJI = {
@@ -250,6 +250,12 @@ router.post("/register", async (req, res) => {
             });
             return;
         }
+        // Anti-farming: normalized-email identity + per-IP daily signup caps
+        const limitBlock = await enforceSignupLimits(email, req.ip);
+        if (limitBlock) {
+            res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
+            return;
+        }
         // Generate API key
         const crypto = await import("crypto");
         const bcrypt = await import("bcryptjs");
@@ -257,9 +263,9 @@ router.post("/register", async (req, res) => {
         const apiKeyPrefix = apiKey.slice(0, 12);
         const apiKeyHash = await bcrypt.hash(apiKey, 10);
         const freeCredits = SIGNUP_FREE_CREDITS;
+        // Only prefix + hash are persisted — the raw key is returned ONCE below.
         const agent = await prisma.agent.create({
             data: {
-                apiKey,
                 apiKeyPrefix,
                 apiKeyHash,
                 email,
@@ -274,9 +280,11 @@ router.post("/register", async (req, res) => {
                 badge: "none",
             },
         });
-        // Email verification gate: credits stay pending until email verified
+        // Email verification gate: credits stay pending until email verified.
+        // Grant is atomically claimed per normalized identity (SignupIdentity).
+        let gatedCredits = freeCredits;
         try {
-            await issueEmailVerification(agent.id, email, freeCredits);
+            gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
         }
         catch (e) {
             console.error("Verification setup failed (granting credits directly):", e);
@@ -286,12 +294,12 @@ router.post("/register", async (req, res) => {
             agent_id: agent.id,
             api_key: apiKey,
             credits: 0,
-            pending_credits: freeCredits,
+            pending_credits: gatedCredits,
             email_verification_required: true,
             reputation_score: 50,
             badge: "none",
             profile_url: `https://archtools.dev/api/v1/agents/${agent.id}`,
-            message: `Welcome! Check your email to verify your address — your ${freeCredits} free credits activate on verification. Your public profile is live.`,
+            message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. Your public profile is live.`,
             docs: "https://archtools.dev/agents",
             request_id: reqId(),
         });

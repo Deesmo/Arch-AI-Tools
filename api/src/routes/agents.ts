@@ -304,9 +304,9 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
     const freeCredits = SIGNUP_FREE_CREDITS;
 
+    // Only prefix + hash are persisted — the raw key is returned ONCE below.
     const agent = await prisma.agent.create({
       data: {
-        apiKey,
         apiKeyPrefix,
         apiKeyHash,
         email,

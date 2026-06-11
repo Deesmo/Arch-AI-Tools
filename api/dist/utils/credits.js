@@ -9,7 +9,17 @@ export async function deductCredits(req, res, toolName, cost) {
         res.status(401).json({ ok: false, error: "unauthorized", request_id: crypto.randomUUID() });
         return false;
     }
-    if (agent.credits < cost) {
+    // ATOMIC guarded deduction: decrement only if the row still has >= cost
+    // credits. Prevents race-condition overdraft under concurrent requests —
+    // the in-memory `agent.credits` check alone is not safe.
+    const deduction = await prisma.agent.updateMany({
+        where: { id: agent.id, credits: { gte: cost } },
+        data: {
+            credits: { decrement: cost },
+            totalCalls: { increment: 1 },
+        },
+    });
+    if (deduction.count === 0) {
         res.status(402).json({
             ok: false,
             error: "insufficient_credits",
@@ -22,13 +32,6 @@ export async function deductCredits(req, res, toolName, cost) {
         });
         return false;
     }
-    await prisma.agent.update({
-        where: { id: agent.id },
-        data: {
-            credits: { decrement: cost },
-            totalCalls: { increment: 1 },
-        },
-    });
     agent.credits -= cost;
     res.setHeader("X-Credits-Remaining", agent.credits.toString());
     res.setHeader("X-Credits-Used", cost.toString());

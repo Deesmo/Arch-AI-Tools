@@ -138,12 +138,10 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  // Verify agent credentials against either hashed or legacy plaintext API keys.
+  // Verify agent credentials — plaintext keys are no longer stored, bcrypt only.
   const agent = await prisma.agent.findUnique({ where: { email } }).catch(() => null);
-  const validAgent = agent
-    ? (agent.apiKeyHash
-        ? await bcrypt.compare(apiKey, agent.apiKeyHash).catch(() => false)
-        : agent.apiKey === apiKey)
+  const validAgent = agent?.apiKeyHash
+    ? await bcrypt.compare(apiKey, agent.apiKeyHash).catch(() => false)
     : false;
   if (!agent || !validAgent) {
     res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method, "Invalid email or API key. Check your credentials at archtools.dev."));

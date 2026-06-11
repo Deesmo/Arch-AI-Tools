@@ -7,7 +7,7 @@ import { logger } from "../lib/logger.js";
 import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits } from "../lib/verification.js";
 const router = Router();
 // POST /v1/agent/register
 router.post("/register", async (req, res) => {
@@ -47,15 +47,20 @@ router.post("/register", async (req, res) => {
             });
             return;
         }
+        // Anti-farming: normalized-email identity + per-IP daily signup caps
+        const limitBlock = await enforceSignupLimits(email, req.ip);
+        if (limitBlock) {
+            res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
+            return;
+        }
         const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
-        // Security: store a bcrypt hash of the API key (saltRounds=10) for secure comparison.
-        // The first 12 chars are stored as apiKeyPrefix for fast indexed lookup.
+        // Security: only the bcrypt hash (saltRounds=10) + 12-char prefix are persisted.
+        // The raw key is returned to the user ONCE in this response and never stored.
         const apiKeyPrefix = apiKey.slice(0, 12);
         const apiKeyHash = await bcrypt.hash(apiKey, 10);
         const freeCredits = SIGNUP_FREE_CREDITS;
         const agent = await prisma.agent.create({
             data: {
-                apiKey,
                 apiKeyPrefix,
                 apiKeyHash,
                 email,
@@ -105,9 +110,11 @@ router.post("/register", async (req, res) => {
             const errMsg = err instanceof Error ? err.message : "Unknown error";
             logger.warn({ agentId: agent.id, error: errMsg }, "Wallet auto-creation failed (non-fatal)");
         }
-        // Email verification gate: credits stay pending until email verified
+        // Email verification gate: credits stay pending until email verified.
+        // Grant is atomically claimed per normalized identity (SignupIdentity).
+        let gatedCredits = freeCredits;
         try {
-            await issueEmailVerification(agent.id, email, freeCredits);
+            gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
         }
         catch (e) {
             console.error("Verification setup failed (granting credits directly):", e);
@@ -117,10 +124,10 @@ router.post("/register", async (req, res) => {
             agent_id: agent.id,
             api_key: apiKey,
             credits: 0,
-            pending_credits: freeCredits,
+            pending_credits: gatedCredits,
             email_verification_required: true,
             wallet_address: walletAddress,
-            message: `Welcome! Check your email to verify your address — your ${freeCredits} free credits activate on verification.`,
+            message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification.`,
             docs: "https://archtools.dev",
             request_id: reqId(),
         });
@@ -250,9 +257,10 @@ router.post("/keys/rotate", requireAuth, async (req, res) => {
         const newKey = `arch_${crypto.default.randomBytes(24).toString("hex")}`;
         const newPrefix = newKey.slice(0, 12);
         const newHash = await bcrypt.default.hash(newKey, 10);
+        // Only prefix + hash are persisted — the raw key is returned ONCE below.
         await prisma.agent.update({
             where: { id: agent.id },
-            data: { apiKey: newKey, apiKeyPrefix: newPrefix, apiKeyHash: newHash },
+            data: { apiKeyPrefix: newPrefix, apiKeyHash: newHash },
         });
         res.json({
             ok: true,
@@ -275,15 +283,16 @@ router.delete("/keys/:prefix", requireAuth, async (req, res) => {
         res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() });
         return;
     }
-    // For now, can only revoke own current key prefix
+    // For now, can only revoke own current key prefix (req.agent.apiKey is the
+    // caller-presented key verified by requireAuth — plaintext is not stored).
     if (!agent.apiKey?.startsWith(String(prefix))) {
         res.status(403).json({ ok: false, error: "forbidden", message: "Can only revoke your own key", request_id: reqId() });
         return;
     }
-    // Invalidate by setting apiKey to empty — forces re-registration
+    // Invalidate by clearing the stored hash + prefix — no key can match.
     await prisma.agent.update({
         where: { id: agent.id },
-        data: { apiKey: `revoked_${prefix}`, apiKeyHash: "" },
+        data: { apiKeyPrefix: null, apiKeyHash: null },
     }).catch(() => { });
     res.json({ ok: true, message: "API key revoked. Generate a new key via POST /v1/agent/keys/rotate.", request_id: reqId() });
 });

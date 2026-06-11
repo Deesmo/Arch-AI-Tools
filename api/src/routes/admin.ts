@@ -205,10 +205,10 @@ router.get("/agents", requireAdmin, async (req: Request, res: Response): Promise
   }
 });
 
-// GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
+// GET /v1/admin/lookup?email=... — look up agent key metadata by email (owner use only).
+// Plaintext keys are no longer stored; only the prefix/masked form can ever be returned.
 router.get("/lookup", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.query as { email?: string };
-  const reveal = req.query.reveal === "true";
   if (!email) { res.status(400).json({ ok: false, error: "email_required", request_id: reqId() }); return; }
   try {
     const agent = await prisma.agent.findUnique({
@@ -216,16 +216,13 @@ router.get("/lookup", requireAdmin, async (req: Request, res: Response): Promise
       select: {
         id: true,
         email: true,
-        apiKey: true,
         apiKeyPrefix: true,
+        apiKeyHash: true,
         credits: true,
         createdAt: true,
       },
     });
     if (!agent) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
-    if (reveal) {
-      logger.warn({ email, adminLookup: true }, "Admin lookup returned full API key");
-    }
     res.json({
       ok: true,
       agent: {
@@ -233,9 +230,9 @@ router.get("/lookup", requireAdmin, async (req: Request, res: Response): Promise
         email: agent.email,
         credits: agent.credits,
         createdAt: agent.createdAt,
-        apiKeyPrefix: agent.apiKeyPrefix ?? agent.apiKey?.slice(0, 12) ?? null,
-        hasApiKey: Boolean(agent.apiKey),
-        apiKey: reveal ? agent.apiKey : undefined,
+        apiKeyPrefix: agent.apiKeyPrefix ?? null,
+        apiKeyMasked: agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null,
+        hasApiKey: Boolean(agent.apiKeyHash),
       },
       request_id: reqId(),
     });
