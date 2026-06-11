@@ -1,7 +1,7 @@
 name: Uptime Monitor
-# Independent of OpenClaw and of the Render app layer: runs on GitHub's
-# infrastructure on a schedule. On failure GitHub emails the repo owner;
-# also posts to Discord if ARCH_ALERT_DISCORD_WEBHOOK secret is set.
+# Independent of OpenClaw and the Render app layer: runs on GitHub infra on a schedule.
+# On failure: GitHub emails the repo owner + posts to Discord if ARCH_ALERT_DISCORD_WEBHOOK set.
+# Deep checks: /health liveness, homepage HTML, /pricing, and /openapi.json tool-count (==64).
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -10,24 +10,55 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Health check archtools.dev
+      - name: Deep health check archtools.dev
         run: |
-          url="https://archtools.dev/health"
+          base="https://archtools.dev"
+          fails=""
+
+          # 1) /health -> 200 + "ok":true
           ok=0
           for i in 1 2 3; do
-            code=$(curl -s -m 15 -o /tmp/body -w "%{http_code}" "$url" || echo 000)
-            body=$(cat /tmp/body 2>/dev/null)
-            echo "attempt $i: HTTP $code body=$body"
-            if [ "$code" = "200" ] && echo "$body" | grep -q '"ok":true'; then ok=1; break; fi
-            sleep 10
+            code=$(curl -s -m 15 -o /tmp/h -w "%{http_code}" "$base/health" || echo 000)
+            if [ "$code" = "200" ] && grep -q '"ok":true' /tmp/h; then ok=1; break; fi
+            echo "/health attempt $i: HTTP $code"; sleep 10
           done
-          if [ "$ok" != "1" ]; then
-            echo "::error::archtools.dev /health FAILED 3x"
+          [ "$ok" = "1" ] || fails="$fails\n- /health (liveness) failed 3x"
+
+          # 2) homepage -> 200 with HTML
+          ok=0
+          for i in 1 2 3; do
+            code=$(curl -s -m 15 -o /tmp/home -w "%{http_code}" "$base/" || echo 000)
+            if [ "$code" = "200" ] && grep -qi '<html' /tmp/home; then ok=1; break; fi
+            echo "/ attempt $i: HTTP $code"; sleep 10
+          done
+          [ "$ok" = "1" ] || fails="$fails\n- homepage / not HTML 200"
+
+          # 3) /pricing -> 200
+          ok=0
+          for i in 1 2 3; do
+            code=$(curl -s -m 15 -o /dev/null -w "%{http_code}" "$base/pricing" || echo 000)
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            echo "/pricing attempt $i: HTTP $code"; sleep 10
+          done
+          [ "$ok" = "1" ] || fails="$fails\n- /pricing not 200"
+
+          # 4) /openapi.json -> 200 and EXACTLY 64 tool paths
+          ok=0; n="?"
+          for i in 1 2 3; do
+            code=$(curl -s -m 20 -o /tmp/oa -w "%{http_code}" "$base/openapi.json" || echo 000)
+            n=$(jq '.paths | length' /tmp/oa 2>/dev/null || echo -1)
+            if [ "$code" = "200" ] && [ "$n" = "64" ]; then ok=1; break; fi
+            echo "/openapi.json attempt $i: HTTP $code paths=$n"; sleep 10
+          done
+          [ "$ok" = "1" ] || fails="$fails\n- /openapi.json tool count != 64 (got $n)"
+
+          if [ -n "$fails" ]; then
+            msg="🔴 **archtools.dev health FAILED** (GitHub monitor):$fails"
+            echo "::error::$msg"
             if [ -n "${{ secrets.ARCH_ALERT_DISCORD_WEBHOOK }}" ]; then
-              curl -s -m 15 -H 'Content-Type: application/json' \
-                -d '{"content":"🔴 **archtools.dev DOWN** — /health failed 3x (GitHub uptime monitor)"}' \
-                "${{ secrets.ARCH_ALERT_DISCORD_WEBHOOK }}" || true
+              payload=$(jq -nc --arg c "$(printf '%b' "$msg")" '{content:$c}')
+              curl -s -m 15 -H 'Content-Type: application/json' -d "$payload" "${{ secrets.ARCH_ALERT_DISCORD_WEBHOOK }}" || true
             fi
             exit 1
           fi
-          echo "healthy"
+          echo "all checks healthy: /health, /, /pricing, /openapi.json==64"
