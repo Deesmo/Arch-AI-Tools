@@ -1,0 +1,33 @@
+name: Uptime Monitor
+# Independent of OpenClaw and of the Render app layer: runs on GitHub's
+# infrastructure on a schedule. On failure GitHub emails the repo owner;
+# also posts to Discord if ARCH_ALERT_DISCORD_WEBHOOK secret is set.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check archtools.dev
+        run: |
+          url="https://archtools.dev/health"
+          ok=0
+          for i in 1 2 3; do
+            code=$(curl -s -m 15 -o /tmp/body -w "%{http_code}" "$url" || echo 000)
+            body=$(cat /tmp/body 2>/dev/null)
+            echo "attempt $i: HTTP $code body=$body"
+            if [ "$code" = "200" ] && echo "$body" | grep -q '"ok":true'; then ok=1; break; fi
+            sleep 10
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::archtools.dev /health FAILED 3x"
+            if [ -n "${{ secrets.ARCH_ALERT_DISCORD_WEBHOOK }}" ]; then
+              curl -s -m 15 -H 'Content-Type: application/json' \
+                -d '{"content":"🔴 **archtools.dev DOWN** — /health failed 3x (GitHub uptime monitor)"}' \
+                "${{ secrets.ARCH_ALERT_DISCORD_WEBHOOK }}" || true
+            fi
+            exit 1
+          fi
+          echo "healthy"
