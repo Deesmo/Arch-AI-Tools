@@ -379,7 +379,20 @@ router.get("/v1/tools", async (_req: Request, res: Response): Promise<void> => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore — `active` exists in prod schema; local client may be stale
   const tools = await prisma.tool.findMany({ where: { active: true }, orderBy: { name: "asc" } });
-    res.json({ ok: true, tools });
+    // Honesty annotation: usage-metered tools charge MORE than the listed base.
+    // `credits` stays the base/minimum (unchanged); `metered` + `credits_note`
+    // let clients render "500+ (metered)" instead of implying a flat price.
+    const METERED: Record<string, string> = {
+      "text-to-speech": "metered by length — 25 base + 8 credits per 100 characters",
+      "video-generate": "metered by duration — 125 credits/second (5s = 625, 10s = 1250), 500 minimum",
+    };
+    const annotated = tools.map((t: { name: string; credits?: number }) => {
+      const note = METERED[t.name];
+      return note
+        ? { ...t, metered: true, credits_note: `${t.credits ?? ""}+ credits — ${note}` }
+        : { ...t, metered: false };
+    });
+    res.json({ ok: true, tools: annotated });
   } catch {
     res.json({ ok: true, tools: FALLBACK_TOOLS });
   }
