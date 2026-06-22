@@ -29,930 +29,22 @@
     "packs": [
       {
         "name": "Starter",
-        "credits": 10000,
+        "credits": 3000,
         "price": 9
       },
       {
         "name": "Pro",
-        "credits": 60000,
+        "credits": 25000,
         "price": 49
       },
       {
         "name": "Business",
-        "credits": 250000,
+        "credits": 125000,
         "price": 199
       }
     ]
   },
   "tools": [
-    {
-      "name": "validate-data",
-      "description": "Validate JSON against a JSON Schema",
-      "endpoint": "https://archtools.dev/v1/tools/validate-data",
-      "method": "POST",
-      "credits": 1,
-      "category": "data",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "data",
-          "schema"
-        ],
-        "properties": {
-          "data": {
-            "description": "The JSON data to validate"
-          },
-          "schema": {
-            "type": "object",
-            "description": "JSON Schema to validate against"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "generate-hash",
-      "description": "Generate cryptographic hashes (sha256/sha512/md5)",
-      "endpoint": "https://archtools.dev/v1/tools/generate-hash",
-      "method": "POST",
-      "credits": 1,
-      "category": "security",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to hash"
-          },
-          "algorithm": {
-            "type": "string",
-            "enum": [
-              "sha256",
-              "sha512",
-              "md5",
-              "sha1"
-            ],
-            "default": "sha256"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "qr-code",
-      "description": "Generate QR codes (PNG or SVG)",
-      "endpoint": "https://archtools.dev/v1/tools/qr-code",
-      "method": "POST",
-      "credits": 2,
-      "category": "data",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text or URL to encode"
-          },
-          "size": {
-            "type": "integer",
-            "default": 200,
-            "description": "Image size in pixels"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "png",
-              "svg"
-            ],
-            "default": "png"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "convert-format",
-      "description": "Convert between JSON, YAML, CSV, XML",
-      "endpoint": "https://archtools.dev/v1/tools/convert-format",
-      "method": "POST",
-      "credits": 2,
-      "category": "data",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "input",
-          "from",
-          "to"
-        ],
-        "properties": {
-          "input": {
-            "type": "string",
-            "description": "The content to convert (serialized as a string)"
-          },
-          "from": {
-            "type": "string",
-            "enum": [
-              "json",
-              "yaml",
-              "csv",
-              "xml",
-              "toml"
-            ],
-            "description": "Source format"
-          },
-          "to": {
-            "type": "string",
-            "enum": [
-              "json",
-              "yaml",
-              "csv",
-              "xml",
-              "toml"
-            ],
-            "description": "Target format"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "transform-text",
-      "description": "Transform text (10 modes: slug, camel, base64…)",
-      "endpoint": "https://archtools.dev/v1/tools/transform-text",
-      "method": "POST",
-      "credits": 3,
-      "category": "text",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text",
-          "mode"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to transform"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "slug",
-              "camel",
-              "snake",
-              "pascal",
-              "kebab",
-              "upper",
-              "lower",
-              "title",
-              "base64_encode",
-              "base64_decode"
-            ],
-            "description": "Transformation mode"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "extract-metadata",
-      "description": "Extract OG tags, word count, links from text or URLs",
-      "endpoint": "https://archtools.dev/v1/tools/extract-metadata",
-      "method": "POST",
-      "credits": 3,
-      "category": "data",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "URL to extract metadata from"
-          },
-          "text": {
-            "type": "string",
-            "description": "Raw text to analyze (alternative to url)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "web-scrape",
-      "description": "Scrape any public URL with optional CSS selector",
-      "endpoint": "https://archtools.dev/v1/tools/web-scrape",
-      "method": "POST",
-      "credits": 5,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "URL to scrape"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "markdown",
-              "html",
-              "text"
-            ],
-            "default": "markdown"
-          },
-          "selector": {
-            "type": "string",
-            "description": "CSS selector to extract specific element"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "extract-page",
-      "description": "Clean text, links, and metadata from any webpage",
-      "endpoint": "https://archtools.dev/v1/tools/extract-page",
-      "method": "POST",
-      "credits": 5,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "URL of the webpage to extract"
-          },
-          "include_links": {
-            "type": "boolean",
-            "default": true,
-            "description": "Include extracted links"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "search-web",
-      "description": "Web search with structured results (DuckDuckGo)",
-      "endpoint": "https://archtools.dev/v1/tools/search-web",
-      "method": "POST",
-      "credits": 5,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "Search query"
-          },
-          "limit": {
-            "type": "integer",
-            "default": 10,
-            "maximum": 20
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "rss-parse",
-      "description": "Parse RSS/Atom feeds into structured JSON",
-      "endpoint": "https://archtools.dev/v1/tools/rss-parse",
-      "method": "POST",
-      "credits": 4,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "RSS or Atom feed URL"
-          },
-          "limit": {
-            "type": "integer",
-            "default": 20,
-            "description": "Maximum number of items to return"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "ip-lookup",
-      "description": "Geo, ISP, VPN/proxy detection",
-      "endpoint": "https://archtools.dev/v1/tools/ip-lookup",
-      "method": "POST",
-      "credits": 2,
-      "category": "network",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "ip": {
-            "type": "string",
-            "description": "IP address (uses caller's IP if omitted)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "whois-lookup",
-      "description": "Domain registration, expiry, nameservers via RDAP",
-      "endpoint": "https://archtools.dev/v1/tools/whois-lookup",
-      "method": "POST",
-      "credits": 3,
-      "category": "network",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "domain"
-        ],
-        "properties": {
-          "domain": {
-            "type": "string",
-            "description": "Domain name to look up (e.g. example.com)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
-    {
-      "name": "email-verify",
-      "description": "MX check + disposable domain detection",
-      "endpoint": "https://archtools.dev/v1/tools/email-verify",
-      "method": "POST",
-      "credits": 3,
-      "category": "validation",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "email"
-        ],
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Email address to verify"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "phone-validate",
-      "description": "E.164 format, type, country code",
-      "endpoint": "https://archtools.dev/v1/tools/phone-validate",
-      "method": "POST",
-      "credits": 2,
-      "category": "validation",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "phone"
-        ],
-        "properties": {
-          "phone": {
-            "type": "string",
-            "description": "Phone number to validate"
-          },
-          "country": {
-            "type": "string",
-            "description": "ISO 3166-1 alpha-2 country code (e.g. US, GB)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "currency-convert",
-      "description": "170+ currencies with live rates",
-      "endpoint": "https://archtools.dev/v1/tools/currency-convert",
-      "method": "POST",
-      "credits": 2,
-      "category": "finance",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "amount",
-          "from",
-          "to"
-        ],
-        "properties": {
-          "amount": {
-            "type": "number",
-            "description": "Amount to convert"
-          },
-          "from": {
-            "type": "string",
-            "description": "Source currency code (e.g. USD, EUR, GBP)"
-          },
-          "to": {
-            "type": "string",
-            "description": "Target currency code (e.g. EUR, JPY, BTC)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "timezone-convert",
-      "description": "Convert datetime between any two IANA timezones",
-      "endpoint": "https://archtools.dev/v1/tools/timezone-convert",
-      "method": "POST",
-      "credits": 1,
-      "category": "utility",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "datetime",
-          "from_tz",
-          "to_tz"
-        ],
-        "properties": {
-          "datetime": {
-            "type": "string",
-            "description": "ISO 8601 datetime to convert (e.g. 2024-01-15T14:30:00)"
-          },
-          "from_tz": {
-            "type": "string",
-            "description": "Source IANA timezone (e.g. America/New_York)"
-          },
-          "to_tz": {
-            "type": "string",
-            "description": "Target IANA timezone (e.g. Europe/London)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "generate-uuid",
-      "description": "Generate UUIDs, tokens, and API-key-format strings",
-      "endpoint": "https://archtools.dev/v1/tools/generate-uuid",
-      "method": "POST",
-      "credits": 1,
-      "category": "utility",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "uuid",
-              "token",
-              "api-key"
-            ],
-            "default": "uuid",
-            "description": "Type of identifier to generate"
-          },
-          "count": {
-            "type": "integer",
-            "default": 1,
-            "description": "Number of identifiers to generate"
-          },
-          "length": {
-            "type": "integer",
-            "default": 32,
-            "description": "Length for token/api-key types"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "diff-text",
-      "description": "Structured diff in unified, words, chars, or JSON format",
-      "endpoint": "https://archtools.dev/v1/tools/diff-text",
-      "method": "POST",
-      "credits": 2,
-      "category": "text",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text1",
-          "text2"
-        ],
-        "properties": {
-          "text1": {
-            "type": "string",
-            "description": "Original text"
-          },
-          "text2": {
-            "type": "string",
-            "description": "Modified text"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "unified",
-              "words",
-              "chars",
-              "json"
-            ],
-            "default": "unified",
-            "description": "Diff output format"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "readability-score",
-      "description": "Flesch-Kincaid readability and grade level",
-      "endpoint": "https://archtools.dev/v1/tools/readability-score",
-      "method": "POST",
-      "credits": 2,
-      "category": "text",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to analyze for readability"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "language-detect",
-      "description": "Detect language with confidence score (100+ languages)",
-      "endpoint": "https://archtools.dev/v1/tools/language-detect",
-      "method": "POST",
-      "credits": 3,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to detect the language of"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "sentiment-analysis",
-      "description": "Sentiment + emotion detection (joy, anger, fear…)",
-      "endpoint": "https://archtools.dev/v1/tools/sentiment-analysis",
-      "method": "POST",
-      "credits": 8,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to analyze"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "summarize",
-      "description": "Summarize in 5 styles (bullets, tldr, executive…)",
-      "endpoint": "https://archtools.dev/v1/tools/summarize",
-      "method": "POST",
-      "credits": 10,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to summarize"
-          },
-          "style": {
-            "type": "string",
-            "enum": [
-              "bullets",
-              "tldr",
-              "executive",
-              "paragraph",
-              "headline"
-            ],
-            "default": "bullets",
-            "description": "Summary style"
-          },
-          "max_length": {
-            "type": "integer",
-            "description": "Maximum summary length in words"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "extract-entities",
-      "description": "NER: people, orgs, locations, dates, money",
-      "endpoint": "https://archtools.dev/v1/tools/extract-entities",
-      "method": "POST",
-      "credits": 8,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to extract entities from"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "regex-generate",
-      "description": "Generate regex from plain English with explanations",
-      "endpoint": "https://archtools.dev/v1/tools/regex-generate",
-      "method": "POST",
-      "credits": 8,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "description"
-        ],
-        "properties": {
-          "description": {
-            "type": "string",
-            "description": "Plain English description of the pattern to match"
-          },
-          "test_strings": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Optional strings to test the generated regex against"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "pii-detect",
-      "description": "Detect and optionally redact PII",
-      "endpoint": "https://archtools.dev/v1/tools/pii-detect",
-      "method": "POST",
-      "credits": 10,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to scan for PII"
-          },
-          "redact": {
-            "type": "boolean",
-            "default": false,
-            "description": "Whether to return redacted version of the text"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "web-search",
-      "description": "Real-time web search with AI-synthesized answer",
-      "endpoint": "https://archtools.dev/v1/tools/web-search",
-      "method": "POST",
-      "credits": 10,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "Search query"
-          },
-          "limit": {
-            "type": "integer",
-            "default": 5,
-            "description": "Number of source results"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Web"
-      ]
-    },
     {
       "name": "ai-generate",
       "description": "AI text generation via Claude",
@@ -1001,22 +93,35 @@
       ]
     },
     {
-      "name": "ocr-extract",
-      "description": "Extract text from images (URL or base64)",
-      "endpoint": "https://archtools.dev/v1/tools/ocr-extract",
+      "name": "ai-oracle",
+      "description": "Premium reasoning with structured analysis and confidence levels",
+      "endpoint": "https://archtools.dev/v1/tools/ai-oracle",
       "method": "POST",
-      "credits": 10,
-      "category": "media",
+      "credits": 25,
+      "category": "ai",
       "parameters": {
         "type": "object",
+        "required": [
+          "question"
+        ],
         "properties": {
-          "image_url": {
+          "question": {
             "type": "string",
-            "description": "Public URL of the image"
+            "description": "Question or topic to analyze"
           },
-          "image_base64": {
+          "context": {
             "type": "string",
-            "description": "Base64-encoded image (alternative to image_url)"
+            "description": "Additional context for the analysis"
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "quick",
+              "standard",
+              "deep"
+            ],
+            "default": "standard",
+            "description": "Analysis depth level"
           }
         }
       },
@@ -1027,6 +132,56 @@
       ],
       "tags": [
         "AI"
+      ]
+    },
+    {
+      "name": "barcode-generate",
+      "description": "Generate barcodes in various formats",
+      "endpoint": "https://archtools.dev/v1/tools/barcode-generate",
+      "method": "POST",
+      "credits": 2,
+      "category": "data",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text or number to encode"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "CODE128",
+              "EAN13",
+              "UPC",
+              "CODE39",
+              "ITF14"
+            ],
+            "default": "CODE128",
+            "description": "Barcode format"
+          },
+          "width": {
+            "type": "integer",
+            "default": 2,
+            "description": "Bar width"
+          },
+          "height": {
+            "type": "integer",
+            "default": 100,
+            "description": "Bar height in pixels"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
       ]
     },
     {
@@ -1088,6 +243,616 @@
       ]
     },
     {
+      "name": "check-domain",
+      "description": "Check if a domain is available or registered via RDAP. No API key needed.",
+      "endpoint": "/v1/tools/check-domain",
+      "method": "POST",
+      "credits": 2,
+      "category": "utility",
+      "parameters": {
+        "domain": {
+          "type": "string",
+          "required": true,
+          "description": "Domain name to check, e.g. example.com"
+        }
+      },
+      "authentication": "api_key or x402",
+      "tags": [
+        "utility"
+      ]
+    },
+    {
+      "name": "convert-format",
+      "description": "Convert between JSON, YAML, CSV, XML",
+      "endpoint": "https://archtools.dev/v1/tools/convert-format",
+      "method": "POST",
+      "credits": 2,
+      "category": "data",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "input",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "The content to convert (serialized as a string)"
+          },
+          "from": {
+            "type": "string",
+            "enum": [
+              "json",
+              "yaml",
+              "csv",
+              "xml",
+              "toml"
+            ],
+            "description": "Source format"
+          },
+          "to": {
+            "type": "string",
+            "enum": [
+              "json",
+              "yaml",
+              "csv",
+              "xml",
+              "toml"
+            ],
+            "description": "Target format"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "crypto-fear-greed",
+      "description": "Get the crypto Fear & Greed Index",
+      "endpoint": "https://archtools.dev/v1/tools/crypto-fear-greed",
+      "method": "POST",
+      "credits": 1,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "default": 1,
+            "description": "Number of historical entries (1 = current)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
+      "name": "crypto-market-cap",
+      "description": "Get top cryptocurrencies by market cap",
+      "endpoint": "https://archtools.dev/v1/tools/crypto-market-cap",
+      "method": "POST",
+      "credits": 1,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of top coins to return"
+          },
+          "currency": {
+            "type": "string",
+            "default": "usd",
+            "description": "Fiat currency for prices"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
+      "name": "crypto-news",
+      "description": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine",
+      "endpoint": "https://archtools.dev/v1/tools/crypto-news",
+      "method": "POST",
+      "credits": 2,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Filter by coin symbol (e.g. BTC, ETH)"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "maximum": 20
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
+      "name": "crypto-ohlcv",
+      "description": "Get OHLCV (candlestick) data for a cryptocurrency",
+      "endpoint": "https://archtools.dev/v1/tools/crypto-ohlcv",
+      "method": "POST",
+      "credits": 2,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "CoinGecko coin ID (e.g. bitcoin, ethereum)"
+          },
+          "days": {
+            "type": "integer",
+            "default": 7,
+            "description": "Number of days of OHLCV data (1, 7, 14, 30, 90, 180, 365)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
+      "name": "crypto-price",
+      "description": "Get current cryptocurrency price and market data",
+      "endpoint": "https://archtools.dev/v1/tools/crypto-price",
+      "method": "POST",
+      "credits": 1,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "CoinGecko coin ID (e.g. bitcoin, ethereum, solana)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
+      "name": "crypto-sentiment",
+      "description": "Get community sentiment for a cryptocurrency",
+      "endpoint": "https://archtools.dev/v1/tools/crypto-sentiment",
+      "method": "POST",
+      "credits": 2,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "CoinGecko coin ID (e.g. bitcoin, ethereum)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
+      "name": "currency-convert",
+      "description": "170+ currencies with live rates",
+      "endpoint": "https://archtools.dev/v1/tools/currency-convert",
+      "method": "POST",
+      "credits": 2,
+      "category": "finance",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "amount",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Amount to convert"
+          },
+          "from": {
+            "type": "string",
+            "description": "Source currency code (e.g. USD, EUR, GBP)"
+          },
+          "to": {
+            "type": "string",
+            "description": "Target currency code (e.g. EUR, JPY, BTC)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "design-create",
+      "description": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
+      "endpoint": "https://archtools.dev/v1/tools/design-create",
+      "method": "POST",
+      "credits": 15,
+      "category": "media",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Image description"
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "1024x1024",
+              "1792x1024",
+              "1024x1792"
+            ],
+            "default": "1024x1024"
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "hd"
+            ],
+            "default": "standard"
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "vivid",
+              "natural"
+            ],
+            "default": "vivid"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Image"
+      ]
+    },
+    {
+      "name": "diff-text",
+      "description": "Structured diff in unified, words, chars, or JSON format",
+      "endpoint": "https://archtools.dev/v1/tools/diff-text",
+      "method": "POST",
+      "credits": 2,
+      "category": "text",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text1",
+          "text2"
+        ],
+        "properties": {
+          "text1": {
+            "type": "string",
+            "description": "Original text"
+          },
+          "text2": {
+            "type": "string",
+            "description": "Modified text"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "unified",
+              "words",
+              "chars",
+              "json"
+            ],
+            "default": "unified",
+            "description": "Diff output format"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "domain-check",
+      "description": "Check if a domain is available or registered via RDAP (no key needed)",
+      "endpoint": "https://archtools.dev/v1/tools/domain-check",
+      "method": "POST",
+      "credits": 2,
+      "category": "network",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name (e.g. example.com)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "email-find",
+      "description": "Find email address for a person at a company via Hunter.io",
+      "endpoint": "https://archtools.dev/v1/tools/email-find",
+      "method": "POST",
+      "credits": 5,
+      "category": "validation",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Company domain (e.g. google.com)"
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Person's first name"
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Person's last name"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Communication"
+      ]
+    },
+    {
+      "name": "email-send",
+      "description": "Send transactional emails via Resend \u2014 plain text or HTML",
+      "endpoint": "https://archtools.dev/v1/tools/email-send",
+      "method": "POST",
+      "credits": 3,
+      "category": "communication",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "to",
+          "subject",
+          "body"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line"
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain text email body"
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML email body (alternative to body)"
+          },
+          "from": {
+            "type": "string",
+            "description": "Sender (default: no-reply@archtools.dev)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Communication"
+      ]
+    },
+    {
+      "name": "email-verify",
+      "description": "MX check + disposable domain detection",
+      "endpoint": "https://archtools.dev/v1/tools/email-verify",
+      "method": "POST",
+      "credits": 3,
+      "category": "validation",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to verify"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "extract-entities",
+      "description": "NER: people, orgs, locations, dates, money",
+      "endpoint": "https://archtools.dev/v1/tools/extract-entities",
+      "method": "POST",
+      "credits": 8,
+      "category": "ai",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to extract entities from"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
+      ]
+    },
+    {
+      "name": "extract-metadata",
+      "description": "Extract OG tags, word count, links from text or URLs",
+      "endpoint": "https://archtools.dev/v1/tools/extract-metadata",
+      "method": "POST",
+      "credits": 3,
+      "category": "data",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to extract metadata from"
+          },
+          "text": {
+            "type": "string",
+            "description": "Raw text to analyze (alternative to url)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Web"
+      ]
+    },
+    {
+      "name": "extract-page",
+      "description": "Clean text, links, and metadata from any webpage",
+      "endpoint": "https://archtools.dev/v1/tools/extract-page",
+      "method": "POST",
+      "credits": 5,
+      "category": "web",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL of the webpage to extract"
+          },
+          "include_links": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include extracted links"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Web"
+      ]
+    },
+    {
       "name": "extract-pdf",
       "description": "Extract text from a PDF (URL or base64)",
       "endpoint": "https://archtools.dev/v1/tools/extract-pdf",
@@ -1117,44 +882,25 @@
       ]
     },
     {
-      "name": "screenshot-capture",
-      "description": "Capture a screenshot of any webpage",
-      "endpoint": "https://archtools.dev/v1/tools/screenshot-capture",
+      "name": "fact-check",
+      "description": "Verify claims against real-time web sources",
+      "endpoint": "https://archtools.dev/v1/tools/fact-check",
       "method": "POST",
       "credits": 10,
-      "category": "web",
+      "category": "ai",
       "parameters": {
         "type": "object",
         "required": [
-          "url"
+          "claim"
         ],
         "properties": {
-          "url": {
+          "claim": {
             "type": "string",
-            "description": "URL to screenshot"
+            "description": "The claim or statement to verify"
           },
-          "width": {
-            "type": "integer",
-            "default": 1280,
-            "description": "Viewport width in pixels"
-          },
-          "height": {
-            "type": "integer",
-            "default": 800,
-            "description": "Viewport height in pixels"
-          },
-          "full_page": {
-            "type": "boolean",
-            "default": false,
-            "description": "Capture full scrollable page"
-          },
-          "format": {
+          "context": {
             "type": "string",
-            "enum": [
-              "png",
-              "jpeg"
-            ],
-            "default": "png"
+            "description": "Additional context about the claim"
           }
         }
       },
@@ -1164,7 +910,110 @@
         "x402"
       ],
       "tags": [
-        "Web"
+        "AI"
+      ]
+    },
+    {
+      "name": "generate-hash",
+      "description": "Generate cryptographic hashes (sha256/sha512/md5)",
+      "endpoint": "https://archtools.dev/v1/tools/generate-hash",
+      "method": "POST",
+      "credits": 1,
+      "category": "security",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to hash"
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": [
+              "sha256",
+              "sha512",
+              "md5",
+              "sha1"
+            ],
+            "default": "sha256"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "generate-image",
+      "description": "Generate images from text prompts via DALL-E 3 (1024\u00d71024, 1792\u00d71024, 1024\u00d71792).",
+      "endpoint": "/v1/tools/generate-image",
+      "method": "POST",
+      "credits": 15,
+      "category": "ai",
+      "parameters": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "Text prompt describing the image"
+        },
+        "size": {
+          "type": "string",
+          "required": false,
+          "description": "1024x1024, 1792x1024, or 1024x1792"
+        }
+      },
+      "authentication": "api_key or x402",
+      "tags": [
+        "ai"
+      ]
+    },
+    {
+      "name": "generate-uuid",
+      "description": "Generate UUIDs, tokens, and API-key-format strings",
+      "endpoint": "https://archtools.dev/v1/tools/generate-uuid",
+      "method": "POST",
+      "credits": 1,
+      "category": "utility",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "uuid",
+              "token",
+              "api-key"
+            ],
+            "default": "uuid",
+            "description": "Type of identifier to generate"
+          },
+          "count": {
+            "type": "integer",
+            "default": 1,
+            "description": "Number of identifiers to generate"
+          },
+          "length": {
+            "type": "integer",
+            "default": 32,
+            "description": "Length for token/api-key types"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
       ]
     },
     {
@@ -1187,115 +1036,6 @@
           "url": {
             "type": "string",
             "description": "URL to fetch and convert (alternative to html)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "url-shorten",
-      "description": "Shorten a URL",
-      "endpoint": "https://archtools.dev/v1/tools/url-shorten",
-      "method": "POST",
-      "credits": 1,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "Long URL to shorten"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "webhook-send",
-      "description": "POST a JSON payload to any webhook URL",
-      "endpoint": "https://archtools.dev/v1/tools/webhook-send",
-      "method": "POST",
-      "credits": 2,
-      "category": "web",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "webhook_url",
-          "payload"
-        ],
-        "properties": {
-          "webhook_url": {
-            "type": "string",
-            "description": "The webhook endpoint URL to POST to"
-          },
-          "payload": {
-            "type": "object",
-            "description": "JSON body to send in the POST request"
-          },
-          "headers": {
-            "type": "object",
-            "description": "Optional custom headers to include"
-          },
-          "method": {
-            "type": "string",
-            "enum": [
-              "GET",
-              "POST",
-              "PUT",
-              "PATCH",
-              "DELETE"
-            ],
-            "default": "POST"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Utility"
-      ]
-    },
-    {
-      "name": "jsonpath-query",
-      "description": "Run a JSONPath expression against a JSON object",
-      "endpoint": "https://archtools.dev/v1/tools/jsonpath-query",
-      "method": "POST",
-      "credits": 1,
-      "category": "data",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "data",
-          "path"
-        ],
-        "properties": {
-          "data": {
-            "type": "object",
-            "description": "The JSON object to query"
-          },
-          "path": {
-            "type": "string",
-            "description": "JSONPath expression, e.g. $.store.book[*].title"
           }
         }
       },
@@ -1354,43 +1094,90 @@
       ]
     },
     {
-      "name": "barcode-generate",
-      "description": "Generate barcodes in various formats",
-      "endpoint": "https://archtools.dev/v1/tools/barcode-generate",
+      "name": "image-remove-bg",
+      "description": "Remove background from any image via RemoveBG",
+      "endpoint": "https://archtools.dev/v1/tools/image-remove-bg",
+      "method": "POST",
+      "credits": 350,
+      "category": "media",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "image_url": {
+            "type": "string",
+            "description": "Public URL of the image"
+          },
+          "image_base64": {
+            "type": "string",
+            "description": "Base64-encoded image (alternative to image_url)"
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "preview",
+              "full",
+              "auto"
+            ],
+            "default": "auto",
+            "description": "Output size"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Image"
+      ]
+    },
+    {
+      "name": "ip-lookup",
+      "description": "Geo, ISP, VPN/proxy detection",
+      "endpoint": "https://archtools.dev/v1/tools/ip-lookup",
       "method": "POST",
       "credits": 2,
+      "category": "network",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ip": {
+            "type": "string",
+            "description": "IP address (uses caller's IP if omitted)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Web"
+      ]
+    },
+    {
+      "name": "jsonpath-query",
+      "description": "Run a JSONPath expression against a JSON object",
+      "endpoint": "https://archtools.dev/v1/tools/jsonpath-query",
+      "method": "POST",
+      "credits": 1,
       "category": "data",
       "parameters": {
         "type": "object",
         "required": [
-          "text"
+          "data",
+          "path"
         ],
         "properties": {
-          "text": {
+          "data": {
+            "type": "object",
+            "description": "The JSON object to query"
+          },
+          "path": {
             "type": "string",
-            "description": "Text or number to encode"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "CODE128",
-              "EAN13",
-              "UPC",
-              "CODE39",
-              "ITF14"
-            ],
-            "default": "CODE128",
-            "description": "Barcode format"
-          },
-          "width": {
-            "type": "integer",
-            "default": 2,
-            "description": "Bar width"
-          },
-          "height": {
-            "type": "integer",
-            "default": 100,
-            "description": "Bar height in pixels"
+            "description": "JSONPath expression, e.g. $.store.book[*].title"
           }
         }
       },
@@ -1404,33 +1191,21 @@
       ]
     },
     {
-      "name": "workflow-agent",
-      "description": "Execute multi-step AI workflows with tool chaining",
-      "endpoint": "https://archtools.dev/v1/tools/workflow-agent",
+      "name": "language-detect",
+      "description": "Detect language with confidence score (100+ languages)",
+      "endpoint": "https://archtools.dev/v1/tools/language-detect",
       "method": "POST",
-      "credits": 25,
+      "credits": 3,
       "category": "ai",
       "parameters": {
         "type": "object",
         "required": [
-          "goal"
+          "text"
         ],
         "properties": {
-          "goal": {
+          "text": {
             "type": "string",
-            "description": "High-level goal for the workflow agent"
-          },
-          "tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of tool names the agent can use"
-          },
-          "max_steps": {
-            "type": "integer",
-            "default": 5,
-            "description": "Maximum number of steps the agent can take"
+            "description": "Text to detect the language of"
           }
         }
       },
@@ -1444,85 +1219,31 @@
       ]
     },
     {
-      "name": "crypto-price",
-      "description": "Get current cryptocurrency price and market data",
-      "endpoint": "https://archtools.dev/v1/tools/crypto-price",
+      "name": "news-search",
+      "description": "Search real-time news articles by keyword",
+      "endpoint": "https://archtools.dev/v1/tools/news-search",
       "method": "POST",
-      "credits": 1,
-      "category": "crypto",
+      "credits": 3,
+      "category": "web",
       "parameters": {
         "type": "object",
         "required": [
-          "symbol"
+          "query"
         ],
         "properties": {
-          "symbol": {
+          "query": {
             "type": "string",
-            "description": "CoinGecko coin ID (e.g. bitcoin, ethereum, solana)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Crypto"
-      ]
-    },
-    {
-      "name": "crypto-ohlcv",
-      "description": "Get OHLCV (candlestick) data for a cryptocurrency",
-      "endpoint": "https://archtools.dev/v1/tools/crypto-ohlcv",
-      "method": "POST",
-      "credits": 2,
-      "category": "crypto",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "symbol"
-        ],
-        "properties": {
-          "symbol": {
-            "type": "string",
-            "description": "CoinGecko coin ID (e.g. bitcoin, ethereum)"
+            "description": "News search query"
           },
-          "days": {
-            "type": "integer",
-            "default": 7,
-            "description": "Number of days of OHLCV data (1, 7, 14, 30, 90, 180, 365)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Crypto"
-      ]
-    },
-    {
-      "name": "crypto-market-cap",
-      "description": "Get top cryptocurrencies by market cap",
-      "endpoint": "https://archtools.dev/v1/tools/crypto-market-cap",
-      "method": "POST",
-      "credits": 1,
-      "category": "crypto",
-      "parameters": {
-        "type": "object",
-        "properties": {
           "limit": {
             "type": "integer",
             "default": 10,
-            "description": "Number of top coins to return"
+            "description": "Maximum number of articles to return"
           },
-          "currency": {
+          "language": {
             "type": "string",
-            "default": "usd",
-            "description": "Fiat currency for prices"
+            "default": "en",
+            "description": "ISO-639-1 language code"
           }
         }
       },
@@ -1532,23 +1253,26 @@
         "x402"
       ],
       "tags": [
-        "Crypto"
+        "Web"
       ]
     },
     {
-      "name": "crypto-fear-greed",
-      "description": "Get the crypto Fear & Greed Index",
-      "endpoint": "https://archtools.dev/v1/tools/crypto-fear-greed",
+      "name": "ocr-extract",
+      "description": "Extract text from images (URL or base64)",
+      "endpoint": "https://archtools.dev/v1/tools/ocr-extract",
       "method": "POST",
-      "credits": 1,
-      "category": "crypto",
+      "credits": 10,
+      "category": "media",
       "parameters": {
         "type": "object",
         "properties": {
-          "limit": {
-            "type": "integer",
-            "default": 1,
-            "description": "Number of historical entries (1 = current)"
+          "image_url": {
+            "type": "string",
+            "description": "Public URL of the image"
+          },
+          "image_base64": {
+            "type": "string",
+            "description": "Base64-encoded image (alternative to image_url)"
           }
         }
       },
@@ -1558,25 +1282,29 @@
         "x402"
       ],
       "tags": [
-        "Crypto"
+        "AI"
       ]
     },
     {
-      "name": "crypto-sentiment",
-      "description": "Get community sentiment for a cryptocurrency",
-      "endpoint": "https://archtools.dev/v1/tools/crypto-sentiment",
+      "name": "phone-validate",
+      "description": "E.164 format, type, country code",
+      "endpoint": "https://archtools.dev/v1/tools/phone-validate",
       "method": "POST",
       "credits": 2,
-      "category": "crypto",
+      "category": "validation",
       "parameters": {
         "type": "object",
         "required": [
-          "symbol"
+          "phone"
         ],
         "properties": {
-          "symbol": {
+          "phone": {
             "type": "string",
-            "description": "CoinGecko coin ID (e.g. bitcoin, ethereum)"
+            "description": "Phone number to validate"
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 country code (e.g. US, GB)"
           }
         }
       },
@@ -1586,22 +1314,292 @@
         "x402"
       ],
       "tags": [
-        "Crypto"
+        "Utility"
       ]
     },
     {
-      "name": "crypto-news",
-      "description": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine",
-      "endpoint": "https://archtools.dev/v1/tools/crypto-news",
+      "name": "pii-detect",
+      "description": "Detect and optionally redact PII",
+      "endpoint": "https://archtools.dev/v1/tools/pii-detect",
       "method": "POST",
-      "credits": 2,
-      "category": "crypto",
+      "credits": 10,
+      "category": "ai",
       "parameters": {
         "type": "object",
+        "required": [
+          "text"
+        ],
         "properties": {
-          "symbol": {
+          "text": {
             "type": "string",
-            "description": "Filter by coin symbol (e.g. BTC, ETH)"
+            "description": "Text to scan for PII"
+          },
+          "redact": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to return redacted version of the text"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
+      ]
+    },
+    {
+      "name": "qr-code",
+      "description": "Generate QR codes (PNG or SVG)",
+      "endpoint": "https://archtools.dev/v1/tools/qr-code",
+      "method": "POST",
+      "credits": 2,
+      "category": "data",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text or URL to encode"
+          },
+          "size": {
+            "type": "integer",
+            "default": 200,
+            "description": "Image size in pixels"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "png",
+              "svg"
+            ],
+            "default": "png"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "readability-score",
+      "description": "Flesch-Kincaid readability and grade level",
+      "endpoint": "https://archtools.dev/v1/tools/readability-score",
+      "method": "POST",
+      "credits": 2,
+      "category": "text",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to analyze for readability"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
+      ]
+    },
+    {
+      "name": "regex-generate",
+      "description": "Generate regex from plain English with explanations",
+      "endpoint": "https://archtools.dev/v1/tools/regex-generate",
+      "method": "POST",
+      "credits": 8,
+      "category": "ai",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Plain English description of the pattern to match"
+          },
+          "test_strings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional strings to test the generated regex against"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
+      ]
+    },
+    {
+      "name": "research-report",
+      "description": "Generate a structured research report on any topic",
+      "endpoint": "https://archtools.dev/v1/tools/research-report",
+      "method": "POST",
+      "credits": 40,
+      "category": "ai",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Research topic or question"
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "brief",
+              "standard",
+              "comprehensive"
+            ],
+            "default": "standard",
+            "description": "Report depth level"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "json"
+            ],
+            "default": "markdown"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
+      ]
+    },
+    {
+      "name": "rss-parse",
+      "description": "Parse RSS/Atom feeds into structured JSON",
+      "endpoint": "https://archtools.dev/v1/tools/rss-parse",
+      "method": "POST",
+      "credits": 4,
+      "category": "web",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "RSS or Atom feed URL"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 20,
+            "description": "Maximum number of items to return"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Web"
+      ]
+    },
+    {
+      "name": "screenshot-capture",
+      "description": "Capture a screenshot of any webpage",
+      "endpoint": "https://archtools.dev/v1/tools/screenshot-capture",
+      "method": "POST",
+      "credits": 10,
+      "category": "web",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to screenshot"
+          },
+          "width": {
+            "type": "integer",
+            "default": 1280,
+            "description": "Viewport width in pixels"
+          },
+          "height": {
+            "type": "integer",
+            "default": 800,
+            "description": "Viewport height in pixels"
+          },
+          "full_page": {
+            "type": "boolean",
+            "default": false,
+            "description": "Capture full scrollable page"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "png",
+              "jpeg"
+            ],
+            "default": "png"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Web"
+      ]
+    },
+    {
+      "name": "search-web",
+      "description": "Web search with structured results (DuckDuckGo)",
+      "endpoint": "https://archtools.dev/v1/tools/search-web",
+      "method": "POST",
+      "credits": 5,
+      "category": "web",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
           },
           "limit": {
             "type": "integer",
@@ -1616,16 +1614,16 @@
         "x402"
       ],
       "tags": [
-        "Crypto"
+        "Web"
       ]
     },
     {
-      "name": "token-lookup",
-      "description": "Search CoinGecko for a token by name or ticker symbol",
-      "endpoint": "https://archtools.dev/v1/tools/token-lookup",
+      "name": "semantic-search",
+      "description": "Neural/semantic web search via Exa AI",
+      "endpoint": "https://archtools.dev/v1/tools/semantic-search",
       "method": "POST",
-      "credits": 1,
-      "category": "crypto",
+      "credits": 8,
+      "category": "ai",
       "parameters": {
         "type": "object",
         "required": [
@@ -1634,7 +1632,17 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)"
+            "description": "Natural language search query"
+          },
+          "num_results": {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of results to return"
+          },
+          "include_text": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include full page text in results"
           }
         }
       },
@@ -1644,39 +1652,59 @@
         "x402"
       ],
       "tags": [
-        "Crypto"
+        "Web"
       ]
     },
     {
-      "name": "ai-oracle",
-      "description": "Premium reasoning with structured analysis and confidence levels",
-      "endpoint": "https://archtools.dev/v1/tools/ai-oracle",
+      "name": "send-email",
+      "description": "Send transactional emails via Resend \u2014 plain text or HTML.",
+      "endpoint": "/v1/tools/send-email",
       "method": "POST",
-      "credits": 25,
+      "credits": 3,
+      "category": "utility",
+      "parameters": {
+        "to": {
+          "type": "string",
+          "required": true,
+          "description": "Recipient email address"
+        },
+        "subject": {
+          "type": "string",
+          "required": true,
+          "description": "Email subject"
+        },
+        "text": {
+          "type": "string",
+          "required": false,
+          "description": "Plain-text body"
+        },
+        "html": {
+          "type": "string",
+          "required": false,
+          "description": "HTML body"
+        }
+      },
+      "authentication": "api_key or x402",
+      "tags": [
+        "utility"
+      ]
+    },
+    {
+      "name": "sentiment-analysis",
+      "description": "Sentiment + emotion detection (joy, anger, fear\u2026)",
+      "endpoint": "https://archtools.dev/v1/tools/sentiment-analysis",
+      "method": "POST",
+      "credits": 8,
       "category": "ai",
       "parameters": {
         "type": "object",
         "required": [
-          "question"
+          "text"
         ],
         "properties": {
-          "question": {
+          "text": {
             "type": "string",
-            "description": "Question or topic to analyze"
-          },
-          "context": {
-            "type": "string",
-            "description": "Additional context for the analysis"
-          },
-          "depth": {
-            "type": "string",
-            "enum": [
-              "quick",
-              "standard",
-              "deep"
-            ],
-            "default": "standard",
-            "description": "Analysis depth level"
+            "description": "Text to analyze"
           }
         }
       },
@@ -1764,11 +1792,87 @@
       ]
     },
     {
+      "name": "social-post",
+      "description": "Post a tweet to X/Twitter via API v2",
+      "endpoint": "https://archtools.dev/v1/tools/social-post",
+      "method": "POST",
+      "credits": 5,
+      "category": "communication",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Tweet text (max 280 characters)"
+          },
+          "reply_to": {
+            "type": "string",
+            "description": "Tweet ID to reply to"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Communication"
+      ]
+    },
+    {
+      "name": "summarize",
+      "description": "Summarize in 5 styles (bullets, tldr, executive\u2026)",
+      "endpoint": "https://archtools.dev/v1/tools/summarize",
+      "method": "POST",
+      "credits": 10,
+      "category": "ai",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to summarize"
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "bullets",
+              "tldr",
+              "executive",
+              "paragraph",
+              "headline"
+            ],
+            "default": "bullets",
+            "description": "Summary style"
+          },
+          "max_length": {
+            "type": "integer",
+            "description": "Maximum summary length in words"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
+      ]
+    },
+    {
       "name": "text-to-speech",
       "description": "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)",
       "endpoint": "https://archtools.dev/v1/tools/text-to-speech",
       "method": "POST",
-      "credits": 5,
+      "credits": 25,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -1809,11 +1913,77 @@
       ]
     },
     {
+      "name": "timezone-convert",
+      "description": "Convert datetime between any two IANA timezones",
+      "endpoint": "https://archtools.dev/v1/tools/timezone-convert",
+      "method": "POST",
+      "credits": 1,
+      "category": "utility",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "datetime",
+          "from_tz",
+          "to_tz"
+        ],
+        "properties": {
+          "datetime": {
+            "type": "string",
+            "description": "ISO 8601 datetime to convert (e.g. 2024-01-15T14:30:00)"
+          },
+          "from_tz": {
+            "type": "string",
+            "description": "Source IANA timezone (e.g. America/New_York)"
+          },
+          "to_tz": {
+            "type": "string",
+            "description": "Target IANA timezone (e.g. Europe/London)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "token-lookup",
+      "description": "Search CoinGecko for a token by name or ticker symbol",
+      "endpoint": "https://archtools.dev/v1/tools/token-lookup",
+      "method": "POST",
+      "credits": 1,
+      "category": "crypto",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Token name or ticker to search (e.g. bitcoin, BTC, solana)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Crypto"
+      ]
+    },
+    {
       "name": "transcribe-audio",
       "description": "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)",
       "endpoint": "https://archtools.dev/v1/tools/transcribe-audio",
       "method": "POST",
-      "credits": 8,
+      "credits": 25,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -1845,120 +2015,38 @@
       ]
     },
     {
-      "name": "email-send",
-      "description": "Send transactional emails via Resend — plain text or HTML",
-      "endpoint": "https://archtools.dev/v1/tools/email-send",
+      "name": "transform-text",
+      "description": "Transform text (10 modes: slug, camel, base64\u2026)",
+      "endpoint": "https://archtools.dev/v1/tools/transform-text",
       "method": "POST",
       "credits": 3,
-      "category": "communication",
+      "category": "text",
       "parameters": {
         "type": "object",
         "required": [
-          "to",
-          "subject",
-          "body"
+          "text",
+          "mode"
         ],
         "properties": {
-          "to": {
+          "text": {
             "type": "string",
-            "description": "Recipient email address"
+            "description": "Text to transform"
           },
-          "subject": {
-            "type": "string",
-            "description": "Email subject line"
-          },
-          "body": {
-            "type": "string",
-            "description": "Plain text email body"
-          },
-          "html": {
-            "type": "string",
-            "description": "HTML email body (alternative to body)"
-          },
-          "from": {
-            "type": "string",
-            "description": "Sender (default: no-reply@archtools.dev)"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Communication"
-      ]
-    },
-    {
-      "name": "design-create",
-      "description": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
-      "endpoint": "https://archtools.dev/v1/tools/design-create",
-      "method": "POST",
-      "credits": 15,
-      "category": "media",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "prompt"
-        ],
-        "properties": {
-          "prompt": {
-            "type": "string",
-            "description": "Image description"
-          },
-          "size": {
+          "mode": {
             "type": "string",
             "enum": [
-              "1024x1024",
-              "1792x1024",
-              "1024x1792"
+              "slug",
+              "camel",
+              "snake",
+              "pascal",
+              "kebab",
+              "upper",
+              "lower",
+              "title",
+              "base64_encode",
+              "base64_decode"
             ],
-            "default": "1024x1024"
-          },
-          "quality": {
-            "type": "string",
-            "enum": [
-              "standard",
-              "hd"
-            ],
-            "default": "standard"
-          },
-          "style": {
-            "type": "string",
-            "enum": [
-              "vivid",
-              "natural"
-            ],
-            "default": "vivid"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Image"
-      ]
-    },
-    {
-      "name": "domain-check",
-      "description": "Check if a domain is available or registered via RDAP (no key needed)",
-      "endpoint": "https://archtools.dev/v1/tools/domain-check",
-      "method": "POST",
-      "credits": 2,
-      "category": "network",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "domain"
-        ],
-        "properties": {
-          "domain": {
-            "type": "string",
-            "description": "Domain name (e.g. example.com)"
+            "description": "Transformation mode"
           }
         }
       },
@@ -1972,31 +2060,21 @@
       ]
     },
     {
-      "name": "news-search",
-      "description": "Search real-time news articles by keyword",
-      "endpoint": "https://archtools.dev/v1/tools/news-search",
+      "name": "url-shorten",
+      "description": "Shorten a URL",
+      "endpoint": "https://archtools.dev/v1/tools/url-shorten",
       "method": "POST",
-      "credits": 3,
+      "credits": 1,
       "category": "web",
       "parameters": {
         "type": "object",
         "required": [
-          "query"
+          "url"
         ],
         "properties": {
-          "query": {
+          "url": {
             "type": "string",
-            "description": "News search query"
-          },
-          "limit": {
-            "type": "integer",
-            "default": 10,
-            "description": "Maximum number of articles to return"
-          },
-          "language": {
-            "type": "string",
-            "default": "en",
-            "description": "ISO-639-1 language code"
+            "description": "Long URL to shorten"
           }
         }
       },
@@ -2006,43 +2084,29 @@
         "x402"
       ],
       "tags": [
-        "Web"
+        "Utility"
       ]
     },
     {
-      "name": "research-report",
-      "description": "Generate a structured research report on any topic",
-      "endpoint": "https://archtools.dev/v1/tools/research-report",
+      "name": "validate-data",
+      "description": "Validate JSON against a JSON Schema",
+      "endpoint": "https://archtools.dev/v1/tools/validate-data",
       "method": "POST",
-      "credits": 15,
-      "category": "ai",
+      "credits": 1,
+      "category": "data",
       "parameters": {
         "type": "object",
         "required": [
-          "topic"
+          "data",
+          "schema"
         ],
         "properties": {
-          "topic": {
-            "type": "string",
-            "description": "Research topic or question"
+          "data": {
+            "description": "The JSON data to validate"
           },
-          "depth": {
-            "type": "string",
-            "enum": [
-              "brief",
-              "standard",
-              "comprehensive"
-            ],
-            "default": "standard",
-            "description": "Report depth level"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "markdown",
-              "json"
-            ],
-            "default": "markdown"
+          "schema": {
+            "type": "object",
+            "description": "JSON Schema to validate against"
           }
         }
       },
@@ -2052,39 +2116,7 @@
         "x402"
       ],
       "tags": [
-        "AI"
-      ]
-    },
-    {
-      "name": "fact-check",
-      "description": "Verify claims against real-time web sources",
-      "endpoint": "https://archtools.dev/v1/tools/fact-check",
-      "method": "POST",
-      "credits": 10,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "claim"
-        ],
-        "properties": {
-          "claim": {
-            "type": "string",
-            "description": "The claim or statement to verify"
-          },
-          "context": {
-            "type": "string",
-            "description": "Additional context about the claim"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "AI"
+        "Utility"
       ]
     },
     {
@@ -2092,7 +2124,7 @@
       "description": "AI video generation from text prompts via Runway Gen-3",
       "endpoint": "https://archtools.dev/v1/tools/video-generate",
       "method": "POST",
-      "credits": 50,
+      "credits": 500,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -2121,106 +2153,34 @@
       ]
     },
     {
-      "name": "image-remove-bg",
-      "description": "Remove background from any image via RemoveBG",
-      "endpoint": "https://archtools.dev/v1/tools/image-remove-bg",
-      "method": "POST",
-      "credits": 10,
-      "category": "media",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "image_url": {
-            "type": "string",
-            "description": "Public URL of the image"
-          },
-          "image_base64": {
-            "type": "string",
-            "description": "Base64-encoded image (alternative to image_url)"
-          },
-          "size": {
-            "type": "string",
-            "enum": [
-              "preview",
-              "full",
-              "auto"
-            ],
-            "default": "auto",
-            "description": "Output size"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Image"
-      ]
-    },
-    {
-      "name": "email-find",
-      "description": "Find email address for a person at a company via Hunter.io",
-      "endpoint": "https://archtools.dev/v1/tools/email-find",
+      "name": "web-scrape",
+      "description": "Scrape any public URL with optional CSS selector",
+      "endpoint": "https://archtools.dev/v1/tools/web-scrape",
       "method": "POST",
       "credits": 5,
-      "category": "validation",
+      "category": "web",
       "parameters": {
         "type": "object",
         "required": [
-          "domain"
+          "url"
         ],
         "properties": {
-          "domain": {
+          "url": {
             "type": "string",
-            "description": "Company domain (e.g. google.com)"
+            "description": "URL to scrape"
           },
-          "first_name": {
+          "format": {
             "type": "string",
-            "description": "Person's first name"
+            "enum": [
+              "markdown",
+              "html",
+              "text"
+            ],
+            "default": "markdown"
           },
-          "last_name": {
+          "selector": {
             "type": "string",
-            "description": "Person's last name"
-          }
-        }
-      },
-      "authentication": [
-        "bearer",
-        "x-api-key",
-        "x402"
-      ],
-      "tags": [
-        "Communication"
-      ]
-    },
-    {
-      "name": "semantic-search",
-      "description": "Neural/semantic web search via Exa AI",
-      "endpoint": "https://archtools.dev/v1/tools/semantic-search",
-      "method": "POST",
-      "credits": 8,
-      "category": "ai",
-      "parameters": {
-        "type": "object",
-        "required": [
-          "query"
-        ],
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "Natural language search query"
-          },
-          "num_results": {
-            "type": "integer",
-            "default": 10,
-            "description": "Number of results to return"
-          },
-          "include_text": {
-            "type": "boolean",
-            "default": true,
-            "description": "Include full page text in results"
+            "description": "CSS selector to extract specific element"
           }
         }
       },
@@ -2234,25 +2194,26 @@
       ]
     },
     {
-      "name": "social-post",
-      "description": "Post a tweet to X/Twitter via API v2",
-      "endpoint": "https://archtools.dev/v1/tools/social-post",
+      "name": "web-search",
+      "description": "Real-time web search with AI-synthesized answer",
+      "endpoint": "https://archtools.dev/v1/tools/web-search",
       "method": "POST",
-      "credits": 5,
-      "category": "communication",
+      "credits": 10,
+      "category": "web",
       "parameters": {
         "type": "object",
         "required": [
-          "text"
+          "query"
         ],
         "properties": {
-          "text": {
+          "query": {
             "type": "string",
-            "description": "Tweet text (max 280 characters)"
+            "description": "Search query"
           },
-          "reply_to": {
-            "type": "string",
-            "description": "Tweet ID to reply to"
+          "limit": {
+            "type": "integer",
+            "default": 5,
+            "description": "Number of source results"
           }
         }
       },
@@ -2262,7 +2223,123 @@
         "x402"
       ],
       "tags": [
-        "Communication"
+        "Web"
+      ]
+    },
+    {
+      "name": "webhook-send",
+      "description": "POST a JSON payload to any webhook URL",
+      "endpoint": "https://archtools.dev/v1/tools/webhook-send",
+      "method": "POST",
+      "credits": 2,
+      "category": "web",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "webhook_url",
+          "payload"
+        ],
+        "properties": {
+          "webhook_url": {
+            "type": "string",
+            "description": "The webhook endpoint URL to POST to"
+          },
+          "payload": {
+            "type": "object",
+            "description": "JSON body to send in the POST request"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Optional custom headers to include"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE"
+            ],
+            "default": "POST"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Utility"
+      ]
+    },
+    {
+      "name": "whois-lookup",
+      "description": "Domain registration, expiry, nameservers via RDAP",
+      "endpoint": "https://archtools.dev/v1/tools/whois-lookup",
+      "method": "POST",
+      "credits": 3,
+      "category": "network",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name to look up (e.g. example.com)"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "Web"
+      ]
+    },
+    {
+      "name": "workflow-agent",
+      "description": "Execute multi-step AI workflows with tool chaining",
+      "endpoint": "https://archtools.dev/v1/tools/workflow-agent",
+      "method": "POST",
+      "credits": 25,
+      "category": "ai",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "goal"
+        ],
+        "properties": {
+          "goal": {
+            "type": "string",
+            "description": "High-level goal for the workflow agent"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of tool names the agent can use"
+          },
+          "max_steps": {
+            "type": "integer",
+            "default": 5,
+            "description": "Maximum number of steps the agent can take"
+          }
+        }
+      },
+      "authentication": [
+        "bearer",
+        "x-api-key",
+        "x402"
+      ],
+      "tags": [
+        "AI"
       ]
     }
   ]

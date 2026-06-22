@@ -3,12 +3,15 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { sendWelcomeEmail, sendAdminAlert } from "../services/email.js";
+import { logger } from "../lib/logger.js";
+import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits } from "../lib/verification.js";
 const router = Router();
 // POST /v1/agent/register
 router.post("/register", async (req, res) => {
-    const { name, email: rawEmail, plan } = req.body;
+    const { name, email: rawEmail, plan, password } = req.body;
     const email = rawEmail?.toLowerCase().trim();
     if (!email) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
@@ -17,6 +20,10 @@ router.post("/register", async (req, res) => {
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRe.test(email)) {
         res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email format", request_id: reqId() });
+        return;
+    }
+    if (isDisposableEmail(email)) {
+        res.status(400).json({ ok: false, error: "disposable_email", message: "Disposable email addresses are not allowed. Please use a real email address.", request_id: reqId() });
         return;
     }
     try {
@@ -40,15 +47,20 @@ router.post("/register", async (req, res) => {
             });
             return;
         }
+        // Anti-farming: normalized-email identity + per-IP daily signup caps
+        const limitBlock = await enforceSignupLimits(email, req.ip);
+        if (limitBlock) {
+            res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
+            return;
+        }
         const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
-        // Security: store a bcrypt hash of the API key (saltRounds=10) for secure comparison.
-        // The first 12 chars are stored as apiKeyPrefix for fast indexed lookup.
+        // Security: only the bcrypt hash (saltRounds=10) + 12-char prefix are persisted.
+        // The raw key is returned to the user ONCE in this response and never stored.
         const apiKeyPrefix = apiKey.slice(0, 12);
         const apiKeyHash = await bcrypt.hash(apiKey, 10);
-        const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "100", 10);
+        const freeCredits = SIGNUP_FREE_CREDITS;
         const agent = await prisma.agent.create({
             data: {
-                apiKey,
                 apiKeyPrefix,
                 apiKeyHash,
                 email,
@@ -57,12 +69,65 @@ router.post("/register", async (req, res) => {
                 tier: (["free", "starter", "pro", "business"].includes(plan?.replace(/-(?:monthly|annual)$/, "") ?? "") ? plan.replace(/-(?:monthly|annual)$/, "") : "free"),
             },
         });
+        // Save password hash if provided
+        if (password && password.length >= 8) {
+            const bcrypt = await import("bcryptjs");
+            const passwordHash = await bcrypt.hash(password, 10);
+            await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash } });
+        }
+        // ─── Embedded Wallet Auto-Creation (best-effort, non-fatal) ─────────
+        let walletAddress = null;
+        try {
+            if (config.cdp.apiKeyId && config.cdp.apiKeySecret) {
+                const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
+                const axios = (await import("axios")).default;
+                const axiosClient = axios.create({
+                    baseURL: "https://api.cdp.coinbase.com",
+                });
+                axiosHooks.withAuth(axiosClient, {
+                    apiKeyId: config.cdp.apiKeyId,
+                    apiKeySecret: config.cdp.apiKeySecret,
+                    walletSecret: config.cdp.walletSecret,
+                });
+                const walletResp = await axiosClient.post("/platform/v2/evm/accounts", {
+                    name: `user-${agent.id.slice(0, 8)}`,
+                });
+                const address = walletResp.data?.address;
+                if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
+                    walletAddress = address;
+                    await prisma.agent.update({
+                        where: { id: agent.id },
+                        data: { walletAddress: address },
+                    });
+                    logger.info({ agentId: agent.id, walletAddress: address }, "Embedded wallet created on signup");
+                }
+            }
+            else {
+                logger.debug("CDP keys not configured — skipping auto wallet creation");
+            }
+        }
+        catch (err) {
+            const errMsg = err instanceof Error ? err.message : "Unknown error";
+            logger.warn({ agentId: agent.id, error: errMsg }, "Wallet auto-creation failed (non-fatal)");
+        }
+        // Email verification gate: credits stay pending until email verified.
+        // Grant is atomically claimed per normalized identity (SignupIdentity).
+        let gatedCredits = freeCredits;
+        try {
+            gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
+        }
+        catch (e) {
+            console.error("Verification setup failed (granting credits directly):", e);
+        }
         res.status(201).json({
             ok: true,
             agent_id: agent.id,
             api_key: apiKey,
-            credits: freeCredits,
-            message: `Welcome! You have ${freeCredits} free credits to get started.`,
+            credits: 0,
+            pending_credits: gatedCredits,
+            email_verification_required: true,
+            wallet_address: walletAddress,
+            message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification.`,
             docs: "https://archtools.dev",
             request_id: reqId(),
         });
@@ -92,6 +157,22 @@ router.post("/register", async (req, res) => {
     }
     catch (e) {
         console.error("Register error:", e);
+        res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// GET /v1/agent/verify-email?token=... — activates pending credits
+router.get("/verify-email", async (req, res) => {
+    const token = String(req.query.token ?? "");
+    try {
+        const result = await verifyEmailToken(token);
+        if (!result) {
+            res.status(400).send(`<!doctype html><html><body style="font-family:sans-serif;background:#07061a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Link invalid or expired</h1><p>Please request a new verification email from your <a href="https://archtools.dev/dashboard" style="color:#9d8cff">dashboard</a>.</p></div></body></html>`);
+            return;
+        }
+        res.send(`<!doctype html><html><body style="font-family:sans-serif;background:#07061a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>✅ Email verified!</h1><p>${result.creditsActivated} credits are now active on your account.</p><p><a href="https://archtools.dev/dashboard" style="color:#9d8cff">Go to dashboard →</a></p></div></body></html>`);
+    }
+    catch (e) {
+        console.error("verify-email error:", e);
         res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
     }
 });
@@ -176,9 +257,10 @@ router.post("/keys/rotate", requireAuth, async (req, res) => {
         const newKey = `arch_${crypto.default.randomBytes(24).toString("hex")}`;
         const newPrefix = newKey.slice(0, 12);
         const newHash = await bcrypt.default.hash(newKey, 10);
+        // Only prefix + hash are persisted — the raw key is returned ONCE below.
         await prisma.agent.update({
             where: { id: agent.id },
-            data: { apiKey: newKey, apiKeyPrefix: newPrefix, apiKeyHash: newHash },
+            data: { apiKeyPrefix: newPrefix, apiKeyHash: newHash },
         });
         res.json({
             ok: true,
@@ -201,15 +283,16 @@ router.delete("/keys/:prefix", requireAuth, async (req, res) => {
         res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() });
         return;
     }
-    // For now, can only revoke own current key prefix
+    // For now, can only revoke own current key prefix (req.agent.apiKey is the
+    // caller-presented key verified by requireAuth — plaintext is not stored).
     if (!agent.apiKey?.startsWith(String(prefix))) {
         res.status(403).json({ ok: false, error: "forbidden", message: "Can only revoke your own key", request_id: reqId() });
         return;
     }
-    // Invalidate by setting apiKey to empty — forces re-registration
+    // Invalidate by clearing the stored hash + prefix — no key can match.
     await prisma.agent.update({
         where: { id: agent.id },
-        data: { apiKey: `revoked_${prefix}`, apiKeyHash: "" },
+        data: { apiKeyPrefix: null, apiKeyHash: null },
     }).catch(() => { });
     res.json({ ok: true, message: "API key revoked. Generate a new key via POST /v1/agent/keys/rotate.", request_id: reqId() });
 });

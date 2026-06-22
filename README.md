@@ -58,7 +58,7 @@ No installation required — works with any MCP-compatible client that supports 
 
 1. Visit [archtools.dev](https://archtools.dev)
 2. Register with your email
-3. Get 100 free credits to start
+3. Get 250 free credits to start
 
 ---
 
@@ -224,7 +224,7 @@ No installation required — works with any MCP-compatible client that supports 
 
 ## Payment
 
-- **Free tier:** 100 credits on signup
+- **Free tier:** 250 credits on signup
 - **Credit packs:** Purchase via Stripe at [archtools.dev](https://archtools.dev)
 - **x402 (autonomous):** AI agents can pay per-call with USDC — see `/.well-known/x402`
 

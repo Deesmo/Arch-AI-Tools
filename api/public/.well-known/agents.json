@@ -44,8 +44,8 @@
     "openapi": "GET https://archtools.dev/openapi.json"
   },
   "mcp": {
-    "sse": "https://arch-tools-mcp.onrender.com/sse",
-    "http": "https://arch-tools-mcp.onrender.com/mcp",
+    "sse": "https://archtools.dev/mcp/sse",
+    "http": "https://archtools.dev/mcp/mcp",
     "registry": "io.github.Deesmo/arch-tools-mcp"
   },
   "payment": {

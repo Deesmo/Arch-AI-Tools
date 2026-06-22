@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arch Tools API",
-    "version": "1.8.0",
-    "description": "61 production-ready API tools for AI agents and developers. Web scraping, AI generation, image creation, audio transcription, crypto data, email, domain checks, research, video generation, and more.",
+    "version": "1.10.0",
+    "description": "Production-ready API tools for developers and AI agents. Use one API key across the platform or pay with x402 USDC micropayments.",
     "contact": {
       "url": "https://archtools.dev",
       "email": "support@archtools.dev"
@@ -33,14 +33,19 @@
       "post": {
         "operationId": "validateData",
         "summary": "Validate JSON against a JSON Schema",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["data", "schema"],
+                "required": [
+                  "data",
+                  "schema"
+                ],
                 "properties": {
                   "data": {
                     "description": "The JSON data to validate"
@@ -55,7 +60,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Validation result with errors if any" }
+          "200": {
+            "description": "Validation result with errors if any"
+          }
         }
       }
     },
@@ -63,14 +70,18 @@
       "post": {
         "operationId": "generateHash",
         "summary": "Generate cryptographic hashes (sha256/sha512/md5)",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -78,7 +89,12 @@
                   },
                   "algorithm": {
                     "type": "string",
-                    "enum": ["sha256", "sha512", "md5", "sha1"],
+                    "enum": [
+                      "sha256",
+                      "sha512",
+                      "md5",
+                      "sha1"
+                    ],
                     "default": "sha256"
                   }
                 }
@@ -87,7 +103,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Hashed value" }
+          "200": {
+            "description": "Hashed value"
+          }
         }
       }
     },
@@ -95,14 +113,18 @@
       "post": {
         "operationId": "qrCode",
         "summary": "Generate QR codes (PNG or SVG)",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -115,7 +137,10 @@
                   },
                   "format": {
                     "type": "string",
-                    "enum": ["png", "svg"],
+                    "enum": [
+                      "png",
+                      "svg"
+                    ],
                     "default": "png"
                   }
                 }
@@ -124,7 +149,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Base64 encoded QR code image" }
+          "200": {
+            "description": "Base64 encoded QR code image"
+          }
         }
       }
     },
@@ -132,14 +159,20 @@
       "post": {
         "operationId": "convertFormat",
         "summary": "Convert between JSON, YAML, CSV, XML",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["input", "from", "to"],
+                "required": [
+                  "input",
+                  "from",
+                  "to"
+                ],
                 "properties": {
                   "input": {
                     "type": "string",
@@ -147,12 +180,24 @@
                   },
                   "from": {
                     "type": "string",
-                    "enum": ["json", "yaml", "csv", "xml", "toml"],
+                    "enum": [
+                      "json",
+                      "yaml",
+                      "csv",
+                      "xml",
+                      "toml"
+                    ],
                     "description": "Source format"
                   },
                   "to": {
                     "type": "string",
-                    "enum": ["json", "yaml", "csv", "xml", "toml"],
+                    "enum": [
+                      "json",
+                      "yaml",
+                      "csv",
+                      "xml",
+                      "toml"
+                    ],
                     "description": "Target format"
                   }
                 }
@@ -161,22 +206,29 @@
           }
         },
         "responses": {
-          "200": { "description": "Converted content" }
+          "200": {
+            "description": "Converted content"
+          }
         }
       }
     },
     "/v1/tools/transform-text": {
       "post": {
         "operationId": "transformText",
-        "summary": "Transform text (10 modes: slug, camel, base64…)",
-        "tags": ["Utility"],
+        "summary": "Transform text (10 modes: slug, camel, base64\u2026)",
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text", "mode"],
+                "required": [
+                  "text",
+                  "mode"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -184,7 +236,18 @@
                   },
                   "mode": {
                     "type": "string",
-                    "enum": ["slug", "camel", "snake", "pascal", "kebab", "upper", "lower", "title", "base64_encode", "base64_decode"],
+                    "enum": [
+                      "slug",
+                      "camel",
+                      "snake",
+                      "pascal",
+                      "kebab",
+                      "upper",
+                      "lower",
+                      "title",
+                      "base64_encode",
+                      "base64_decode"
+                    ],
                     "description": "Transformation mode"
                   }
                 }
@@ -193,7 +256,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Transformed text" }
+          "200": {
+            "description": "Transformed text"
+          }
         }
       }
     },
@@ -201,7 +266,9 @@
       "post": {
         "operationId": "extractMetadata",
         "summary": "Extract OG tags, word count, links from text or URLs",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -223,7 +290,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Metadata including OG tags, word count, and links" }
+          "200": {
+            "description": "Metadata including OG tags, word count, and links"
+          }
         }
       }
     },
@@ -231,14 +300,18 @@
       "post": {
         "operationId": "webScrape",
         "summary": "Scrape any public URL with optional CSS selector",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -246,7 +319,11 @@
                   },
                   "format": {
                     "type": "string",
-                    "enum": ["markdown", "html", "text"],
+                    "enum": [
+                      "markdown",
+                      "html",
+                      "text"
+                    ],
                     "default": "markdown"
                   },
                   "selector": {
@@ -259,7 +336,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Scraped content" }
+          "200": {
+            "description": "Scraped content"
+          }
         }
       }
     },
@@ -267,14 +346,18 @@
       "post": {
         "operationId": "extractPage",
         "summary": "Clean text, links, and metadata from any webpage",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -291,7 +374,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Clean text, links, and metadata from the page" }
+          "200": {
+            "description": "Clean text, links, and metadata from the page"
+          }
         }
       }
     },
@@ -299,14 +384,18 @@
       "post": {
         "operationId": "searchWeb",
         "summary": "Web search with structured results (DuckDuckGo)",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["query"],
+                "required": [
+                  "query"
+                ],
                 "properties": {
                   "query": {
                     "type": "string",
@@ -323,7 +412,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Search results" }
+          "200": {
+            "description": "Search results"
+          }
         }
       }
     },
@@ -331,14 +422,18 @@
       "post": {
         "operationId": "rssParse",
         "summary": "Parse RSS/Atom feeds into structured JSON",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -355,7 +450,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Parsed feed items as structured JSON" }
+          "200": {
+            "description": "Parsed feed items as structured JSON"
+          }
         }
       }
     },
@@ -363,7 +460,9 @@
       "post": {
         "operationId": "ipLookup",
         "summary": "Geo, ISP, VPN/proxy detection",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -381,7 +480,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Geolocation, ISP, and VPN/proxy detection data" }
+          "200": {
+            "description": "Geolocation, ISP, and VPN/proxy detection data"
+          }
         }
       }
     },
@@ -389,14 +490,18 @@
       "post": {
         "operationId": "whoisLookup",
         "summary": "Domain registration, expiry, nameservers via RDAP",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["domain"],
+                "required": [
+                  "domain"
+                ],
                 "properties": {
                   "domain": {
                     "type": "string",
@@ -408,7 +513,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Domain registration details, expiry, and nameservers" }
+          "200": {
+            "description": "Domain registration details, expiry, and nameservers"
+          }
         }
       }
     },
@@ -416,14 +523,18 @@
       "post": {
         "operationId": "emailVerify",
         "summary": "MX check + disposable domain detection",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email"],
+                "required": [
+                  "email"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -435,7 +546,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Verification result with MX status and disposable flag" }
+          "200": {
+            "description": "Verification result with MX status and disposable flag"
+          }
         }
       }
     },
@@ -443,14 +556,18 @@
       "post": {
         "operationId": "phoneValidate",
         "summary": "E.164 format, type, country code",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["phone"],
+                "required": [
+                  "phone"
+                ],
                 "properties": {
                   "phone": {
                     "type": "string",
@@ -466,7 +583,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Validated phone number in E.164 format with type and country" }
+          "200": {
+            "description": "Validated phone number in E.164 format with type and country"
+          }
         }
       }
     },
@@ -474,14 +593,20 @@
       "post": {
         "operationId": "currencyConvert",
         "summary": "170+ currencies with live rates",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["amount", "from", "to"],
+                "required": [
+                  "amount",
+                  "from",
+                  "to"
+                ],
                 "properties": {
                   "amount": {
                     "type": "number",
@@ -501,7 +626,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Converted amount with exchange rate" }
+          "200": {
+            "description": "Converted amount with exchange rate"
+          }
         }
       }
     },
@@ -509,14 +636,20 @@
       "post": {
         "operationId": "timezoneConvert",
         "summary": "Convert datetime between any two IANA timezones",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["datetime", "from_tz", "to_tz"],
+                "required": [
+                  "datetime",
+                  "from_tz",
+                  "to_tz"
+                ],
                 "properties": {
                   "datetime": {
                     "type": "string",
@@ -536,7 +669,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Converted datetime" }
+          "200": {
+            "description": "Converted datetime"
+          }
         }
       }
     },
@@ -544,7 +679,9 @@
       "post": {
         "operationId": "generateUuid",
         "summary": "Generate UUIDs, tokens, and API-key-format strings",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -554,7 +691,11 @@
                 "properties": {
                   "type": {
                     "type": "string",
-                    "enum": ["uuid", "token", "api-key"],
+                    "enum": [
+                      "uuid",
+                      "token",
+                      "api-key"
+                    ],
                     "default": "uuid",
                     "description": "Type of identifier to generate"
                   },
@@ -574,7 +715,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Generated identifiers" }
+          "200": {
+            "description": "Generated identifiers"
+          }
         }
       }
     },
@@ -582,14 +725,19 @@
       "post": {
         "operationId": "diffText",
         "summary": "Structured diff in unified, words, chars, or JSON format",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text1", "text2"],
+                "required": [
+                  "text1",
+                  "text2"
+                ],
                 "properties": {
                   "text1": {
                     "type": "string",
@@ -601,7 +749,12 @@
                   },
                   "mode": {
                     "type": "string",
-                    "enum": ["unified", "words", "chars", "json"],
+                    "enum": [
+                      "unified",
+                      "words",
+                      "chars",
+                      "json"
+                    ],
                     "default": "unified",
                     "description": "Diff output format"
                   }
@@ -611,7 +764,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Structured diff output" }
+          "200": {
+            "description": "Structured diff output"
+          }
         }
       }
     },
@@ -619,14 +774,18 @@
       "post": {
         "operationId": "readabilityScore",
         "summary": "Flesch-Kincaid readability and grade level",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -638,7 +797,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Readability scores including Flesch-Kincaid grade level" }
+          "200": {
+            "description": "Readability scores including Flesch-Kincaid grade level"
+          }
         }
       }
     },
@@ -646,14 +807,18 @@
       "post": {
         "operationId": "languageDetect",
         "summary": "Detect language with confidence score (100+ languages)",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -665,22 +830,28 @@
           }
         },
         "responses": {
-          "200": { "description": "Detected language with confidence score" }
+          "200": {
+            "description": "Detected language with confidence score"
+          }
         }
       }
     },
     "/v1/tools/sentiment-analysis": {
       "post": {
         "operationId": "sentimentAnalysis",
-        "summary": "Sentiment + emotion detection (joy, anger, fear…)",
-        "tags": ["AI"],
+        "summary": "Sentiment + emotion detection (joy, anger, fear\u2026)",
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -692,22 +863,28 @@
           }
         },
         "responses": {
-          "200": { "description": "Sentiment score and detected emotions" }
+          "200": {
+            "description": "Sentiment score and detected emotions"
+          }
         }
       }
     },
     "/v1/tools/summarize": {
       "post": {
         "operationId": "summarize",
-        "summary": "Summarize in 5 styles (bullets, tldr, executive…)",
-        "tags": ["AI"],
+        "summary": "Summarize in 5 styles (bullets, tldr, executive\u2026)",
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -715,7 +892,13 @@
                   },
                   "style": {
                     "type": "string",
-                    "enum": ["bullets", "tldr", "executive", "paragraph", "headline"],
+                    "enum": [
+                      "bullets",
+                      "tldr",
+                      "executive",
+                      "paragraph",
+                      "headline"
+                    ],
                     "default": "bullets",
                     "description": "Summary style"
                   },
@@ -729,7 +912,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Summarized text in the requested style" }
+          "200": {
+            "description": "Summarized text in the requested style"
+          }
         }
       }
     },
@@ -737,14 +922,18 @@
       "post": {
         "operationId": "extractEntities",
         "summary": "NER: people, orgs, locations, dates, money",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -756,7 +945,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Extracted entities categorized by type" }
+          "200": {
+            "description": "Extracted entities categorized by type"
+          }
         }
       }
     },
@@ -764,14 +955,18 @@
       "post": {
         "operationId": "regexGenerate",
         "summary": "Generate regex from plain English with explanations",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["description"],
+                "required": [
+                  "description"
+                ],
                 "properties": {
                   "description": {
                     "type": "string",
@@ -779,7 +974,9 @@
                   },
                   "test_strings": {
                     "type": "array",
-                    "items": { "type": "string" },
+                    "items": {
+                      "type": "string"
+                    },
                     "description": "Optional strings to test the generated regex against"
                   }
                 }
@@ -788,7 +985,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Generated regex pattern with explanation and test results" }
+          "200": {
+            "description": "Generated regex pattern with explanation and test results"
+          }
         }
       }
     },
@@ -796,14 +995,18 @@
       "post": {
         "operationId": "piiDetect",
         "summary": "Detect and optionally redact PII",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -820,7 +1023,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Detected PII items with optional redacted text" }
+          "200": {
+            "description": "Detected PII items with optional redacted text"
+          }
         }
       }
     },
@@ -828,14 +1033,18 @@
       "post": {
         "operationId": "webSearch",
         "summary": "Real-time web search with AI-synthesized answer",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["query"],
+                "required": [
+                  "query"
+                ],
                 "properties": {
                   "query": {
                     "type": "string",
@@ -852,7 +1061,9 @@
           }
         },
         "responses": {
-          "200": { "description": "AI-synthesized answer with source citations" }
+          "200": {
+            "description": "AI-synthesized answer with source citations"
+          }
         }
       }
     },
@@ -860,14 +1071,18 @@
       "post": {
         "operationId": "aiGenerate",
         "summary": "AI text generation via Claude",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["prompt"],
+                "required": [
+                  "prompt"
+                ],
                 "properties": {
                   "prompt": {
                     "type": "string",
@@ -875,7 +1090,12 @@
                   },
                   "model": {
                     "type": "string",
-                    "enum": ["claude", "gpt4", "grok", "gemini"],
+                    "enum": [
+                      "claude",
+                      "gpt4",
+                      "grok",
+                      "gemini"
+                    ],
                     "default": "claude",
                     "description": "AI model to use"
                   },
@@ -893,7 +1113,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Generated text" }
+          "200": {
+            "description": "Generated text"
+          }
         }
       }
     },
@@ -901,7 +1123,9 @@
       "post": {
         "operationId": "ocrExtract",
         "summary": "Extract text from images (URL or base64)",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -923,7 +1147,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Extracted text from image" }
+          "200": {
+            "description": "Extracted text from image"
+          }
         }
       }
     },
@@ -931,14 +1157,19 @@
       "post": {
         "operationId": "browserTask",
         "summary": "Headless browser automation (click/type/extract) via Playwright",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url", "steps"],
+                "required": [
+                  "url",
+                  "steps"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -951,7 +1182,14 @@
                       "properties": {
                         "action": {
                           "type": "string",
-                          "enum": ["click", "type", "extract", "screenshot", "wait", "navigate"],
+                          "enum": [
+                            "click",
+                            "type",
+                            "extract",
+                            "screenshot",
+                            "wait",
+                            "navigate"
+                          ],
                           "description": "Action to perform"
                         },
                         "selector": {
@@ -972,7 +1210,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Browser task results with extracted data" }
+          "200": {
+            "description": "Browser task results with extracted data"
+          }
         }
       }
     },
@@ -980,7 +1220,9 @@
       "post": {
         "operationId": "extractPdf",
         "summary": "Extract text from a PDF (URL or base64)",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1002,7 +1244,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Extracted PDF content" }
+          "200": {
+            "description": "Extracted PDF content"
+          }
         }
       }
     },
@@ -1010,14 +1254,18 @@
       "post": {
         "operationId": "screenshotCapture",
         "summary": "Capture a screenshot of any webpage",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -1040,7 +1288,10 @@
                   },
                   "format": {
                     "type": "string",
-                    "enum": ["png", "jpeg"],
+                    "enum": [
+                      "png",
+                      "jpeg"
+                    ],
                     "default": "png"
                   }
                 }
@@ -1049,7 +1300,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Base64 encoded screenshot image" }
+          "200": {
+            "description": "Base64 encoded screenshot image"
+          }
         }
       }
     },
@@ -1057,14 +1310,18 @@
       "post": {
         "operationId": "htmlToMarkdown",
         "summary": "Convert HTML content to clean Markdown",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["html"],
+                "required": [
+                  "html"
+                ],
                 "properties": {
                   "html": {
                     "type": "string",
@@ -1080,7 +1337,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Converted Markdown text" }
+          "200": {
+            "description": "Converted Markdown text"
+          }
         }
       }
     },
@@ -1088,14 +1347,18 @@
       "post": {
         "operationId": "urlShorten",
         "summary": "Shorten a URL",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -1107,7 +1370,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Shortened URL" }
+          "200": {
+            "description": "Shortened URL"
+          }
         }
       }
     },
@@ -1115,14 +1380,19 @@
       "post": {
         "operationId": "webhookSend",
         "summary": "POST a JSON payload to any webhook URL",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["webhook_url", "payload"],
+                "required": [
+                  "webhook_url",
+                  "payload"
+                ],
                 "properties": {
                   "webhook_url": {
                     "type": "string",
@@ -1138,7 +1408,13 @@
                   },
                   "method": {
                     "type": "string",
-                    "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE"
+                    ],
                     "default": "POST"
                   }
                 }
@@ -1147,7 +1423,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Webhook response status and body" }
+          "200": {
+            "description": "Webhook response status and body"
+          }
         }
       }
     },
@@ -1155,14 +1433,19 @@
       "post": {
         "operationId": "jsonpathQuery",
         "summary": "Run a JSONPath expression against a JSON object",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["data", "path"],
+                "required": [
+                  "data",
+                  "path"
+                ],
                 "properties": {
                   "data": {
                     "type": "object",
@@ -1178,7 +1461,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Matching values from the JSONPath query" }
+          "200": {
+            "description": "Matching values from the JSONPath query"
+          }
         }
       }
     },
@@ -1186,14 +1471,18 @@
       "post": {
         "operationId": "imageGenerate",
         "summary": "Generate images from text prompts",
-        "tags": ["Image"],
+        "tags": [
+          "Image"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["prompt"],
+                "required": [
+                  "prompt"
+                ],
                 "properties": {
                   "prompt": {
                     "type": "string",
@@ -1201,12 +1490,19 @@
                   },
                   "size": {
                     "type": "string",
-                    "enum": ["1024x1024", "1792x1024", "1024x1792"],
+                    "enum": [
+                      "1024x1024",
+                      "1792x1024",
+                      "1024x1792"
+                    ],
                     "default": "1024x1024"
                   },
                   "style": {
                     "type": "string",
-                    "enum": ["vivid", "natural"],
+                    "enum": [
+                      "vivid",
+                      "natural"
+                    ],
                     "default": "vivid"
                   }
                 }
@@ -1215,7 +1511,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Generated image URL" }
+          "200": {
+            "description": "Generated image URL"
+          }
         }
       }
     },
@@ -1223,29 +1521,40 @@
       "post": {
         "operationId": "barcodeGenerate",
         "summary": "Generate barcodes in various formats",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "data"
+                ],
                 "properties": {
-                  "text": {
+                  "data": {
                     "type": "string",
                     "description": "Text or number to encode"
                   },
-                  "format": {
+                  "value": {
                     "type": "string",
-                    "enum": ["CODE128", "EAN13", "UPC", "CODE39", "ITF14"],
-                    "default": "CODE128",
-                    "description": "Barcode format"
+                    "description": "Alias for data"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "code128",
+                      "qr"
+                    ],
+                    "default": "code128",
+                    "description": "Barcode type"
                   },
                   "width": {
                     "type": "integer",
-                    "default": 2,
-                    "description": "Bar width"
+                    "default": 250,
+                    "description": "Output width in pixels"
                   },
                   "height": {
                     "type": "integer",
@@ -1258,7 +1567,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Base64 encoded barcode image" }
+          "200": {
+            "description": "Base64 encoded barcode image"
+          }
         }
       }
     },
@@ -1266,28 +1577,35 @@
       "post": {
         "operationId": "workflowAgent",
         "summary": "Execute multi-step AI workflows with tool chaining",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["goal"],
+                "required": [
+                  "goal"
+                ],
                 "properties": {
                   "goal": {
                     "type": "string",
                     "description": "High-level goal for the workflow agent"
                   },
-                  "tools": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "List of tool names the agent can use"
+                  "context": {
+                    "type": "string",
+                    "description": "Optional additional context for the workflow"
+                  },
+                  "steps": {
+                    "type": "integer",
+                    "default": 3,
+                    "description": "Target number of workflow steps"
                   },
                   "max_steps": {
                     "type": "integer",
-                    "default": 5,
-                    "description": "Maximum number of steps the agent can take"
+                    "description": "Legacy alias for steps"
                   }
                 }
               }
@@ -1295,7 +1613,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Workflow execution result with step-by-step log" }
+          "200": {
+            "description": "Workflow execution result with step-by-step log"
+          }
         }
       }
     },
@@ -1303,14 +1623,18 @@
       "post": {
         "operationId": "cryptoPrice",
         "summary": "Get current cryptocurrency price and market data",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["symbol"],
+                "required": [
+                  "symbol"
+                ],
                 "properties": {
                   "symbol": {
                     "type": "string",
@@ -1322,7 +1646,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Current price and market data (powered by CoinGecko)" }
+          "200": {
+            "description": "Current price and market data (powered by CoinGecko)"
+          }
         }
       }
     },
@@ -1330,14 +1656,18 @@
       "post": {
         "operationId": "cryptoOhlcv",
         "summary": "Get OHLCV (candlestick) data for a cryptocurrency",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["symbol"],
+                "required": [
+                  "symbol"
+                ],
                 "properties": {
                   "symbol": {
                     "type": "string",
@@ -1354,7 +1684,9 @@
           }
         },
         "responses": {
-          "200": { "description": "OHLCV candlestick data (powered by CoinGecko)" }
+          "200": {
+            "description": "OHLCV candlestick data (powered by CoinGecko)"
+          }
         }
       }
     },
@@ -1362,7 +1694,9 @@
       "post": {
         "operationId": "cryptoMarketCap",
         "summary": "Get top cryptocurrencies by market cap",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1386,7 +1720,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Top cryptocurrencies ranked by market cap (powered by CoinGecko)" }
+          "200": {
+            "description": "Top cryptocurrencies ranked by market cap (powered by CoinGecko)"
+          }
         }
       }
     },
@@ -1394,7 +1730,9 @@
       "post": {
         "operationId": "cryptoFearGreed",
         "summary": "Get the crypto Fear & Greed Index",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1413,7 +1751,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Fear & Greed Index value and classification" }
+          "200": {
+            "description": "Fear & Greed Index value and classification"
+          }
         }
       }
     },
@@ -1421,14 +1761,18 @@
       "post": {
         "operationId": "cryptoSentiment",
         "summary": "Get community sentiment for a cryptocurrency",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["symbol"],
+                "required": [
+                  "symbol"
+                ],
                 "properties": {
                   "symbol": {
                     "type": "string",
@@ -1440,7 +1784,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Community sentiment data (powered by CoinGecko)" }
+          "200": {
+            "description": "Community sentiment data (powered by CoinGecko)"
+          }
         }
       }
     },
@@ -1448,7 +1794,9 @@
       "post": {
         "operationId": "cryptoNews",
         "summary": "Get latest crypto news from CoinDesk, CoinTelegraph, Bitcoin Magazine",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1471,7 +1819,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Latest crypto news articles" }
+          "200": {
+            "description": "Latest crypto news articles"
+          }
         }
       }
     },
@@ -1479,14 +1829,18 @@
       "post": {
         "operationId": "tokenLookup",
         "summary": "Search CoinGecko for a token by name or ticker symbol",
-        "tags": ["Crypto"],
+        "tags": [
+          "Crypto"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["query"],
+                "required": [
+                  "query"
+                ],
                 "properties": {
                   "query": {
                     "type": "string",
@@ -1498,7 +1852,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Token metadata including CoinGecko ID (powered by CoinGecko)" }
+          "200": {
+            "description": "Token metadata including CoinGecko ID (powered by CoinGecko)"
+          }
         }
       }
     },
@@ -1506,14 +1862,18 @@
       "post": {
         "operationId": "aiOracle",
         "summary": "Premium reasoning with structured analysis and confidence levels",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["question"],
+                "required": [
+                  "question"
+                ],
                 "properties": {
                   "question": {
                     "type": "string",
@@ -1525,7 +1885,11 @@
                   },
                   "depth": {
                     "type": "string",
-                    "enum": ["quick", "standard", "deep"],
+                    "enum": [
+                      "quick",
+                      "standard",
+                      "deep"
+                    ],
                     "default": "standard",
                     "description": "Analysis depth level"
                   }
@@ -1535,7 +1899,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Structured analysis with confidence levels and reasoning" }
+          "200": {
+            "description": "Structured analysis with confidence levels and reasoning"
+          }
         }
       }
     },
@@ -1543,28 +1909,42 @@
       "post": {
         "operationId": "sessionCreate",
         "summary": "Create a managed conversation session",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "namespace"
+                ],
                 "properties": {
-                  "system": {
+                  "namespace": {
+                    "type": "string",
+                    "description": "Session namespace or grouping key"
+                  },
+                  "system_prompt": {
                     "type": "string",
                     "description": "System prompt for the session"
                   },
+                  "system": {
+                    "type": "string",
+                    "description": "Legacy alias for system_prompt"
+                  },
                   "model": {
                     "type": "string",
-                    "enum": ["claude", "gpt4", "grok", "gemini"],
-                    "default": "claude",
+                    "enum": [
+                      "claude-sonnet-4-6",
+                      "claude-opus-4-6",
+                      "claude-haiku-4-5-20251001",
+                      "gpt-4o",
+                      "gpt-4o-mini"
+                    ],
+                    "default": "claude-sonnet-4-6",
                     "description": "AI model to use"
-                  },
-                  "ttl": {
-                    "type": "integer",
-                    "default": 3600,
-                    "description": "Session time-to-live in seconds"
                   }
                 }
               }
@@ -1572,7 +1952,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Session ID and metadata" }
+          "200": {
+            "description": "Session ID and metadata"
+          }
         }
       }
     },
@@ -1580,14 +1962,19 @@
       "post": {
         "operationId": "sessionMessage",
         "summary": "Send a message in an existing conversation session",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["session_id", "message"],
+                "required": [
+                  "session_id",
+                  "message"
+                ],
                 "properties": {
                   "session_id": {
                     "type": "string",
@@ -1603,7 +1990,9 @@
           }
         },
         "responses": {
-          "200": { "description": "AI response within the session context" }
+          "200": {
+            "description": "AI response within the session context"
+          }
         }
       }
     },
@@ -1611,14 +2000,18 @@
       "post": {
         "operationId": "textToSpeech",
         "summary": "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)",
-        "tags": ["Audio"],
+        "tags": [
+          "Audio"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -1647,7 +2040,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Base64 MP3 audio" }
+          "200": {
+            "description": "Base64 MP3 audio"
+          }
         }
       }
     },
@@ -1655,14 +2050,18 @@
       "post": {
         "operationId": "transcribeAudio",
         "summary": "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)",
-        "tags": ["Audio"],
+        "tags": [
+          "Audio"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["audio_url"],
+                "required": [
+                  "audio_url"
+                ],
                 "properties": {
                   "audio_url": {
                     "type": "string",
@@ -1682,22 +2081,30 @@
           }
         },
         "responses": {
-          "200": { "description": "Transcript text" }
+          "200": {
+            "description": "Transcript text"
+          }
         }
       }
     },
     "/v1/tools/email-send": {
       "post": {
         "operationId": "emailSend",
-        "summary": "Send transactional emails via Resend — plain text or HTML",
-        "tags": ["Communication"],
+        "summary": "Send transactional emails via Resend \u2014 plain text or HTML",
+        "tags": [
+          "Communication"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["to", "subject", "body"],
+                "required": [
+                  "to",
+                  "subject",
+                  "body"
+                ],
                 "properties": {
                   "to": {
                     "type": "string",
@@ -1725,7 +2132,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Message ID" }
+          "200": {
+            "description": "Message ID"
+          }
         }
       }
     },
@@ -1733,14 +2142,18 @@
       "post": {
         "operationId": "designCreate",
         "summary": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
-        "tags": ["Image"],
+        "tags": [
+          "Image"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["prompt"],
+                "required": [
+                  "prompt"
+                ],
                 "properties": {
                   "prompt": {
                     "type": "string",
@@ -1748,17 +2161,27 @@
                   },
                   "size": {
                     "type": "string",
-                    "enum": ["1024x1024", "1792x1024", "1024x1792"],
+                    "enum": [
+                      "1024x1024",
+                      "1792x1024",
+                      "1024x1792"
+                    ],
                     "default": "1024x1024"
                   },
                   "quality": {
                     "type": "string",
-                    "enum": ["standard", "hd"],
+                    "enum": [
+                      "standard",
+                      "hd"
+                    ],
                     "default": "standard"
                   },
                   "style": {
                     "type": "string",
-                    "enum": ["vivid", "natural"],
+                    "enum": [
+                      "vivid",
+                      "natural"
+                    ],
                     "default": "vivid"
                   }
                 }
@@ -1767,7 +2190,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Generated image URL" }
+          "200": {
+            "description": "Generated image URL"
+          }
         }
       }
     },
@@ -1775,14 +2200,18 @@
       "post": {
         "operationId": "domainCheck",
         "summary": "Check if a domain is available or registered via RDAP (no key needed)",
-        "tags": ["Utility"],
+        "tags": [
+          "Utility"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["domain"],
+                "required": [
+                  "domain"
+                ],
                 "properties": {
                   "domain": {
                     "type": "string",
@@ -1794,7 +2223,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Registration status, expiry, nameservers" }
+          "200": {
+            "description": "Registration status, expiry, nameservers"
+          }
         }
       }
     },
@@ -1802,14 +2233,18 @@
       "post": {
         "operationId": "newsSearch",
         "summary": "Search real-time news articles by keyword",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["query"],
+                "required": [
+                  "query"
+                ],
                 "properties": {
                   "query": {
                     "type": "string",
@@ -1831,7 +2266,9 @@
           }
         },
         "responses": {
-          "200": { "description": "News articles with title, source, date, and URL" }
+          "200": {
+            "description": "News articles with title, source, date, and URL"
+          }
         }
       }
     },
@@ -1839,28 +2276,43 @@
       "post": {
         "operationId": "researchReport",
         "summary": "Generate a structured research report on any topic",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["topic"],
+                "required": [
+                  "query"
+                ],
                 "properties": {
-                  "topic": {
+                  "query": {
                     "type": "string",
                     "description": "Research topic or question"
                   },
+                  "topic": {
+                    "type": "string",
+                    "description": "Legacy alias for query"
+                  },
                   "depth": {
                     "type": "string",
-                    "enum": ["brief", "standard", "comprehensive"],
+                    "enum": [
+                      "brief",
+                      "standard",
+                      "deep"
+                    ],
                     "default": "standard",
                     "description": "Report depth level"
                   },
                   "format": {
                     "type": "string",
-                    "enum": ["markdown", "json"],
+                    "enum": [
+                      "markdown",
+                      "json"
+                    ],
                     "default": "markdown"
                   }
                 }
@@ -1869,7 +2321,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Structured research report with sources" }
+          "200": {
+            "description": "Structured research report with sources"
+          }
         }
       }
     },
@@ -1877,14 +2331,18 @@
       "post": {
         "operationId": "factCheck",
         "summary": "Verify claims against real-time web sources",
-        "tags": ["AI"],
+        "tags": [
+          "AI"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["claim"],
+                "required": [
+                  "claim"
+                ],
                 "properties": {
                   "claim": {
                     "type": "string",
@@ -1900,7 +2358,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Fact-check result with verdict, sources, and confidence" }
+          "200": {
+            "description": "Fact-check result with verdict, sources, and confidence"
+          }
         }
       }
     },
@@ -1908,14 +2368,18 @@
       "post": {
         "operationId": "videoGenerate",
         "summary": "AI video generation from text prompts via Runway Gen-3",
-        "tags": ["Image"],
+        "tags": [
+          "Image"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["prompt"],
+                "required": [
+                  "prompt"
+                ],
                 "properties": {
                   "prompt": {
                     "type": "string",
@@ -1923,8 +2387,19 @@
                   },
                   "duration": {
                     "type": "integer",
-                    "default": 4,
-                    "description": "Video duration in seconds (4 or 10)"
+                    "default": 5,
+                    "description": "Video duration in seconds (5 or 10)"
+                  },
+                  "aspect_ratio": {
+                    "type": "string",
+                    "enum": [
+                      "16:9",
+                      "9:16",
+                      "1280:720",
+                      "720:1280"
+                    ],
+                    "default": "16:9",
+                    "description": "Output aspect ratio"
                   }
                 }
               }
@@ -1932,7 +2407,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Generated video URL" }
+          "200": {
+            "description": "Generated video URL"
+          }
         }
       }
     },
@@ -1940,7 +2417,9 @@
       "post": {
         "operationId": "imageRemoveBg",
         "summary": "Remove background from any image via RemoveBG",
-        "tags": ["Image"],
+        "tags": [
+          "Image"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1958,7 +2437,11 @@
                   },
                   "size": {
                     "type": "string",
-                    "enum": ["preview", "full", "auto"],
+                    "enum": [
+                      "preview",
+                      "full",
+                      "auto"
+                    ],
                     "default": "auto",
                     "description": "Output size"
                   }
@@ -1968,7 +2451,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Image with background removed (base64 PNG)" }
+          "200": {
+            "description": "Image with background removed (base64 PNG)"
+          }
         }
       }
     },
@@ -1976,14 +2461,18 @@
       "post": {
         "operationId": "emailFind",
         "summary": "Find email address for a person at a company via Hunter.io",
-        "tags": ["Communication"],
+        "tags": [
+          "Communication"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["domain"],
+                "required": [
+                  "domain"
+                ],
                 "properties": {
                   "domain": {
                     "type": "string",
@@ -2003,7 +2492,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Found email address with confidence score" }
+          "200": {
+            "description": "Found email address with confidence score"
+          }
         }
       }
     },
@@ -2011,14 +2502,18 @@
       "post": {
         "operationId": "semanticSearch",
         "summary": "Neural/semantic web search via Exa AI",
-        "tags": ["Web"],
+        "tags": [
+          "Web"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["query"],
+                "required": [
+                  "query"
+                ],
                 "properties": {
                   "query": {
                     "type": "string",
@@ -2040,7 +2535,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Semantically relevant search results with content" }
+          "200": {
+            "description": "Semantically relevant search results with content"
+          }
         }
       }
     },
@@ -2048,14 +2545,19 @@
       "post": {
         "operationId": "socialPost",
         "summary": "Post a tweet to X/Twitter via API v2",
-        "tags": ["Communication"],
+        "tags": [
+          "Communication"
+        ],
+        "description": "Requires either X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens with write permissions enabled in the X developer app.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["text"],
+                "required": [
+                  "text"
+                ],
                 "properties": {
                   "text": {
                     "type": "string",
@@ -2071,7 +2573,134 @@
           }
         },
         "responses": {
-          "200": { "description": "Posted tweet ID and URL" }
+          "200": {
+            "description": "Posted tweet ID and URL"
+          }
+        }
+      }
+    },
+    "/v1/tools/send-email": {
+      "post": {
+        "operationId": "sendEmail",
+        "summary": "Send transactional emails via Resend (alias of email-send)",
+        "tags": [
+          "Communication"
+        ],
+        "description": "Alias of /v1/tools/email-send. Same parameters and pricing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "to",
+                  "subject",
+                  "body"
+                ],
+                "properties": {
+                  "to": {
+                    "type": "string",
+                    "description": "Recipient email address"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Email subject line"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Email body (plain text or HTML)"
+                  },
+                  "from": {
+                    "type": "string",
+                    "description": "Sender address (optional, defaults to verified domain)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email queued with Resend message ID"
+          }
+        }
+      }
+    },
+    "/v1/tools/generate-image": {
+      "post": {
+        "operationId": "generateImage",
+        "summary": "Generate images from text prompts (alias of design-create)",
+        "tags": [
+          "Image"
+        ],
+        "description": "Alias of /v1/tools/design-create. Same parameters and pricing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "Text description of the image to generate"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": [
+                      "1024x1024",
+                      "1792x1024",
+                      "1024x1792"
+                    ],
+                    "default": "1024x1024"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated image URL"
+          }
+        }
+      }
+    },
+    "/v1/tools/check-domain": {
+      "post": {
+        "operationId": "checkDomain",
+        "summary": "Check if a domain is available or registered (alias of domain-check)",
+        "tags": [
+          "Utility"
+        ],
+        "description": "Alias of /v1/tools/domain-check. Same parameters and pricing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string",
+                    "description": "Domain name to check (e.g. example.com)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Domain availability status and registration details"
+          }
         }
       }
     }

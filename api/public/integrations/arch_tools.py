@@ -74,7 +74,7 @@ class ArchToolsAuthError(ArchToolsError):
     pass
 
 
-# ─── Tool catalog (all 61 tools) ─────────────────────────────────────────────
+# ─── Tool catalog (all 64 tools) ─────────────────────────────────────────────
 
 TOOL_NAMES: list[str] = [
     "validate-data", "generate-hash", "qr-code", "convert-format",

@@ -24,7 +24,7 @@
     "name": "How to Migrate from Skyfire to Arch Tools",
     "description": "Step-by-step guide for migrating AI agent payment infrastructure from Skyfire to Arch Tools",
     "step": [
-      {"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits"},
+{"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits"},
       {"@type": "HowToStep", "name": "Replace SDK", "text": "Swap skyfire-seller-sdk-node with a simple fetch call to Arch Tools endpoints"},
       {"@type": "HowToStep", "name": "Update Payment Flow", "text": "Switch from KYAPay JWT tokens to x402 payment headers or API key auth"},
       {"@type": "HowToStep", "name": "Test", "text": "Run your agent against Arch Tools — 64 tools available immediately"}
@@ -215,7 +215,7 @@
         <tr>
           <td class="feature">Free Tier</td>
           <td><span class="cross">No</span></td>
-          <td><span class="check">100 free credits on signup</span></td>
+<td><span class="check">100 free credits on signup</span></td>
         </tr>
         <tr>
           <td class="feature">MCP Support</td>
@@ -297,7 +297,7 @@
     <div class="timeline">
       <div class="timeline-step">
         <h4><span class="step-num">1</span> Get Your API Key</h4>
-        <p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 100 free credits. No credit card, no wallet, no KYA registration needed.</p>
+<p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 100 free credits. No credit card, no wallet, no KYA registration needed.</p>
       </div>
 
       <div class="timeline-step">
@@ -399,7 +399,7 @@ const data = await response.json();
     "arch-tools": {
       "command": "npx",
       "args": ["-y", "mcp-remote",
-        "https://arch-tools-mcp.onrender.com/sse"],
+        "https://archtools.dev/mcp/sse"],
       "env": { "ARCH_API_KEY": "arch_your_key" }
     }
   }
@@ -409,7 +409,7 @@ const data = await response.json();
     <h2 id="gain">What You Gain</h2>
 
     <div class="callout-green callout">
-      <strong>🛠️ 58 Ready-to-Use Tools</strong><br>
+      <strong>🛠️ 64 Ready-to-Use Tools</strong><br>
       Skyfire was a payment rail — you still had to build or find the services to pay for. Arch Tools is tools <em>and</em> payments in one. Web scrape, AI text generation (Claude, GPT-4, Grok, Gemini), crypto prices, email, PDF parsing, fact-checking, domain lookup — 64 tools behind a single API key.
     </div>
 
@@ -449,17 +449,17 @@ const data = await response.json();
     <p>You don't need one — it's a REST API. <code>fetch()</code> or <code>curl</code> is all you need. For MCP users, install the MCP server config and all tools appear natively in Claude Desktop, Cursor, and Windsurf.</p>
 
     <h3>What tools are available?</h3>
-    <p>58 and growing. Check the full <a href="/directory" style="color:var(--purple);">tool directory</a> — categories include AI generation, web scraping, crypto, file conversion, security, email, and more.</p>
+    <p>64 production-ready tools. Check the full <a href="/directory" style="color:var(--purple);">tool directory</a> — categories include AI generation, web scraping, crypto, file conversion, security, email, and more.</p>
 
     <h3>Is there a free tier?</h3>
-    <p>Yes — every account gets 100 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
+<p>Yes — every account gets 100 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
   </article>
 </div>
 
 <div class="wrap">
   <div class="cta-section">
     <h2>Ready to switch?</h2>
-    <p>Get your API key, 100 free credits, and access to all 64 tools — in 30 seconds.</p>
+<p>Get your API key, 100 free credits, and access to all 64 tools — in 30 seconds.</p>
     <a class="btn" href="/#register">$ get-api-key →</a>
     <a class="btn-ghost" href="/directory">Browse Tools</a>
   </div>

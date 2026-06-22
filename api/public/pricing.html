@@ -91,52 +91,115 @@
     <!-- Hero -->
     <div class="hero">
       <h1>Simple, Transparent Pricing</h1>
-      <p>Pay only for what you use. No subscriptions, no hidden fees. Credits, x402 micropayments, or both.</p>
+      <p>Start free with 100 credits on signup. Scale with monthly subscriptions or one-time top-ups. No card required to start.</p>
     </div>
 
-    <!-- Tool Usage Pricing -->
+    <!-- Subscription Plans -->
     <div class="section">
-      <h2>🛠️ Tool Usage</h2>
-      <p class="subtitle">64 AI-powered tools — pay per call with credits or x402 USDC micropayments</p>
+      <h2>🛠️ Plans</h2>
+      <p class="subtitle">Monthly credits across the full Arch Tools platform — 64 AI tools, x402 payments, and more</p>
       <div class="pricing-grid">
         <div class="pricing-card">
-          <h3>Free Tier</h3>
+          <h3>Free</h3>
           <div class="price">$0<span>/month</span></div>
-          <p class="desc">Get started with 100 free credits monthly</p>
+          <p class="desc">No card required — start building immediately</p>
           <ul>
-            <li>100 credits/month (auto-refill)</li>
-            <li>Access to all 64 tools</li>
+            <li>100 free credits on signup</li>
+            <li>Access to the full platform</li>
             <li>60 requests/minute</li>
             <li>Community support</li>
           </ul>
           <a href="/signup" class="btn btn-outline" style="width:100%">Get Started Free</a>
         </div>
+        <div class="pricing-card">
+          <h3>Starter</h3>
+          <div class="price">$19<span>/month</span></div>
+          <p class="desc">For solo builders shipping their first AI app</p>
+          <ul>
+            <li>10,000 credits/month</li>
+            <li>Access to the full platform</li>
+            <li>300 requests/minute</li>
+            <li>Email support</li>
+          </ul>
+          <a href="#" data-sub="starter-monthly" class="btn btn-outline" style="width:100%">Choose Starter</a>
+        </div>
         <div class="pricing-card featured">
           <div class="badge">Most Popular</div>
-          <h3>x402 Pay-Per-Use</h3>
-          <div class="price">$0.005<span>– $0.50/call</span></div>
-          <p class="desc">Pay with USDC on Base — no account needed</p>
+          <h3>Pro</h3>
+          <div class="price">$49<span>/month</span></div>
+          <p class="desc">For active teams and production agents</p>
           <ul>
-            <li>No signup required</li>
-            <li>Pay exactly per call</li>
-            <li>USDC on Base (low gas)</li>
+            <li>30,000 credits/month</li>
+            <li>Access to the full platform</li>
             <li>300 requests/minute</li>
-            <li>Priority processing</li>
+            <li>Priority support</li>
           </ul>
-          <a href="/fund" class="btn btn-primary" style="width:100%">Fund & Start</a>
+          <a href="#" data-sub="pro-monthly" class="btn btn-primary" style="width:100%">Choose Pro</a>
         </div>
         <div class="pricing-card">
-          <h3>Credit Packs</h3>
-          <div class="price">$5<span>– $100</span></div>
-          <p class="desc">Buy credits via Stripe — use them on any tool</p>
+          <h3>Growth</h3>
+          <div class="price">$99<span>/month</span></div>
+          <p class="desc">For scaling products and heavy agents</p>
           <ul>
-            <li>$5 = 500 credits</li>
-            <li>$20 = 2,200 credits (+10%)</li>
-            <li>$50 = 6,000 credits (+20%)</li>
-            <li>$100 = 13,000 credits (+30%)</li>
+            <li>75,000 credits/month</li>
+            <li>Access to the full platform</li>
+            <li>600 requests/minute</li>
+            <li>Priority support</li>
+          </ul>
+          <a href="#" data-sub="growth-monthly" class="btn btn-outline" style="width:100%">Choose Growth</a>
+        </div>
+        <div class="pricing-card">
+          <h3>Business</h3>
+          <div class="price">$199<span>/month</span></div>
+          <p class="desc">For high-volume workloads and orgs</p>
+          <ul>
+            <li>175,000 credits/month</li>
+            <li>Access to the full platform</li>
+            <li>1,000 requests/minute</li>
+            <li>Priority support + SLA</li>
+          </ul>
+          <a href="#" data-sub="business-monthly" class="btn btn-outline" style="width:100%">Choose Business</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top-up Packs -->
+    <div class="section">
+      <h2>⚡ Top-up Packs</h2>
+      <p class="subtitle">Need more credits this month? One-time top-ups stack on any plan. Credits never expire.</p>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h3>Small Pack</h3>
+          <div class="price">$9<span> one-time</span></div>
+          <p class="desc">Top off a busy week</p>
+          <ul>
+            <li>3,000 credits</li>
+            <li>Works on any plan</li>
             <li>Credits never expire</li>
           </ul>
-          <a href="/dashboard" class="btn btn-outline" style="width:100%">Buy Credits</a>
+          <a href="#" data-pack="starter" class="btn btn-outline" style="width:100%">Buy 3K Credits</a>
+        </div>
+        <div class="pricing-card">
+          <h3>Medium Pack</h3>
+          <div class="price">$49<span> one-time</span></div>
+          <p class="desc">Best value for most users</p>
+          <ul>
+            <li>25,000 credits</li>
+            <li>Works on any plan</li>
+            <li>Credits never expire</li>
+          </ul>
+          <a href="#" data-pack="pro" class="btn btn-outline" style="width:100%">Buy 25K Credits</a>
+        </div>
+        <div class="pricing-card">
+          <h3>Large Pack</h3>
+          <div class="price">$199<span> one-time</span></div>
+          <p class="desc">Power-user volume</p>
+          <ul>
+            <li>125,000 credits</li>
+            <li>Works on any plan</li>
+            <li>Credits never expire</li>
+          </ul>
+          <a href="#" data-pack="business" class="btn btn-outline" style="width:100%">Buy 125K Credits</a>
         </div>
       </div>
     </div>
@@ -189,7 +252,7 @@
     <!-- Directory Listings -->
     <div class="section">
       <h2>📂 Directory Listings</h2>
-      <p class="subtitle">Get your x402 service discovered by AI agents in the largest x402 directory (112+ services)</p>
+      <p class="subtitle">Get your x402 service discovered by AI agents in the Arch Tools x402 directory (64 tools)</p>
       <div class="pricing-grid">
         <div class="pricing-card">
           <h3>Free Listing</h3>
@@ -201,7 +264,7 @@
             <li>Service detail page</li>
             <li>API endpoint discovery</li>
           </ul>
-          <a href="/api/v1/x402/directory/submit" class="btn btn-outline" style="width:100%">Submit Service</a>
+          <a href="/directory" class="btn btn-outline" style="width:100%">Submit Service</a>
         </div>
         <div class="pricing-card">
           <h3>✓ Verified</h3>
@@ -238,5 +301,33 @@
       <p style="margin-top:8px"><a href="/docs">Docs</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a></p>
     </div>
   </footer>
+<script>
+// Stripe checkout — works with stored API key OR logged-in session cookie.
+async function startCheckout(endpoint, body) {
+  var apiKey = '';
+  try { apiKey = (sessionStorage.getItem('arch_api_key') || localStorage.getItem('arch_api_key') || '').trim(); } catch(e) {}
+  var headers = { 'Content-Type': 'application/json' };
+  if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+  try {
+    var res = await fetch(endpoint, { method: 'POST', headers: headers, credentials: 'include', body: JSON.stringify(body) });
+    if (res.status === 401) {
+      if (apiKey) { try { localStorage.removeItem('arch_api_key'); sessionStorage.removeItem('arch_api_key'); } catch(e) {} }
+      window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+      return;
+    }
+    var data = await res.json();
+    if (data.url) { window.location.href = data.url; }
+    else { alert('Error: ' + (data.message || 'Could not create checkout session.')); }
+  } catch(e) { alert('Something went wrong. Please try again.'); }
+}
+function buyPack(packName) { return startCheckout('/v1/billing/checkout', { pack: packName }); }
+function buySubscription(planId) { return startCheckout('/v1/billing/subscribe', { plan: planId }); }
+document.addEventListener('click', function(e) {
+  var p = e.target.closest('[data-pack]');
+  if (p) { e.preventDefault(); buyPack(p.dataset.pack); return; }
+  var sb = e.target.closest('[data-sub]');
+  if (sb) { e.preventDefault(); buySubscription(sb.dataset.sub); }
+});
+</script>
 </body>
 </html>

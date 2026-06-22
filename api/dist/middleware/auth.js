@@ -38,25 +38,13 @@ export async function requireAuth(req, res, next) {
             }
         }
         else {
-            // Standard API key — use bcrypt comparison when a hash is available.
-            // Lookup by the first 12-char prefix (fast indexed scan), then bcrypt.compare the full key.
+            // Standard API key — plaintext keys are no longer stored. Lookup by the
+            // first 12-char prefix (fast indexed scan), then bcrypt.compare the full key.
             const prefix = apiKey.slice(0, 12);
             const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } });
-            if (candidate) {
-                if (candidate.apiKeyHash) {
-                    // New path: secure bcrypt comparison
-                    const match = await bcrypt.compare(apiKey, candidate.apiKeyHash);
-                    agent = match ? candidate : null;
-                }
-                else {
-                    // Legacy path: plaintext comparison (migration period — no hash stored yet)
-                    agent = candidate.apiKey === apiKey ? candidate : null;
-                }
-            }
-            else {
-                // No prefix match — fall back to exact plaintext lookup for agents that
-                // pre-date the apiKeyPrefix column (populated by migration backfill).
-                agent = await prisma.agent.findUnique({ where: { apiKey } });
+            if (candidate?.apiKeyHash) {
+                const match = await bcrypt.compare(apiKey, candidate.apiKeyHash);
+                agent = match ? candidate : null;
             }
         }
         if (!agent) {
@@ -68,9 +56,11 @@ export async function requireAuth(req, res, next) {
             });
             return;
         }
+        // Note: the DB no longer stores plaintext keys — req.agent.apiKey carries the
+        // caller-presented (and just-verified) credential for internal re-use only.
         req.agent = {
             id: agent.id,
-            apiKey: agent.apiKey,
+            apiKey,
             email: agent.email,
             credits: agent.credits,
             tier: agent.tier,

@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "name": "Arch Tools",
-  "description": "64 production-ready API tools for developers and AI agents. Web scraping, AI generation, crypto data, OCR, NLP, email/phone validation, QR codes, PDF extraction, browser automation, and more. Dual payment rails: Stripe + x402 USDC on Base.",
+  "description": "Production-ready API tools for developers and AI agents with dual payment rails: API credits or x402 USDC micropayments.",
   "logo_url": "https://archtools.dev/arch-icon.svg",
   "website": "https://archtools.dev",
   "documentation_url": "https://archtools.dev/openapi.json",
   "support_email": "support@archtools.dev",
-  "mcp_server_url": "https://arch-tools-mcp.onrender.com/sse",
+  "mcp_server_url": "https://archtools.dev/mcp/sse",
   "auth": {
     "type": "oauth2",
     "authorization_url": "https://archtools.dev/oauth/authorize",

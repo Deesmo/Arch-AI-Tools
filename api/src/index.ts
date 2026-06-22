@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { config } from "./config.js";
@@ -22,6 +23,7 @@ if (process.env.SENTRY_DSN) {
 // Routes
 import discoveryRouter from "./routes/discovery.js";
 import agentRouter from "./routes/agent.js";
+import { requireAuth, AuthedRequest } from "./middleware/auth.js";
 import toolsRouter from "./routes/tools/index.js";
 import billingRouter from "./routes/billing.js";
 import adminRouter from "./routes/admin.js";
@@ -56,21 +58,36 @@ import analyticsRouter from "./routes/analytics.js";
 import statsRouter from "./routes/stats.js";
 
 const app = express();
+const corsOrigins = config.corsOrigin
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
+
+// ─── Canonical-host redirect: *.onrender.com → archtools.dev ─────────────────
+// Keeps the Render origin from being indexed/used directly. /health stays
+// exempt so Render health checks keep passing.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const host = (req.headers.host ?? "").toLowerCase();
+  if (host.endsWith(".onrender.com") && req.path !== "/health") {
+    return res.redirect(301, `https://archtools.dev${req.originalUrl}`);
+  }
+  next();
+});
 
 // ─── Security headers (helmet) ────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],  // landing page inline scripts + Chart.js CDN
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://browser.sentry-cdn.com", "https://www.clarity.ms", "https://*.clarity.ms", "https://assets.apollo.io", "https://cdnjs.cloudflare.com", "https://static.cloudflareinsights.com"],  // inline scripts + Chart.js + Sentry + MS Clarity + Apollo + Prism (cdnjs) + Cloudflare Insights
       "script-src-attr": ["'unsafe-inline'"],  // allow inline event handlers (onclick etc)
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com"],
+      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com", "https://*.sentry.io", "https://*.ingest.sentry.io", "https://www.clarity.ms", "https://*.clarity.ms", "https://assets.apollo.io", "https://*.apollo.io", "https://cloudflareinsights.com"],
     },
   },
   crossOriginEmbedderPolicy: false,  // needed for fonts/CDN
@@ -116,7 +133,14 @@ const registerLimiter = rateLimit({
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: (origin, callback) => {
+    if (!origin || corsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
   exposedHeaders: [
     "Payment-Required",
@@ -151,11 +175,25 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
   if (err) res.redirect(301, '/arch-icon.svg?v=2');
 }));
 
+// ─── Admin HTML guard — block static serving of admin.html (adminGate route below handles authorized access) ───
+app.use((req: Request, res: Response, next: import('express').NextFunction): void => {
+  if (req.path === "/admin.html" && req.method === "GET") {
+    const key = req.headers["x-admin-key"] as string | undefined;
+    const cookie = req.headers["cookie"] ?? "";
+    if (!((key && key === config.adminKey) || cookie.includes("at_admin="))) {
+      res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
+      return;
+    }
+  }
+  next();
+});
+
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
 // Assets (images, icons): allow caching
 app.use(express.static(path.join(__dirname, "../public"), {
   dotfiles: 'allow', // allow .well-known directory to be served
+  redirect: false, // don't 301 /integrations -> /integrations/ (dir of SDK files); let the extensionless fallback serve integrations.html
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, must-revalidate');
@@ -220,6 +258,14 @@ app.use("/v1/tools", seoRouter);  // Free endpoint proxies
 app.use("/v1/agent/register", registerLimiter);
 // Agent usage & other agent routes — auth brute force protection
 app.use("/v1/agent", authLimiter, agentRouter);
+
+// Aliases — /v1/account and /v1/credits point to the same agent router
+app.use("/v1/account", authLimiter, agentRouter);
+app.get("/v1/credits", requireAuth, async (req: AuthedRequest, res: Response) => {
+  // Thin alias → same as GET /v1/agent/balance
+  req.url = "/balance";
+  agentRouter(req, res, () => res.status(404).json({ ok: false, error: "not_found" }));
+});
 
 // OAuth (rate limited to prevent brute force)
 app.use("/oauth", authLimiter, oauthRouter);
@@ -302,6 +348,12 @@ app.get("/dashboard", (req: Request, res: Response) => {
   return res.type("text/html").send(DASHBOARD_HTML);
 });
 
+// Convenience redirects for billing/usage paths referenced in emails & docs
+app.get("/billing", (_req: Request, res: Response) => res.redirect(302, "/pricing"));
+app.get("/dashboard/usage", (_req: Request, res: Response) => res.redirect(302, "/dashboard"));
+app.get("/dashboard/billing", (_req: Request, res: Response) => res.redirect(302, "/pricing"));
+app.get("/dashboard/byok", (_req: Request, res: Response) => res.redirect(302, "/byok"));
+
 // ─── Missing pages (referenced throughout the app) ────────────────────────────
 // /pricing — full pricing page
 app.get("/pricing", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
@@ -310,10 +362,10 @@ app.get("/langchain-guide", (_req, res) => res.sendFile(path.join(__dirname, '..
 app.get("/byok", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/byok.html')));
 app.get("/quickstart", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/quickstart.html')));
 app.get("/getting-started", (_req: Request, res: Response) => res.redirect(301, "/docs/getting-started"));
-// /terms — convenience redirect to static terms page
-app.get("/terms", (_req: Request, res: Response) => res.redirect(301, "/terms.html"));
-// /privacy and /legal — convenience redirects to canonical sub-paths
-app.get("/privacy", (_req: Request, res: Response) => res.redirect(301, "/legal/privacy"));
+// /terms — serve the static terms page directly (no 301 hop)
+app.get("/terms", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, "../public/terms.html")));
+// /privacy — serve the static privacy page directly (no 301 hop to /legal/privacy)
+app.get("/privacy", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, "../public/privacy.html")));
 
 // /docs — full API reference page
 app.get("/changelog", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/changelog.html')));
@@ -331,10 +383,19 @@ app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirn
 // /wallet → 302 redirect to /fund (302 not 301 — keeps it reversible if /wallet becomes its own page)
 app.get("/wallet", (_req: Request, res: Response) => res.redirect(302, "/fund"));
 app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/playground.html')));
+app.get("/use-cases", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/use-cases.html')));
 app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
-app.get("/admin.html", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
-app.get("/admin", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+// Admin panel — require session cookie OR x-admin-key before serving HTML
+const adminGate = (req: Request, res: Response, next: import('express').NextFunction): void => {
+  const key = req.headers["x-admin-key"] as string | undefined;
+  const cookie = req.headers["cookie"] ?? "";
+  // Allow if valid admin key header OR browser session cookie present (admin login sets it)
+  if ((key && key === config.adminKey) || cookie.includes("at_admin=")) { next(); return; }
+  res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
+};
+app.get("/admin.html", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+app.get("/admin", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
 app.get("/sitemap.xml", (_req, res) => res.sendFile(path.join(__dirname, '../public/sitemap.xml')));
 app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../public/robots.txt')));
 app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
@@ -345,6 +406,8 @@ app.get("/changelog-tonight", (_req: Request, _res: Response) => _res.sendFile(p
 app.get("/agents", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/agents-landing.html')));
 // /register → /signup redirect (common developer habit)
 app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
+// /get-api-key → /signup redirect (homepage CTA target)
+app.get("/get-api-key", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 
 app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/usage.html')));
 app.get("/status", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/status.html')));
@@ -394,12 +457,86 @@ app.get("/v1/x402/status", (_req: Request, res: Response) => {
   res.json({ ok: true, x402_sdk: getX402SdkStatus() });
 });
 
+app.get("/v1/health/x402", async (_req: Request, res: Response) => {
+  try {
+    const testUrl = `http://localhost:${process.env.PORT ?? 10000}/v1/tools/generate-hash`;
+    const r = await fetch(testUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "gate-test" }),
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => null);
+
+    const gateWorking = r?.status === 402;
+    res.status(gateWorking ? 200 : 503).json({
+      ok: gateWorking,
+      gate_status: gateWorking ? "ok" : "BROKEN",
+      expected_status: 402,
+      actual_status: r?.status ?? "error",
+      message: gateWorking
+        ? "x402 payment gate is working correctly - unauthenticated requests return 402"
+        : "CRITICAL: x402 payment gate is BROKEN - unauthenticated requests are not returning 402",
+      checked_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(503).json({ ok: false, gate_status: "ERROR", message: String(err) });
+  }
+});
+
+// ─── Extensionless HTML fallback ─────────────────────────────────────────────
+// Serves /integrations, /docs-x402-guide, /faq, etc. when public/<name>.html exists
+// and no explicit route matched above. GET/HEAD only; single path segment only.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const m = /^\/([A-Za-z0-9_-]+)$/.exec(req.path);
+  if (!m) return next();
+  const file = path.join(__dirname, "../public", `${m[1]}.html`);
+  if (!fs.existsSync(file)) return next();
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
+  res.sendFile(file, (err) => { if (err) next(); });
+});
+
 // ─── 404 handler ─────────────────────────────────────────────────────────────
-app.use((_req: Request, res: Response) => {
+app.use((req: Request, res: Response) => {
+  const requestId = crypto.randomUUID();
+  const wantsHtml = req.accepts(["json", "html"]) === "html";
+  if (wantsHtml) {
+    res.status(404).type("html").send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>404 — Page not found | Arch Tools</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#07061a;color:#f0f0f6;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;min-height:100vh}
+  .wrap{max-width:560px;margin:0 auto;padding:80px 24px;text-align:center}
+  .code{font-size:72px;font-weight:800;letter-spacing:-0.06em;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px}
+  h1{font-size:22px;font-weight:700;margin:0 0 12px}
+  p{font-size:14px;line-height:1.6;color:rgba(255,255,255,0.65);margin:0 0 28px}
+  .links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:24px}
+  a.btn{display:inline-block;padding:10px 18px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#22d3ee;text-decoration:none;font-weight:600;font-size:13px}
+  a.btn.primary{background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);border:0;color:#fff}
+  a.btn:hover{background:rgba(255,255,255,0.12)}
+  .rid{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:rgba(255,255,255,0.35);margin-top:20px;word-break:break-all}
+</style></head><body><div class="wrap">
+  <div class="code">404</div>
+  <h1>That page doesn't exist.</h1>
+  <p>The URL you tried isn't a known route. If you came from a link inside Arch Tools, let us know so we can fix it.</p>
+  <div class="links">
+    <a class="btn primary" href="/">Home</a>
+    <a class="btn" href="/docs">Docs</a>
+    <a class="btn" href="/pricing">Pricing</a>
+    <a class="btn" href="/dashboard">Dashboard</a>
+  </div>
+  <div class="rid">request_id: ${requestId}</div>
+</div></body></html>`);
+    return;
+  }
   res.status(404).json({
     ok: false,
     error: "not_found",
-    request_id: crypto.randomUUID(),
+    message: `No route matches ${req.method} ${req.path}. See https://archtools.dev/docs or GET /v1/tools for the list of available tools.`,
+    docs_url: "https://archtools.dev/docs",
+    tools_list_url: "https://archtools.dev/v1/tools",
+    request_id: requestId,
   });
 });
 
@@ -472,5 +609,21 @@ setInterval(async () => {
     await cleanupExpiredOAuthRecords();
   } catch { /* non-fatal */ }
 }, 24 * 60 * 60 * 1000);
+
+// MCP anonymous-demo pool auto-top-off — hourly, hard-capped per month.
+// First line of defense = per-IP/global daily anon caps in the MCP server;
+// this is the bounded-credit backstop (see src/cron/demoTopoff.ts).
+setInterval(async () => {
+  try {
+    const { runDemoTopoff } = await import("./cron/demoTopoff");
+    await runDemoTopoff();
+  } catch { /* non-fatal */ }
+}, 60 * 60 * 1000);
+setTimeout(async () => {
+  try {
+    const { runDemoTopoff } = await import("./cron/demoTopoff");
+    await runDemoTopoff();
+  } catch { /* non-fatal */ }
+}, 90 * 1000); // one kick shortly after boot
 
 export default app;

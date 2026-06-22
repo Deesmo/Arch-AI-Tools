@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>x402 Service Directory — Arch Tools</title>
-  <meta name="description" content="Discover all x402-compatible API services. The most comprehensive catalog of pay-per-call APIs for AI agents and developers. Search by category, chain, or price." />
-  <meta property="og:title" content="x402 Service Directory — Arch Tools" />
-  <meta property="og:description" content="The most comprehensive directory of x402-enabled API services. Discover, search, and connect to pay-per-call APIs across 18+ chains." />
+  <title>Tool Directory — Arch Tools | All 64 Tools</title>
+  <meta name="description" content="Browse all 64 Arch Tools — production-ready, pay-per-call APIs for AI agents and developers. AI generation, web scraping, crypto, validation, media, and more behind one API key." />
+  <meta property="og:title" content="Tool Directory — Arch Tools" />
+  <meta property="og:description" content="All 64 Arch Tools in one place. Production-ready pay-per-call APIs for AI agents and developers — one API key, x402 payments supported." />
   <meta property="og:image" content="https://archtools.dev/og-image.png" />
   <meta property="og:url" content="https://archtools.dev/directory" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="x402 Service Directory — Arch Tools" />
-  <meta name="twitter:description" content="The most comprehensive directory of x402-enabled API services. Discover, search, and connect to pay-per-call APIs." />
+  <meta name="twitter:title" content="Tool Directory — Arch Tools" />
+  <meta name="twitter:description" content="All 64 Arch Tools in one place. Production-ready pay-per-call APIs for AI agents and developers." />
   <meta name="twitter:image" content="https://archtools.dev/og-image.png" />
-  <meta name="keywords" content="x402 directory, API marketplace, x402 services, crypto API, AI tools directory, USDC payments, agentic commerce, pay-per-call API" />
+  <meta name="keywords" content="Arch Tools directory, API tools, x402 API, crypto API, AI tools, USDC payments, agentic commerce, pay-per-call API" />
   <link rel="canonical" href="https://archtools.dev/directory" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,8 +67,6 @@
     .search-input { flex: 1; min-width: 200px; background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 16px; color: var(--text); font-size: 15px; outline: none; font-family: inherit; }
     .search-input:focus { border-color: var(--accent); }
     .search-input::placeholder { color: var(--muted); }
-    .filter-btn { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 16px; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
-    .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); }
     .filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.2s; user-select: none; }
     .chip:hover, .chip.active { background: rgba(0,229,176,0.08); border-color: rgba(0,229,176,0.3); color: var(--accent); }
@@ -77,34 +75,15 @@
     .grid { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: all 0.3s; position: relative; overflow: hidden; }
     .card:hover { border-color: var(--border2); transform: translateY(-2px); }
-    .card.featured { border-color: rgba(0,229,176,0.2); }
-    .card.featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--grad); }
     .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .card-logo { width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
-    .card-logo img { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; }
     .card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; }
-    .card-badges { display: flex; gap: 6px; margin-left: auto; }
-    .badge { font-size: 10px; padding: 3px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .badge-verified { background: rgba(0,229,176,0.12); color: var(--accent); }
-    .badge-featured { background: rgba(170,68,255,0.12); color: var(--accent3); }
     .card-desc { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .card-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     .meta-tag { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 10px; font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
-    .card-chains { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
-    .chain-tag { background: rgba(0,102,255,0.08); color: var(--accent2); border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
     .card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px; }
     .card-price { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); }
-    .card-endpoints { font-size: 12px; color: var(--muted); }
     .card-link { color: var(--accent2); font-size: 13px; text-decoration: none; font-weight: 600; }
     .card-link:hover { text-decoration: underline; }
-
-    /* Submit CTA */
-    .submit-section { max-width: 800px; margin: 0 auto 80px; padding: 0 24px; text-align: center; }
-    .submit-card { background: var(--card); border: 1px solid var(--border2); border-radius: 20px; padding: 48px; }
-    .submit-card h2 { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 12px; }
-    .submit-card p { color: var(--muted); margin-bottom: 24px; }
-    .btn-accent { display: inline-block; background: var(--accent); color: #030308; padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; border: none; cursor: pointer; font-family: inherit; }
-    .btn-accent:hover { opacity: 0.9; }
 
     /* Machine-readable info */
     .api-info { max-width: 800px; margin: 0 auto 60px; padding: 0 24px; }
@@ -143,57 +122,35 @@
   </nav>
 
   <section class="hero">
-    <div class="hero-badge">🌐 x402 ECOSYSTEM</div>
-    <h1>The <span class="grad">x402 Service Directory</span></h1>
-    <p>Discover every x402-compatible API in one place. The most comprehensive catalog of pay-per-call services for AI agents and developers.</p>
+    <div class="hero-badge">🛠 64 PRODUCTION TOOLS</div>
+    <h1>The <span class="grad">Arch Tools Directory</span></h1>
+    <p>All 64 Arch Tools in one place. Production-ready, pay-per-call APIs for AI agents and developers — one API key, x402 payments supported.</p>
   </section>
 
   <div class="stats-bar" id="statsBar">
-    <div class="stat"><div class="stat-num" id="statServices">—</div><div class="stat-label">Services</div></div>
-    <div class="stat"><div class="stat-num" id="statEndpoints">—</div><div class="stat-label">Endpoints</div></div>
-    <div class="stat"><div class="stat-num" id="statChains">—</div><div class="stat-label">Chains</div></div>
+    <div class="stat"><div class="stat-num" id="statTools">64</div><div class="stat-label">Tools</div></div>
     <div class="stat"><div class="stat-num" id="statCategories">—</div><div class="stat-label">Categories</div></div>
+    <div class="stat"><div class="stat-num">1</div><div class="stat-label">API Key</div></div>
   </div>
 
   <div class="filters">
     <div class="search-row">
-      <input type="text" class="search-input" id="searchInput" placeholder="Search services by name, description, or category…" />
-      <button class="filter-btn" id="btnAll" onclick="filterCategory('')">All</button>
-      <button class="filter-btn" id="btnAI" onclick="filterCategory('ai')">AI</button>
-      <button class="filter-btn" id="btnWeb" onclick="filterCategory('web-scraping')">Web</button>
-      <button class="filter-btn" id="btnCrypto" onclick="filterCategory('crypto')">Crypto</button>
-      <button class="filter-btn" id="btnInfra" onclick="filterCategory('infrastructure')">Infra</button>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search tools by name, description, or category…" />
     </div>
-    <div class="filter-row" id="chainFilters"></div>
+    <div class="filter-row" id="categoryFilters"></div>
   </div>
 
-  <div class="grid" id="servicesGrid">
-    <div class="loading"><div class="spinner"></div><p style="margin-top:12px">Loading directory…</p></div>
+  <div class="grid" id="toolsGrid">
+    <div class="loading"><div class="spinner"></div><p style="margin-top:12px">Loading tools…</p></div>
   </div>
 
   <section class="api-info">
     <div class="api-card">
       <h3>🤖 Machine-Readable API</h3>
-      <code>GET https://archtools.dev/api/v1/x402/directory</code>
-      <code>GET https://archtools.dev/api/v1/x402/directory/search?category=ai&chain=base</code>
-      <code>GET https://archtools.dev/api/v1/x402/directory/stats</code>
-      <p class="muted">AI agents can programmatically discover x402 services. No auth required. JSON responses.</p>
-    </div>
-  </section>
-
-  <section class="submit-section">
-    <div class="submit-card">
-      <h2>List Your x402 Service</h2>
-      <p>Built an x402-compatible API? Submit it to the directory and get discovered by thousands of AI agents.</p>
-      <button class="btn-accent" onclick="showSubmitForm()">Submit Your Service →</button>
-      <div id="submitForm" style="display:none;margin-top:24px;text-align:left">
-        <div style="margin-bottom:12px"><label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Service Name *</label><input type="text" id="subName" class="search-input" style="width:100%" placeholder="My x402 API" /></div>
-        <div style="margin-bottom:12px"><label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">URL *</label><input type="text" id="subUrl" class="search-input" style="width:100%" placeholder="https://api.example.com" /></div>
-        <div style="margin-bottom:12px"><label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Description *</label><textarea id="subDesc" class="search-input" style="width:100%;min-height:80px;resize:vertical" placeholder="What does your service do?"></textarea></div>
-        <div style="margin-bottom:12px"><label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Contact Email *</label><input type="email" id="subEmail" class="search-input" style="width:100%" placeholder="you@example.com" /></div>
-        <button class="btn-accent" onclick="submitService()">Submit for Review</button>
-        <p id="submitMsg" style="margin-top:12px;font-size:14px;display:none"></p>
-      </div>
+      <code>GET https://archtools.dev/api/discovery</code>
+      <code>GET https://archtools.dev/v1/tools</code>
+      <code>GET https://archtools.dev/.well-known/openapi.json</code>
+      <p class="muted">AI agents can programmatically discover all 64 Arch Tools. No auth required for discovery. JSON responses.</p>
     </div>
   </section>
 
@@ -202,147 +159,95 @@
   </footer>
 
   <script>
-    let allServices = [];
+    let allTools = [];
     let activeCategory = '';
-    let activeChain = '';
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
     async function loadDirectory() {
       try {
-        const res = await fetch('/api/v1/x402/directory');
+        const res = await fetch('/api/discovery');
         const data = await res.json();
-        if (!data.ok) throw new Error('Failed to load');
+        if (!data.ok || !Array.isArray(data.tools)) throw new Error('Failed to load');
 
-        allServices = data.services;
-        document.getElementById('statServices').textContent = data.directory.total_services;
-        document.getElementById('statEndpoints').textContent = data.directory.total_endpoints.toLocaleString();
-        document.getElementById('statChains').textContent = data.directory.chains_covered;
-        document.getElementById('statCategories').textContent = data.directory.categories_count;
+        allTools = data.tools;
+        const categories = [...new Set(allTools.map(t => t.category))].sort();
+        document.getElementById('statTools').textContent = allTools.length;
+        document.getElementById('statCategories').textContent = categories.length;
 
-        // Build chain filter chips
-        const chainDiv = document.getElementById('chainFilters');
-        data.directory.chains.slice(0, 12).forEach(chain => {
+        // Build category filter chips
+        const catDiv = document.getElementById('categoryFilters');
+        const allChip = document.createElement('span');
+        allChip.className = 'chip active';
+        allChip.textContent = 'All';
+        allChip.onclick = () => filterCategory('');
+        catDiv.appendChild(allChip);
+        categories.forEach(cat => {
           const chip = document.createElement('span');
           chip.className = 'chip';
-          chip.textContent = chain;
-          chip.onclick = () => filterChain(chain === activeChain ? '' : chain);
-          chainDiv.appendChild(chip);
+          chip.textContent = cat;
+          chip.onclick = () => filterCategory(cat === activeCategory ? '' : cat);
+          catDiv.appendChild(chip);
         });
 
-        renderServices(allServices);
+        renderTools(allTools);
       } catch (e) {
-        document.getElementById('servicesGrid').innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px">Failed to load directory. Try refreshing.</p>';
+        document.getElementById('toolsGrid').innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1">Failed to load tools. Try refreshing.</p>';
       }
     }
 
-    function renderServices(services) {
-      const grid = document.getElementById('servicesGrid');
-      if (!services.length) {
-        grid.innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1">No services match your filters.</p>';
+    function renderTools(tools) {
+      const grid = document.getElementById('toolsGrid');
+      if (!tools.length) {
+        grid.innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1">No tools match your filters.</p>';
         return;
       }
-      grid.innerHTML = services.map(s => `
-        <div class="card ${s.featured ? 'featured' : ''}">
+      grid.innerHTML = tools.map(t => `
+        <div class="card">
           <div class="card-head">
-            <div class="card-logo">${s.logo_url ? `<img src="${s.logo_url}" alt="${s.name}" onerror="this.parentElement.textContent='${s.name[0]}'" />` : s.name[0]}</div>
-            <div class="card-title">${s.name}</div>
-            <div class="card-badges">
-              ${s.verified ? '<span class="badge badge-verified">✓ Verified</span>' : ''}
-              ${s.featured ? '<span class="badge badge-featured">★ Featured</span>' : ''}
-            </div>
+            <div class="card-title">${esc(t.name)}</div>
           </div>
-          <div class="card-desc">${s.description}</div>
+          <div class="card-desc">${esc(t.description)}</div>
           <div class="card-meta">
-            ${s.categories.slice(0, 4).map(c => `<span class="meta-tag">${c}</span>`).join('')}
-          </div>
-          <div class="card-chains">
-            ${s.chains_supported.slice(0, 6).map(c => `<span class="chain-tag">${c}</span>`).join('')}
-            ${s.chains_supported.length > 6 ? `<span class="chain-tag">+${s.chains_supported.length - 6} more</span>` : ''}
+            <span class="meta-tag">${esc(t.category)}</span>
+            <span class="meta-tag">${esc(t.method)}</span>
           </div>
           <div class="card-footer">
-            <span class="card-price">${s.total_endpoints > 0 ? s.price_range.min + ' – ' + s.price_range.max : 'Contact'}</span>
-            <span class="card-endpoints">${s.total_endpoints} endpoint${s.total_endpoints !== 1 ? 's' : ''}</span>
-            <a href="${s.website_url || s.base_url}" target="_blank" class="card-link">Visit →</a>
+            <span class="card-price">${esc(t.credits)} credits</span>
+            <a href="/docs#${encodeURIComponent(t.name)}" class="card-link">Docs →</a>
           </div>
         </div>
       `).join('');
     }
 
     function applyFilters() {
-      let filtered = allServices;
+      let filtered = allTools;
       if (activeCategory) {
-        filtered = filtered.filter(s => s.categories.includes(activeCategory));
-      }
-      if (activeChain) {
-        filtered = filtered.filter(s => s.chains_supported.includes(activeChain));
+        filtered = filtered.filter(t => t.category === activeCategory);
       }
       const q = document.getElementById('searchInput').value.toLowerCase().trim();
       if (q) {
         const terms = q.split(/\s+/);
-        filtered = filtered.filter(s => {
-          const text = (s.name + ' ' + s.description + ' ' + s.categories.join(' ')).toLowerCase();
-          return terms.every(t => text.includes(t));
+        filtered = filtered.filter(t => {
+          const text = (t.name + ' ' + t.description + ' ' + t.category).toLowerCase();
+          return terms.every(x => text.includes(x));
         });
       }
-      renderServices(filtered);
+      renderTools(filtered);
     }
 
     function filterCategory(cat) {
       activeCategory = cat;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      if (cat === '') document.getElementById('btnAll').classList.add('active');
-      else if (cat === 'ai') document.getElementById('btnAI').classList.add('active');
-      else if (cat === 'web-scraping') document.getElementById('btnWeb').classList.add('active');
-      else if (cat === 'crypto') document.getElementById('btnCrypto').classList.add('active');
-      else if (cat === 'infrastructure') document.getElementById('btnInfra').classList.add('active');
-      applyFilters();
-    }
-
-    function filterChain(chain) {
-      activeChain = chain;
-      document.querySelectorAll('.chip').forEach(c => {
-        c.classList.toggle('active', c.textContent === chain);
+      document.querySelectorAll('#categoryFilters .chip').forEach(c => {
+        c.classList.toggle('active', (cat === '' && c.textContent === 'All') || c.textContent === cat);
       });
       applyFilters();
     }
 
     document.getElementById('searchInput').addEventListener('input', applyFilters);
 
-    function showSubmitForm() {
-      document.getElementById('submitForm').style.display = 'block';
-    }
-
-    async function submitService() {
-      const msg = document.getElementById('submitMsg');
-      msg.style.display = 'none';
-      const body = {
-        name: document.getElementById('subName').value,
-        url: document.getElementById('subUrl').value,
-        description: document.getElementById('subDesc').value,
-        contact_email: document.getElementById('subEmail').value,
-      };
-      try {
-        const res = await fetch('/api/v1/x402/directory/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        msg.style.display = 'block';
-        if (data.ok) {
-          msg.style.color = 'var(--accent)';
-          msg.textContent = '✓ ' + data.message;
-        } else {
-          msg.style.color = '#ff4444';
-          msg.textContent = '✗ ' + data.message;
-        }
-      } catch {
-        msg.style.display = 'block';
-        msg.style.color = '#ff4444';
-        msg.textContent = '✗ Network error. Try again.';
-      }
-    }
-
-    document.getElementById('btnAll').classList.add('active');
     loadDirectory();
   </script>
 </body>

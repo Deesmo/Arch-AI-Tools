@@ -12,6 +12,87 @@
  */
 import { Request, Response, NextFunction } from "express";
 import { redis } from "../lib/redis.js";
+import { sendSecurityAlert } from "../lib/alert.js";
+
+// ─── Security Anomaly Detection (Discord alerts, fail-safe) ─────────────────
+// Thresholds are env-tunable; conservative defaults. All checks run inside a
+// try/catch and add only Map lookups — negligible latency, never throws.
+const AUTH_FAIL_THRESHOLD = Number(process.env.ARCH_ALERT_AUTH_FAIL_THRESHOLD) > 0
+  ? Number(process.env.ARCH_ALERT_AUTH_FAIL_THRESHOLD) : 20; // 401s per IP
+const AUTH_FAIL_WINDOW_MS = Number(process.env.ARCH_ALERT_AUTH_FAIL_WINDOW_MS) > 0
+  ? Number(process.env.ARCH_ALERT_AUTH_FAIL_WINDOW_MS) : 5 * 60 * 1000; // 5 min
+const CREDIT_DRAIN_THRESHOLD = Number(process.env.ARCH_ALERT_CREDIT_DRAIN_THRESHOLD) > 0
+  ? Number(process.env.ARCH_ALERT_CREDIT_DRAIN_THRESHOLD) : 500; // calls per account
+const CREDIT_DRAIN_WINDOW_MS = Number(process.env.ARCH_ALERT_CREDIT_DRAIN_WINDOW_MS) > 0
+  ? Number(process.env.ARCH_ALERT_CREDIT_DRAIN_WINDOW_MS) : 10 * 60 * 1000; // 10 min
+
+const authFailsByIp: Map<string, number[]> = new Map();
+const billedCallsByAgent: Map<string, number[]> = new Map();
+const MAX_TRACKED_KEYS = 5000;
+
+function pushWindowed(map: Map<string, number[]>, key: string, windowMs: number): number {
+  const now = Date.now();
+  let arr = map.get(key) ?? [];
+  arr = arr.filter((t) => t > now - windowMs);
+  arr.push(now);
+  if (map.size > MAX_TRACKED_KEYS && !map.has(key)) map.clear(); // hard memory cap
+  map.set(key, arr);
+  return arr.length;
+}
+
+function securityAnomalyCheck(
+  req: Request,
+  statusCode: number,
+  toolName: string | null,
+  agentId: string | null,
+  isX402: boolean,
+  isAdmin: boolean,
+): void {
+  try {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+
+    // (a) Burst of auth failures from one IP
+    if (statusCode === 401) {
+      const count = pushWindowed(authFailsByIp, ip, AUTH_FAIL_WINDOW_MS);
+      if (count >= AUTH_FAIL_THRESHOLD) {
+        sendSecurityAlert({
+          type: "auth_fail_burst",
+          title: "Auth-failure burst detected",
+          detail: `IP ${ip} produced ${count} HTTP 401s in ${Math.round(AUTH_FAIL_WINDOW_MS / 60000)} min on ${req.path}. Possible key brute-force or misconfigured client.`,
+          severity: count >= AUTH_FAIL_THRESHOLD * 3 ? "critical" : "warning",
+          fields: { ip, count, window_min: Math.round(AUTH_FAIL_WINDOW_MS / 60000), path: req.path },
+        });
+      }
+    }
+
+    // (b) Billable tool path served 2xx WITHOUT any auth/payment — should be impossible
+    if (toolName && statusCode < 400 && !agentId && !isX402 && !isAdmin) {
+      sendSecurityAlert({
+        type: "unauthed_billable_hit",
+        title: "UNAUTHENTICATED billable tool response",
+        detail: `Tool ${toolName} returned ${statusCode} with no agent, no x402 payment, and no admin key. The auth gate may have regressed — investigate immediately.`,
+        severity: "critical",
+        fields: { tool: toolName, status: statusCode, path: req.path, ip },
+      });
+    }
+
+    // (c) Credit-drain spike on a single account
+    if (agentId && toolName && statusCode < 400 && !isX402 && !isAdmin) {
+      const count = pushWindowed(billedCallsByAgent, agentId, CREDIT_DRAIN_WINDOW_MS);
+      if (count >= CREDIT_DRAIN_THRESHOLD) {
+        sendSecurityAlert({
+          type: "credit_drain_spike",
+          title: "Credit-drain spike on single account",
+          detail: `Agent ${agentId.slice(0, 8)}... made ${count} billable calls in ${Math.round(CREDIT_DRAIN_WINDOW_MS / 60000)} min. Possible leaked key or runaway client.`,
+          severity: "critical",
+          fields: { agent: agentId.slice(0, 8), count, window_min: Math.round(CREDIT_DRAIN_WINDOW_MS / 60000) },
+        });
+      }
+    }
+  } catch {
+    // Anomaly detection must never affect the request path.
+  }
+}
 
 // ─── In-Memory Counters (fallback when Redis unavailable) ────────────────────
 interface MetricEntry {
@@ -170,6 +251,9 @@ export function analyticsMiddleware(req: Request, res: Response, next: NextFunct
         // Track hourly volume for spike detection
         trackHourlyVolume(agentId);
       }
+
+      // Security anomaly detection → Discord webhook (fail-safe, rate-limited)
+      securityAnomalyCheck(req, statusCode, toolName, agentId, isX402, !!isAdmin);
     }
 
     return originalEnd.apply(res, args);

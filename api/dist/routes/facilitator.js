@@ -19,6 +19,8 @@ import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
 import { verifyPayment, settlePayment, decodePayment, calculateProviderPayout, getDefaultFeePercent, getSupportedNetworks, } from "../services/facilitator.js";
 import { requireAdmin } from "../middleware/auth.js";
+import { reqId, safeErr } from "../utils/credits.js";
+import { validateUrl } from "../lib/ssrf.js";
 const router = Router();
 /**
  * Authenticate a facilitator provider via API key.
@@ -38,25 +40,21 @@ async function requireFacilitatorAuth(req, res, next) {
         return;
     }
     try {
-        // Look up by raw key first (for backward compat), then by hash
-        let provider = await prisma.facilitatorProvider.findUnique({
-            where: { apiKey },
+        // Plaintext keys are no longer stored — hash-based lookup only
+        // (iterate — in production, use a prefix index).
+        let provider = null;
+        const candidates = await prisma.facilitatorProvider.findMany({
+            where: { active: true },
+            select: { id: true, name: true, apiKeyHash: true, walletAddress: true, feePercent: true, networks: true },
         });
-        if (!provider) {
-            // Try hash-based lookup (iterate — in production, use a prefix index)
-            const candidates = await prisma.facilitatorProvider.findMany({
-                where: { active: true },
-                select: { id: true, name: true, apiKeyHash: true, walletAddress: true, feePercent: true, networks: true, apiKey: true },
-            });
-            for (const c of candidates) {
-                if (c.apiKeyHash && await bcrypt.compare(apiKey, c.apiKeyHash)) {
-                    provider = await prisma.facilitatorProvider.findUnique({ where: { id: c.id } });
-                    break;
-                }
+        for (const c of candidates) {
+            if (c.apiKeyHash && await bcrypt.compare(apiKey, c.apiKeyHash)) {
+                provider = await prisma.facilitatorProvider.findUnique({ where: { id: c.id } });
+                break;
             }
         }
         if (!provider || !provider.active) {
-            res.status(401).json({ ok: false, error: "invalid_api_key", message: "Invalid or inactive facilitator API key." });
+            res.status(401).json({ ok: false, error: "invalid_api_key", message: "Invalid or inactive facilitator API key.", request_id: reqId() });
             return;
         }
         req.facilitatorProvider = {
@@ -70,7 +68,7 @@ async function requireFacilitatorAuth(req, res, next) {
     }
     catch (err) {
         console.error("[facilitator] Auth error:", err);
-        res.status(500).json({ ok: false, error: "internal_error" });
+        res.status(500).json({ ok: false, error: "internal_error", request_id: reqId() });
     }
 }
 // ─── POST /verify — Verify a payment ─────────────────────────────────────────
@@ -82,6 +80,7 @@ router.post("/verify", requireFacilitatorAuth, async (req, res) => {
                 ok: false,
                 error: "missing_fields",
                 message: "Required: payment (base64 string), paymentDetails (object with scheme, network, maxAmountRequired, resource, payTo, asset)",
+                request_id: reqId(),
             });
             return;
         }
@@ -92,6 +91,7 @@ router.post("/verify", requireFacilitatorAuth, async (req, res) => {
                 ok: false,
                 error: "invalid_payment_details",
                 message: "paymentDetails must include: scheme, network, maxAmountRequired, resource, payTo, asset",
+                request_id: reqId(),
             });
             return;
         }
@@ -102,6 +102,7 @@ router.post("/verify", requireFacilitatorAuth, async (req, res) => {
                 ok: false,
                 error: "unsupported_network",
                 message: `Network ${paymentDetails.network} is not enabled for your account. Supported: ${provider.networks.join(", ")}`,
+                request_id: reqId(),
             });
             return;
         }
@@ -128,11 +129,17 @@ router.post("/verify", requireFacilitatorAuth, async (req, res) => {
             ok: true,
             isValid: result.isValid,
             invalidReason: result.invalidReason || undefined,
+            request_id: reqId(),
         });
     }
     catch (err) {
         console.error("[facilitator] Verify error:", err);
-        res.status(500).json({ ok: false, error: "verification_error", message: err.message });
+        res.status(500).json({
+            ok: false,
+            error: "verification_error",
+            message: "Unable to verify payment.",
+            request_id: reqId(),
+        });
     }
 });
 // ─── POST /settle — Settle a verified payment on-chain ────────────────────────
@@ -144,6 +151,7 @@ router.post("/settle", requireFacilitatorAuth, async (req, res) => {
                 ok: false,
                 error: "missing_fields",
                 message: "Required: payment (base64 string), paymentDetails (object)",
+                request_id: reqId(),
             });
             return;
         }
@@ -251,11 +259,17 @@ router.post("/settle", requireFacilitatorAuth, async (req, res) => {
                 amount: providerPayout,
                 amountUsdc: payoutFloat.toFixed(6),
             } : undefined,
+            request_id: reqId(),
         });
     }
     catch (err) {
         console.error("[facilitator] Settle error:", err);
-        res.status(500).json({ ok: false, error: "settlement_error", message: err.message });
+        res.status(500).json({
+            ok: false,
+            error: "settlement_error",
+            message: "Unable to settle payment.",
+            request_id: reqId(),
+        });
     }
 });
 // ─── POST /register — Register a new provider ────────────────────────────────
@@ -268,23 +282,43 @@ router.post("/register", async (req, res) => {
                 ok: false,
                 error: "missing_fields",
                 message: "Required: name, email, walletAddress",
+                request_id: reqId(),
             });
             return;
         }
         // Validate email format
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            res.status(400).json({ ok: false, error: "invalid_email", message: "Invalid email address" });
+            res.status(400).json({ ok: false, error: "invalid_email", message: "Invalid email address", request_id: reqId() });
             return;
         }
         // Validate wallet address (EVM)
         if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-            res.status(400).json({ ok: false, error: "invalid_wallet", message: "Wallet address must be a valid EVM address (0x + 40 hex chars)" });
+            res.status(400).json({ ok: false, error: "invalid_wallet", message: "Wallet address must be a valid EVM address (0x + 40 hex chars)", request_id: reqId() });
             return;
+        }
+        if (webhookUrl) {
+            try {
+                const parsed = new URL(webhookUrl);
+                if (parsed.protocol !== "https:") {
+                    res.status(400).json({ ok: false, error: "invalid_webhook_url", message: "Webhook URL must use HTTPS", request_id: reqId() });
+                    return;
+                }
+                await validateUrl(webhookUrl);
+            }
+            catch (err) {
+                res.status(400).json({
+                    ok: false,
+                    error: "invalid_webhook_url",
+                    message: err instanceof Error ? err.message : "Invalid webhook URL",
+                    request_id: reqId(),
+                });
+                return;
+            }
         }
         // Check if email already registered
         const existing = await prisma.facilitatorProvider.findUnique({ where: { email } });
         if (existing) {
-            res.status(409).json({ ok: false, error: "email_exists", message: "This email is already registered as a facilitator provider." });
+            res.status(409).json({ ok: false, error: "email_exists", message: "This email is already registered as a facilitator provider.", request_id: reqId() });
             return;
         }
         // Generate API key
@@ -296,12 +330,11 @@ router.post("/register", async (req, res) => {
         if (requestedNetworks.length === 0) {
             requestedNetworks.push("eip155:8453");
         }
-        // Create provider
+        // Create provider — only the bcrypt hash is persisted; raw key returned ONCE below.
         const provider = await prisma.facilitatorProvider.create({
             data: {
                 name,
                 email,
-                apiKey,
                 apiKeyHash,
                 walletAddress,
                 webhookUrl: webhookUrl || null,
@@ -330,11 +363,12 @@ router.post("/register", async (req, res) => {
                 dashboard: "GET /api/v1/facilitator/dashboard",
                 docs: `${process.env.PUBLIC_SITE_URL || "https://archtools.dev"}/facilitator`,
             },
+            request_id: reqId(),
         });
     }
     catch (err) {
         console.error("[facilitator] Register error:", err);
-        res.status(500).json({ ok: false, error: "internal_error" });
+        res.status(500).json({ ok: false, error: "internal_error", message: safeErr(err), request_id: reqId() });
     }
 });
 // ─── GET /dashboard — Provider payment stats ──────────────────────────────────
@@ -346,7 +380,7 @@ router.get("/dashboard", requireFacilitatorAuth, async (req, res) => {
             where: { id: provider.id },
         });
         if (!providerRecord) {
-            res.status(404).json({ ok: false, error: "provider_not_found" });
+            res.status(404).json({ ok: false, error: "provider_not_found", request_id: reqId() });
             return;
         }
         // Get recent payments (last 30 days)
@@ -429,11 +463,12 @@ router.get("/dashboard", requireFacilitatorAuth, async (req, res) => {
                 status: p.status,
                 createdAt: p.createdAt.toISOString(),
             })),
+            request_id: reqId(),
         });
     }
     catch (err) {
         console.error("[facilitator] Dashboard error:", err);
-        res.status(500).json({ ok: false, error: "internal_error" });
+        res.status(500).json({ ok: false, error: "internal_error", request_id: reqId() });
     }
 });
 // ─── GET /revenue — Admin: Total facilitator fee revenue ──────────────────────
@@ -516,11 +551,12 @@ router.get("/revenue", requireAdmin, async (_req, res) => {
                 settlements_usdc: Math.round(data.settlements * 1e6) / 1e6,
                 transactions: data.count,
             })),
+            request_id: reqId(),
         });
     }
     catch (err) {
         console.error("[facilitator] Revenue error:", err);
-        res.status(500).json({ ok: false, error: "internal_error" });
+        res.status(500).json({ ok: false, error: "internal_error", request_id: reqId() });
     }
 });
 // ─── GET /networks — List supported networks ──────────────────────────────────
@@ -529,6 +565,7 @@ router.get("/networks", (_req, res) => {
         ok: true,
         networks: getSupportedNetworks(),
         facilitatorUrl: `${process.env.PUBLIC_SITE_URL || "https://archtools.dev"}/api/v1/facilitator`,
+        request_id: reqId(),
     });
 });
 // ─── GET /health — Health check ───────────────────────────────────────────────
@@ -560,6 +597,7 @@ router.get("/health", async (_req, res) => {
             settlement: hasPrivateKey ? "ready" : "disabled (no FACILITATOR_PRIVATE_KEY)",
             activeProviders: providerCount,
         },
+        request_id: reqId(),
     });
 });
 export default router;

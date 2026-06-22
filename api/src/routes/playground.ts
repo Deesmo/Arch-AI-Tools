@@ -6,8 +6,27 @@
  */
 
 import { Router, Request, Response } from "express";
+import { readFileSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { X402_PRICES } from "../middleware/x402.js";
 import { config } from "../config.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Canonical tool list = tools present in the public OpenAPI spec (64).
+// X402_PRICES contains extra internal/legacy entries that must not surface here.
+function loadOpenapiToolNames(): string[] {
+  try {
+    const spec = JSON.parse(readFileSync(path.join(__dirname, "../../public/openapi.json"), "utf8"));
+    return Object.keys(spec.paths ?? {})
+      .filter((p) => p.startsWith("/v1/tools/"))
+      .map((p) => p.slice("/v1/tools/".length));
+  } catch {
+    return Object.keys(X402_PRICES);
+  }
+}
+const OPENAPI_TOOL_NAMES = loadOpenapiToolNames();
 
 const router = Router();
 
@@ -113,9 +132,9 @@ router.get("/demo", (req: Request, res: Response): void => {
 // ─── GET /api/v1/x402/playground/tools ────────────────────────────────────────
 // Returns all tools with pricing + sample params for the playground
 router.get("/tools", (_req: Request, res: Response): void => {
-  const tools = Object.entries(X402_PRICES).map(([name, price]) => ({
+  const tools = OPENAPI_TOOL_NAMES.map((name) => ({
     name,
-    price_usdc: price,
+    price_usdc: X402_PRICES[name] ?? "0.010",
     endpoint: `/v1/tools/${name}`,
     sample_params: getSampleParams(name),
   }));

@@ -164,6 +164,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         <div class="stat-card">
           <div class="stat-label">Credits Remaining</div>
           <div class="stat-val green"><span id="credits">—</span><span class="stat-unit">cr</span></div>
+          <a href="/pricing" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--accent);text-decoration:none;font-weight:600;letter-spacing:0.02em">Get more credits →</a>
         </div>
         <div class="stat-card">
           <div class="stat-label">Calls Today</div>
@@ -213,7 +214,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
   <script>
     function doSignOut() {
-      localStorage.clear();
+      sessionStorage.removeItem("arch_api_key");
+      try { localStorage.removeItem("arch_api_key"); } catch(_) {}
       window.location.href = "/auth/logout";
     }
 
@@ -273,7 +275,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         fullKey = token;
-        if (token) localStorage.setItem("arch_api_key", token);
+        if (token) { sessionStorage.setItem("arch_api_key", token); try { localStorage.setItem("arch_api_key", token); } catch(_) {} }
         setStatus("\u2713 Loaded", "var(--green)");
 
         // Show masked key
@@ -311,7 +313,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         // Update quickstart with actual key
         var qs = document.getElementById("quickstart-code");
         var displayKey = maskKey(token);
-        qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash \\\n  -H "x-api-key: ' + displayKey + '" \\\n  -H "Content-Type: application/json" \\\n  -d \'{{"text":"hello world","algorithm":"sha256"}}\'';
+        var SQ = String.fromCharCode(39);
+        var BSNL = String.fromCharCode(92, 10) + '  ';
+        qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash' + BSNL + '-H "x-api-key: ' + displayKey + '"' + BSNL + '-H "Content-Type: application/json"' + BSNL + '-d ' + SQ + '{"text":"hello world","algorithm":"sha256"}' + SQ;
 
         // Hide the key entry card entirely after successful load
         document.getElementById("key-entry-card").style.display = "none";
@@ -343,7 +347,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       if (qKey && qKey.startsWith("arch_")) {
         // Consume key from URL immediately — strip from history so it never leaks
         history.replaceState({}, "", "/dashboard");
-        localStorage.setItem("arch_api_key", qKey);
+        sessionStorage.setItem("arch_api_key", qKey);
+        try { localStorage.setItem("arch_api_key", qKey); } catch(_) {}
         document.getElementById("key-input").value = qKey;
         document.getElementById("loading-card").style.display = "none";
         await loadDashboard();
@@ -357,14 +362,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           if (me.ok) {
             // Sentinel fix: clear stale localStorage key before loading session key
             // Prevents cross-account key bleed if /auth/api-key fails transiently
-            localStorage.removeItem("arch_api_key");
+            sessionStorage.removeItem("arch_api_key");
+            try { localStorage.removeItem("arch_api_key"); } catch(_) {}
             try {
               var keyResp = await fetch("/auth/api-key", { credentials: "include" });
               if (keyResp.ok) {
                 var kd = await keyResp.json();
                 if (kd.ok && kd.api_key) {
                   document.getElementById("key-input").value = kd.api_key;
-                  localStorage.setItem("arch_api_key", kd.api_key);
+                  sessionStorage.setItem("arch_api_key", kd.api_key);
+                  try { localStorage.setItem("arch_api_key", kd.api_key); } catch(_) {}
                   document.getElementById("loading-card").style.display = "none";
                   sessionStorage.removeItem("_dash_auth_attempt");
                   await loadDashboard();
@@ -382,7 +389,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         }
       } catch(_) {}
       // Secondary: localStorage (returning users who used API key tab, no active session)
-      var saved = localStorage.getItem("arch_api_key");
+      var saved = sessionStorage.getItem("arch_api_key");
+      if (!saved) { try { saved = localStorage.getItem("arch_api_key"); } catch(_) {} }
       if (saved) {
         document.getElementById("key-input").value = saved;
         document.getElementById("loading-card").style.display = "none";

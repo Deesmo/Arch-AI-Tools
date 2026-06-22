@@ -11,7 +11,7 @@
   <title>Quick-Start Code Generator — Arch Tools</title>
   <meta name="description" content="Generate ready-to-run code snippets for any Arch Tools API endpoint in Python, Node.js, or curl. Copy, paste, and ship.">
   <meta property="og:title" content="Quick-Start Code Generator — Arch Tools">
-  <meta property="og:description" content="Generate working code snippets for 61 AI tools in seconds.">
+<meta property="og:description" content="Generate working code snippets for 64 AI tools in seconds.">
   <meta property="og:url" content="https://archtools.dev/quickstart">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://archtools.dev/og-image.png">
@@ -480,7 +480,7 @@
 
     function genCurl(tool, body, useCase) {
       const base = `curl -X POST https://archtools.dev/v1/tools/${tool} \\
-  -H "Authorization: Bearer $ARCH_API_KEY" \\
+-H "x-api-key: $ARCH_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '${body}'`;
 
@@ -500,7 +500,7 @@ echo "$response" | python3 -m json.tool`;
         return `# Fire multiple calls in parallel
 for query in "AI news" "crypto trends" "tech startups"; do
   curl -s -X POST https://archtools.dev/v1/tools/${tool} \\
-    -H "Authorization: Bearer $ARCH_API_KEY" \\
+-H "x-api-key: $ARCH_API_KEY" \\
     -H "Content-Type: application/json" \\
     -d "{\\"query\\": \\"$query\\"}" &
 done

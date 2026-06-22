@@ -9,13 +9,19 @@ const router = Router();
 router.get("/stats", requireAdmin, async (_req, res) => {
     try {
         const today = new Date().toISOString().slice(0, 10);
+        const todayDate = new Date(today);
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const [totalAgents, totalRequests, requestsToday, requestsLast30Days, topTools, recentPurchases, x402Payments,] = await Promise.all([
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+        const [totalAgents, totalRequests, requestsToday, requestsLast7Days, requestsLast30Days, signupsToday, signupsLast7d, signupsLast30d, topTools, recentPurchases, x402Payments, creditsAgg, toolsActive,] = await Promise.all([
             prisma.agent.count(),
             prisma.apiRequest.count(),
-            prisma.apiRequest.count({ where: { createdAt: { gte: new Date(today) } } }),
+            prisma.apiRequest.count({ where: { createdAt: { gte: todayDate } } }),
+            prisma.apiRequest.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
             prisma.apiRequest.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
-            // Prisma v5 groupBy with correct _count orderBy syntax
+            prisma.agent.count({ where: { createdAt: { gte: todayDate } } }),
+            prisma.agent.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+            prisma.agent.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
             prisma.apiRequest.groupBy({
                 by: ["toolName"],
                 _count: { toolName: true },
@@ -29,8 +35,43 @@ router.get("/stats", requireAdmin, async (_req, res) => {
                 select: { credits: true, amountCents: true, createdAt: true, agentId: true },
             }),
             prisma.x402Payment.count(),
+            prisma.agent.aggregate({ _sum: { credits: true } }),
+            prisma.tool.count({ where: { active: true } }),
         ]);
+        // True all-time Stripe revenue (completed purchases), not just the last 10.
+        const stripeAgg = await prisma.purchase.aggregate({
+            where: { status: "completed" },
+            _sum: { amountCents: true },
+            _count: { _all: true },
+        });
+        const totalStripeRevenueCents = stripeAgg._sum.amountCents ?? 0;
+        const totalStripePurchases = stripeAgg._count._all;
+        // Preserve legacy "sample" field for back-compat; it's the sum of the last 10 only.
         const totalRevenueCents = recentPurchases.reduce((s, p) => s + p.amountCents, 0);
+        // Daily requests for last 14 days
+        const dailyRequests = [];
+        const dailySignups = [];
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+            const dateStr = d.toISOString().slice(0, 10);
+            dailyRequests.push({ date: dateStr, count: 0 });
+            dailySignups.push({ date: dateStr, count: 0 });
+        }
+        // Batch query for daily request counts
+        const rawDailyReqs = await prisma.$queryRaw(Prisma.sql `SELECT DATE("createdAt") as d, COUNT(*)::bigint as c FROM "ApiRequest" WHERE "createdAt" >= ${fourteenDaysAgo} GROUP BY DATE("createdAt") ORDER BY d`);
+        for (const row of rawDailyReqs) {
+            const dateStr = typeof row.d === 'string' ? row.d : new Date(row.d).toISOString().slice(0, 10);
+            const entry = dailyRequests.find(e => e.date === dateStr);
+            if (entry)
+                entry.count = Number(row.c);
+        }
+        const rawDailySignups = await prisma.$queryRaw(Prisma.sql `SELECT DATE("createdAt") as d, COUNT(*)::bigint as c FROM "Agent" WHERE "createdAt" >= ${fourteenDaysAgo} GROUP BY DATE("createdAt") ORDER BY d`);
+        for (const row of rawDailySignups) {
+            const dateStr = typeof row.d === 'string' ? row.d : new Date(row.d).toISOString().slice(0, 10);
+            const entry = dailySignups.find(e => e.date === dateStr);
+            if (entry)
+                entry.count = Number(row.c);
+        }
         // Agent fingerprinting breakdown
         const [callerBreakdown, callerTypeBreakdown] = await Promise.all([
             prisma.apiRequest.groupBy({
@@ -45,19 +86,46 @@ router.get("/stats", requireAdmin, async (_req, res) => {
                 orderBy: { _count: { callerType: "desc" } },
             }),
         ]);
+        // Merge duplicate caller_types (e.g. null callerType and literal "unknown" string
+        // both surface as "unknown" — collapse them into a single bucket so the UI doesn't
+        // render two rows for the same thing).
+        const mergedCallerTypes = new Map();
+        for (const c of callerTypeBreakdown) {
+            const key = c.callerType ?? "unknown";
+            mergedCallerTypes.set(key, (mergedCallerTypes.get(key) ?? 0) + c._count.callerType);
+        }
+        const callerTypes = Array.from(mergedCallerTypes.entries())
+            .map(([type, calls]) => ({ type, calls }))
+            .sort((a, b) => b.calls - a.calls);
+        // Trim daily series to dates <= today (UTC). The 14-day window can
+        // straddle a UTC day boundary depending on when the loop runs.
+        const todayUtc = new Date().toISOString().slice(0, 10);
+        const trimSeries = (arr) => arr.filter(d => d.date <= todayUtc);
         res.json({
             ok: true,
             summary: {
                 total_agents: totalAgents,
                 total_requests: totalRequests,
                 requests_today: requestsToday,
+                requests_last_7d: requestsLast7Days,
                 requests_last_30d: requestsLast30Days,
+                signups_today: signupsToday,
+                signups_last_7d: signupsLast7d,
+                signups_last_30d: signupsLast30d,
                 x402_payments: x402Payments,
+                // Legacy field — sum of the *last 10* purchases only. Kept for back-compat;
+                // do not use this for total revenue display. Use total_stripe_revenue_cents.
                 revenue_sample_cents: totalRevenueCents,
+                total_stripe_revenue_cents: totalStripeRevenueCents,
+                total_stripe_purchases: totalStripePurchases,
+                credits_in_circulation: creditsAgg._sum.credits ?? 0,
+                tools_active: toolsActive,
             },
+            daily_requests: trimSeries(dailyRequests),
+            daily_signups: trimSeries(dailySignups),
             top_tools: topTools.map(t => ({ tool: t.toolName, calls: t._count.toolName })),
             caller_breakdown: callerBreakdown.map(c => ({ caller: c.callerName ?? "unknown", calls: c._count.callerName })),
-            caller_types: callerTypeBreakdown.map(c => ({ type: c.callerType ?? "unknown", calls: c._count.callerType })),
+            caller_types: callerTypes,
             recent_purchases: recentPurchases,
             request_id: reqId(),
         });
@@ -67,7 +135,45 @@ router.get("/stats", requireAdmin, async (_req, res) => {
         res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
     }
 });
-// GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
+// GET /v1/admin/agents — list all agents with usage stats
+router.get("/agents", requireAdmin, async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 50, 500);
+        const agents = await prisma.agent.findMany({
+            take: limit,
+            orderBy: { lastSeenAt: { sort: "desc", nulls: "last" } },
+            select: {
+                id: true,
+                email: true,
+                credits: true,
+                tier: true,
+                totalCalls: true,
+                lastSeenAt: true,
+                createdAt: true,
+            },
+        });
+        res.json({
+            ok: true,
+            agents: agents.map(a => ({
+                id: a.id,
+                email: a.email,
+                credits: a.credits,
+                tier: a.tier,
+                totalCalls: a.totalCalls,
+                lastActive: a.lastSeenAt,
+                createdAt: a.createdAt,
+            })),
+            total: agents.length,
+            request_id: reqId(),
+        });
+    }
+    catch (e) {
+        console.error("Admin agents error:", e);
+        res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+    }
+});
+// GET /v1/admin/lookup?email=... — look up agent key metadata by email (owner use only).
+// Plaintext keys are no longer stored; only the prefix/masked form can ever be returned.
 router.get("/lookup", requireAdmin, async (req, res) => {
     const { email } = req.query;
     if (!email) {
@@ -75,12 +181,34 @@ router.get("/lookup", requireAdmin, async (req, res) => {
         return;
     }
     try {
-        const agent = await prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
+        const agent = await prisma.agent.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                apiKeyPrefix: true,
+                apiKeyHash: true,
+                credits: true,
+                createdAt: true,
+            },
+        });
         if (!agent) {
             res.status(404).json({ ok: false, error: "not_found", request_id: reqId() });
             return;
         }
-        res.json({ ok: true, agent, request_id: reqId() });
+        res.json({
+            ok: true,
+            agent: {
+                id: agent.id,
+                email: agent.email,
+                credits: agent.credits,
+                createdAt: agent.createdAt,
+                apiKeyPrefix: agent.apiKeyPrefix ?? null,
+                apiKeyMasked: agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null,
+                hasApiKey: Boolean(agent.apiKeyHash),
+            },
+            request_id: reqId(),
+        });
     }
     catch (e) {
         res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
@@ -110,8 +238,8 @@ router.post("/seed-tools", requireAdmin, async (_req, res) => {
         { name: "session-create", description: "Create a persistent AI conversation session", category: "ai", credits: 5 },
         { name: "session-message", description: "Send a message in an existing AI session", category: "ai", credits: 10 },
         { name: "design-create", description: "Generate designs and images via DALL-E 3", category: "media", credits: 20 },
-        { name: "image-remove-bg", description: "Remove background from any image", category: "media", credits: 10 },
-        { name: "video-generate", description: "Generate short video clips from text prompts", category: "media", credits: 30 },
+        { name: "image-remove-bg", description: "Remove background from any image", category: "media", credits: 350 },
+        { name: "video-generate", description: "Generate short video clips from text prompts", category: "media", credits: 500 },
         { name: "email-find", description: "Find email addresses for a person at a company domain", category: "utility", credits: 5 },
         { name: "email-send", description: "Send transactional emails via Resend", category: "utility", credits: 3 },
         { name: "domain-check", description: "Check domain availability via RDAP", category: "network", credits: 2 },

@@ -9,82 +9,97 @@ export async function deductCredits(req, res, toolName, cost) {
         res.status(401).json({ ok: false, error: "unauthorized", request_id: crypto.randomUUID() });
         return false;
     }
-    if (agent.credits < cost) {
-        res.status(402).json({
-            ok: false,
-            error: "insufficient_credits",
-            message: `This tool costs ${cost} credits. You have ${agent.credits}. Buy more at https://archtools.dev/pricing`,
-            credits_remaining: agent.credits,
-            credits_needed: cost,
-            upgrade_url: "https://archtools.dev/pricing",
-            request_id: crypto.randomUUID(),
-        });
-        return false;
-    }
-    // Deduct credits atomically
-    await prisma.agent.update({
-        where: { id: agent.id },
+    // ATOMIC guarded deduction: decrement only if the row still has >= cost
+    // credits. Prevents race-condition overdraft under concurrent requests —
+    // the in-memory `agent.credits` check alone is not safe.
+    const deduction = await prisma.agent.updateMany({
+        where: { id: agent.id, credits: { gte: cost } },
         data: {
             credits: { decrement: cost },
             totalCalls: { increment: 1 },
         },
     });
-    // Update agent object in-place for use in handler
+    if (deduction.count === 0) {
+        res.status(402).json({
+            ok: false,
+            error: "insufficient_credits",
+            message: `Insufficient credits. You have ${agent.credits} credits but this tool costs ${cost}. Top up at https://archtools.dev/pricing — or earn 500 bonus credits by referring a friend (see /v1/referral/code).`,
+            credits_remaining: agent.credits,
+            credits_needed: cost,
+            upgrade_url: "https://archtools.dev/pricing",
+            referral_url: "https://archtools.dev/v1/referral/code",
+            request_id: crypto.randomUUID(),
+        });
+        return false;
+    }
     agent.credits -= cost;
-    // Set credit tracking response headers (TASK 7: X-Credits-Remaining)
     res.setHeader("X-Credits-Remaining", agent.credits.toString());
     res.setHeader("X-Credits-Used", cost.toString());
     if (agent.credits < 20) {
         res.setHeader("X-Upgrade-URL", "https://archtools.dev/pricing");
     }
-    // Low credit alert (non-blocking)
+    let finalized = false;
+    const finalizeCharge = async () => {
+        if (finalized)
+            return;
+        finalized = true;
+        const succeeded = res.statusCode >= 200 && res.statusCode < 400;
+        try {
+            if (succeeded) {
+                const fp = fingerprintCaller(req.headers["user-agent"]);
+                await prisma.apiRequest.create({
+                    data: {
+                        agentId: agent.id,
+                        toolName,
+                        creditsUsed: cost,
+                        status: "SUCCESS",
+                        callerType: fp.callerType,
+                        callerName: fp.callerName,
+                        callerVersion: fp.callerVersion ?? null,
+                    },
+                });
+                const today = new Date().toISOString().slice(0, 10);
+                await prisma.dailyUsage.upsert({
+                    where: { date_toolName: { date: today, toolName } },
+                    update: { callCount: { increment: 1 } },
+                    create: { date: today, toolName, callCount: 1 },
+                });
+                void recordAgentCall(agent.id, true);
+                void updateAgentReputation(agent.id);
+                return;
+            }
+            await prisma.agent.update({
+                where: { id: agent.id },
+                data: {
+                    credits: { increment: cost },
+                    totalCalls: { decrement: 1 },
+                },
+            });
+            await logError(agent.id, toolName, 0);
+        }
+        catch {
+            // Non-fatal; never block the response path
+        }
+    };
+    res.once("finish", () => { void finalizeCharge(); });
+    res.once("close", () => { void finalizeCharge(); });
     if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
         prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
             .then(a => { if (a?.email)
             sendLowCreditAlert(a.email, agent.credits, agent.id).catch(() => { }); })
             .catch(() => { });
-        // Fire credits.low webhook
         fireWebhookEvent("credits.low", agent.id, {
             credits_remaining: agent.credits,
             tool_name: toolName,
             threshold: LOW_CREDIT_THRESHOLD,
         }).catch(() => { });
     }
-    // Credits depleted webhook
     if (agent.credits <= 0) {
         fireWebhookEvent("credits.depleted", agent.id, {
             credits_remaining: 0,
             tool_name: toolName,
             message: "Your credit balance has reached zero. Purchase more at https://archtools.dev/pricing",
         }).catch(() => { });
-    }
-    // Log the request with agent fingerprint
-    try {
-        const fp = fingerprintCaller(req.headers["user-agent"]);
-        await prisma.apiRequest.create({
-            data: {
-                agentId: agent.id,
-                toolName,
-                creditsUsed: cost,
-                status: "SUCCESS",
-                callerType: fp.callerType,
-                callerName: fp.callerName,
-                callerVersion: fp.callerVersion ?? null,
-            },
-        });
-        // Update daily rollup
-        const today = new Date().toISOString().slice(0, 10);
-        await prisma.dailyUsage.upsert({
-            where: { date_toolName: { date: today, toolName } },
-            update: { callCount: { increment: 1 } },
-            create: { date: today, toolName, callCount: 1 },
-        });
-        // KYA: Track success and update reputation (non-blocking)
-        void recordAgentCall(agent.id, true);
-        void updateAgentReputation(agent.id);
-    }
-    catch {
-        // Non-fatal — don't block the response
     }
     return true;
 }
@@ -98,10 +113,8 @@ export async function logError(agentId, toolName, cost) {
                 status: "ERROR",
             },
         });
-        // KYA: Track error and update reputation (non-blocking)
         void recordAgentCall(agentId, false);
         void updateAgentReputation(agentId);
-        // Fire tool.error webhook (non-blocking)
         fireWebhookEvent("tool.error", agentId, {
             tool_name: toolName,
             credits_charged: cost,
@@ -114,7 +127,6 @@ export async function logError(agentId, toolName, cost) {
 export function reqId() {
     return `req_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
 }
-// Safe error message — never leak internals in production
 export function safeErr(e) {
     if (process.env.NODE_ENV === "production")
         return "An error occurred. Please try again.";

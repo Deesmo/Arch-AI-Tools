@@ -127,6 +127,10 @@ export function initX402Sdk(): boolean {
   // The SDK is the primary payment middleware; custom x402.ts is fallback only.
 
   try {
+    const evmNetwork = config.x402.network === "base-sepolia"
+      ? "eip155:84532"
+      : "eip155:8453";
+
     // Use @coinbase/x402's createFacilitatorConfig for proper CDP JWT auth
     // This handles JWT generation automatically for verify/settle/supported calls
     // Support both naming conventions: CDP_API_KEY_ID or CDP_API_KEY, CDP_API_KEY_SECRET or CDP_API_SECRET
@@ -155,10 +159,6 @@ export function initX402Sdk(): boolean {
     _x402OrgServer = new x402ResourceServer(x402OrgClient)
       .register(evmNetwork, new ExactEvmScheme())
       .registerExtension(bazaarResourceServerExtension);
-
-    const evmNetwork = config.x402.network === "base-sepolia"
-      ? "eip155:84532"
-      : "eip155:8453";
 
     const resourceServer = new x402ResourceServer(facilitatorClient)
       .register(evmNetwork, new ExactEvmScheme())           // Base mainnet

@@ -30,6 +30,7 @@ export declare const config: {
     cdp: {
         apiKeyId: string;
         apiKeySecret: string;
+        walletSecret: string;
         projectId: string;
     };
     redisUrl: string;

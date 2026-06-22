@@ -1,11 +1,37 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
+import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
 const router = Router();
 // ─── In-memory wallet store (swap for DB table when Prisma schema is updated) ─
 // Maps agentId → wallet info
 const walletStore = new Map();
+// ─── GET /v1/wallet ───────────────────────────────────────────────────────────
+// Returns the authenticated user's wallet address (from DB, created at signup).
+router.get("/", requireAuth, async (req, res) => {
+    const agentId = req.agent?.id;
+    if (!agentId) {
+        res.status(401).json({ ok: false, error: "unauthorized" });
+        return;
+    }
+    try {
+        const agent = await prisma.agent.findUnique({
+            where: { id: agentId },
+            select: { walletAddress: true },
+        });
+        res.json({
+            ok: true,
+            wallet_address: agent?.walletAddress ?? null,
+            network: "base",
+        });
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        logger.error({ agentId, error: message }, "Failed to fetch wallet");
+        res.status(500).json({ ok: false, error: "internal_error" });
+    }
+});
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
 // Creates a new CDP wallet for an authenticated agent.
 // @coinbase/cdp-sdk v1.45 installed. @coinbase/agentkit requires separate install.
@@ -15,8 +41,14 @@ router.post("/provision", requireAuth, async (req, res) => {
         res.status(401).json({ ok: false, error: "unauthorized" });
         return;
     }
-    // Check if agent already has a wallet
-    const existing = walletStore.get(agentId);
+    // Check if agent already has a wallet (DB first, then in-memory fallback)
+    const agentRecord = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { walletAddress: true },
+    });
+    const existing = agentRecord?.walletAddress
+        ? { address: agentRecord.walletAddress, network: "base", label: "" }
+        : walletStore.get(agentId);
     if (existing) {
         res.status(409).json({
             ok: false,
@@ -31,35 +63,49 @@ router.post("/provision", requireAuth, async (req, res) => {
         return;
     }
     // Validate CDP config is present
-    if (!config.cdp.apiKeyId || !config.cdp.apiKeySecret) {
-        logger.error("CDP API keys not configured — cannot provision wallet");
+    if (!config.cdp.apiKeyId || !config.cdp.apiKeySecret || !config.cdp.walletSecret) {
+        logger.error("CDP API keys or wallet secret not configured — cannot provision wallet");
         res.status(503).json({
             ok: false,
             error: "cdp_not_configured",
-            message: "Wallet provisioning is not yet available. CDP keys not configured.",
+            message: "Wallet provisioning is not yet available. CDP keys or wallet secret not configured.",
         });
         return;
     }
     const body = req.body;
     const label = body.label?.slice(0, 64) ?? `agent-${agentId.slice(0, 8)}`;
     try {
-        // Dynamic import so the server doesn't crash if @coinbase/agentkit isn't installed yet
-        // @ts-ignore — @coinbase/agentkit not yet installed
-        const { CdpEvmWalletProvider } = await import("@coinbase/agentkit");
-        const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
+        // Use axiosHooks from cdp-sdk/auth subpath (proven working — same import as x402.ts)
+        // axiosHooks.withAuth handles Bearer JWT + Wallet Auth JWT internally — no manual headers
+        const axios = (await import("axios")).default;
+        const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
+        const axiosClient = axios.create({
+            baseURL: "https://api.cdp.coinbase.com",
+        });
+        axiosHooks.withAuth(axiosClient, {
             apiKeyId: config.cdp.apiKeyId,
             apiKeySecret: config.cdp.apiKeySecret,
-            networkId: "base",
+            walletSecret: config.cdp.walletSecret,
         });
-        const address = walletProvider.getAddress();
+        const response = await axiosClient.post("/platform/v2/evm/accounts", {
+            name: label,
+        });
+        const address = response.data?.address;
+        if (!address) {
+            throw new Error("CDP API returned no wallet address");
+        }
         const walletRecord = {
             address,
             network: "base",
             label,
             createdAt: new Date().toISOString(),
         };
-        // Store wallet association
+        // Store wallet association (DB + in-memory cache)
         walletStore.set(agentId, walletRecord);
+        await prisma.agent.update({
+            where: { id: agentId },
+            data: { walletAddress: address },
+        }).catch((e) => logger.warn({ agentId, error: e }, "Failed to persist wallet to DB"));
         logger.info({ agentId, address, network: "base" }, "Wallet provisioned for agent");
         res.status(201).json({
             ok: true,
@@ -97,7 +143,23 @@ router.get("/status", requireAuth, async (req, res) => {
         res.status(401).json({ ok: false, error: "unauthorized" });
         return;
     }
-    const wallet = walletStore.get(agentId);
+    // Check in-memory cache first, then fall back to DB
+    let wallet = walletStore.get(agentId);
+    if (!wallet) {
+        const dbAgent = await prisma.agent.findUnique({
+            where: { id: agentId },
+            select: { walletAddress: true, createdAt: true },
+        });
+        if (dbAgent?.walletAddress) {
+            wallet = {
+                address: dbAgent.walletAddress,
+                network: "base",
+                label: `agent-${agentId.slice(0, 8)}`,
+                createdAt: dbAgent.createdAt.toISOString(),
+            };
+            walletStore.set(agentId, wallet); // repopulate cache
+        }
+    }
     if (!wallet) {
         res.status(404).json({
             ok: false,
@@ -112,6 +174,7 @@ router.get("/status", requireAuth, async (req, res) => {
         const cdp = new CdpClient({
             apiKeyId: config.cdp.apiKeyId,
             apiKeySecret: config.cdp.apiKeySecret,
+            walletSecret: config.cdp.walletSecret,
         });
         // USDC on Base contract address
         const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -119,15 +182,29 @@ router.get("/status", requireAuth, async (req, res) => {
         // fall back to returning wallet info without balance
         let usdcBalance = "unknown";
         try {
-            const balance = await cdp.evm.listTokenBalances({
+            const result = await cdp.evm.listTokenBalances({
                 address: wallet.address,
-                token: USDC_BASE,
                 network: "base",
             });
-            usdcBalance = balance?.toString() ?? "0";
+            // Find USDC entry by contract address
+            const usdcEntry = result.balances.find((b) => b.token.contractAddress.toLowerCase() === USDC_BASE.toLowerCase());
+            if (usdcEntry) {
+                // amount.amount is bigint in atomic units; decimals is 6 for USDC
+                const raw = BigInt(String(usdcEntry.amount.amount));
+                const decimals = usdcEntry.amount.decimals;
+                const divisor = BigInt(10 ** decimals);
+                const whole = raw / divisor;
+                const remainder = raw % divisor;
+                const remainderStr = remainder.toString().padStart(decimals, "0");
+                usdcBalance = `${whole}.${remainderStr}`;
+            }
+            else {
+                usdcBalance = "0.000000";
+            }
+            console.log("[wallet/status] USDC balance:", usdcBalance, "tokens found:", result.balances.length);
         }
-        catch {
-            // Balance lookup not available or failed — return what we have
+        catch (e) {
+            console.error("[wallet/status] Balance lookup failed:", e);
             usdcBalance = "unavailable";
         }
         res.json({
@@ -166,4 +243,6 @@ router.get("/status", requireAuth, async (req, res) => {
     }
 });
 export default router;
+// CDP_WALLET_SECRET updated Sun Mar 22 00:40:43 EDT 2026
+// env vars updated: Sun Mar 22 12:29:21 EDT 2026
 //# sourceMappingURL=wallet.js.map

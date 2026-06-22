@@ -205,7 +205,7 @@ def webhook():
       <span class="endpoint-path">/api/v1/webhooks/register</span>
     </div>
     <pre>curl -X POST https://archtools.dev/api/v1/webhooks/register \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+-H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com/webhook",
@@ -219,7 +219,7 @@ def webhook():
       <span class="endpoint-path">/api/v1/webhooks</span>
     </div>
     <pre>curl https://archtools.dev/api/v1/webhooks \
-  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+-H "x-api-key: YOUR_API_KEY"</pre>
 
     <h3>Delete a Webhook</h3>
     <div class="endpoint">
@@ -227,7 +227,7 @@ def webhook():
       <span class="endpoint-path">/api/v1/webhooks/:id</span>
     </div>
     <pre>curl -X DELETE https://archtools.dev/api/v1/webhooks/WEBHOOK_ID \
-  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+-H "x-api-key: YOUR_API_KEY"</pre>
 
     <h3>Send a Test Event</h3>
     <div class="endpoint">
@@ -235,7 +235,7 @@ def webhook():
       <span class="endpoint-path">/api/v1/webhooks/test</span>
     </div>
     <pre>curl -X POST https://archtools.dev/api/v1/webhooks/test \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+-H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "webhook_id": "OPTIONAL_SPECIFIC_WEBHOOK_ID" }'</pre>
 

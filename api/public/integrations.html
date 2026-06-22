@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Framework Integrations — Arch Tools</title>
-  <meta name="description" content="Use Arch Tools with LangChain, CrewAI, AutoGen, and more. Ready-to-use Python and TypeScript integrations for 64+ AI tools with x402 payments." />
+  <meta name="description" content="Use Arch Tools with LangChain, CrewAI, AutoGen, and more. Ready-to-use Python and TypeScript integrations for 64 AI tools with x402 payments." />
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="canonical" href="https://archtools.dev/integrations" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -152,19 +152,19 @@
       <div class="sidebar-heading">Advanced</div>
       <a href="#x402">x402 Payments</a>
       <a href="#error-handling">Error Handling</a>
-      <a href="#all-tools">All 61 Tools</a>
+        <a href="#all-tools">All 64 Tools</a>
     </div>
   </nav>
 
   <div class="content">
-    <h1>Framework Integrations</h1>
-    <p class="subtitle">Use Arch Tools with LangChain, CrewAI, AutoGen, and any Python or TypeScript project. One API key, 61 tools, ready in 30 seconds.</p>
+    <h1 id="overview">Framework Integrations</h1>
+      <p class="subtitle">Use Arch Tools with LangChain, CrewAI, AutoGen, and any Python or TypeScript project. One API key, 64 tools, ready in 30 seconds.</p>
 
     <div class="fw-grid">
       <a class="fw-card" href="#python-sdk">
         <div class="fw-icon">🐍</div>
         <h4>Python SDK <span class="badge badge-py">Python</span></h4>
-        <p>Sync + async client with retry logic, rate limit handling, and typed convenience methods for all 61 tools.</p>
+          <p>Sync + async client with retry logic, rate limit handling, and typed convenience methods for all 64 tools.</p>
       </a>
       <a class="fw-card" href="#langchain">
         <div class="fw-icon">🦜</div>
@@ -230,7 +230,7 @@ curl -O https://archtools.dev/integrations/arch-tools-client.ts</code></pre>
     <h2 id="python-sdk">Python SDK</h2>
     <p>The Python SDK is a single-file client with zero required dependencies (uses stdlib <code class="inline-code">urllib</code>). Install <code class="inline-code">httpx</code> for connection pooling and async support.</p>
 
-    <h3>Basic Usage</h3>
+    <h3 id="quickstart">Basic Usage</h3>
     <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-kw">from</span> arch_tools <span class="c-kw">import</span> ArchToolsClient
 
 <span class="c-muted"># Initialize with API key (or set ARCHTOOLS_API_KEY env var)</span>
@@ -318,14 +318,14 @@ result = executor.invoke({
     ArchToolsImageGenerate,
     ArchToolsResearch,
     ArchToolsFactCheck,
-    ArchToolsGeneric,  <span class="c-muted"># calls any of 61 tools by name</span>
+ArchToolsGeneric,  <span class="c-muted"># calls any of 64 tools by name</span>
 )
 
 <span class="c-muted"># Each tool works standalone</span>
 scraper = ArchToolsWebScrape(api_key=<span class="c-str">"arch_..."</span>)
 result = scraper.invoke({<span class="c-str">"url"</span>: <span class="c-str">"https://example.com"</span>})
 
-<span class="c-muted"># Or use the generic tool for any of the 61 tools</span>
+<span class="c-muted"># Or use the generic tool for any of the 64 tools</span>
 generic = ArchToolsGeneric(api_key=<span class="c-str">"arch_..."</span>)
 result = generic.invoke({
     <span class="c-str">"tool_name"</span>: <span class="c-str">"ocr-extract"</span>,
@@ -333,7 +333,7 @@ result = generic.invoke({
 })</code></pre>
 
     <div class="alert alert-info">
-      <strong>💡 Tip:</strong> The <code class="inline-code">ArchToolsGeneric</code> tool lets LangChain agents access all 61 tools dynamically — great for autonomous agents that need to pick the right tool.
+        <strong>💡 Tip:</strong> The <code class="inline-code">ArchToolsGeneric</code> tool lets LangChain agents access all 64 tools dynamically — great for autonomous agents that need to pick the right tool.
     </div>
 
     <!-- ─── CREWAI ──────────────────────────────────────────────────── -->
@@ -381,7 +381,7 @@ result = crew.kickoff()
       <li><strong>ArchResearchTool</strong> — Generate research reports</li>
       <li><strong>ArchImageGenerateTool</strong> — Generate images with DALL-E</li>
       <li><strong>ArchFactCheckTool</strong> — Verify claims with evidence</li>
-      <li><strong>ArchGenericTool</strong> — Call any of 61 tools by name</li>
+          <li><strong>ArchGenericTool</strong> — Call any of 64 tools by name</li>
     </ul>
 
     <!-- ─── AUTOGEN ─────────────────────────────────────────────────── -->
@@ -509,7 +509,7 @@ client = ArchToolsClient(api_key=<span class="c-str">"arch_..."</span>)
 
     <!-- ─── ALL TOOLS ───────────────────────────────────────────────── -->
 
-    <h2 id="all-tools">All 61 Tools</h2>
+      <h2 id="all-tools">All 64 Tools</h2>
     <p>Every tool is accessible via <code class="inline-code">client.call_tool("tool-name", **params)</code>. Here's the full list:</p>
 
     <div style="columns: 3; column-gap: 24px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin: 16px 0;">

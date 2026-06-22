@@ -50,15 +50,15 @@ const TOOLS = [
   { name: "crypto-news", description: "Latest crypto news headlines with source and timestamp. Filter by token symbol", category: "crypto", credits: 2 },
   { name: "token-lookup", description: "Search for any token by name or ticker. Returns CoinGecko IDs for use with other crypto tools", category: "crypto", credits: 1 },
   // Audio & speech tools
-  { name: "text-to-speech", description: "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)", category: "media", credits: 10 },
-  { name: "transcribe-audio", description: "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)", category: "media", credits: 12 },
+  { name: "text-to-speech", description: "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)", category: "media", credits: 65 },
+  { name: "transcribe-audio", description: "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)", category: "media", credits: 25 },
   // Communication tools
   { name: "email-send", description: "Send transactional emails via Resend — plain text or HTML", category: "communication", credits: 3 },
   { name: "email-find", description: "Find email address for a person at a company via Hunter.io", category: "communication", credits: 5 },
   { name: "social-post", description: "Post a tweet to X/Twitter via API v2", category: "social", credits: 5 },
   // Image & design tools
   { name: "design-create", description: "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)", category: "media", credits: 30 },
-  { name: "image-remove-bg", description: "Remove background from any image via RemoveBG", category: "media", credits: 10 },
+  { name: "image-remove-bg", description: "Remove background from any image via RemoveBG", category: "media", credits: 350 },
   // Domain & network tools
   { name: "domain-check", description: "Check if a domain is available or registered via RDAP (no key needed)", category: "network", credits: 2 },
   // AI premium tools
@@ -68,10 +68,10 @@ const TOOLS = [
   { name: "semantic-search", description: "Neural/semantic web search via Exa AI", category: "ai", credits: 8 },
   // Research & analysis tools
   { name: "news-search", description: "Search real-time news articles by keyword via Brave/Tavily/Serper", category: "web", credits: 3 },
-  { name: "research-report", description: "Generate a structured research report on any topic with citations", category: "ai", credits: 15 },
+  { name: "research-report", description: "Generate a structured research report on any topic with citations", category: "ai", credits: 40 },
   { name: "fact-check", description: "Verify claims against real-time web sources with verdict and confidence", category: "ai", credits: 10 },
   // Video generation
-  { name: "video-generate", description: "AI video generation from text prompts via Runway Gen-3", category: "media", credits: 50 },
+  { name: "video-generate", description: "AI video generation from text prompts via Runway Gen-3", category: "media", credits: 500 },
 ];
 
 async function main(): Promise<void> {

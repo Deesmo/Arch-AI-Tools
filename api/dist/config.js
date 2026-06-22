@@ -4,7 +4,7 @@ export const config = {
     adminKey: process.env.ADMIN_KEY ?? "changeme",
     publicSiteUrl: process.env.PUBLIC_SITE_URL ?? "https://archtools.dev",
     corsOrigin: process.env.CORS_ORIGIN ?? "https://archtools.dev",
-    freeMonthlyCredits: parseInt(process.env.FREE_MONTHLY_CREDITS ?? "1000", 10),
+    freeMonthlyCredits: parseInt(process.env.FREE_MONTHLY_CREDITS ?? "250", 10),
     stripe: {
         secretKey: process.env.STRIPE_SECRET_KEY ?? "",
         webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
@@ -28,8 +28,10 @@ export const config = {
         apiKey: process.env.COINGECKO_API_KEY ?? "",
     },
     cdp: {
-        apiKeyId: process.env.CDP_API_KEY_ID ?? "",
-        apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
+        // Support both naming conventions: CDP_API_KEY_ID (SDK) or CDP_API_KEY (Render)
+        apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
+        apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
+        walletSecret: process.env.CDP_WALLET_SECRET ?? "",
         projectId: process.env.CDP_PROJECT_ID ?? "",
     },
     redisUrl: process.env.REDIS_URL ?? "",
@@ -39,7 +41,7 @@ export const config = {
         network: process.env.X402_NETWORK ?? "base",
         // CDP facilitator for mainnet (requires CDP_API_KEY_ID + CDP_API_KEY_SECRET)
         // x402.org/facilitator is TESTNET ONLY (Base Sepolia + Solana Devnet)
-        facilitatorUrl: process.env.X402_FACILITATOR_URL ?? ((process.env.X402_NETWORK ?? "base") === "base" && process.env.CDP_API_KEY_ID
+        facilitatorUrl: process.env.X402_FACILITATOR_URL ?? ((process.env.X402_NETWORK ?? "base") === "base" && (process.env.CDP_API_KEY_ID || process.env.CDP_API_KEY)
             ? "https://api.cdp.coinbase.com/platform/v2/x402"
             : "https://x402.org/facilitator"),
     },

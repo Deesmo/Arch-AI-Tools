@@ -59,6 +59,15 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
       prisma.tool.count({ where: { active: true } }),
     ]);
 
+    // True all-time Stripe revenue (completed purchases), not just the last 10.
+    const stripeAgg = await prisma.purchase.aggregate({
+      where: { status: "completed" },
+      _sum: { amountCents: true },
+      _count: { _all: true },
+    });
+    const totalStripeRevenueCents = stripeAgg._sum.amountCents ?? 0;
+    const totalStripePurchases = stripeAgg._count._all;
+    // Preserve legacy "sample" field for back-compat; it's the sum of the last 10 only.
     const totalRevenueCents = recentPurchases.reduce((s, p) => s + p.amountCents, 0);
 
     // Daily requests for last 14 days
@@ -105,6 +114,24 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
       }),
     ]);
 
+    // Merge duplicate caller_types (e.g. null callerType and literal "unknown" string
+    // both surface as "unknown" — collapse them into a single bucket so the UI doesn't
+    // render two rows for the same thing).
+    const mergedCallerTypes = new Map<string, number>();
+    for (const c of callerTypeBreakdown) {
+      const key = c.callerType ?? "unknown";
+      mergedCallerTypes.set(key, (mergedCallerTypes.get(key) ?? 0) + c._count.callerType);
+    }
+    const callerTypes = Array.from(mergedCallerTypes.entries())
+      .map(([type, calls]) => ({ type, calls }))
+      .sort((a, b) => b.calls - a.calls);
+
+    // Trim daily series to dates <= today (UTC). The 14-day window can
+    // straddle a UTC day boundary depending on when the loop runs.
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const trimSeries = (arr: Array<{ date: string; count: number }>) =>
+      arr.filter(d => d.date <= todayUtc);
+
     res.json({
       ok: true,
       summary: {
@@ -117,15 +144,19 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
         signups_last_7d: signupsLast7d,
         signups_last_30d: signupsLast30d,
         x402_payments: x402Payments,
+        // Legacy field — sum of the *last 10* purchases only. Kept for back-compat;
+        // do not use this for total revenue display. Use total_stripe_revenue_cents.
         revenue_sample_cents: totalRevenueCents,
+        total_stripe_revenue_cents: totalStripeRevenueCents,
+        total_stripe_purchases: totalStripePurchases,
         credits_in_circulation: creditsAgg._sum.credits ?? 0,
         tools_active: toolsActive,
       },
-      daily_requests: dailyRequests,
-      daily_signups: dailySignups,
+      daily_requests: trimSeries(dailyRequests),
+      daily_signups: trimSeries(dailySignups),
       top_tools: topTools.map(t => ({ tool: t.toolName, calls: t._count.toolName })),
       caller_breakdown: callerBreakdown.map(c => ({ caller: c.callerName ?? "unknown", calls: c._count.callerName })),
-      caller_types: callerTypeBreakdown.map(c => ({ type: c.callerType ?? "unknown", calls: c._count.callerType })),
+      caller_types: callerTypes,
       recent_purchases: recentPurchases,
       request_id: reqId(),
     });
@@ -174,14 +205,37 @@ router.get("/agents", requireAdmin, async (req: Request, res: Response): Promise
   }
 });
 
-// GET /v1/admin/lookup?email=... — look up agent API key by email (owner use only)
+// GET /v1/admin/lookup?email=... — look up agent key metadata by email (owner use only).
+// Plaintext keys are no longer stored; only the prefix/masked form can ever be returned.
 router.get("/lookup", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.query as { email?: string };
   if (!email) { res.status(400).json({ ok: false, error: "email_required", request_id: reqId() }); return; }
   try {
-    const agent = await prisma.agent.findUnique({ where: { email }, select: { id: true, email: true, apiKey: true, credits: true, createdAt: true } });
+    const agent = await prisma.agent.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        apiKeyPrefix: true,
+        apiKeyHash: true,
+        credits: true,
+        createdAt: true,
+      },
+    });
     if (!agent) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
-    res.json({ ok: true, agent, request_id: reqId() });
+    res.json({
+      ok: true,
+      agent: {
+        id: agent.id,
+        email: agent.email,
+        credits: agent.credits,
+        createdAt: agent.createdAt,
+        apiKeyPrefix: agent.apiKeyPrefix ?? null,
+        apiKeyMasked: agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null,
+        hasApiKey: Boolean(agent.apiKeyHash),
+      },
+      request_id: reqId(),
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
@@ -211,8 +265,8 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
     { name: "session-create",     description: "Create a persistent AI conversation session",                     category: "ai",      credits: 5  },
     { name: "session-message",    description: "Send a message in an existing AI session",                        category: "ai",      credits: 10 },
     { name: "design-create",      description: "Generate designs and images via DALL-E 3",                        category: "media",   credits: 20 },
-    { name: "image-remove-bg",    description: "Remove background from any image",                                category: "media",   credits: 10 },
-    { name: "video-generate",     description: "Generate short video clips from text prompts",                    category: "media",   credits: 30 },
+    { name: "image-remove-bg",    description: "Remove background from any image",                                category: "media",   credits: 350 },
+    { name: "video-generate",     description: "Generate short video clips from text prompts",                    category: "media",   credits: 500 },
     { name: "email-find",         description: "Find email addresses for a person at a company domain",           category: "utility", credits: 5  },
     { name: "email-send",         description: "Send transactional emails via Resend",                            category: "utility", credits: 3  },
     { name: "domain-check",       description: "Check domain availability via RDAP",                              category: "network", credits: 2  },

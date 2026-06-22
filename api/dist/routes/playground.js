@@ -5,8 +5,26 @@
  * No real payment is made — shows what the full cycle looks like.
  */
 import { Router } from "express";
+import { readFileSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { X402_PRICES } from "../middleware/x402.js";
 import { config } from "../config.js";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Canonical tool list = tools present in the public OpenAPI spec (64).
+// X402_PRICES contains extra internal/legacy entries that must not surface here.
+function loadOpenapiToolNames() {
+    try {
+        const spec = JSON.parse(readFileSync(path.join(__dirname, "../../public/openapi.json"), "utf8"));
+        return Object.keys(spec.paths ?? {})
+            .filter((p) => p.startsWith("/v1/tools/"))
+            .map((p) => p.slice("/v1/tools/".length));
+    }
+    catch {
+        return Object.keys(X402_PRICES);
+    }
+}
+const OPENAPI_TOOL_NAMES = loadOpenapiToolNames();
 const router = Router();
 // ─── GET /api/v1/x402/playground/demo ─────────────────────────────────────────
 router.get("/demo", (req, res) => {
@@ -106,9 +124,9 @@ router.get("/demo", (req, res) => {
 // ─── GET /api/v1/x402/playground/tools ────────────────────────────────────────
 // Returns all tools with pricing + sample params for the playground
 router.get("/tools", (_req, res) => {
-    const tools = Object.entries(X402_PRICES).map(([name, price]) => ({
+    const tools = OPENAPI_TOOL_NAMES.map((name) => ({
         name,
-        price_usdc: price,
+        price_usdc: X402_PRICES[name] ?? "0.010",
         endpoint: `/v1/tools/${name}`,
         sample_params: getSampleParams(name),
     }));
@@ -140,7 +158,7 @@ function getSampleParams(tool) {
         "timezone-convert": { datetime: "2025-06-01T12:00:00Z", from_tz: "America/New_York", to_tz: "Asia/Tokyo" },
         "web-search": { query: "Arch Tools API", max_results: 5 },
         "sentiment-analysis": { text: "Arch Tools is absolutely incredible! Best API I have ever used." },
-        "summarize": { text: "Arch Tools provides 58 production-ready API tools for developers and AI agents.", style: "tldr" },
+        "summarize": { text: "Arch Tools provides 64 production-ready API tools for developers and AI agents.", style: "tldr" },
         "extract-entities": { text: "Brad Valdes founded Arch Enterprises LLC in Columbia, South Carolina." },
         "language-detect": { text: "Bonjour, comment allez-vous?" },
         "pii-detect": { text: "Contact John Smith at john@example.com or 555-123-4567.", redact: true },
@@ -189,7 +207,7 @@ function getDemoResult(tool) {
     const results = {
         "generate-hash": { algorithm: "sha256", hash: "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9" },
         "ip-lookup": { ip: "8.8.8.8", city: "Mountain View", region: "California", country: "US", org: "Google LLC" },
-        "ai-generate": { text: "Arch Tools gives AI agents 58 production-ready APIs with built-in x402 USDC payments — no API key required." },
+        "ai-generate": { text: "Arch Tools gives AI agents 64 production-ready APIs with built-in x402 USDC payments — no API key required." },
         "crypto-price": { symbol: "bitcoin", price_usd: 104250.42, change_24h: 2.3 },
         "sentiment-analysis": { sentiment: "positive", score: 0.95, label: "Very Positive" },
     };

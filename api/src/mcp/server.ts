@@ -9,12 +9,13 @@
  * Config: Set ARCH_TOOLS_API_KEY env var for credit-based access
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Server } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+  type CallToolRequest,
+} from "@modelcontextprotocol/sdk/types";
 
 const ARCH_TOOLS_BASE_URL = process.env.ARCH_TOOLS_URL || "https://archtools.dev";
 const ARCH_TOOLS_API_KEY = process.env.ARCH_TOOLS_API_KEY || "";
@@ -33,7 +34,7 @@ const ARCH_TOOLS: ArchTool[] = [
     inputSchema: { type: "object", properties: { url: { type: "string" }, format: { type: "string", enum: ["markdown","html","text"] } }, required: ["url"] } },
   { name: "extract-page", description: "Extract main content from a webpage", price: "$0.015",
     inputSchema: { type: "object", properties: { url: { type: "string" }, include_links: { type: "boolean" } }, required: ["url"] } },
-  { name: "ai-generate", description: "Generate text with Claude, GPT-4, Grok, or Gemini", price: "$0.030",
+  { name: "ai-generate", description: "Generate text with Claude, GPT-4, Grok, or Gemini", price: "$0.040",
     inputSchema: { type: "object", properties: { prompt: { type: "string" }, model: { type: "string", enum: ["claude","gpt4","grok","gemini"] }, system: { type: "string" }, max_tokens: { type: "integer" } }, required: ["prompt"] } },
   { name: "summarize", description: "Summarize text (bullets, TLDR, executive, paragraph)", price: "$0.020",
     inputSchema: { type: "object", properties: { text: { type: "string" }, style: { type: "string", enum: ["bullets","tldr","executive","paragraph","headline"] } }, required: ["text"] } },
@@ -43,7 +44,7 @@ const ARCH_TOOLS: ArchTool[] = [
     inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] } },
   { name: "semantic-search", description: "Semantic web search with AI-ranked results", price: "$0.015",
     inputSchema: { type: "object", properties: { query: { type: "string" }, num_results: { type: "integer" }, include_text: { type: "boolean" } }, required: ["query"] } },
-  { name: "research-report", description: "Generate comprehensive research report", price: "$0.050",
+  { name: "research-report", description: "Generate comprehensive research report", price: "$0.040",
     inputSchema: { type: "object", properties: { topic: { type: "string" }, depth: { type: "string", enum: ["brief","standard","comprehensive"] }, format: { type: "string", enum: ["markdown","json"] } }, required: ["topic"] } },
   { name: "fact-check", description: "Verify a claim using multiple sources", price: "$0.025",
     inputSchema: { type: "object", properties: { claim: { type: "string" }, context: { type: "string" } }, required: ["claim"] } },
@@ -51,11 +52,11 @@ const ARCH_TOOLS: ArchTool[] = [
     inputSchema: { type: "object", properties: { query: { type: "string" }, limit: { type: "integer" }, language: { type: "string" } }, required: ["query"] } },
   { name: "image-generate", description: "Generate images with DALL-E 3", price: "$0.050",
     inputSchema: { type: "object", properties: { prompt: { type: "string" }, size: { type: "string", enum: ["1024x1024","1792x1024","1024x1792"] }, style: { type: "string", enum: ["vivid","natural"] } }, required: ["prompt"] } },
-  { name: "image-remove-bg", description: "Remove image background", price: "$0.025",
+  { name: "image-remove-bg", description: "Remove image background", price: "$0.350",
     inputSchema: { type: "object", properties: { image_url: { type: "string" }, image_base64: { type: "string" } } } },
   { name: "screenshot-capture", description: "Capture screenshot of any URL", price: "$0.020",
     inputSchema: { type: "object", properties: { url: { type: "string" }, full_page: { type: "boolean" }, format: { type: "string", enum: ["png","jpeg"] } }, required: ["url"] } },
-  { name: "text-to-speech", description: "Convert text to speech with ElevenLabs", price: "$0.025",
+  { name: "text-to-speech", description: "Convert text to speech with ElevenLabs", price: "$0.100",
     inputSchema: { type: "object", properties: { text: { type: "string" }, voice_id: { type: "string" } }, required: ["text"] } },
   { name: "transcribe-audio", description: "Transcribe audio with Whisper", price: "$0.025",
     inputSchema: { type: "object", properties: { audio_url: { type: "string" }, language: { type: "string" } }, required: ["audio_url"] } },
@@ -177,7 +178,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   })),
 }));
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
   const { name, arguments: args } = request.params;
   const tool = ARCH_TOOLS.find((t) => t.name === name);
 

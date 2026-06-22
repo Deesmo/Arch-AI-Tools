@@ -12,9 +12,8 @@ datasource db {
 
 model Agent {
   id           String       @id @default(cuid())
-  apiKey       String       @unique @map("api_key")
   apiKeyPrefix String?      @map("api_key_prefix") @db.VarChar(12)  // first 12 chars — lookup index
-  apiKeyHash   String?      @map("api_key_hash")                     // bcrypt hash for secure comparison
+  apiKeyHash   String?      @map("api_key_hash")                     // bcrypt hash — the ONLY stored form of the key
   email        String       @unique
   name         String?
   passwordHash      String?      @map("password_hash")
@@ -38,9 +37,26 @@ model Agent {
   totalSpentUsdc  Float        @default(0) @map("total_spent_usdc")
   isPublic        Boolean      @default(true) @map("is_public")  // show on leaderboard/profile
 
+  // ─── Email verification gate (credits activate on verify) ──────────────────
+  emailVerified     Boolean    @default(false) @map("email_verified")
+  verifyToken       String?    @map("verify_token")
+  verifyTokenExpiry DateTime?  @map("verify_token_expiry")
+  pendingCredits    Int        @default(0) @map("pending_credits")
+
   // back-references — required for Prisma v5 relations
   apiRequests  ApiRequest[]
   purchases    Purchase[]
+
+  @@index([apiKeyPrefix])
+}
+
+// Atomic free-grant guard: one row per normalized email identity. The UNIQUE
+// constraint makes free-credit eligibility a DB-level decision (no TOCTOU).
+// Starts empty — populated going forward; existing Agent rows are untouched.
+model SignupIdentity {
+  id              String   @id @default(cuid())
+  normalizedEmail String   @unique @map("normalized_email")
+  createdAt       DateTime @default(now()) @map("created_at")
 }
 
 enum ToolPlan {
@@ -182,8 +198,7 @@ model FacilitatorProvider {
   id              String   @id @default(cuid())
   name            String
   email           String   @unique
-  apiKey          String   @unique @map("api_key")       // Provider's facilitator API key
-  apiKeyHash      String?  @map("api_key_hash")           // bcrypt hash for secure comparison
+  apiKeyHash      String?  @map("api_key_hash")           // bcrypt hash — the ONLY stored form of the key
   walletAddress   String   @map("wallet_address")         // Provider's wallet for settlement
   webhookUrl      String?  @map("webhook_url")            // Optional webhook for payment events
   feePercent      Float    @default(1.0)                   // Arch Tools fee (% of each tx)
@@ -197,7 +212,6 @@ model FacilitatorProvider {
   updatedAt       DateTime @updatedAt
   payments        FacilitatorPayment[]
 
-  @@index([apiKey])
   @@index([email])
 }
 

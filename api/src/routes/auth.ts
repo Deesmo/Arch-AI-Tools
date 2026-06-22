@@ -11,19 +11,15 @@ import { captureEvent, identifyUser } from "../lib/posthog.js";
 
 const router = Router();
 
-// Security: fail hard at startup if JWT_SECRET is not set — never use a hardcoded fallback.
-// This applies in ALL environments; a missing secret is always a configuration error.
 if (!process.env.JWT_SECRET) {
   throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start. Set a strong random secret.");
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const COOKIE_NAME = "arch_session";
-// Security: JWT expiry and cookie maxAge are intentionally set to the SAME value (7 days).
-// Mismatched expiry (e.g. 30d JWT + 72h cookie) allows stolen tokens to remain valid
-// long after the user's browser session has expired.
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-const SESSION_TTL_JWT = "7d"; // must match SESSION_TTL_MS
+const DUMMY_BCRYPT_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8y4q0h0iI1GtIsfRSAxEPPYUajFBlW";
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_TTL_JWT = "7d";
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -32,7 +28,6 @@ const COOKIE_OPTS = {
   path: "/",
 };
 
-// C-2 FIX: Rate limit login attempts — 5 per 15 min per IP
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -42,7 +37,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Also rate-limit forgot-password — 3 requests per email per 5 min (handled per IP here)
 const forgotLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 3,
@@ -63,8 +57,17 @@ export function verifySession(token: string): { sub: string } | null {
   }
 }
 
-// ─── POST /auth/login-key ───────────────────────────────────────────────────────
-// API Key login: validate key, set session cookie, redirect to dashboard. No password needed.
+async function findAgentByApiKey(apiKey: string) {
+  // Plaintext keys are no longer stored — prefix lookup + bcrypt compare only.
+  const prefix = apiKey.slice(0, 12);
+  const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } }).catch(() => null);
+  if (candidate?.apiKeyHash) {
+    const match = await bcrypt.compare(apiKey, candidate.apiKeyHash).catch(() => false);
+    if (match) return candidate;
+  }
+  return null;
+}
+
 router.post("/login-key", loginLimiter, async (req: Request, res: Response): Promise<void> => {
   const { api_key } = req.body ?? {};
   if (!api_key || typeof api_key !== "string" || !api_key.startsWith("arch_")) {
@@ -72,7 +75,7 @@ router.post("/login-key", loginLimiter, async (req: Request, res: Response): Pro
     return;
   }
 
-  const agent = await prisma.agent.findUnique({ where: { apiKey: api_key } });
+  const agent = await findAgentByApiKey(api_key);
   if (!agent) {
     res.status(401).json({ ok: false, error: "invalid_api_key", message: "Invalid API key." });
     return;
@@ -85,50 +88,51 @@ router.post("/login-key", loginLimiter, async (req: Request, res: Response): Pro
   res.json({ ok: true, redirect: "/dashboard" });
 });
 
-// ─── POST /auth/login ──────────────────────────────────────────────────────────
 router.post("/login", loginLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body ?? {};
-  if (!email || !password) {
+  if (typeof email !== "string" || typeof password !== "string" || !email.trim() || !password) {
     res.status(400).json({ ok: false, error: "email_and_password_required" });
     return;
   }
 
-  const agent = await prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
-  if (!agent) {
-    // Timing-safe: still do a bcrypt compare to prevent user enumeration
-    await bcrypt.compare(password, "$2b$10$invalid.hash.that.never.matches.xxxxxxxxxxx");
-    res.status(401).json({ ok: false, error: "invalid_credentials" });
-    return;
-  }
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+    const agent = await prisma.agent.findUnique({ where: { email: normalizedEmail } });
+    if (!agent) {
+      bcrypt.compareSync(password, DUMMY_BCRYPT_HASH);
+      res.status(401).json({ ok: false, error: "invalid_credentials" });
+      return;
+    }
 
-  if (!agent.passwordHash) {
-    // Account exists but was created before passwords — send magic link
-    res.status(401).json({
-      ok: false,
-      error: "no_password_set",
-      message: "This account was created before password login was added. Use the link in your original welcome email, or contact support to set a password.",
-    });
-    return;
-  }
+    if (!agent.passwordHash || typeof agent.passwordHash !== "string") {
+      res.status(401).json({
+        ok: false,
+        error: "no_password_set",
+        message: "This account does not have a password yet. Set one from your dashboard or welcome flow.",
+      });
+      return;
+    }
 
-  const valid = await bcrypt.compare(password, agent.passwordHash);
-  if (!valid) {
-    res.status(401).json({ ok: false, error: "invalid_credentials" });
-    return;
-  }
+    const valid = bcrypt.compareSync(password, agent.passwordHash);
+    if (!valid) {
+      res.status(401).json({ ok: false, error: "invalid_credentials" });
+      return;
+    }
 
-  const token = signSession(agent.id);
-  res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
-  logger.info({ agentId: agent.id }, "Agent logged in");
-  captureEvent(agent.id, "login", { method: "email_password" });
-  res.json({ ok: true, redirect: "/dashboard" });
+    const token = signSession(agent.id);
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+    logger.info({ agentId: agent.id }, "Agent logged in");
+    captureEvent(agent.id, "login", { method: "email_password" });
+    res.json({ ok: true, redirect: "/dashboard" });
+  } catch (error) {
+    logger.error({ error, email }, "Email login failed");
+    res.status(500).json({ ok: false, error: "login_failed", message: "Unable to log in right now. Please try again." });
+  }
 });
 
-// ─── POST /auth/set-password ───────────────────────────────────────────────────
-// Used at signup + by existing users who have their API key
 router.post("/set-password", async (req: Request, res: Response): Promise<void> => {
   const { api_key, password } = req.body ?? {};
-  if (!api_key || !password) {
+  if (typeof api_key !== "string" || typeof password !== "string" || !api_key || !password) {
     res.status(400).json({ ok: false, error: "api_key_and_password_required" });
     return;
   }
@@ -137,35 +141,34 @@ router.post("/set-password", async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const agent = await prisma.agent.findUnique({ where: { apiKey: api_key } });
-  if (!agent) {
-    res.status(404).json({ ok: false, error: "not_found" });
-    return;
+  try {
+    const agent = await findAgentByApiKey(api_key);
+    if (!agent) {
+      res.status(404).json({ ok: false, error: "not_found" });
+      return;
+    }
+
+    const hash = bcrypt.hashSync(password, 10);
+    await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash: hash } });
+
+    const token = signSession(agent.id);
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+    logger.info({ agentId: agent.id }, "Agent set password + logged in");
+    captureEvent(agent.id, "signup_password_set", { email: agent.email, tier: agent.tier });
+    identifyUser(agent.id, { email: agent.email, tier: agent.tier, credits: agent.credits });
+    res.json({ ok: true, redirect: "/dashboard" });
+  } catch (error) {
+    logger.error({ error }, "Set password failed");
+    res.status(500).json({ ok: false, error: "set_password_failed", message: "Unable to save your password right now. Please try again." });
   }
-
-  const hash = await bcrypt.hash(password, 10);
-  await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash: hash } });
-
-  // Set session cookie immediately
-  const token = signSession(agent.id);
-  res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
-  logger.info({ agentId: agent.id }, "Agent set password + logged in");
-  captureEvent(agent.id, "signup_password_set", { email: agent.email, tier: agent.tier });
-  identifyUser(agent.id, { email: agent.email, tier: agent.tier, credits: agent.credits });
-  res.json({ ok: true, redirect: "/dashboard" });
 });
 
-// ─── GET /auth/logout ──────────────────────────────────────────────────────────
 router.get("/logout", (_req: Request, res: Response): void => {
-  // Clear with exact same options as COOKIE_OPTS to ensure browser removes it
   res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
-  // Belt-and-suspenders: also set to empty with maxAge 0
   res.cookie(COOKIE_NAME, "", { ...COOKIE_OPTS, maxAge: 0 });
   res.redirect("/login");
 });
 
-// ─── GET /auth/me ─────────────────────────────────────────────────────────────
-// Returns current session agent info (used by dashboard JS)
 router.get("/me", async (req: Request, res: Response): Promise<void> => {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) {
@@ -184,7 +187,6 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     res.status(401).json({ ok: false, error: "agent_not_found" });
     return;
   }
-  // C-3 FIX: Never return api_key from /auth/me — serve only on explicit /auth/api-key request
   res.json({
     ok: true,
     agent_id: agent.id,
@@ -195,8 +197,6 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
   });
 });
 
-// ─── GET /auth/api-key ────────────────────────────────────────────────────────
-// Returns the API key only on explicit request (user clicked "Show Key" etc.)
 router.get("/api-key", async (req: Request, res: Response): Promise<void> => {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) { res.status(401).json({ ok: false, error: "not_authenticated" }); return; }
@@ -204,25 +204,24 @@ router.get("/api-key", async (req: Request, res: Response): Promise<void> => {
   if (!payload) { res.status(401).json({ ok: false, error: "session_expired" }); return; }
   const agent = await prisma.agent.findUnique({ where: { id: payload.sub } });
   if (!agent) { res.status(401).json({ ok: false, error: "agent_not_found" }); return; }
-  // Return masked key by default; caller can request reveal
-  const masked = agent.apiKey.substring(0, 8) + "●".repeat(agent.apiKey.length - 12) + agent.apiKey.slice(-4);
-  res.json({ ok: true, api_key_masked: masked, api_key: agent.apiKey });
+  // Plaintext keys are no longer stored — only the prefix can be shown.
+  // Full keys are returned exactly once at registration/rotation.
+  const masked = agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null;
+  res.json({ ok: true, api_key_masked: masked, api_key: null, message: "Full API keys are shown only once at creation. Rotate via POST /v1/agent/keys/rotate if you lost yours." });
 });
 
 export default router;
 
-// ─── POST /auth/forgot-password ───────────────────────────────────────────────
 router.post("/forgot-password", forgotLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body ?? {};
   if (!email) {
     res.status(400).json({ ok: false, error: "email_required" });
     return;
   }
-  // Always return 200 to prevent user enumeration
   const agent = await prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (agent) {
     const token = crypto.randomBytes(32).toString("hex");
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiry = new Date(Date.now() + 60 * 60 * 1000);
     await prisma.agent.update({
       where: { id: agent.id },
       data: { resetToken: token, resetTokenExpiry: expiry },
@@ -233,14 +232,13 @@ router.post("/forgot-password", forgotLimiter, async (req: Request, res: Respons
   res.json({ ok: true, message: "If an account exists with that email, a reset link has been sent." });
 });
 
-// ─── GET /auth/reset-password ─────────────────────────────────────────────────
 router.get("/reset-password", (_req: Request, res: Response): void => {
   const token = (_req.query.token as string) ?? "";
   res.type("text/html").send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Arch Tools — Reset Password</title>
+  <title>Arch Tools - Reset Password</title>
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
@@ -261,7 +259,7 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
   <input type="password" id="pw" placeholder="New password (min 8 chars)" autocomplete="new-password"/>
   <input type="password" id="pw2" placeholder="Confirm password" autocomplete="new-password"/>
   <div class="status" id="status"></div>
-  <button onclick="doReset()">Set Password →</button>
+  <button onclick="doReset()">Set Password -&gt;</button>
 </div>
 <script>
   async function doReset() {
@@ -270,30 +268,30 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
     var st = document.getElementById('status');
     if (pw.length < 8) { st.style.color='#f87171'; st.textContent='Password must be at least 8 characters.'; return; }
     if (pw !== pw2) { st.style.color='#f87171'; st.textContent='Passwords do not match.'; return; }
-    st.style.color='rgba(255,255,255,0.5)'; st.textContent='Setting password…';
+    st.style.color='rgba(255,255,255,0.5)'; st.textContent='Setting password...';
     var r = await fetch('/auth/reset-password', {
       method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include',
       body: JSON.stringify({ token: '${token}', password: pw })
     });
     var d = await r.json();
-    if (d.ok) { st.style.color='#34d399'; st.textContent='✓ Password set! Redirecting…'; setTimeout(()=>window.location.href='/dashboard',1200); }
+    if (d.ok) { st.style.color='#34d399'; st.textContent='Password set. Redirecting...'; setTimeout(()=>window.location.href='/dashboard',1200); }
     else { st.style.color='#f87171'; st.textContent = d.message || 'Invalid or expired link. Request a new one.'; }
   }
 </script>
 </body></html>`);
 });
 
-// ─── POST /auth/reset-password ────────────────────────────────────────────────
 router.post("/reset-password", async (req: Request, res: Response): Promise<void> => {
   const { token, password } = req.body ?? {};
   if (!token || !password) {
     res.status(400).json({ ok: false, error: "token_and_password_required" });
     return;
   }
-  if (password.length < 8) {
+  if (typeof password !== "string" || password.length < 8) {
     res.status(400).json({ ok: false, error: "password_too_short", message: "Password must be at least 8 characters." });
     return;
   }
+
   const agent = await prisma.agent.findFirst({
     where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
   });
@@ -301,12 +299,13 @@ router.post("/reset-password", async (req: Request, res: Response): Promise<void
     res.status(400).json({ ok: false, error: "invalid_or_expired_token", message: "This reset link has expired or is invalid. Please request a new one." });
     return;
   }
-  const hash = await bcrypt.hash(password, 10);
+
+  const hash = bcrypt.hashSync(password, 10);
   await prisma.agent.update({
     where: { id: agent.id },
     data: { passwordHash: hash, resetToken: null, resetTokenExpiry: null },
   });
-  // Log the user in
+
   const sessionToken = signSession(agent.id);
   res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
   logger.info({ agentId: agent.id }, "Agent reset password + logged in");

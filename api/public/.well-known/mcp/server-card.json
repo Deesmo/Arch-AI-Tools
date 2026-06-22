@@ -13,11 +13,11 @@
   "transport": [
     {
       "type": "sse",
-      "url": "https://arch-tools-mcp.onrender.com/sse"
+      "url": "https://archtools.dev/mcp/sse"
     },
     {
       "type": "streamable-http",
-      "url": "https://arch-tools-mcp.onrender.com/mcp"
+      "url": "https://archtools.dev/mcp/mcp"
     }
   ],
   "tools": [

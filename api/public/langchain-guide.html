@@ -99,7 +99,7 @@
 
     <h2 id="install">2. Installation</h2>
     <pre><code>pip install langchain langchain-openai requests</code></pre>
-    <p>Get your API key at <a href="/signup">archtools.dev/signup</a> — 100 free credits included.</p>
+<p>Get your API key at <a href="/signup">archtools.dev/signup</a> — 100 free credits included.</p>
 
     <h2 id="basic">3. Basic Usage — Custom Tool</h2>
     <p>Wrap any Arch Tools endpoint as a LangChain <code>Tool</code>:</p>
@@ -238,7 +238,7 @@ print(result["output"])</code></pre>
     <ul>
       <li><strong>Credit awareness:</strong> Check <code>X-Credits-Remaining</code> headers to avoid unexpected 402 responses.</li>
       <li><strong>Error handling:</strong> Always check <code>resp.json()["ok"]</code> before accessing data.</li>
-      <li><strong>Rate limits:</strong> Free tier: 10 req/min. Pro: 60 req/min. Business: 300 req/min.</li>
+      <li><strong>Rate limits:</strong> Free tier: 60 req/min. Starter/Pro: 300 req/min. Business: 1,000 req/min.</li>
       <li><strong>BYOK:</strong> Pass your own API keys via headers (e.g., <code>x-anthropic-key</code>) for zero credit cost on AI tools.</li>
       <li><strong>Batch wisely:</strong> Chain tools in sequence — scrape → summarize → sentiment — for powerful analysis pipelines.</li>
       <li><strong>MCP alternative:</strong> For Claude-native agents, consider the <a href="/mcp-setup">MCP integration</a> instead.</li>
@@ -246,7 +246,7 @@ print(result["output"])</code></pre>
 
     <div style="text-align: center; margin-top: 48px;">
       <a href="/signup" class="btn">Get Your Free API Key →</a>
-      <p style="margin-top: 12px; font-size: 13px; color: var(--muted);">100 free credits · No credit card required</p>
+<p style="margin-top: 12px; font-size: 13px; color: var(--muted);">100 free credits · No credit card required</p>
     </div>
   </div>
 </body>

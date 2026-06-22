@@ -5,16 +5,30 @@ import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl } from "../../lib/ssrf.js";
+import { prisma } from "../../lib/prisma.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
 import axios from "axios";
 
 const router = Router();
-const _anthropicKey = process.env.ANTHROPIC_API_KEY;
-const anthropic = (_anthropicKey && !_anthropicKey.startsWith("ENTER"))
-  ? new Anthropic({ apiKey: _anthropicKey })
-  : null;
+// Lazy Anthropic client: re-checks env at call time so a key set AFTER boot
+// (e.g. Render env var update) becomes usable without redeploy.
+let _anthropicInstance: Anthropic | null = null;
+let _anthropicLastKey: string | undefined = undefined;
+function getAnthropic(): Anthropic | null {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key || key.startsWith("ENTER")) {
+    _anthropicInstance = null;
+    _anthropicLastKey = key;
+    return null;
+  }
+  if (_anthropicInstance && _anthropicLastKey === key) return _anthropicInstance;
+  _anthropicInstance = new Anthropic({ apiKey: key });
+  _anthropicLastKey = key;
+  return _anthropicInstance;
+}
+// Runtime-only access via getAnthropic(); do not capture the client at module load.
 
 // ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
@@ -32,7 +46,7 @@ function tierRateLimiter(req: AuthedRequest, res: Response, next: NextFunction):
   const key = agent?.apiKey?.slice(0, 20) ?? req.ip ?? "anon";
   const tier = agent?.tier ?? "free";
   const limit = tier === "business" ? config.rateLimits.business
-              : tier === "pro"      ? config.rateLimits.pro
+              : (tier === "pro" || tier === "starter") ? config.rateLimits.pro
               : config.rateLimits.free;
 
   const now = Date.now();
@@ -71,6 +85,115 @@ function toolMiddleware(toolName: string) {
 
 function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
+}
+
+// ─── BYOK discount: tools called with user-provided provider keys charge 20% ───
+const BYOK_HEADER_NAMES = [
+  "x-anthropic-key", "x-openai-key", "x-xai-key", "x-google-key",
+  "x-firecrawl-key", "x-brave-key", "x-tavily-key", "x-exa-key",
+  "x-elevenlabs-key", "x-removebg-key", "x-runway-key",
+];
+function hasByokKeys(req: Request): boolean {
+  return BYOK_HEADER_NAMES.some((h) => !!req.headers[h]);
+}
+function byokAdjustedCost(req: Request, cost: number): number {
+  return hasByokKeys(req) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
+}
+
+function extractJsonObject(text: string): string | null {
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  return match ? match[0] : null;
+}
+
+const BLOCKED_FORWARD_HEADERS = new Set([
+  "authorization",
+  "cookie",
+  "proxy-authorization",
+  "x-api-key",
+  "x-admin-key",
+  "x-auth-token",
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+]);
+
+function sanitizeWebhookHeaders(input: Record<string, string> | undefined): Record<string, string> {
+  const safe: Record<string, string> = {};
+  for (const [rawName, rawValue] of Object.entries(input ?? {})) {
+    const name = rawName.trim();
+    if (!name) continue;
+    const lower = name.toLowerCase();
+    if (BLOCKED_FORWARD_HEADERS.has(lower)) continue;
+    if (!/^[a-z0-9-]{1,64}$/i.test(name)) continue;
+    safe[name] = String(rawValue).slice(0, 500);
+  }
+  return safe;
+}
+
+function getDefaultSender(): string {
+  return process.env.EMAIL_FROM?.trim() || "Arch Tools <no-reply@archtools.dev>";
+}
+
+function sanitizeOutboundEmailHtml(html: string | undefined, body: string | undefined): { htmlBody: string; textBody: string } {
+  const rawHtml = (html ?? "").slice(0, 20_000);
+  const rawBody = (body ?? "").slice(0, 10_000);
+  const escapedBody = rawBody
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
+
+  const htmlBody = rawHtml
+    ? rawHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/\son\w+="[^"]*"/gi, "")
+    : `<p>${escapedBody}</p>`;
+  const textBody = rawBody || rawHtml.replace(/<[^>]+>/g, "").slice(0, 10_000);
+  return { htmlBody, textBody };
+}
+
+const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; starter: number; business: number }> = {
+  "webhook-send": { free: 10, pro: 50, starter: 50, business: 200 },
+  "email-send": { free: 5, pro: 25, starter: 25, business: 100 },
+  "send-email": { free: 5, pro: 25, starter: 25, business: 100 },
+  "social-post": { free: 3, pro: 15, starter: 15, business: 50 },
+  "video-generate": { free: 3, pro: 20, starter: 20, business: 100 },
+};
+
+async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName: string): Promise<boolean> {
+  const agent = req.agent;
+  if (!agent) {
+    res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() });
+    return false;
+  }
+
+  const limitConfig = SIDE_EFFECT_DAILY_LIMITS[toolName];
+  if (!limitConfig) return true;
+
+  const tier = agent.tier === "business" ? "business" : agent.tier === "pro" ? "pro" : agent.tier === "starter" ? "starter" : "free";
+  const limit = limitConfig[tier];
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+
+  const count = await prisma.apiRequest.count({
+    where: {
+      agentId: agent.id,
+      toolName,
+      createdAt: { gte: since },
+      status: "SUCCESS",
+    },
+  }).catch(() => 0);
+
+  if (count >= limit) {
+    res.status(429).json({
+      ok: false,
+      error: "daily_limit_reached",
+      message: `Daily limit reached for ${toolName}. ${tier} tier allows ${limit} successful calls per day.`,
+      request_id: reqId(),
+    });
+    return false;
+  }
+
+  return true;
 }
 
 // ─── 1. VALIDATE-DATA ────────────────────────────────────────────────────────
@@ -130,7 +253,7 @@ router.post("/generate-hash", ...toolMiddleware("generate-hash"), async (req: Au
     if (!ok) return;
   }
   const { text, algorithm = "sha256", encoding = "hex" } = req.body as { text?: string; algorithm?: string; encoding?: string };
-  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  if (!text || typeof text !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required and must be a string", request_id: reqId() }); return; }
   const algos = ["sha256", "sha512", "sha1", "md5", "sha384"];
   if (!algos.includes(algorithm)) { res.status(400).json({ ok: false, error: "invalid_request", message: `algorithm must be one of: ${algos.join(", ")}`, request_id: reqId() }); return; }
   const enc: "hex" | "base64" = (encoding === "base64" ? "base64" : "hex");
@@ -146,8 +269,9 @@ router.post("/qr-code", ...toolMiddleware("qr-code"), async (req: AuthedRequest,
     const ok = await deductCredits(req, res, "qr-code", 2);
     if (!ok) return;
   }
-  const { text, format = "png", size = 256, error_correction = "M" } = req.body as { text?: string; format?: string; size?: number; error_correction?: string };
-  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  const { format = "png", size = 256, error_correction = "M" } = req.body as { format?: string; size?: number; error_correction?: string };
+  const text = (req.body.text ?? req.body.content) as string | undefined; // accept documented alias `content`
+  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text (or content) is required", request_id: reqId() }); return; }
   try {
     const QRCode = await import("qrcode");
     const ecl = (["L","M","Q","H"].includes(error_correction ?? "M") ? error_correction : "M") as "L"|"M"|"Q"|"H";
@@ -171,12 +295,23 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     const ok = await deductCredits(req, res, "convert-format", 2);
     if (!ok) return;
   }
-  const input = req.body.data ?? req.body.input;
+  const input = req.body.data ?? req.body.input ?? req.body.content;
   const { from, to } = req.body as { from?: string; to?: string };
-  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data), from, and to are required", request_id: reqId() }); return; }
+  if (!input || !from || !to) { res.status(400).json({ ok: false, error: "invalid_request", message: "input (or data/content), from, and to are required", request_id: reqId() }); return; }
   try {
     const yaml = await import("js-yaml");
     let parsed: unknown;
+    // text ↔ base64 shortcut (no structured parse needed)
+    if (from === "text" || from === "string") {
+      if (to === "base64") { res.json({ ok: true, output: Buffer.from(input, "utf8").toString("base64"), from, to, request_id: reqId() }); return; }
+      if (to === "hex") { res.json({ ok: true, output: Buffer.from(input, "utf8").toString("hex"), from, to, request_id: reqId() }); return; }
+      res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot convert text to ${to}. Supported: base64, hex`, request_id: reqId() }); return;
+    }
+    if (from === "base64") {
+      if (to === "text" || to === "string") { res.json({ ok: true, output: Buffer.from(input, "base64").toString("utf8"), from, to, request_id: reqId() }); return; }
+      if (to === "hex") { res.json({ ok: true, output: Buffer.from(input, "base64").toString("hex"), from, to, request_id: reqId() }); return; }
+      res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot convert base64 to ${to}. Supported: text, hex`, request_id: reqId() }); return;
+    }
     if (from === "json") parsed = JSON.parse(input);
     else if (from === "yaml") parsed = yaml.load(input);
     else if (from === "csv") {
@@ -185,7 +320,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     } else if (from === "xml") {
       const xml2js = await import("xml2js");
       parsed = await xml2js.parseStringPromise(input);
-    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}`, request_id: reqId() }); return; }
+    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported from format: ${from}. Supported: json, yaml, csv, xml, text, base64`, request_id: reqId() }); return; }
 
     let output: string;
     if (to === "json") output = JSON.stringify(parsed, null, 2);
@@ -197,7 +332,7 @@ router.post("/convert-format", ...toolMiddleware("convert-format"), async (req: 
     } else if (to === "xml") {
       const { create } = await import("xmlbuilder2");
       output = create({ root: parsed as object }).end({ prettyPrint: true });
-    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}`, request_id: reqId() }); return; }
+    } else { res.status(400).json({ ok: false, error: "invalid_request", message: `Unsupported to format: ${to}. Supported: json, yaml, csv, xml`, request_id: reqId() }); return; }
 
     res.json({ ok: true, output, from, to, request_id: reqId() });
   } catch (e) {
@@ -213,8 +348,10 @@ router.post("/transform-text", ...toolMiddleware("transform-text"), async (req: 
     const ok = await deductCredits(req, res, "transform-text", 3);
     if (!ok) return;
   }
-  const { text, mode } = req.body as { text?: string; mode?: string };
-  if (!text || !mode) { res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode are required", request_id: reqId() }); return; }
+  const { text } = req.body as { text?: string };
+  let mode = (req.body.mode ?? req.body.operation) as string | undefined; // accept documented alias `operation`
+  if (mode === "camelCase") mode = "camel"; else if (mode === "snakeCase") mode = "snake"; else if (mode === "kebabCase") mode = "kebab"; // accept documented casing variants
+  if (!text || !mode) { res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode (or operation) are required", request_id: reqId() }); return; }
   const modes = ["uppercase","lowercase","titlecase","slug","camel","snake","kebab","base64_encode","base64_decode","reverse","trim","word_count"];
   if (!modes.includes(mode)) { res.status(400).json({ ok: false, error: "invalid_request", message: `mode must be one of: ${modes.join(", ")}`, request_id: reqId() }); return; }
   let result: string | number;
@@ -358,7 +495,8 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "search-web", 5);
     if (!ok) return;
   }
-  const { query, num_results = 5 } = req.body as { query?: string; num_results?: number };
+  const { query, limit, num_results } = req.body as { query?: string; limit?: number; num_results?: number };
+  const resultLimit = Math.min(Math.max(1, limit ?? num_results ?? 5), 10);
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
   // BYOK: check for user-provided search keys
   const byokBraveKeySearch = req.headers["x-brave-key"] as string | undefined;
@@ -369,7 +507,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
     if (braveKey) {
       if (byokBraveKeySearch) console.log(`[BYOK] search-web using user-provided brave key`);
       try {
-        const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(Math.min(num_results, 10)) }), {
+        const resp = await fetch("https://api.search.brave.com/res/v1/web/search?" + new URLSearchParams({ q: query, count: String(resultLimit) }), {
           headers: { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
         });
         if (resp.ok) {
@@ -389,7 +527,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
         const resp = await fetch("https://api.tavily.com/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ api_key: tavilyKey, query, max_results: Math.min(num_results, 10) }),
+          body: JSON.stringify({ api_key: tavilyKey, query, max_results: resultLimit }),
         });
         if (resp.ok) {
           const data = await resp.json() as { results?: Array<{ title?: string; url?: string; content?: string }> };
@@ -406,7 +544,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
         const resp = await fetch("https://google.serper.dev/search", {
           method: "POST",
           headers: { "X-API-KEY": process.env.SERPER_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({ q: query, num: Math.min(num_results, 10) }),
+          body: JSON.stringify({ q: query, num: resultLimit }),
         });
         if (resp.ok) {
           const data = await resp.json() as { organic?: Array<{ title?: string; link?: string; snippet?: string }> };
@@ -431,7 +569,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "web-search", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { query } = req.body as { query?: string };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
   // BYOK: check for user-provided search keys
@@ -473,7 +611,7 @@ router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRe
     }
     if (!context) { res.status(503).json({ ok: false, error: "search_unavailable", message: "Search context unavailable. Pass x-tavily-key or x-brave-key header for BYOK.", request_id: reqId() }); return; }
     // Synthesize with Claude
-    const msg = await anthropic!.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 600,
       messages: [{ role: "user", content: `Answer this query based on the following search context. Be concise and factual.\n\nQuery: ${query}\n\nContext:\n${context}\n\nAnswer:` }],
@@ -750,8 +888,8 @@ router.post("/language-detect", ...toolMiddleware("language-detect"), async (req
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
     // Use Claude for accurate language detection
-    if (anthropic) {
-      const msg = await anthropic.messages.create({
+    if (getAnthropic()) {
+      const msg = await getAnthropic()!.messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 100,
         messages: [{ role: "user", content: `Detect the language of this text. Reply ONLY with a JSON object: {"language": "English", "code": "en", "confidence": 0.99}\n\nText: ${text.slice(0, 500)}` }],
@@ -778,11 +916,11 @@ router.post("/sentiment-analysis", ...toolMiddleware("sentiment-analysis"), asyn
     const ok = await deductCredits(req, res, "sentiment-analysis", 8);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text } = req.body as { text?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
       messages: [{ role: "user", content: `Analyze the sentiment of this text. Return ONLY a JSON object:\n{"sentiment": "positive|negative|neutral|mixed", "score": 0.85, "emotions": {"joy": 0.8, "anger": 0.1, "sadness": 0.0, "fear": 0.0, "surprise": 0.1, "disgust": 0.0}}\n\nText: ${text.slice(0, 2000)}` }],
@@ -803,7 +941,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req: AuthedRequ
     const ok = await deductCredits(req, res, "summarize", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text, style = "paragraph" } = req.body as { text?: string; style?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   const stylePrompts: Record<string, string> = {
@@ -815,7 +953,7 @@ router.post("/summarize", ...toolMiddleware("summarize"), async (req: AuthedRequ
   };
   const prompt = stylePrompts[style] ?? stylePrompts["paragraph"];
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 600,
       messages: [{ role: "user", content: `${prompt}\n\nText to summarize:\n${text.slice(0, 8000)}` }],
@@ -835,11 +973,11 @@ router.post("/extract-entities", ...toolMiddleware("extract-entities"), async (r
     const ok = await deductCredits(req, res, "extract-entities", 8);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text } = req.body as { text?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 800,
       messages: [{ role: "user", content: `Extract named entities from this text. Return ONLY JSON:\n{"people": [], "organizations": [], "locations": [], "dates": [], "money": [], "other": []}\n\nText: ${text.slice(0, 4000)}` }],
@@ -861,11 +999,11 @@ router.post("/regex-generate", ...toolMiddleware("regex-generate"), async (req: 
     const ok = await deductCredits(req, res, "regex-generate", 8);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { description, examples } = req.body as { description?: string; examples?: string[] };
   if (!description) { res.status(400).json({ ok: false, error: "invalid_request", message: "description is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 500,
       messages: [{ role: "user", content: `Generate a JavaScript regex for: "${description}"\n${examples?.length ? `Examples that should match: ${examples.join(", ")}` : ""}\n\nReturn ONLY valid JSON (no extra text): {"pattern": "^[a-z]+$", "flags": "i", "explanation": "brief explanation", "test_examples": ["match1", "match2"]}` }],
@@ -889,11 +1027,11 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "pii-detect", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { text, redact = false } = req.body as { text?: string; redact?: boolean };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 800,
       messages: [{ role: "user", content: `Detect PII in this text${redact ? " and provide redacted version" : ""}. Return ONLY JSON:\n{"found": [{"type": "email|phone|ssn|credit_card|name|address|dob|ip", "value": "...", "start": 0, "end": 5}], "has_pii": true${redact ? ', "redacted": "text with [EMAIL] placeholders"' : ""}}\n\nText: ${text.slice(0, 4000)}` }],
@@ -927,12 +1065,16 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   const byokExaKey = req.headers["x-exa-key"] as string | undefined;
   const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey || byokBraveKey || byokTavilyKey || byokExaKey || byokFirecrawlKey);
 
+  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   const paid = isX402Paid(req);
-  if (!paid && !hasByok) {
-    const ok = await deductCredits(req, res, "ai-generate", 20);
+  if (!paid) {
+    // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000
+    const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
+    let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
+    if (hasByok) aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
+    const ok = await deductCredits(req, res, "ai-generate", aiGenCost);
     if (!ok) return;
   }
-  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
   if (prompt.length > MAX_PROMPT) { res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() }); return; }
@@ -942,7 +1084,17 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   if (mode && !validModes.includes(mode)) {
     res.status(400).json({ ok: false, error: "invalid_mode", message: `mode must be one of: ${validModes.join(", ")}. Or provide an explicit model instead.`, request_id: reqId() }); return;
   }
-  const model = explicitModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
+  // Friendly alias mapping — openapi.json advertises these short names
+  const MODEL_ALIASES: Record<string, string> = {
+    "claude": "claude-sonnet-4-6",
+    "gpt": "gpt-4o",
+    "gpt4": "gpt-4o",
+    "gpt-4": "gpt-4o",
+    "gemini": "gemini-2.0-flash",
+    "grok": "grok-3",
+  };
+  const requestedModel = explicitModel ? (MODEL_ALIASES[explicitModel.toLowerCase()] ?? explicitModel) : undefined;
+  const model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
   const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
 
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
@@ -1005,14 +1157,14 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     // Validate model
     const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
     if (!allModels.includes(model)) {
-      res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: ${allModels.join(", ")}`, request_id: reqId() });
+      res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: claude, gpt4, gemini, grok, ${allModels.join(", ")}`, request_id: reqId() });
       return;
     }
 
     // ── Claude ──
     if (CLAUDE_MODELS.includes(model)) {
       const anthKey = byokAnthropicKey || process.env.ANTHROPIC_API_KEY;
-      if (!anthKey && !anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() }); return; }
+      if (!anthKey && !getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() }); return; }
       // BYOK: use fetch directly with user's key; otherwise use SDK client
       let msg: any;
       if (byokAnthropicKey) {
@@ -1021,7 +1173,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         if (!r.ok) { res.status(r.status).json({ ok: false, error: "byok_api_error", message: msg?.error?.message || "BYOK Anthropic call failed", request_id: reqId() }); return; }
         msg = { content: msg.content, usage: msg.usage, model: msg.model };
       } else {
-        msg = await anthropic!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
+        msg = await getAnthropic()!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
       }
       const text = msg.content.find((b: any) => b.type === "text")?.text ?? "";
       const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
@@ -1041,15 +1193,23 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     const ok = await deductCredits(req, res, "ocr-extract", 10);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { image_url, image_base64, media_type = "image/jpeg" } = req.body as { image_url?: string; image_base64?: string; media_type?: string };
-  if (!image_url && !image_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  const { image_base64, media_type = "image/jpeg" } = req.body as { image_base64?: string; media_type?: string };
+  const image_url = (req.body.image_url ?? req.body.url ?? req.body.image) as string | undefined; // accept documented alias `url`
+  if (!image_url && !image_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url (or url) or image_base64 is required", request_id: reqId() }); return; }
   try {
     let imgBase64 = image_base64;
     let imgMediaType: string = media_type;
     if (image_url && !image_base64) {
       try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024 });
+      let imgResp;
+      try {
+        imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)", "Accept": "image/*" } });
+      } catch (dlErr) {
+        const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
+        console.error("[ocr-extract] image download failed:", st ?? dlErr);
+        res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() }); return;
+      }
       imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
       imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim();
     }
@@ -1059,7 +1219,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
       imgMediaType = "image/jpeg"; // safe default
     }
     const imageContent = { type: "image" as const, source: { type: "base64" as const, media_type: imgMediaType as "image/jpeg", data: imgBase64! } };
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages: [{ role: "user", content: [imageContent, { type: "text", text: "Extract all text from this image. Return the text exactly as it appears, preserving formatting and structure." }] }],
@@ -1080,7 +1240,8 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
     const ok = await deductCredits(req, res, "browser-task", 10);
     if (!ok) return;
   }
-  const { url, action = "extract", selector, text: inputText } = req.body as { url?: string; action?: string; selector?: string; text?: string };
+  const { url, selector, text: inputText } = req.body as { url?: string; selector?: string; text?: string };
+  const action = String(req.body.action ?? req.body.task ?? "extract");
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
@@ -1107,9 +1268,10 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     const ok = await deductCredits(req, res, "extract-pdf", 6);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { pdf_url, pdf_base64 } = req.body as { pdf_url?: string; pdf_base64?: string };
-  if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url or pdf_base64 is required", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  const { pdf_base64 } = req.body as { pdf_base64?: string };
+  const pdf_url = (req.body.pdf_url ?? req.body.url) as string | undefined; // accept documented alias `url`
+  if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url (or url) or pdf_base64 is required", request_id: reqId() }); return; }
   try {
     let base64Data = pdf_base64;
     if (pdf_url && !pdf_base64) {
@@ -1124,7 +1286,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     }
     try {
       // Use messages.create with betas header for PDF document type support
-      const msg = await anthropic.messages.create({
+      const msg = await getAnthropic()!.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4096,
         messages: [{ role: "user", content: [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data! } } as any, { type: "text", text: "Extract all text from this PDF. Preserve the structure and formatting as much as possible." }] }],
@@ -1275,6 +1437,8 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req: Authed
 router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "webhook-send");
+    if (!withinLimit) return;
     const ok = await deductCredits(req, res, "webhook-send", 2);
     if (!ok) return;
   }
@@ -1286,18 +1450,23 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
   };
   if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
+  if (!webhook_url.startsWith("https://")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must use https", request_id: reqId() }); return; }
   try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-  const allowedMethods = ["POST", "PUT", "PATCH"];
+  const allowedMethods = ["POST"];
   const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
+  const payloadString = JSON.stringify(payload ?? {});
+  if (payloadString.length > 20_000) { res.status(400).json({ ok: false, error: "invalid_request", message: "payload must be 20KB or less", request_id: reqId() }); return; }
+  const safeHeaders = sanitizeWebhookHeaders(customHeaders);
   try {
     const start = Date.now();
     const resp = await axios({
-      method: httpMethod as "POST" | "PUT" | "PATCH",
+      method: httpMethod as "POST",
       url: webhook_url,
       data: payload ?? {},
-      headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...customHeaders },
+      headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...safeHeaders },
       timeout: 10000,
       validateStatus: () => true,
+      maxRedirects: 0,
     });
     res.json({
       ok: true,
@@ -1305,7 +1474,9 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
       method: httpMethod,
       status_code: resp.status,
       response_ms: Date.now() - start,
-      response_body: String(resp.data).slice(0, 500),
+      response_body: typeof resp.data === "string"
+        ? resp.data.slice(0, 500)
+        : JSON.stringify(resp.data).slice(0, 500),
       request_id: reqId(),
     });
   } catch (e) {
@@ -1322,8 +1493,8 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
     if (!ok) return;
   }
   const data = req.body.json ?? req.body.data;
-  const jsonPath = req.body.path as string | undefined;
-  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path are required", request_id: reqId() }); return; }
+  const jsonPath = (req.body.path ?? req.body.query) as string | undefined; // accept documented alias `query`
+  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path (or query) are required", request_id: reqId() }); return; }
   try {
     // Simple JSONPath evaluator: supports $, .key, ['key'], [index], [*], ..key
     function evalPath(obj: unknown, expr: string): unknown[] {
@@ -1378,11 +1549,11 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: 
     const ok = await deductCredits(req, res, "image-generate", 30);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { prompt, style = "svg", width = 400, height = 300 } = req.body as { prompt?: string; style?: string; width?: number; height?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1500,
       messages: [{
@@ -1407,8 +1578,10 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const ok = await deductCredits(req, res, "barcode-generate", 2);
     if (!ok) return;
   }
-  const barcodeData = (req.body.value ?? req.body.data) as string | undefined;
-  const { type = "code128", width = 250, height = 100 } = req.body as { type?: string; width?: number; height?: number };
+  const barcodeData = (req.body.value ?? req.body.data ?? req.body.text ?? req.body.content) as string | undefined; // accept documented alias `content`
+  const requestedType = String(req.body.type ?? req.body.format ?? "code128").toLowerCase();
+  const type = requestedType === "code128" ? "code128" : requestedType;
+  const { width = 250, height = 100 } = req.body as { width?: number; height?: number };
   if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() }); return; }
   const validTypes = ["code128", "qr"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
@@ -1454,21 +1627,36 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
     const ok = await deductCredits(req, res, "workflow-agent", 25);
     if (!ok) return;
   }
-  if (!anthropic) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { goal, context, steps } = req.body as { goal?: string; context?: string; steps?: number };
-  if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal is required", request_id: reqId() }); return; }
+  if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
+  const goal = req.body.goal ?? req.body.task ?? req.body.objective;
+  const { context } = req.body as { context?: string };
+  const requestedSteps = Number(req.body.steps ?? req.body.max_steps ?? 3);
+  const stepCount = Number.isFinite(requestedSteps) ? Math.max(1, Math.min(10, Math.floor(requestedSteps))) : 3;
+  if (!goal) { res.status(400).json({ ok: false, error: "invalid_request", message: "goal (or task/objective) is required", request_id: reqId() }); return; }
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAnthropic()!.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 3000,
       messages: [{
         role: "user",
-        content: `You are an autonomous agent. Complete this goal in ${steps ?? 3} steps, then provide a final answer.\n\nGoal: ${goal}\n${context ? `Context: ${context}` : ""}\n\nReturn ONLY JSON:\n{"steps": [{"step": 1, "action": "...", "result": "..."}], "final_answer": "...", "success": true}`,
+        content: `You are an autonomous agent. Complete this goal in ${stepCount} steps, then provide a final answer.\n\nGoal: ${goal}\n${context ? `Context: ${context}` : ""}\n\nReturn ONLY JSON:\n{"steps": [{"step": 1, "action": "...", "result": "..."}], "final_answer": "...", "success": true}`,
       }],
     });
     const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { steps?: unknown[]; final_answer?: string; success?: boolean };
-    res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
+    const parsedText = extractJsonObject(raw);
+    if (parsedText) {
+      const parsed = JSON.parse(parsedText) as { steps?: unknown[]; final_answer?: string; success?: boolean };
+      res.json({ ok: true, goal, steps: parsed.steps ?? [], final_answer: parsed.final_answer ?? "", success: parsed.success ?? true, request_id: reqId() });
+      return;
+    }
+    res.json({
+      ok: true,
+      goal,
+      steps: [{ step: 1, action: "model_response", result: raw.trim() }],
+      final_answer: raw.trim(),
+      success: true,
+      request_id: reqId(),
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: "workflow_error", message: safeErr(e), request_id: reqId() });
   }
@@ -1512,7 +1700,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
   const providers: Array<{ name: string; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
 
-  if (anthropic || oraclByokAnthropicKey) {
+  if (getAnthropic() || oraclByokAnthropicKey) {
     const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
     providers.push({
       name: "anthropic",
@@ -1528,7 +1716,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
           const text = (d.content || []).find((b: any) => b.type === "text")?.text ?? "";
           return { text, model: oracleModel, usage: { input_tokens: d.usage?.input_tokens ?? 0, output_tokens: d.usage?.output_tokens ?? 0 } };
         }
-        const msg = await anthropic!.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
+        const msg = await getAnthropic()!.messages.create({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] });
         const text = (msg.content as any[]).filter(b => b.type === "text").map(b => b.text).join("") ?? "";
         return { text, model: oracleModel, usage: { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens } };
       },
@@ -1618,19 +1806,83 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
 const cgHeaders = (): Record<string, string> => {
   const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
   const key = config.coingecko?.apiKey;
-  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-demo-api-key"] = key; // demo key header (upgrade to x-cg-pro-api-key if switching to Pro tier)
+  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-pro-api-key"] = key;
   return h;
+};
+// Use pro endpoint when a CoinGecko API key is configured, otherwise fall back to free tier
+const cgBase = (): string => {
+  const key = config.coingecko?.apiKey;
+  return (key && key.length > 10 && !key.startsWith("REPLACE"))
+    ? "https://pro-api.coingecko.com/api/v3"
+    : "https://api.coingecko.com/api/v3";
+};
+
+// Ticker → CoinGecko slug map. Lets users pass BTC/ETH/etc and have it resolved
+// to the canonical CoinGecko id. Slugs (e.g. "bitcoin") still pass through as-is.
+const TICKER_TO_SLUG: Record<string, string> = {
+  btc: "bitcoin",
+  eth: "ethereum",
+  sol: "solana",
+  xrp: "ripple",
+  ada: "cardano",
+  doge: "dogecoin",
+  matic: "matic-network",
+  avax: "avalanche-2",
+  dot: "polkadot",
+  link: "chainlink",
+  uni: "uniswap",
+  usdt: "tether",
+  usdc: "usd-coin",
+  bnb: "binancecoin",
+  trx: "tron",
+  shib: "shiba-inu",
+  ltc: "litecoin",
+  bch: "bitcoin-cash",
+  atom: "cosmos",
+  near: "near",
+  fil: "filecoin",
+  algo: "algorand",
+  vet: "vechain",
+  icp: "internet-computer",
+  sand: "the-sandbox",
+  mana: "decentraland",
+  ftm: "fantom",
+  hbar: "hedera-hashgraph",
+  etc: "ethereum-classic",
+  xlm: "stellar",
+  aave: "aave",
+  crv: "curve-dao-token",
+  mkr: "maker",
+  comp: "compound-governance-token",
+  ldo: "lido-dao",
+  arb: "arbitrum",
+  op: "optimism",
+};
+
+// Normalize a user-provided token reference. If it looks like a ticker (all-caps
+// original OR found in the ticker map), return the CoinGecko slug. Otherwise
+// pass through as-is so existing slug inputs ("bitcoin") keep working.
+const normalizeCoinId = (input: string): string => {
+  if (!input) return input;
+  const raw = input.trim();
+  const lower = raw.toLowerCase();
+  const isAllCaps = raw === raw.toUpperCase() && /[A-Z]/.test(raw);
+  if (isAllCaps && TICKER_TO_SLUG[lower]) return TICKER_TO_SLUG[lower];
+  if (TICKER_TO_SLUG[lower]) return TICKER_TO_SLUG[lower];
+  return lower;
 };
 
 // ─── crypto-price ────────────────────────────────────────────────────────────
 router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-price", 1); if (!ok) return; }
-  const { symbol, currency = "usd" } = req.body as { symbol?: string; currency?: string };
-  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
+  const body = req.body as { symbol?: string; coin?: string; currency?: string };
+  const symbol = body.symbol ?? body.coin;
+  const currency = body.currency ?? "usd";
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required (e.g. bitcoin, ethereum)", request_id: reqId() }); return; }
   try {
-    const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
+    const id = normalizeCoinId(symbol);
+    const r = await fetch(`${cgBase()}/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as Record<string, Record<string, number>>;
     if (!data || !data[id]) {
@@ -1646,11 +1898,14 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
 router.post("/crypto-ohlcv", ...toolMiddleware("crypto-ohlcv"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-ohlcv", 2); if (!ok) return; }
-  const { symbol, days = 7, currency = "usd" } = req.body as { symbol?: string; days?: number; currency?: string };
-  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
+  const body = req.body as { symbol?: string; coin?: string; days?: number; currency?: string };
+  const symbol = body.symbol ?? body.coin;
+  const days = body.days ?? 7;
+  const currency = body.currency ?? "usd";
+  if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol (or coin) is required", request_id: reqId() }); return; }
   try {
-    const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
+    const id = normalizeCoinId(symbol);
+    const r = await fetch(`${cgBase()}/coins/${id}/ohlc?vs_currency=${currency}&days=${days}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found`, request_id: reqId() }); return; }
     const raw = await r.json() as number[][];
     const candles = raw.map(([ts, o, h, l, c]) => ({ timestamp: ts, open: o, high: h, low: l, close: c }));
@@ -1669,7 +1924,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const n = Math.min(Math.max(1, limit), 100);
 
     // Try CoinGecko with exponential backoff (Render IPs get rate-limited)
-    const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
+    const cgUrl = `${cgBase()}/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=${n}&page=1&sparkline=false`;
     const _cgHeaders = cgHeaders();
     type CgCoin = { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number };
     let cgData: CgCoin[] | null = null;
@@ -1748,7 +2003,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
   try {
     const id = symbol.toLowerCase().trim();
-    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
+    const r = await fetch(`${cgBase()}/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
     if (!r.ok) {
       console.warn(`[crypto-sentiment] CoinGecko returned ${r.status} for '${id}'`);
       if (r.status === 429) { res.status(429).json({ ok: false, error: "rate_limited", message: "CoinGecko rate limit hit. Try again in a moment.", request_id: reqId() }); return; }
@@ -1772,7 +2027,9 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
 router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-news", 2); if (!ok) return; }
-  const { symbol, limit = 10 } = req.body as { symbol?: string; limit?: number };
+  const body = req.body as { symbol?: string; coin?: string; limit?: number };
+  const symbol = body.symbol ?? body.coin;
+  const limit = body.limit ?? 10;
   const n = Math.min(Math.max(1, limit), 20);
 
   // Helper: parse RSS feed
@@ -1818,10 +2075,15 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
       for (const r of results) {
         if (r.status === "fulfilled") articles.push(...r.value);
       }
-      // Filter by symbol if provided
+      // Filter by symbol if provided. Match either the raw input or its CoinGecko slug
+      // form, so users passing "BTC" still match articles mentioning "bitcoin".
       if (symbol && articles.length > 0) {
-        const q = symbol.toLowerCase();
-        const filtered = articles.filter(a => a.title.toLowerCase().includes(q));
+        const q = symbol.toLowerCase().trim();
+        const slug = normalizeCoinId(symbol);
+        const filtered = articles.filter(a => {
+          const t = a.title.toLowerCase();
+          return t.includes(q) || (slug && slug !== q && t.includes(slug));
+        });
         if (filtered.length > 0) articles = filtered;
       }
       articles = articles.slice(0, n);
@@ -1837,10 +2099,10 @@ router.post("/crypto-news", ...toolMiddleware("crypto-news"), async (req: Authed
 router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "token-lookup", 1); if (!ok) return; }
-  const { query } = req.body as { query?: string };
-  if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  const query = (req.body.query ?? req.body.text ?? req.body.symbol) as string | undefined;
+  if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query (or text/symbol) is required", request_id: reqId() }); return; }
   try {
-    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
+    const r = await fetch(`${cgBase()}/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
     if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
@@ -1850,11 +2112,16 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
 
 // ─── text-to-speech ───────────────────────────────────────────────────────────
 router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: AuthedRequest, res: Response): Promise<void> => {
-  const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "text-to-speech", 10); if (!ok) return; }
   const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body as { text?: string; voice_id?: string; model_id?: string; stability?: number; similarity_boost?: number };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 5000) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() }); return; }
+  const paid = isX402Paid(req);
+  if (!paid) {
+    // Metered by length: 25 base + 8 credits per 100 chars (covers ElevenLabs COGS)
+    const ttsCost = byokAdjustedCost(req, 25 + 8 * Math.ceil(text.length / 100));
+    const ok = await deductCredits(req, res, "text-to-speech", ttsCost);
+    if (!ok) return;
+  }
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() }); return; }
   try {
@@ -1877,7 +2144,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
 // ─── transcribe-audio ─────────────────────────────────────────────────────────
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 12); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", byokAdjustedCost(req, 25)); if (!ok) return; }
   const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -1922,16 +2189,22 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
 // ─── email-send ───────────────────────────────────────────────────────────────
 router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "email-send", 3); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "email-send");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "email-send", 3);
+    if (!ok) return;
+  }
   const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
   if (!to || !subject || (!body && !html)) { res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return; }
   if (!to.includes("@")) { res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return; }
+  if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
+  if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return; }
   try {
-    const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
-    const htmlBody = html ?? `<p>${(body ?? "").replace(/\n/g, "<br>")}</p>`;
-    const textBody = body ?? html?.replace(/<[^>]+>/g, "") ?? "";
+    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
+    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1952,7 +2225,12 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
 // ─── send-email (alias — same logic as email-send) ────────────────────────────
 router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "send-email", 3); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "send-email");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "send-email", 3);
+    if (!ok) return;
+  }
   const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
   if (!to || !subject || (!body && !html)) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return;
@@ -1960,14 +2238,15 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
   if (!to.includes("@")) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return;
   }
+  if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
+  if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
     res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return;
   }
   try {
-    const fromAddr = from ?? "Arch Tools <no-reply@archtools.dev>";
-    const htmlBody = html ?? "<p>" + (body ?? "").replace(/\n/g, "<br>") + "</p>";
-    const textBody = body ?? (html ?? "").replace(/<[^>]+>/g, "");
+    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
+    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1986,17 +2265,20 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
-  const { prompt, size = "1024x1024", quality = "standard", style = "vivid", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; style?: string; n?: number };
+  const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; n?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
   const safeSize = validSizes.includes(size) ? size : "1024x1024";
+  // gpt-image-1 quality: low/medium/high
+  const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+  const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: reqId() }); return; }
   try {
     const r = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, size: safeSize, quality, style, n: Math.min(n, 1), response_format: "url" })
+      body: JSON.stringify({ model: "gpt-image-1", prompt, size: safeSize, quality: safeQuality, n: Math.min(n, 1) })
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
@@ -2012,7 +2294,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
           if (sr.ok) {
             const sd = await sr.json() as { image?: string };
             if (sd.image) {
-              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality, style, source: "stability", request_id: reqId() }); return;
+              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return;
             }
           }
         } catch (_) { /* fall through */ }
@@ -2021,7 +2303,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
     const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
-    res.json({ ok: true, images, count: images.length, size: safeSize, quality, style, request_id: reqId() });
+    res.json({ ok: true, images, count: images.length, size: safeSize, quality: safeQuality, request_id: reqId() });
   } catch (e) { console.error("[design-create]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2086,17 +2368,22 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req: A
   req.url = "/design-create";
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
-  const { prompt, size = "1024x1024", quality = "standard" } = req.body as { prompt?: string; size?: string; quality?: string };
+  const { prompt, size = "1024x1024", quality = "medium" } = req.body as { prompt?: string; size?: string; quality?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
   if (!OPENAI_KEY) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: reqId() }); return; }
+  const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+  const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
+  const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
+  const safeSize = validSizes.includes(size) ? size : "1024x1024";
   try {
     const r = await axios.post("https://api.openai.com/v1/images/generations",
-      { model: "dall-e-3", prompt, n: 1, size, quality },
+      { model: "gpt-image-1", prompt, n: 1, size: safeSize, quality: safeQuality },
       { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 }
     );
-    const img = (r.data as { data: Array<{ url: string; revised_prompt: string }> }).data[0];
-    res.json({ ok: true, image_url: img.url, revised_prompt: img.revised_prompt, size, quality, credits_used: 15, request_id: reqId() });
+    const img = (r.data as { data: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }).data[0];
+    const image_url = img.url ?? (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
+    res.json({ ok: true, image_url, revised_prompt: img.revised_prompt ?? null, size: safeSize, quality: safeQuality, request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2193,8 +2480,8 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
 router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "research-report", 15); if (!ok) return; }
-  const query = String(req.body.query ?? req.query.query ?? "").trim();
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", byokAdjustedCost(req, 40)); if (!ok) return; }
+  const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
@@ -2396,7 +2683,8 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     const ok = await deductCredits(req, res, "session-create", 5);
     if (!ok) return;
   }
-  const { namespace, system_prompt, model } = req.body as { namespace?: string; system_prompt?: string; model?: string };
+  const { namespace, model } = req.body as { namespace?: string; model?: string };
+  const systemPrompt = req.body.system_prompt ?? req.body.system;
   if (!namespace || typeof namespace !== "string") {
     res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
     return;
@@ -2407,10 +2695,11 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     smart: "claude-sonnet-4-6",
     deep: "claude-opus-4-6",
   };
-  const resolvedModel = model ?? "claude-sonnet-4-6";
+  const SESSION_MODEL_ALIASES: Record<string, string> = { "claude": "claude-sonnet-4-6", "gpt": "gpt-4o", "gpt4": "gpt-4o", "gpt-4": "gpt-4o" };
+  const resolvedModel = model ? (SESSION_MODEL_ALIASES[model.toLowerCase()] ?? model) : "claude-sonnet-4-6";
   const ALLOWED = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"];
   if (!ALLOWED.includes(resolvedModel)) {
-    res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: ${ALLOWED.join(", ")}`, request_id: reqId() });
+    res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: claude, gpt4, ${ALLOWED.join(", ")}`, request_id: reqId() });
     return;
   }
 
@@ -2420,7 +2709,7 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
   const session: SessionData = {
     session_id,
     namespace: namespace.slice(0, 100),
-    system_prompt: system_prompt ? String(system_prompt).slice(0, 4000) : null,
+    system_prompt: systemPrompt ? String(systemPrompt).slice(0, 4000) : null,
     model: resolvedModel,
     messages: [],
     created_at,
@@ -2485,11 +2774,11 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     let responseText = "";
 
     if (CLAUDE_MODELS.includes(model)) {
-      if (!anthropic) {
+      if (!getAnthropic()) {
         res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
         return;
       }
-      const msg = await anthropic.messages.create({
+      const msg = await getAnthropic()!.messages.create({
         model,
         max_tokens: 2048,
         ...(session.system_prompt ? { system: session.system_prompt } : {}),
@@ -2536,27 +2825,69 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 
 // ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
 router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
-  const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "video-generate", 50); if (!ok) return; }
   const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body as { prompt?: string; duration?: number; aspect_ratio?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
+  // Scaled by duration at 125 credits/second, 500 minimum (5s = 625, 10s = 1250)
+  const videoCost = byokAdjustedCost(req, Math.max(500, duration * 125));
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "video-generate", videoCost);
+    if (!ok) return;
+  }
+  const ratioAliases: Record<string, string> = {
+    "16:9": "1280:720",
+    "9:16": "720:1280",
+    "1280:768": "1280:720",
+    "768:1280": "720:1280",
+  };
+  const resolvedRatio = ratioAliases[aspect_ratio] ?? aspect_ratio;
+  const validRatios = ["1280:720", "720:1280"];
+  if (!validRatios.includes(resolvedRatio)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "aspect_ratio must be one of: 16:9, 9:16, 1280:720, 720:1280", request_id: reqId() });
+    return;
+  }
   const runwayKey = process.env.RUNWAY_API_KEY;
   if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
   try {
-    // Start video generation task
-    const startResp = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
-      body: JSON.stringify({ model: "gen3a_turbo", promptText: prompt, duration, ratio: aspect_ratio, watermark: false }),
-    });
-    if (!startResp.ok) {
-      const err = await startResp.text();
-      console.error("[video-generate] Runway start error:", startResp.status, err);
-      res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${startResp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+    const candidateModels = [process.env.RUNWAY_VIDEO_MODEL, "gen4.5"].filter((value, index, self): value is string => !!value && self.indexOf(value) === index);
+    let startResp: import("axios").AxiosResponse<{ id?: string }> | null = null;
+    let startError: string | null = null;
+    let selectedModel: string | null = null;
+
+    for (const model of candidateModels) {
+      const attempt = await axios.post("https://api.dev.runwayml.com/v1/text_to_video",
+        { model, promptText: prompt, duration, ratio: resolvedRatio, watermark: false },
+        {
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+          timeout: 30000,
+          validateStatus: () => true,
+        });
+
+      if (attempt.status >= 200 && attempt.status < 300) {
+        startResp = attempt as import("axios").AxiosResponse<{ id?: string }>;
+        selectedModel = model;
+        break;
+      }
+
+      const err = typeof attempt.data === "string" ? attempt.data : JSON.stringify(attempt.data);
+      if (attempt.status === 403 && /not available/i.test(err)) {
+        startError = `Runway model ${model} is not available for this API key`;
+        continue;
+      }
+
+      console.error("[video-generate] Runway start error:", attempt.status, err);
+      res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
-    const startData = await startResp.json() as { id?: string };
+
+    if (!startResp || !selectedModel) {
+      res.status(503).json({ ok: false, error: "not_configured", message: startError ?? "No compatible Runway model is configured for this API key", request_id: reqId() }); return;
+    }
+
+    const startData = startResp.data as { id?: string };
     const taskId = startData.id;
     if (!taskId) { res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
 
@@ -2564,11 +2895,13 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
     let videoUrl: string | null = null;
     for (let i = 0; i < 24; i++) {
       await new Promise(r => setTimeout(r, 5000));
-      const pollResp = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+      const pollResp = await axios.get(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: { "Authorization": `Bearer ${runwayKey}`, "X-Runway-Version": "2024-11-06" },
+        timeout: 15000,
+        validateStatus: () => true,
       });
-      if (!pollResp.ok) continue;
-      const pollData = await pollResp.json() as { status?: string; output?: string[]; failure?: string; failureCode?: string };
+      if (pollResp.status < 200 || pollResp.status >= 300) continue;
+      const pollData = pollResp.data as { status?: string; output?: string[]; failure?: string; failureCode?: string };
       if (pollData.status === "SUCCEEDED" && pollData.output?.length) {
         videoUrl = pollData.output[0];
         break;
@@ -2578,36 +2911,60 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
     }
     if (!videoUrl) { res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() }); return; }
-    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio, task_id: taskId, credits_used: 50, request_id: reqId() });
+    res.json({ ok: true, video_url: videoUrl, duration, aspect_ratio: resolvedRatio, model: selectedModel, task_id: taskId, credits_used: paid ? 0 : videoCost, request_id: reqId() });
   } catch (e) { console.error("[video-generate]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── 55. IMAGE-REMOVE-BG (RemoveBG) ──────────────────────────────────────────
 router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", 10); if (!ok) return; }
-  const { image_url, size = "auto" } = req.body as { image_url?: string; size?: string };
-  if (!image_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url is required", request_id: reqId() }); return; }
-  const validSizes = ["auto", "preview", "hd"];
+  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", byokAdjustedCost(req, 350)); if (!ok) return; }
+  const { image_url, image_base64: inputBase64, size = "auto" } = req.body as { image_url?: string; image_base64?: string; size?: string };
+  if (!image_url && !inputBase64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
+  const validSizes = ["auto", "preview", "hd", "full"];
   if (!validSizes.includes(size)) { res.status(400).json({ ok: false, error: "invalid_request", message: `size must be one of: ${validSizes.join(", ")}`, request_id: reqId() }); return; }
   const removebgKey = process.env.REMOVEBG_API_KEY;
   if (!removebgKey) { res.status(503).json({ ok: false, error: "not_configured", message: "REMOVEBG_API_KEY not configured", request_id: reqId() }); return; }
   try {
+    // Download the image ourselves and send base64 to RemoveBG. RemoveBG's own
+    // image_url fetcher is frequently blocked/429'd by CDNs (e.g. Wikimedia),
+    // which made valid requests fail.
+    let imgB64 = inputBase64;
+    if (image_url && !imgB64) {
+      try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
+      try {
+        const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 20000, maxContentLength: 22 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)" } });
+        imgB64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
+      } catch (dlErr) {
+        const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
+        res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() }); return;
+      }
+    }
     const resp = await fetch("https://api.remove.bg/v1.0/removebg", {
       method: "POST",
       headers: { "X-Api-Key": removebgKey, "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ image_url, size, format: "png", type: "auto" }),
+      body: JSON.stringify({ image_file_b64: imgB64, size: size === "hd" ? "full" : size, format: "png", type: "auto" }),
+      signal: AbortSignal.timeout(45000),
     });
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "removebg_error", message: `RemoveBG returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      // NOTE: never return 502 from origin — Cloudflare replaces origin 502
+      // bodies with its own error page, hiding our JSON from the client.
+      let detail = err.slice(0, 300);
+      try { const j = JSON.parse(err) as { errors?: Array<{ title?: string }> }; detail = j.errors?.[0]?.title ?? detail; } catch { /* keep raw */ }
+      const status = resp.status >= 400 && resp.status < 500 ? 400 : 503;
+      res.status(status).json({ ok: false, error: "removebg_error", message: `RemoveBG rejected the request (${resp.status}): ${detail.slice(0, 200)}`, request_id: reqId() }); return;
     }
     const data = await resp.json() as { data?: { result_b64?: string; foreground_top?: number; foreground_left?: number; foreground_width?: number; foreground_height?: number } };
     const imageBase64 = data.data?.result_b64 ?? "";
-    if (!imageBase64) { res.status(502).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() }); return; }
+    if (!imageBase64) { res.status(503).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() }); return; }
     res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 10, request_id: reqId() });
-  } catch (e) { console.error("[image-remove-bg]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+  } catch (e) {
+    console.error("[image-remove-bg]", e);
+    const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    res.status(isTimeout ? 503 : 500).json({ ok: false, error: isTimeout ? "upstream_timeout" : "fetch_error", message: isTimeout ? "RemoveBG did not respond in time. Please retry." : safeErr(e), request_id: reqId() });
+  }
 });
 
 // ─── 56. EMAIL-FIND (Hunter.io) ──────────────────────────────────────────────
@@ -2619,34 +2976,73 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
   const hunterKey = process.env.HUNTER_API_KEY;
   if (!hunterKey) { res.status(503).json({ ok: false, error: "not_configured", message: "HUNTER_API_KEY not configured", request_id: reqId() }); return; }
   try {
+    const hasFullName = !!(first_name && last_name);
+    const endpoint = hasFullName ? "email-finder" : "domain-search";
     const params = new URLSearchParams({ domain, api_key: hunterKey });
-    if (first_name) params.set("first_name", first_name);
-    if (last_name) params.set("last_name", last_name);
-    const resp = await fetch(`https://api.hunter.io/v2/email-finder?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
+    if (hasFullName) {
+      params.set("first_name", first_name!);
+      params.set("last_name", last_name!);
+    }
+    const resp = await fetch(`https://api.hunter.io/v2/${endpoint}?${params.toString()}`, { signal: AbortSignal.timeout(15000) });
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[email-find] Hunter error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "hunter_error", message: `Hunter.io returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      // NOTE: never return 502 from origin — Cloudflare replaces origin 502 bodies
+      // with its own error page, hiding our JSON from the client.
+      let detail = err.slice(0, 300);
+      try { const j = JSON.parse(err) as { errors?: Array<{ details?: string }> }; detail = j.errors?.[0]?.details ?? detail; } catch { /* keep raw */ }
+      const status = resp.status >= 400 && resp.status < 500 ? 400 : 503;
+      res.status(status).json({ ok: false, error: "hunter_error", message: `Hunter.io rejected the request (${resp.status}): ${detail.slice(0, 200)}`, request_id: reqId() }); return;
     }
-    const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
-    const result = data.data;
-    if (!result?.email) { res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() }); return; }
-    res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, credits_used: 5, request_id: reqId() });
-  } catch (e) { console.error("[email-find]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
+    if (hasFullName) {
+      const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
+      const result = data.data;
+      if (!result?.email) { res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() }); return; }
+      res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, match_type: "person", credits_used: 5, request_id: reqId() });
+      return;
+    }
+    const data = await resp.json() as { data?: { emails?: Array<{ value?: string; confidence?: number; first_name?: string; last_name?: string; position?: string; department?: string }> ; organization?: string } };
+    const emails = data.data?.emails ?? [];
+    if (!emails.length) { res.status(404).json({ ok: false, error: "not_found", message: "No emails found for the given domain", request_id: reqId() }); return; }
+    res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 5, request_id: reqId() });
+  } catch (e) {
+    console.error("[email-find]", e);
+    const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    res.status(isTimeout ? 503 : 500).json({ ok: false, error: isTimeout ? "upstream_timeout" : "fetch_error", message: isTimeout ? "Hunter.io did not respond in time. Please retry." : safeErr(e), request_id: reqId() });
+  }
 });
 
 // ─── 57. SEMANTIC-SEARCH (Exa) ───────────────────────────────────────────────
 router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "semantic-search", 8); if (!ok) return; }
-  const { query, num_results = 5, type = "neural" } = req.body as { query?: string; num_results?: number; type?: string };
+  const { query, num_results = 5, limit, type = "neural", documents } = req.body as { query?: string; num_results?: number; limit?: number; type?: string; documents?: string[] };
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query is required", request_id: reqId() }); return; }
+  const n = Math.min(Math.max(1, Number(limit ?? num_results ?? 5)), 20);
+
+  if (Array.isArray(documents) && documents.length > 0) {
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const queryTerms = new Set(normalize(query).split(" ").filter(Boolean));
+    const scored = documents.map((doc, index) => {
+      const text = typeof doc === "string" ? doc : JSON.stringify(doc);
+      const norm = normalize(text);
+      const words = new Set(norm.split(" ").filter(Boolean));
+      let overlap = 0;
+      for (const term of queryTerms) if (words.has(term)) overlap += 1;
+      const phraseBoost = norm.includes(normalize(query)) ? 2 : 0;
+      const score = queryTerms.size ? (overlap / queryTerms.size) + phraseBoost : 0;
+      return { index, text: text.slice(0, 1000), score };
+    }).sort((a, b) => b.score - a.score).slice(0, n);
+
+    res.json({ ok: true, query, type: "documents", results: scored, count: scored.length, documents_searched: documents.length, credits_used: 8, request_id: reqId() });
+    return;
+  }
+
   const validTypes = ["neural", "keyword"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
   const exaKey = process.env.EXA_API_KEY;
   if (!exaKey) { res.status(503).json({ ok: false, error: "not_configured", message: "EXA_API_KEY not configured", request_id: reqId() }); return; }
   try {
-    const n = Math.min(Math.max(1, num_results), 20);
     const resp = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${exaKey}` },
@@ -2666,7 +3062,12 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
 // ─── 58. SOCIAL-POST (X/Twitter) ─────────────────────────────────────────────
 router.post("/social-post", ...toolMiddleware("social-post"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "social-post", 5); if (!ok) return; }
+  if (!paid) {
+    const withinLimit = await enforceDailyToolLimit(req, res, "social-post");
+    if (!withinLimit) return;
+    const ok = await deductCredits(req, res, "social-post", 5);
+    if (!ok) return;
+  }
   const { text, reply_to } = req.body as { text?: string; reply_to?: string };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 280) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 280 characters or less", request_id: reqId() }); return; }
@@ -2674,48 +3075,85 @@ router.post("/social-post", ...toolMiddleware("social-post"), async (req: Authed
   const apiSecret = process.env.X_API_SECRET;
   const accessToken = process.env.X_ACCESS_TOKEN;
   const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
-  if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
-    res.status(503).json({ ok: false, error: "not_configured", message: "X/Twitter API credentials not configured", request_id: reqId() }); return;
+  const oauth2UserToken =
+    process.env.X_USER_ACCESS_TOKEN
+    ?? process.env.X_OAUTH2_USER_ACCESS_TOKEN
+    ?? (accessToken && !accessTokenSecret ? accessToken : undefined)
+    ?? undefined;
+  const hasOauth1 = !!(apiKey && apiSecret && accessToken && accessTokenSecret);
+  if (!oauth2UserToken && !hasOauth1) {
+    res.status(503).json({
+      ok: false,
+      error: "not_configured",
+      message: "X posting requires either X_USER_ACCESS_TOKEN/X_OAUTH2_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens",
+      request_id: reqId()
+    }); return;
   }
   try {
-    // OAuth 1.0a signature generation
-    const method = "POST";
-    const url = "https://api.twitter.com/2/tweets";
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = crypto.randomBytes(16).toString("hex");
-
-    const oauthParams: Record<string, string> = {
-      oauth_consumer_key: apiKey,
-      oauth_nonce: nonce,
-      oauth_signature_method: "HMAC-SHA1",
-      oauth_timestamp: timestamp,
-      oauth_token: accessToken,
-      oauth_version: "1.0",
-    };
-
-    // Create signature base string
-    const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
-    const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-    const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
-    const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessTokenSecret)}`;
-    const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
-
-    const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
-
     const body: Record<string, unknown> = { text };
     if (reply_to) body.reply = { in_reply_to_tweet_id: reply_to };
+    const url = "https://api.twitter.com/2/tweets";
+    const errors: string[] = [];
+    let data: { data?: { id?: string; text?: string } } | null = null;
 
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": authHeader },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) {
-      const err = await resp.text();
-      console.error("[social-post] Twitter error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "twitter_error", message: `Twitter API returned ${resp.status}: ${err.slice(0, 300)}`, request_id: reqId() }); return;
+    if (oauth2UserToken) {
+      const bearerResp = await axios.post(url, body, {
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${oauth2UserToken}` },
+        timeout: 15000,
+        validateStatus: () => true,
+      });
+      if (bearerResp.status >= 200 && bearerResp.status < 300) {
+        data = bearerResp.data as { data?: { id?: string; text?: string } };
+      } else {
+        const err = typeof bearerResp.data === "string" ? bearerResp.data : JSON.stringify(bearerResp.data);
+        errors.push(`Bearer auth returned ${bearerResp.status}: ${err.slice(0, 300)}`);
+      }
     }
-    const data = await resp.json() as { data?: { id?: string; text?: string } };
+
+    if (!data && hasOauth1 && apiKey && apiSecret && accessToken && accessTokenSecret) {
+      const method = "POST";
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const nonce = crypto.randomBytes(16).toString("hex");
+      const oauthParams: Record<string, string> = {
+        oauth_consumer_key: apiKey,
+        oauth_nonce: nonce,
+        oauth_signature_method: "HMAC-SHA1",
+        oauth_timestamp: timestamp,
+        oauth_token: accessToken,
+        oauth_version: "1.0",
+      };
+      const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
+      const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+      const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+      const signingKey = `${apiSecret}&${accessTokenSecret}`;
+      const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
+      const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
+      const oauthResp = await axios.post(url, body, {
+        headers: { "Content-Type": "application/json", "Authorization": authHeader },
+        timeout: 15000,
+        validateStatus: () => true,
+      });
+      if (oauthResp.status >= 200 && oauthResp.status < 300) {
+        data = oauthResp.data as { data?: { id?: string; text?: string } };
+      } else {
+        const err = typeof oauthResp.data === "string" ? oauthResp.data : JSON.stringify(oauthResp.data);
+        errors.push(`OAuth 1.0a returned ${oauthResp.status}: ${err.slice(0, 300)}`);
+      }
+    }
+
+    if (!data) {
+      console.error("[social-post] X auth failed:", errors.join(" | "));
+      const authConfigError = errors.some(msg => /unsupported authentication|oauth1 app permissions/i.test(msg));
+      res.status(authConfigError ? 503 : 502).json({
+        ok: false,
+        error: authConfigError ? "not_configured" : "twitter_error",
+        message: authConfigError
+          ? "X posting is configured with unsupported auth. Use X_USER_ACCESS_TOKEN or X_OAUTH2_USER_ACCESS_TOKEN for OAuth 2.0 user context, or enable write permissions for your OAuth 1.0a app and regenerate the access token."
+          : (errors.join(" | ") || "X API post failed"),
+        request_id: reqId()
+      });
+      return;
+    }
     const tweetId = data.data?.id ?? "";
     res.json({ ok: true, tweet_id: tweetId, url: tweetId ? `https://x.com/i/web/status/${tweetId}` : "", text: data.data?.text ?? text, credits_used: 5, request_id: reqId() });
   } catch (e) { console.error("[social-post]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
@@ -3009,7 +3447,7 @@ router.post("/crypto-dominance", ...toolMiddleware("crypto-dominance"), async (r
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "crypto-dominance", 1); if (!ok) return; }
   try {
-    const r = await fetch("https://api.coingecko.com/api/v3/global", { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
+    const r = await fetch(`${cgBase()}/global`, { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
     if (!r.ok) {
       try {
         const ccResp = await fetch("https://api.coincap.io/v2/assets?limit=2", { signal: AbortSignal.timeout(8000) });

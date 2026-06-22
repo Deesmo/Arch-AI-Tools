@@ -124,7 +124,7 @@ router.post(
 
       const address = response.data?.address;
       if (!address) {
-        throw new Error(`CDP API returned no address. Response: ${JSON.stringify(response.data)}`);
+        throw new Error("CDP API returned no wallet address");
       }
 
       const walletRecord: WalletRecord = {
@@ -165,13 +165,10 @@ router.post(
         return;
       }
 
-      // Expose detailed error temporarily for debugging (remove after fix confirmed)
-      const isAxiosError = (err as any)?.response?.data;
       res.status(500).json({
         ok: false,
         error: "wallet_provision_failed",
         message: "Failed to create wallet. Please try again later.",
-        _debug_cdp_error: isAxiosError ? JSON.stringify((err as any).response.data).slice(0, 300) : message.slice(0, 300),
       });
     }
   }

@@ -7,7 +7,7 @@
  *
  * The full registration (/v1/agent/register) already gives FREE_MONTHLY_CREDITS
  * (default 1000). This trial endpoint is for quick, minimal onboarding with
- * a smaller credit grant (100 credits) — ideal for embedded signups, widget
+ * a configurable trial credit grant (default 250) — ideal for embedded signups, widget
  * integrations, and partner landing pages.
  */
 declare const router: import("express-serve-static-core").Router;

@@ -17,6 +17,8 @@ import {
   updateAgentReputation,
   BADGE_THRESHOLDS,
 } from "../services/reputation.js";
+import { validateUrl } from "../lib/ssrf.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
 
 const router = Router();
 
@@ -229,6 +231,16 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (isDisposableEmail(email)) {
+      res.status(400).json({
+        ok: false,
+        error: "disposable_email",
+        message: "Disposable email addresses are not allowed. Please use a real email address.",
+        request_id: reqId(),
+      });
+      return;
+    }
+
     // Validate wallet address if provided (basic hex check)
     if (wallet_address && !/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
       res.status(400).json({
@@ -243,12 +255,22 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Validate callback URL if provided
     if (callback_url) {
       try {
-        new URL(callback_url);
-      } catch {
+        const parsed = new URL(callback_url);
+        if (parsed.protocol !== "https:") {
+          res.status(400).json({
+            ok: false,
+            error: "invalid_request",
+            message: "Invalid callback URL — must use HTTPS",
+            request_id: reqId(),
+          });
+          return;
+        }
+        await validateUrl(callback_url);
+      } catch (e) {
         res.status(400).json({
           ok: false,
           error: "invalid_request",
-          message: "Invalid callback URL",
+          message: e instanceof Error ? e.message : "Invalid callback URL",
           request_id: reqId(),
         });
         return;
@@ -267,17 +289,24 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Anti-farming: normalized-email identity + per-IP daily signup caps
+    const limitBlock = await enforceSignupLimits(email, req.ip);
+    if (limitBlock) {
+      res.status(limitBlock.status).json({ ok: false, error: limitBlock.error, message: limitBlock.message, request_id: reqId() });
+      return;
+    }
+
     // Generate API key
     const crypto = await import("crypto");
     const bcrypt = await import("bcryptjs");
     const apiKey = `arch_${crypto.randomBytes(24).toString("hex")}`;
     const apiKeyPrefix = apiKey.slice(0, 12);
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
-    const freeCredits = parseInt(process.env.FREE_MONTHLY_CREDITS ?? "100", 10);
+    const freeCredits = SIGNUP_FREE_CREDITS;
 
+    // Only prefix + hash are persisted — the raw key is returned ONCE below.
     const agent = await prisma.agent.create({
       data: {
-        apiKey,
         apiKeyPrefix,
         apiKeyHash,
         email,
@@ -293,15 +322,26 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
+    // Email verification gate: credits stay pending until email verified.
+    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    let gatedCredits = freeCredits;
+    try {
+      gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
+    } catch (e) {
+      console.error("Verification setup failed (granting credits directly):", e);
+    }
+
     res.status(201).json({
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
-      credits: freeCredits,
+      credits: 0,
+      pending_credits: gatedCredits,
+      email_verification_required: true,
       reputation_score: 50,
       badge: "none",
       profile_url: `https://archtools.dev/api/v1/agents/${agent.id}`,
-      message: `Welcome! You have ${freeCredits} free credits. Your public profile is live.`,
+      message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. Your public profile is live.`,
       docs: "https://archtools.dev/agents",
       request_id: reqId(),
     });
@@ -350,7 +390,32 @@ router.put("/profile", requireAuth, async (req: AuthedRequest, res: Response): P
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (wallet_address !== undefined) updateData.walletAddress = wallet_address;
-    if (callback_url !== undefined) updateData.callbackUrl = callback_url;
+    if (callback_url !== undefined) {
+      if (callback_url !== null && callback_url !== "") {
+        try {
+          const parsed = new URL(callback_url);
+          if (parsed.protocol !== "https:") {
+            res.status(400).json({
+              ok: false,
+              error: "invalid_request",
+              message: "Invalid callback URL — must use HTTPS",
+              request_id: reqId(),
+            });
+            return;
+          }
+          await validateUrl(callback_url);
+        } catch (e) {
+          res.status(400).json({
+            ok: false,
+            error: "invalid_request",
+            message: e instanceof Error ? e.message : "Invalid callback URL",
+            request_id: reqId(),
+          });
+          return;
+        }
+      }
+      updateData.callbackUrl = callback_url;
+    }
     if (is_public !== undefined) updateData.isPublic = is_public;
 
     const updated = await prisma.agent.update({
