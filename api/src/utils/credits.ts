@@ -12,6 +12,7 @@ export async function deductCredits(
   toolName: string,
   cost: number
 ): Promise<boolean> {
+  const requestStartMs = Date.now();
   const agent = req.agent;
   if (!agent) {
     res.status(401).json({ ok: false, error: "unauthorized", request_id: crypto.randomUUID() });
@@ -66,6 +67,8 @@ export async function deductCredits(
             toolName,
             creditsUsed: cost,
             status: "SUCCESS",
+            statusCode: res.statusCode,
+            responseMs: Date.now() - requestStartMs,
             callerType: fp.callerType,
             callerName: fp.callerName,
             callerVersion: fp.callerVersion ?? null,
@@ -92,7 +95,7 @@ export async function deductCredits(
         },
       });
 
-      await logError(agent.id, toolName, 0);
+      await logError(agent.id, toolName, 0, res.statusCode, Date.now() - requestStartMs);
     } catch {
       // Non-fatal; never block the response path
     }
@@ -127,7 +130,9 @@ export async function deductCredits(
 export async function logError(
   agentId: string,
   toolName: string,
-  cost: number
+  cost: number,
+  statusCode?: number,
+  responseMs?: number
 ): Promise<void> {
   try {
     await prisma.apiRequest.create({
@@ -136,6 +141,8 @@ export async function logError(
         toolName,
         creditsUsed: cost,
         status: "ERROR",
+        statusCode: statusCode ?? null,
+        responseMs: responseMs ?? null,
       },
     });
 
