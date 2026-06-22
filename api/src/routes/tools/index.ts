@@ -269,8 +269,9 @@ router.post("/qr-code", ...toolMiddleware("qr-code"), async (req: AuthedRequest,
     const ok = await deductCredits(req, res, "qr-code", 2);
     if (!ok) return;
   }
-  const { text, format = "png", size = 256, error_correction = "M" } = req.body as { text?: string; format?: string; size?: number; error_correction?: string };
-  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  const { format = "png", size = 256, error_correction = "M" } = req.body as { format?: string; size?: number; error_correction?: string };
+  const text = (req.body.text ?? req.body.content) as string | undefined; // accept documented alias `content`
+  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text (or content) is required", request_id: reqId() }); return; }
   try {
     const QRCode = await import("qrcode");
     const ecl = (["L","M","Q","H"].includes(error_correction ?? "M") ? error_correction : "M") as "L"|"M"|"Q"|"H";
@@ -347,8 +348,10 @@ router.post("/transform-text", ...toolMiddleware("transform-text"), async (req: 
     const ok = await deductCredits(req, res, "transform-text", 3);
     if (!ok) return;
   }
-  const { text, mode } = req.body as { text?: string; mode?: string };
-  if (!text || !mode) { res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode are required", request_id: reqId() }); return; }
+  const { text } = req.body as { text?: string };
+  let mode = (req.body.mode ?? req.body.operation) as string | undefined; // accept documented alias `operation`
+  if (mode === "camelCase") mode = "camel"; else if (mode === "snakeCase") mode = "snake"; else if (mode === "kebabCase") mode = "kebab"; // accept documented casing variants
+  if (!text || !mode) { res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode (or operation) are required", request_id: reqId() }); return; }
   const modes = ["uppercase","lowercase","titlecase","slug","camel","snake","kebab","base64_encode","base64_decode","reverse","trim","word_count"];
   if (!modes.includes(mode)) { res.status(400).json({ ok: false, error: "invalid_request", message: `mode must be one of: ${modes.join(", ")}`, request_id: reqId() }); return; }
   let result: string | number;
@@ -1191,8 +1194,9 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     if (!ok) return;
   }
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { image_url, image_base64, media_type = "image/jpeg" } = req.body as { image_url?: string; image_base64?: string; media_type?: string };
-  if (!image_url && !image_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
+  const { image_base64, media_type = "image/jpeg" } = req.body as { image_base64?: string; media_type?: string };
+  const image_url = (req.body.image_url ?? req.body.url ?? req.body.image) as string | undefined; // accept documented alias `url`
+  if (!image_url && !image_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url (or url) or image_base64 is required", request_id: reqId() }); return; }
   try {
     let imgBase64 = image_base64;
     let imgMediaType: string = media_type;
@@ -1265,8 +1269,9 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     if (!ok) return;
   }
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { pdf_url, pdf_base64 } = req.body as { pdf_url?: string; pdf_base64?: string };
-  if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url or pdf_base64 is required", request_id: reqId() }); return; }
+  const { pdf_base64 } = req.body as { pdf_base64?: string };
+  const pdf_url = (req.body.pdf_url ?? req.body.url) as string | undefined; // accept documented alias `url`
+  if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url (or url) or pdf_base64 is required", request_id: reqId() }); return; }
   try {
     let base64Data = pdf_base64;
     if (pdf_url && !pdf_base64) {
@@ -1488,8 +1493,8 @@ router.post("/jsonpath-query", ...toolMiddleware("jsonpath-query"), async (req: 
     if (!ok) return;
   }
   const data = req.body.json ?? req.body.data;
-  const jsonPath = req.body.path as string | undefined;
-  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path are required", request_id: reqId() }); return; }
+  const jsonPath = (req.body.path ?? req.body.query) as string | undefined; // accept documented alias `query`
+  if (!data || !jsonPath) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or json) and path (or query) are required", request_id: reqId() }); return; }
   try {
     // Simple JSONPath evaluator: supports $, .key, ['key'], [index], [*], ..key
     function evalPath(obj: unknown, expr: string): unknown[] {
@@ -1573,7 +1578,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const ok = await deductCredits(req, res, "barcode-generate", 2);
     if (!ok) return;
   }
-  const barcodeData = (req.body.value ?? req.body.data ?? req.body.text) as string | undefined;
+  const barcodeData = (req.body.value ?? req.body.data ?? req.body.text ?? req.body.content) as string | undefined; // accept documented alias `content`
   const requestedType = String(req.body.type ?? req.body.format ?? "code128").toLowerCase();
   const type = requestedType === "code128" ? "code128" : requestedType;
   const { width = 250, height = 100 } = req.body as { width?: number; height?: number };
