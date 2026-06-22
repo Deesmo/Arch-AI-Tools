@@ -1,7 +1,7 @@
 {
   "name": "arch-ai-tools",
   "version": "1.6.0",
-  "description": "Arch Tools \u2014 30 production-ready API tools for developers and AI agents",
+  "description": "Arch Tools — 30 production-ready API tools for developers and AI agents",
   "private": true,
   "type": "module",
   "scripts": {
@@ -46,32 +46,34 @@
     "cors": "^2.8.5",
     "csv-parse": "^5.6.0",
     "csv-stringify": "^6.5.2",
-    "diff": "^7.0.0",
+    "diff": "^8.0.3",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "fast-xml-parser": "^5.5.7",
+    "form-data": "^4.0.6",
     "franc": "^6.2.0",
     "helmet": "^8.1.0",
     "ioredis": "^5.10.0",
-    "js-yaml": "^4.1.0",
+    "jose": "^5.10.0",
+    "js-yaml": "^4.2.0",
     "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.11.18",
     "lru-cache": "^11.0.2",
     "marked": "^15.0.6",
     "morgan": "^1.10.0",
+    "node-fetch": "^2.7.0",
     "posthog-node": "^5.28.2",
     "qrcode": "^1.5.4",
     "resend": "^4.1.2",
     "slugify": "^1.6.6",
     "stripe": "^17.4.0",
+    "undici": "^7.28.0",
     "utf-8-validate": "^5.0.10",
+    "uuid": "^11.1.1",
     "viem": "^2.47.10",
-    "uuid": "^11.0.5",
     "xml2js": "^0.6.2",
-    "xmlbuilder2": "^3.1.1",
-    "zod": "^3.24.1",
-    "jose": "^5.10.0",
-    "node-fetch": "^2.7.0"
+    "xmlbuilder2": "^4.0.3",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -83,8 +85,8 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.0.0",
     "@types/qrcode": "^1.5.5",
-    "@types/uuid": "^10.0.0",
     "@types/trusted-types": "^2.0.7",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
     "@types/xml2js": "^0.4.14",
     "prisma": "^5.22.0",
@@ -98,6 +100,15 @@
   "overrides": {
     "@coinbase/cdp-sdk": {
       "jose": "5.10.0"
-    }
+    },
+    "ws": "8.21.0",
+    "@opentelemetry/core": "2.8.0",
+    "ethjs-unit": {
+      "bn.js": "4.12.3"
+    },
+    "number-to-bn": {
+      "bn.js": "4.12.3"
+    },
+    "uuid": "$uuid"
   }
 }
