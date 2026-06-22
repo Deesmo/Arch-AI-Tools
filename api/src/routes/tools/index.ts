@@ -1212,6 +1212,12 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
       }
       imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
       imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim();
+      // A URL that redirects to an HTML page (e.g. a deleted-image placeholder)
+      // downloads with a 200 but a non-image content-type. Reject it as bad
+      // input instead of forwarding HTML to the vision model (which 500'd).
+      if (!imgMediaType.startsWith("image/")) {
+        res.status(400).json({ ok: false, error: "not_an_image", message: `image_url did not return an image (got content-type "${imgMediaType || "unknown"}"). The link may redirect to an HTML page; pass a direct image URL or image_base64.`, request_id: reqId() }); return;
+      }
     }
     // Anthropic vision API only accepts these media types
     const VALID_MEDIA_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -1228,6 +1234,15 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
     console.error("[ocr-extract] error:", e);
+    // Bad/unsupported image data → the vision API returns a 4xx. Surface that
+    // as a clean client error rather than a 500. (NOTE: never 502 from origin —
+    // Cloudflare replaces origin 502 bodies and hides our JSON.)
+    if (e instanceof Anthropic.APIError && typeof e.status === "number" && e.status >= 400 && e.status < 500) {
+      res.status(422).json({ ok: false, error: "image_unprocessable", message: "The image could not be processed for OCR. Ensure it is a valid, non-corrupted JPEG, PNG, GIF, or WebP under the size limit.", request_id: reqId() }); return;
+    }
+    if (e instanceof Anthropic.APIError) {
+      res.status(503).json({ ok: false, error: "ocr_upstream_error", message: "The OCR vision service is temporarily unavailable. Please retry.", request_id: reqId() }); return;
+    }
     res.status(500).json({ ok: false, error: "ocr_error", message: safeErr(e), request_id: reqId() });
   }
 });
