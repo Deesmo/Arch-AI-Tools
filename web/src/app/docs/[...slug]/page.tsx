@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 type DocPage = {
   title: string
-  sections: { heading?: string; body: string; code?: string; lang?: string }[]
+  sections: { heading?: string; body?: string; code?: string; lang?: string }[]
 }
 
 const PAGES: Record<string, DocPage> = {
@@ -248,8 +248,9 @@ Use the agent when:
   },
 }
 
-export default async function DocPage({ params }: { params: { slug: string[] } }) {
-  const key = (params.slug || []).join('/').split('/')[0]
+export default async function DocPage({ params }: { params: Promise<{ slug: string[] }> }) {
+  const { slug } = await params
+  const key = (slug || []).join('/').split('/')[0]
   const page = PAGES[key]
 
   if (!page) {
