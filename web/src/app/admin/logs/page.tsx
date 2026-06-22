@@ -78,9 +78,16 @@ function fmtDt(x?: string | null) {
 }
 
 export default function AdminLogsPage() {
-  const [tab, setTab] = useState<'ops' | 'logs' | 'billing' | 'fraud'>('ops');
+  const [tab, setTab] = useState<'ops' | 'logs' | 'billing' | 'fraud' | 'access'>('ops');
 
   const [adminKey, setAdminKey] = useState('');
+  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
+  const [adminErr, setAdminErr] = useState<string | null>(null);
+  const [adminKeys, setAdminKeys] = useState<AdminKeyRow[]>([]);
+  const [keysLoading, setKeysLoading] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('admin');
+  const [newKeyScopes, setNewKeyScopes] = useState('admin:read');
+  const [newKeyResult, setNewKeyResult] = useState<string | null>(null);
 
   // Shared state
   const [error, setError] = useState<string | null>(null);
@@ -394,7 +401,14 @@ async function fetchLogs(reset = true) {
     return 'border-neutral-200 bg-neutral-50 text-neutral-700';
   }
 
-  
+  function hasScope(scope: string) {
+    return !!adminInfo?.scopes?.includes(scope);
+  }
+
+  const canOps = hasScope('ops:write');
+  const canAdminRead = hasScope('admin:read');
+  const canAdminWrite = hasScope('admin:write');
+
   useEffect(() => {
     if (tab === 'access' && adminKey && (canAdminRead || canAdminWrite)) {
       fetchKeys();
@@ -935,10 +949,3 @@ return (
     </div>
   );
 }
-  function hasScope(scope: string) {
-    return !!adminInfo?.scopes?.includes(scope);
-  }
-  const canOps = hasScope('ops:write');
-  const canAdminRead = hasScope('admin:read');
-  const canAdminWrite = hasScope('admin:write');
-
