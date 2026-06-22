@@ -1045,6 +1045,8 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
  */
 export function x402Middleware(toolName: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const requestStartMs = Date.now();
+
     // If wallet address not configured, skip x402 (Stripe-only mode)
     if (!config.x402.walletAddress) {
       console.log(`[x402] Skipping — no wallet address configured (WALLET_ADDRESS=${process.env.WALLET_ADDRESS?.slice(0, 10) ?? 'undefined'})`);
@@ -1204,21 +1206,33 @@ export function x402Middleware(toolName: string) {
     };
     res.setHeader("PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResponse)).toString("base64"));
 
-    // Log x402 tool call to ApiRequest for admin stats visibility
-    try {
-      await prisma.apiRequest.create({
-        data: {
-          agentId: "x402_anonymous",
-          toolName,
-          creditsUsed: 0,
-          status: "SUCCESS",
-          callerType: "x402",
-          callerName: "x402-payment",
-        },
-      });
-    } catch {
-      // Non-fatal
-    }
+    // Log x402 tool call to ApiRequest for admin stats visibility after the
+    // downstream handler finishes, so statusCode/responseMs reflect reality.
+    let loggedX402Request = false;
+    const logX402Request = async (): Promise<void> => {
+      if (loggedX402Request) return;
+      loggedX402Request = true;
+
+      try {
+        await prisma.apiRequest.create({
+          data: {
+            agentId: "x402_anonymous",
+            toolName,
+            creditsUsed: 0,
+            status: res.statusCode >= 200 && res.statusCode < 400 ? "SUCCESS" : "ERROR",
+            statusCode: res.statusCode,
+            responseMs: Date.now() - requestStartMs,
+            callerType: "x402",
+            callerName: "x402-payment",
+          },
+        });
+      } catch {
+        // Non-fatal
+      }
+    };
+
+    res.once("finish", () => { void logX402Request(); });
+    res.once("close", () => { void logX402Request(); });
 
     next();
   };

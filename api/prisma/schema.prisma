@@ -94,6 +94,7 @@ model ApiRequest {
   toolName      String
   creditsUsed   Int
   status        String   @default("SUCCESS")  // SUCCESS | ERROR | RATE_LIMITED
+  statusCode    Int?
   responseMs    Int?
   callerType    String?  // ai-agent | sdk | script | human | unknown
   callerName    String?  // claude-desktop | cursor | openai-sdk | python | etc.
