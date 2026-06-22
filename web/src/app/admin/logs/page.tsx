@@ -78,9 +78,18 @@ function fmtDt(x?: string | null) {
 }
 
 export default function AdminLogsPage() {
-  const [tab, setTab] = useState<'ops' | 'logs' | 'billing' | 'fraud'>('ops');
+  const [tab, setTab] = useState<'ops' | 'logs' | 'billing' | 'fraud' | 'access'>('ops');
 
   const [adminKey, setAdminKey] = useState('');
+  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
+  const [adminErr, setAdminErr] = useState<string | null>(null);
+
+  // Access / API keys
+  const [adminKeys, setAdminKeys] = useState<any[]>([]);
+  const [keysLoading, setKeysLoading] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyScopes, setNewKeyScopes] = useState('');
+  const [newKeyResult, setNewKeyResult] = useState<string | null>(null);
 
   // Shared state
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +128,13 @@ export default function AdminLogsPage() {
   const [fraudLoading, setFraudLoading] = useState(false);
 
   const canFetch = useMemo(() => Boolean(adminKey), [adminKey]);
+
+  function hasScope(scope: string) {
+    return !!adminInfo?.scopes?.includes(scope);
+  }
+  const canOps = hasScope('ops:write');
+  const canAdminRead = hasScope('admin:read');
+  const canAdminWrite = hasScope('admin:write');
 
   async function apiFetch(path: string, init?: RequestInit) {
     const headers: any = { ...(init?.headers || {}), 'x-admin-key': adminKey };
@@ -935,10 +951,4 @@ return (
     </div>
   );
 }
-  function hasScope(scope: string) {
-    return !!adminInfo?.scopes?.includes(scope);
-  }
-  const canOps = hasScope('ops:write');
-  const canAdminRead = hasScope('admin:read');
-  const canAdminWrite = hasScope('admin:write');
 
