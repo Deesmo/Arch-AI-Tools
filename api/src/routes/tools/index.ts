@@ -1211,7 +1211,13 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
         res.status(400).json({ ok: false, error: "image_download_failed", message: `Could not download image from image_url${st ? ` (HTTP ${st})` : ""}. Check the URL is public and reachable, or pass image_base64 instead.`, request_id: reqId() }); return;
       }
       imgBase64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
-      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim();
+      imgMediaType = (imgResp.headers["content-type"] as string || "image/jpeg").split(";")[0].trim().toLowerCase();
+      // A URL that redirects to an HTML page (e.g. a deleted-image placeholder)
+      // downloads with a 200 but a non-image content-type. Reject it as bad
+      // input instead of forwarding HTML to the vision model (which 500'd).
+      if (!imgMediaType.startsWith("image/")) {
+        res.status(400).json({ ok: false, error: "not_an_image", message: `image_url did not return an image (got content-type "${imgMediaType || "unknown"}"). The link may redirect to an HTML page; pass a direct image URL or image_base64.`, request_id: reqId() }); return;
+      }
     }
     // Anthropic vision API only accepts these media types
     const VALID_MEDIA_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -1228,6 +1234,21 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
     res.json({ ok: true, text, word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
     console.error("[ocr-extract] error:", e);
+    // Bad/unsupported image data → the vision API returns a 4xx. Surface that
+    // as a clean client error rather than a 500. (NOTE: never 502 from origin —
+    // Cloudflare replaces origin 502 bodies and hides our JSON.)
+    if (e instanceof Anthropic.APIError && typeof e.status === "number") {
+      // 400/422 = the image itself is bad/unsupported -> clean client error.
+      if (e.status === 400 || e.status === 422) {
+        res.status(422).json({ ok: false, error: "image_unprocessable", message: "The image could not be processed for OCR. Ensure it is a valid, non-corrupted JPEG, PNG, GIF, or WebP under the size limit.", request_id: reqId() }); return;
+      }
+      // 429 = upstream rate limit -> surface as 429, not a fake 'bad image'.
+      if (e.status === 429) {
+        res.status(429).json({ ok: false, error: "ocr_rate_limited", message: "The OCR vision service is rate limited. Please retry shortly.", request_id: reqId() }); return;
+      }
+      // 401/403/404/5xx = upstream/auth/config problem -> 503 (never mask as bad image).
+      res.status(503).json({ ok: false, error: "ocr_upstream_error", message: "The OCR vision service is temporarily unavailable. Please retry.", request_id: reqId() }); return;
+    }
     res.status(500).json({ ok: false, error: "ocr_error", message: safeErr(e), request_id: reqId() });
   }
 });
