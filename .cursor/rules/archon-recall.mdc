@@ -1,0 +1,9 @@
+---
+description: Pull ARCHON memory before acting. Always apply.
+alwaysApply: true
+---
+
+# ARCHON recall-first
+- At the START of a task, call the archon-memory tools (`archon_query` / `archon_search_facts` / `archon_explain`) to load prior context about Brad, his decisions, and history before proposing changes.
+- For live system/fleet/service state, use the archon-atlas tools (`atlas_snapshot` / `atlas_fleet` / `atlas_services` / `atlas_alerts` / `atlas_runtime_state`).
+- Treat ARCHON as the source of truth for past decisions — check solved-state / do-not-retry before re-attempting something that may already be settled.

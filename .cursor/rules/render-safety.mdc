@@ -1,0 +1,10 @@
+---
+description: Render deployment safety for Brad's apps. Always apply.
+alwaysApply: true
+---
+
+# Render deploy safety
+- NEVER delete a Render Project — only individual services, and only when Brad explicitly asks. (Brad lost 3 apps to a project deletion.)
+- Do NOT change working build/start/deploy settings. Read the existing Render config first; if it works, leave it alone.
+- A push to a deploy-connected branch can trigger an auto-deploy. Don't push to such a branch unless Brad expects a deploy.
+- Use the `render` MCP tools to inspect services, deploys, and logs before changing anything. Prefer inspection over mutation.
