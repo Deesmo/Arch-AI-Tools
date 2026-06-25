@@ -22,19 +22,27 @@ jobs:
       - name: Test x402 gate (must return 402, not 200)
         run: |
           echo "Testing x402 payment gate..."
-          
-          # Test that unauthenticated request returns 402.
-          # Use the canonical host (archtools.dev): the app 301-redirects the raw
-          # *.onrender.com origin to the canonical domain, so hitting onrender.com
-          # directly returns 301, not the gate response.
-          STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
-            -X POST https://archtools.dev/v1/tools/generate-hash \
-            -H "Content-Type: application/json" \
-            -d '{"text":"ci-gate-test"}')
-          
-          echo "Response status: $STATUS"
+          # Test that an unauthenticated request returns 402. Use the canonical
+          # host (archtools.dev): the app 301-redirects the raw *.onrender.com
+          # origin, so hitting onrender.com directly returns 301, not the gate.
+          # Retry to ride out the brief 502 window while a fresh deploy swaps in.
+          STATUS=""
+          for attempt in 1 2 3 4 5 6; do
+            STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+              -X POST https://archtools.dev/v1/tools/generate-hash \
+              -H "Content-Type: application/json" \
+              -d '{"text":"ci-gate-test"}')
+            echo "Attempt $attempt → status $STATUS"
+            if [ "$STATUS" = "402" ] || [ "$STATUS" = "200" ]; then
+              break
+            fi
+            echo "  (transient $STATUS — likely deploy rollout; retrying in 20s)"
+            sleep 20
+          done
+
+          echo "Final response status: $STATUS"
           echo "Response body: $(cat /tmp/response.json)"
-          
+
           if [ "$STATUS" = "402" ]; then
             echo "✅ x402 gate is WORKING correctly"
             exit 0
@@ -44,7 +52,7 @@ jobs:
             echo "Check X402_SDK_ENABLED env var and x402-sdk.ts middleware."
             exit 1
           else
-            echo "⚠️ Unexpected status $STATUS — gate may be broken"
+            echo "⚠️ Service not reachable (status $STATUS) after retries"
             exit 1
           fi
       
