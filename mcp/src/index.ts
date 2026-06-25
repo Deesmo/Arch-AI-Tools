@@ -54,6 +54,23 @@ const AUTH_REQUIRED_MESSAGE = JSON.stringify({
   docs: "https://archtools.dev/docs",
 }, null, 2);
 
+// Anonymous demo (no client key) may ONLY call cheap, local-compute tools that
+// do not hit paid upstream providers. Anything else requires the caller's own
+// API key — this prevents draining the platform ARCH_API_KEY on expensive
+// AI/media/search calls via IP rotation (H6).
+const ANON_ALLOWED_TOOLS = new Set<string>([
+  "generate-hash", "generate-uuid", "qr-code", "barcode-generate",
+  "transform-text", "diff-text", "validate-data", "convert-format",
+  "jsonpath-query", "timezone-convert", "language-detect", "readability-score",
+]);
+
+const ANON_TOOL_BLOCKED_MESSAGE = JSON.stringify({
+  error: "api_key_required",
+  message: "This tool requires your own Arch Tools API key. Anonymous demo access is limited to free local utilities. Pass `x-api-key` or `Authorization: Bearer <key>`. Get a free key with signup credits at https://archtools.dev/signup",
+  signup: "https://archtools.dev/signup",
+  docs: "https://archtools.dev/docs",
+}, null, 2);
+
 function extractClientKey(req: express.Request): string {
   const xKey = req.headers["x-api-key"];
   if (typeof xKey === "string" && xKey.trim()) return xKey.trim();
@@ -253,6 +270,9 @@ async function createServer(auth?: { clientKey: string; ip: string }): Promise<S
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // SSE sessions: enforce auth/demo limits. stdio (auth undefined) uses env key as before.
     if (auth && !auth.clientKey) {
+      if (!ANON_ALLOWED_TOOLS.has(request.params.name)) {
+        return { content: [{ type: "text" as const, text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true };
+      }
       const allowance = checkAnonAllowance(auth.ip);
       if (!allowance.allowed) {
         return { content: [{ type: "text" as const, text: AUTH_REQUIRED_MESSAGE }], isError: true };
@@ -340,6 +360,10 @@ async function handleStreamablePost(req: express.Request, res: express.Response)
       case "tools/call": {
         const clientKey = extractClientKey(req);
         if (!clientKey) {
+          if (!ANON_ALLOWED_TOOLS.has(body.params?.name)) {
+            send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true } });
+            break;
+          }
           const allowance = checkAnonAllowance(clientIp(req));
           if (!allowance.allowed) {
             send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true } });

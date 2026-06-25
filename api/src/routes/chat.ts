@@ -13,6 +13,24 @@ const chatLimiter = rateLimit({
   message: { ok: false, error: "rate_limited", message: "Too many messages. Please wait a moment." },
 });
 
+// Global hourly circuit-breaker (H5): the public widget calls Anthropic on the
+// PLATFORM key, so per-IP limits alone don't bound cost under IP rotation. This
+// caps total spend regardless of source. In-memory is fine — it resets on deploy
+// and only needs to bound a runaway hour.
+const GLOBAL_HOURLY_CAP = Number(process.env.CHAT_GLOBAL_HOURLY_CAP || 600);
+let chatHourBucket = "";
+let chatHourCount = 0;
+function withinGlobalChatBudget(): boolean {
+  const hour = new Date().toISOString().slice(0, 13);
+  if (hour !== chatHourBucket) {
+    chatHourBucket = hour;
+    chatHourCount = 0;
+  }
+  if (chatHourCount >= GLOBAL_HOURLY_CAP) return false;
+  chatHourCount++;
+  return true;
+}
+
 const SYSTEM_PROMPT = `You are the Arch Tools support assistant — a friendly, knowledgeable AI that helps users with the Arch Tools API platform (archtools.dev).
 
 About Arch Tools:
@@ -88,6 +106,11 @@ router.post("/", chatLimiter, async (req: Request, res: Response): Promise<void>
     if (!apiKey) {
       console.error("ARCH_TOOLS_API_KEY not set — chatbot cannot function");
       res.status(503).json({ ok: false, error: "Chat is temporarily unavailable" });
+      return;
+    }
+
+    if (!withinGlobalChatBudget()) {
+      res.status(429).json({ ok: false, error: "rate_limited", message: "The assistant is busy right now. Please try again shortly." });
       return;
     }
 
