@@ -7,7 +7,7 @@ import { logger } from "../lib/logger.js";
 import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits, recordSignupIp } from "../lib/verification.js";
 
 const router = Router();
 
@@ -79,6 +79,8 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         tier: (["free","starter","pro","business"].includes(plan?.replace(/-(?:monthly|annual)$/,"") ?? "") ? plan!.replace(/-(?:monthly|annual)$/,"") : "free") as any,
       },
     });
+    // Count this IP only now that the account actually exists (F-4).
+    recordSignupIp(req.ip);
 
     // Save password hash if provided
     if (password && password.length >= 8) {

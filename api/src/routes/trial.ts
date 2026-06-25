@@ -18,7 +18,7 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import crypto from "crypto";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits, recordSignupIp } from "../lib/verification.js";
 import bcrypt from "bcryptjs";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
 
@@ -102,6 +102,8 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
         tier: "free",
       },
     });
+    // Count this IP only now that the account actually exists (F-4).
+    recordSignupIp(req.ip);
 
     // Email verification gate: credits stay pending until email verified.
     // Grant is atomically claimed per normalized identity (SignupIdentity).

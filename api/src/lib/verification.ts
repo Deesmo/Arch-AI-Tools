@@ -93,11 +93,12 @@ export async function claimSignupIdentity(email: string): Promise<boolean> {
     //   0 rows (ON CONFLICT) → identity already claimed → gate credits (false)
     return inserted > 0;
   } catch (e) {
-    // Fail open ONLY on genuinely unexpected DB errors (connection loss,
-    // outage). The normal duplicate path never throws — ON CONFLICT DO
-    // NOTHING resolves to 0 rows above, so it can never reach this branch.
-    logger.warn({ error: String(e) }, "SignupIdentity claim failed (failing open)");
-    return true;
+    // Fail CLOSED: on an unexpected DB error we cannot prove this identity has
+    // not already claimed a grant, so we decline the free grant rather than risk
+    // duplicate farming. The account is still created (just without pending
+    // credits); a grant can be issued later once the DB is healthy.
+    logger.warn({ error: String(e) }, "SignupIdentity claim failed (failing closed — no grant)");
+    return false;
   }
 }
 
@@ -141,7 +142,9 @@ export async function enforceSignupLimits(
     logger.warn({ error: String(e) }, "Normalized-email signup check failed (falling back to exact match only)");
   }
 
-  // 2. Per-IP daily signup cap.
+  // 2. Per-IP daily signup cap — CHECK ONLY. The counter is incremented via
+  //    recordSignupIp() AFTER a signup actually succeeds, so failed/abandoned
+  //    attempts can't be used to grief another user's IP quota (F-4).
   if (ip) {
     const day = new Date().toISOString().slice(0, 10);
     const entry = ipSignupCounts.get(ip);
@@ -153,16 +156,27 @@ export async function enforceSignupLimits(
         message: "Too many signups from this network today. Please try again tomorrow or contact support.",
       };
     }
-    ipSignupCounts.set(ip, { day, count: count + 1 });
-    // Opportunistic cleanup to bound memory
-    if (ipSignupCounts.size > 10000) {
-      for (const [k, v] of ipSignupCounts) {
-        if (v.day !== day) ipSignupCounts.delete(k);
-      }
-    }
   }
 
   return null;
+}
+
+/**
+ * Record a successful signup against the per-IP daily counter. Call this only
+ * after an account has actually been created.
+ */
+export function recordSignupIp(ip: string | undefined): void {
+  if (!ip) return;
+  const day = new Date().toISOString().slice(0, 10);
+  const entry = ipSignupCounts.get(ip);
+  const count = entry && entry.day === day ? entry.count : 0;
+  ipSignupCounts.set(ip, { day, count: count + 1 });
+  // Opportunistic cleanup to bound memory
+  if (ipSignupCounts.size > 10000) {
+    for (const [k, v] of ipSignupCounts) {
+      if (v.day !== day) ipSignupCounts.delete(k);
+    }
+  }
 }
 
 /**

@@ -18,7 +18,7 @@ import {
   BADGE_THRESHOLDS,
 } from "../services/reputation.js";
 import { validateUrl } from "../lib/ssrf.js";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits, recordSignupIp } from "../lib/verification.js";
 
 const router = Router();
 
@@ -322,6 +322,8 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         badge: "none",
       },
     });
+    // Count this IP only now that the account actually exists (F-4).
+    recordSignupIp(req.ip);
 
     // Email verification gate: credits stay pending until email verified.
     // Grant is atomically claimed per normalized identity (SignupIdentity).

@@ -12,6 +12,7 @@
  */
 
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
 import { redis } from "../lib/redis.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
@@ -20,6 +21,17 @@ import { logger } from "../lib/logger.js";
 import crypto from "crypto";
 
 const router = Router();
+
+// Public click-tracking is unauthenticated — rate-limit per IP to stop metric
+// inflation / spam (R-5).
+const trackLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many requests." },
+});
 
 const SITE_URL = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\/$/, "");
 const REFERRAL_REWARD = parseInt(process.env.REFERRAL_REWARD_CREDITS ?? "500", 10);
@@ -94,7 +106,7 @@ router.get("/link", requireAuth, async (req: AuthedRequest, res: Response): Prom
 // ─── POST /v1/affiliate/track ───────────────────────────────────────────────
 // Records when someone clicks a referral/affiliate link. Public endpoint (no auth).
 // Called by the signup page JS when ?ref= param is present.
-router.post("/track", async (req: Request, res: Response): Promise<void> => {
+router.post("/track", trackLimiter, async (req: Request, res: Response): Promise<void> => {
   const { code, referrer_url, user_agent } = req.body ?? {};
 
   if (!code || typeof code !== "string") {
