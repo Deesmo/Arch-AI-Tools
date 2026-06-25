@@ -8,6 +8,9 @@
  */
 
 const BASE_URL = process.env.TEST_BASE_URL || 'https://archtools.dev';
+// Detailed /health is admin-gated by design (see SECURITY.md). Provide a matching
+// admin key here to also validate the rich health payload (deps + tool count).
+const ADMIN_KEY = process.env.TEST_ADMIN_KEY || '';
 
 let passed = 0;
 let failed = 0;
@@ -52,8 +55,18 @@ async function run() {
   // ── Health ──
   console.log('── Health ──');
   
-  await test('GET /health → 200 with tools count', async () => {
+  await test('GET /health → 200 (public minimal contract)', async () => {
     const { res, body } = await fetchJSON('/health');
+    assert(res.status === 200, `status ${res.status}`);
+    assert(body && body.ok === true, 'ok is not true');
+  });
+
+  await test('GET /health (admin) → detailed deps + tools count', async () => {
+    if (!ADMIN_KEY) {
+      console.log('     ↳ skipped (set TEST_ADMIN_KEY to validate detailed health)');
+      return;
+    }
+    const { res, body } = await fetchJSON('/health', { headers: { 'x-admin-key': ADMIN_KEY } });
     assert(res.status === 200, `status ${res.status}`);
     assert(body.ok === true, 'ok is not true');
     assert(typeof body.tools === 'number' && body.tools > 0, `tools count missing or zero: ${body.tools}`);

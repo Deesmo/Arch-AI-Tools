@@ -7,8 +7,8 @@
   "scripts": {
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only api/src/index.ts",
-    "seed": "ts-node --transpile-only api/src/seed.ts",
+    "dev": "TS_NODE_TRANSPILE_ONLY=1 node --watch --loader ts-node/esm --env-file-if-exists=.env src/index.ts",
+    "seed": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm --env-file-if-exists=.env src/seed.ts",
     "generate": "prisma generate",
     "db:push": "prisma db push --accept-data-loss",
     "refresh-credits": "node dist/cron/refreshCredits.js",

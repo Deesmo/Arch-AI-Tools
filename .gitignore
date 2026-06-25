@@ -1,5 +1,9 @@
 .mcpregistry_*
 node_modules/
+.env
+.env.local
+**/.env
+**/.env.local
 sdk/typescript/.npmrc
 sdk/python/dist/
 sdk/python/*.egg-info/
