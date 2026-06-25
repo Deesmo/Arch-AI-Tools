@@ -96,18 +96,20 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
         apiKeyHash,
         email,
         name: name ?? "",
-        credits: TRIAL_CREDITS,
+        // Start at 0; grant moves to pendingCredits via issueEmailVerification
+        // and only activates on verification. Fail closed if setup throws.
+        credits: 0,
         tier: "free",
       },
     });
 
     // Email verification gate: credits stay pending until email verified.
     // Grant is atomically claimed per normalized identity (SignupIdentity).
-    let gatedCredits = TRIAL_CREDITS;
+    let gatedCredits = 0;
     try {
       gatedCredits = await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
     } catch (e) {
-      logger.warn({ agentId: agent.id, error: String(e) }, "Verification setup failed");
+      logger.warn({ agentId: agent.id, error: String(e) }, "Verification setup failed (credits remain 0)");
     }
 
     logger.info({ agentId: agent.id, email, credits: gatedCredits }, "Trial account activated (pending email verification)");

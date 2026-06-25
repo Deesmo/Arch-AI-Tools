@@ -81,6 +81,17 @@ router.post("/apply", requireAuth, async (req: AuthedRequest, res: Response): Pr
       return;
     }
 
+    // Anti-farming: the referred account must have a verified email before any
+    // credits are granted. Unverified accounts hold 0 credits anyway.
+    const referredAgent = await prisma.agent.findUnique({
+      where: { id: agent.id },
+      select: { emailVerified: true },
+    });
+    if (!referredAgent?.emailVerified) {
+      res.status(403).json({ ok: false, error: "email_not_verified", message: "Verify your email before applying a referral code.", request_id: reqId() });
+      return;
+    }
+
     // Check if this user has already used a referral code
     const alreadyReferred = await prisma.referral.findFirst({
       where: { referredId: agent.id, status: "completed" },
@@ -90,29 +101,38 @@ router.post("/apply", requireAuth, async (req: AuthedRequest, res: Response): Pr
       return;
     }
 
-    // Complete the referral — create a new completed record (keep original code available for more referrals)
-    const completedReferral = await prisma.referral.create({
-      data: {
-        referrerId: referral.referrerId,
-        referredId: agent.id,
-        code: `${referral.code}-${crypto.randomBytes(3).toString("hex")}`, // unique per completion
-        status: "completed",
-        rewardCredits: REFERRAL_REWARD,
-        completedAt: new Date(),
-      },
-    });
-
-    // Credit BOTH users
-    await Promise.all([
-      prisma.agent.update({
-        where: { id: referral.referrerId },
-        data: { credits: { increment: REFERRAL_REWARD } },
-      }),
-      prisma.agent.update({
-        where: { id: agent.id },
-        data: { credits: { increment: REFERRAL_REWARD } },
-      }),
-    ]);
+    // Atomic single-use guard: the completion record's `code` is deterministic on
+    // the referred user id (`referred-<id>`). `Referral.code` is unique, so two
+    // concurrent /apply calls cannot both insert — the loser hits P2002 and is
+    // treated as already_referred. Crediting happens in the same transaction.
+    try {
+      await prisma.$transaction([
+        prisma.referral.create({
+          data: {
+            referrerId: referral.referrerId,
+            referredId: agent.id,
+            code: `referred-${agent.id}`,
+            status: "completed",
+            rewardCredits: REFERRAL_REWARD,
+            completedAt: new Date(),
+          },
+        }),
+        prisma.agent.update({
+          where: { id: referral.referrerId },
+          data: { credits: { increment: REFERRAL_REWARD } },
+        }),
+        prisma.agent.update({
+          where: { id: agent.id },
+          data: { credits: { increment: REFERRAL_REWARD } },
+        }),
+      ]);
+    } catch (txErr) {
+      if (txErr && typeof txErr === "object" && (txErr as { code?: string }).code === "P2002") {
+        res.status(400).json({ ok: false, error: "already_referred", message: "You have already used a referral code.", request_id: reqId() });
+        return;
+      }
+      throw txErr;
+    }
 
     logger.info({ referrerId: referral.referrerId, referredId: agent.id, reward: REFERRAL_REWARD }, "Referral completed");
 

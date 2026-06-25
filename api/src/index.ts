@@ -295,13 +295,17 @@ app.use("/api/v1/facilitator", facilitatorRouter);
 // Referral system
 app.use("/api/v1/referral", referralRouter);
 
-// Free trial system
+// Free trial system — trial activation is a credit-granting signup path,
+// so it gets the same strict per-IP registration limiter.
+app.use("/v1/trial/activate", registerLimiter);
 app.use("/v1/trial", trialRouter);
 
 // Affiliate tracking
 app.use("/v1/affiliate", affiliateRouter);
 
-// Agent Identity (KYA — Know Your Agent)
+// Agent Identity (KYA — Know Your Agent). /register is an alternate signup
+// path → apply the same per-IP registration limiter as /v1/agent/register.
+app.use("/api/v1/agents/register", registerLimiter);
 app.use("/api/v1/agents", agentsRouter);
 
 // Webhooks — event notification system

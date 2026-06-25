@@ -71,7 +71,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         apiKeyHash,
         email,
         name: name ?? "",
-        credits: freeCredits,
+        // Start at 0 — the free grant is moved into pendingCredits by
+        // issueEmailVerification and only activates on email verification. If
+        // verification setup fails, the user keeps 0 credits (fail closed),
+        // never an unverified balance.
+        credits: 0,
         tier: (["free","starter","pro","business"].includes(plan?.replace(/-(?:monthly|annual)$/,"") ?? "") ? plan!.replace(/-(?:monthly|annual)$/,"") : "free") as any,
       },
     });
@@ -123,11 +127,13 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
 
     // Email verification gate: credits stay pending until email verified.
     // Grant is atomically claimed per normalized identity (SignupIdentity).
-    let gatedCredits = freeCredits;
+    let gatedCredits = 0;
     try {
       gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
     } catch (e) {
-      console.error("Verification setup failed (granting credits directly):", e);
+      // Fail closed: do NOT grant credits if the verification gate could not be
+      // set up. The user can re-trigger via the resend endpoint.
+      console.error("Verification setup failed (credits remain 0, user can resend):", e);
     }
 
     res.status(201).json({

@@ -221,8 +221,11 @@ export async function verifyEmailToken(token: string): Promise<{ email: string; 
   if (agent.verifyTokenExpiry && agent.verifyTokenExpiry < new Date()) return null;
 
   const creditsActivated = agent.pendingCredits;
-  await prisma.agent.update({
-    where: { id: agent.id },
+  // ATOMIC single-use claim: only the update that still matches verifyToken wins.
+  // The winner nulls verifyToken, so a concurrent second request matches 0 rows
+  // and cannot double-activate the pending credits.
+  const claim = await prisma.agent.updateMany({
+    where: { id: agent.id, verifyToken: token },
     data: {
       emailVerified: true,
       verifyToken: null,
@@ -231,6 +234,7 @@ export async function verifyEmailToken(token: string): Promise<{ email: string; 
       credits: { increment: creditsActivated },
     },
   });
+  if (claim.count !== 1) return null; // already claimed by a concurrent request
   logger.info({ agentId: agent.id, creditsActivated }, "Email verified — credits activated");
   return { email: agent.email, creditsActivated };
 }

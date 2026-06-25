@@ -315,7 +315,8 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         walletAddress: wallet_address ?? null,
         callbackUrl: callback_url ?? null,
         isPublic: is_public !== false, // default true
-        credits: freeCredits,
+        // Start at 0; grant activates on email verification (fail closed).
+        credits: 0,
         tier: "free",
         reputationScore: 50,
         badge: "none",
@@ -324,11 +325,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
 
     // Email verification gate: credits stay pending until email verified.
     // Grant is atomically claimed per normalized identity (SignupIdentity).
-    let gatedCredits = freeCredits;
+    let gatedCredits = 0;
     try {
       gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
     } catch (e) {
-      console.error("Verification setup failed (granting credits directly):", e);
+      console.error("Verification setup failed (credits remain 0, user can resend):", e);
     }
 
     res.status(201).json({
