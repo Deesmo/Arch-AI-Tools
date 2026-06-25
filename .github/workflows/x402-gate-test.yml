@@ -23,9 +23,12 @@ jobs:
         run: |
           echo "Testing x402 payment gate..."
           
-          # Test that unauthenticated request returns 402
+          # Test that unauthenticated request returns 402.
+          # Use the canonical host (archtools.dev): the app 301-redirects the raw
+          # *.onrender.com origin to the canonical domain, so hitting onrender.com
+          # directly returns 301, not the gate response.
           STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
-            -X POST https://arch-ai-tools.onrender.com/v1/tools/generate-hash \
+            -X POST https://archtools.dev/v1/tools/generate-hash \
             -H "Content-Type: application/json" \
             -d '{"text":"ci-gate-test"}')
           
@@ -48,6 +51,6 @@ jobs:
       - name: Test health endpoint
         run: |
           STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" \
-            https://arch-ai-tools.onrender.com/v1/health/x402)
+            https://archtools.dev/v1/health/x402)
           echo "Health check status: $STATUS"
           cat /tmp/health.json
