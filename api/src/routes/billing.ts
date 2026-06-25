@@ -17,8 +17,11 @@ const router = Router();
  * pasted their API key into localStorage.
  */
 async function requireAuthOrSession(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
+  // Billing must establish a real account identity (API key or session). An
+  // x402 payment proves a payment was made, NOT who the caller is, so it is
+  // intentionally NOT accepted as authentication here.
   const hasApiKeyAuth = Boolean(req.headers.authorization?.startsWith("Bearer ") || req.headers["x-api-key"]);
-  if (hasApiKeyAuth || (req as unknown as { x402Paid?: boolean }).x402Paid) {
+  if (hasApiKeyAuth) {
     requireAuth(req, res, next);
     return;
   }

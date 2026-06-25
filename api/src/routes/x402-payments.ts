@@ -7,21 +7,34 @@
  */
 
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
+// Public receipt lookup is unauthenticated — rate-limit per IP to prevent
+// enumeration / scraping of the payment table.
+const receiptLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many receipt lookups. Slow down." },
+});
+
 /* ------------------------------------------------------------------ */
 /*  GET /receipt/:txHash — Public endpoint                            */
 /* ------------------------------------------------------------------ */
-router.get("/receipt/:txHash", async (req: Request, res: Response): Promise<void> => {
+router.get("/receipt/:txHash", receiptLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const txHash = String(req.params.txHash ?? "");
 
-    if (!txHash || txHash.length < 10) {
-      res.status(400).json({ ok: false, error: "invalid_tx_hash", message: "Provide a valid transaction hash." });
+    // Require a well-formed 0x EVM tx hash (66 chars) — rejects probing input.
+    if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+      res.status(400).json({ ok: false, error: "invalid_tx_hash", message: "Provide a valid 0x transaction hash." });
       return;
     }
 

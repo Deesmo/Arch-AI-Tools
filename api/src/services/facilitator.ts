@@ -255,7 +255,13 @@ export async function verifyPayment(
           return { isValid: false, invalidReason: "insufficient_balance" };
         }
       } catch (err) {
-        console.warn(`[facilitator] Balance check warning:`, (err as Error).message?.slice(0, 100));
+        console.warn(`[facilitator] Balance check failed:`, (err as Error).message?.slice(0, 100));
+        // Fail closed in production: if we cannot confirm the payer's balance we
+        // must not assert validity. (Dev keeps the lenient path for offline RPC.)
+        if (process.env.NODE_ENV === "production") {
+          await releaseNonce(auth.nonce, providerId);
+          return { isValid: false, invalidReason: "balance_check_unavailable" };
+        }
       }
 
       try {
@@ -270,8 +276,17 @@ export async function verifyPayment(
           await releaseNonce(auth.nonce, providerId);
           return { isValid: false, invalidReason: "nonce_consumed_onchain" };
         }
-      } catch {
-        // authorizationState may not exist — proceed
+      } catch (err) {
+        // authorizationState may legitimately not exist on some tokens. Fail
+        // closed in production only when the RPC itself is unreachable; for a
+        // missing-method revert viem throws a ContractFunctionExecutionError
+        // which we tolerate so non-standard-but-valid tokens still work.
+        const msg = (err as Error).message || "";
+        const methodMissing = /reverted|not a function|returned no data|execution reverted/i.test(msg);
+        if (process.env.NODE_ENV === "production" && !methodMissing) {
+          await releaseNonce(auth.nonce, providerId);
+          return { isValid: false, invalidReason: "nonce_check_unavailable" };
+        }
       }
     }
   }

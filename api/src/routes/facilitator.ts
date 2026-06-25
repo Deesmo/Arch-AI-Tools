@@ -15,6 +15,7 @@
  */
 
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
@@ -34,6 +35,17 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { validateUrl } from "../lib/ssrf.js";
 
 const router = Router();
+
+// Provider registration is unauthenticated, so it gets a strict per-IP limit to
+// prevent bulk provider creation / abuse of the bcrypt-hashing path.
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many registration attempts. Try again later." },
+});
 
 // ─── Provider Auth Middleware ──────────────────────────────────────────────────
 
@@ -204,16 +216,41 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
 
     const provider = req.facilitatorProvider!;
 
+    // SECURITY (F-06): never settle an unverified payment. If this payment was
+    // not already verified (verify→settle flow), verify it now (one-step flow).
+    // verifyPayment enforces signature (fail-closed), amount, recipient, expiry,
+    // and nonce dedup before we spend gas on-chain.
+    const alreadyVerified = await prisma.facilitatorPayment.findFirst({
+      where: { providerId: provider.id, paymentPayload: payment, status: "verified" },
+    });
+    if (!alreadyVerified) {
+      const verifyResult = await verifyPayment(payment, paymentDetails, provider.id);
+      if (!verifyResult.isValid) {
+        res.status(400).json({
+          ok: false,
+          error: "verification_failed",
+          invalidReason: verifyResult.invalidReason,
+          message: "Payment failed verification and was not settled.",
+          request_id: reqId(),
+        });
+        return;
+      }
+    }
+
     // Settle on-chain
     const result = await settlePayment(payment, paymentDetails);
 
-    // Calculate fee — use provider-specific fee or env default
+    // Calculate fee — use provider-specific fee or env default.
+    // SECURITY (F-07): the settlement amount is the value the payer actually
+    // SIGNED (auth.value), NOT the client-supplied paymentDetails.maxAmountRequired,
+    // so fee/revenue accounting reflects real funds moved.
     const effectiveFeePercent = provider.feePercent > 0 ? provider.feePercent : getDefaultFeePercent();
+    const settledAmount = decodePayment(payment)?.payload?.authorization?.value ?? paymentDetails.maxAmountRequired;
     const { fee: feeAmount, payout: providerPayout } = calculateProviderPayout(
-      paymentDetails.maxAmountRequired,
+      settledAmount,
       effectiveFeePercent,
     );
-    const amountFloat = parseFloat(paymentDetails.maxAmountRequired) / 1_000_000; // USDC has 6 decimals
+    const amountFloat = parseFloat(settledAmount) / 1_000_000; // USDC has 6 decimals
     const feeFloat = parseFloat(feeAmount) / 1_000_000;
     const payoutFloat = parseFloat(providerPayout) / 1_000_000;
 
@@ -249,7 +286,7 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
             providerId: provider.id,
             paymentPayload: payment,
             resource: paymentDetails.resource,
-            amount: paymentDetails.maxAmountRequired,
+            amount: settledAmount,
             token: "USDC",
             network: paymentDetails.network,
             payerAddress: decoded?.payload?.authorization?.from || null,
@@ -269,7 +306,7 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
           data: {
             providerId: provider.id,
             paymentId: paymentRecordId,
-            settlementAmount: paymentDetails.maxAmountRequired,
+            settlementAmount: settledAmount,
             feeAmount,
             feePercent: effectiveFeePercent,
             providerPayout,
@@ -333,7 +370,7 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
 
 // ─── POST /register — Register a new provider ────────────────────────────────
 
-router.post("/register", async (req: Request, res: Response): Promise<void> => {
+router.post("/register", registerLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, walletAddress, webhookUrl, networks, endpoints } = req.body;
 
