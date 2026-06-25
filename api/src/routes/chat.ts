@@ -91,10 +91,14 @@ router.post("/", chatLimiter, async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Build conversation context from history (last 10 messages max)
-    const recentHistory = Array.isArray(history) ? history.slice(-10) : [];
+    // Build conversation context from history (last 6 messages max).
+    // SECURITY: the client controls `history`, so we do NOT trust the claimed
+    // `role` — every prior turn is rendered as untrusted user context and newlines
+    // are stripped, preventing injection of fake "Assistant:"/"System:" turns.
+    const recentHistory = Array.isArray(history) ? history.slice(-6) : [];
     const conversationContext = recentHistory
-      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+      .filter((m) => m && typeof m.content === "string")
+      .map((m) => `User: ${m.content.replace(/[\r\n]+/g, " ").slice(0, 500)}`)
       .join("\n");
 
     const fullPrompt = conversationContext

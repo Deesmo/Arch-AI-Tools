@@ -12,6 +12,29 @@ import Anthropic from "@anthropic-ai/sdk";
 import axios from "axios";
 
 const router = Router();
+
+// Escape user-supplied text before embedding it in generated SVG/XML so it
+// cannot break out of a text node and inject markup/script (XSS when the SVG
+// is later rendered as HTML by a consumer).
+function escapeXml(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+// Strip active content from model-generated SVG before returning it. Removes
+// <script>/<foreignObject>, inline event handlers, and javascript: URLs.
+function sanitizeSvg(svg: string): string {
+  return String(svg)
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "")
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(?:xlink:href|href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi, "");
+}
+
 // Lazy Anthropic client: re-checks env at call time so a key set AFTER boot
 // (e.g. Render env var update) becomes usable without redeploy.
 let _anthropicInstance: Anthropic | null = null;
@@ -1583,7 +1606,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: 
         content: `Generate a complete, self-contained SVG image (${width}x${height}) based on this prompt: "${prompt}"\n\nRequirements:\n- Valid SVG with viewBox="0 0 ${width} ${height}"\n- Use only SVG elements (rect, circle, path, text, etc.)\n- Make it visually appealing and creative\n- Return ONLY the SVG code, nothing else, no markdown fences`,
       }],
     });
-    const svg = msg.content.find(b => b.type === "text")?.text ?? "";
+    const svg = sanitizeSvg(msg.content.find(b => b.type === "text")?.text ?? "");
     const base64 = Buffer.from(svg).toString("base64");
     const dataUrl = `data:image/svg+xml;base64,${base64}`;
     res.json({ ok: true, prompt, style: "svg", width, height, data_url: dataUrl, svg, request_id: reqId() });
@@ -1632,7 +1655,7 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${height}" viewBox="0 0 ${svgWidth} ${height}">
   <rect width="${svgWidth}" height="${height}" fill="#fff"/>
   ${bars}
-  <text x="${svgWidth / 2}" y="${height - 2}" text-anchor="middle" font-family="monospace" font-size="10" fill="#000">${chars}</text>
+  <text x="${svgWidth / 2}" y="${height - 2}" text-anchor="middle" font-family="monospace" font-size="10" fill="#000">${escapeXml(chars)}</text>
 </svg>`;
     const base64 = Buffer.from(svg).toString("base64");
     res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, note: "SVG barcode generated. For production use verify scanning with a barcode reader. Full Code128 encoding via bwip-js recommended for high-fidelity output.", request_id: reqId() });
