@@ -63,15 +63,18 @@ TEST_BASE_URL=http://localhost:8787 npm test   # integration + pages tests
 ```
 There is no ESLint config for `api/`; `npx tsc --noEmit` is the lint/type gate.
 
-### Known local test caveats (not setup/code bugs)
-- `integration.test.js`: 2 of 12 checks fail against a keyless local server by
-  design — (1) public `/health` returns minimal `{ok:true}` unless the
-  `x-admin-key` header matches `ADMIN_KEY` (the detailed shape with
-  `tools`/`dependencies` is admin-only on purpose — see `SECURITY.md`; do NOT
-  expose it publicly to make the test pass); (2) the unauthenticated tool call
-  returns `401` instead of `402` because no x402 wallet (`WALLET_ADDRESS`) is
-  configured locally. Both pass against production where those are set.
-  `pages.test.js` passes 31/31.
+### Test notes
+- `integration.test.js` now passes 13/13 and `pages.test.js` 31/31, both locally
+  and against prod. Two things to know:
+  - Public `/health` is intentionally minimal (`{ok:true}`); the detailed shape
+    (tools count + dependency status) is admin-only by design (see `SECURITY.md`).
+    The test validates the public contract always, and the detailed payload only
+    when `TEST_ADMIN_KEY` is set (passed as `x-admin-key`).
+  - The unauthenticated tool call asserts the x402 `402`. That gate only fires
+    when `WALLET_ADDRESS` is set, so the local `api/.env` includes a dummy Base
+    address (prod has a real one). Authenticated (Bearer key) calls bypass the
+    gate and go through the credit/auth path as normal.
+- Run locally with: `TEST_BASE_URL=http://localhost:8787 TEST_ADMIN_KEY=$ADMIN_KEY npm test`
 
 ### Verifying a new account locally (no email provider configured)
 Signups gate 100 credits behind email verification. Without an email provider,
