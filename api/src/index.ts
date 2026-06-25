@@ -23,7 +23,7 @@ if (process.env.SENTRY_DSN) {
 // Routes
 import discoveryRouter from "./routes/discovery.js";
 import agentRouter from "./routes/agent.js";
-import { requireAuth, AuthedRequest, isValidAdminKey } from "./middleware/auth.js";
+import { requireAuth, AuthedRequest } from "./middleware/auth.js";
 import toolsRouter from "./routes/tools/index.js";
 import billingRouter from "./routes/billing.js";
 import adminRouter from "./routes/admin.js";
@@ -174,20 +174,6 @@ app.use(analyticsMiddleware);
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico'), (err) => {
   if (err) res.redirect(301, '/arch-icon.svg?v=2');
 }));
-
-// ─── Admin HTML guard — block static serving of admin.html (adminGate route below handles authorized access) ───
-app.use((req: Request, res: Response, next: import('express').NextFunction): void => {
-  if (req.path === "/admin.html" && req.method === "GET") {
-    const key = req.headers["x-admin-key"] as string | undefined;
-    // Accept a header key OR an at_admin cookie whose VALUE is the real admin key
-    // (timing-safe). A bare `at_admin=1` no longer grants access.
-    if (!isValidAdminKey(key) && !isValidAdminKey(req.cookies?.at_admin)) {
-      res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
-      return;
-    }
-  }
-  next();
-});
 
 // ─── Static files (landing page) ─────────────────────────────────────────────
 // HTML files: no-cache so browsers always revalidate (prevents stale JS/CSS bugs)
@@ -387,16 +373,12 @@ app.get("/playground", (_req: Request, res: Response) => res.sendFile(path.join(
 app.get("/use-cases", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/use-cases.html')));
 app.get("/agents", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/agents.html')));
 app.get("/analytics", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/analytics.html')));
-// Admin panel — require session cookie OR x-admin-key before serving HTML
-const adminGate = (req: Request, res: Response, next: import('express').NextFunction): void => {
-  const key = req.headers["x-admin-key"] as string | undefined;
-  // Allow a valid admin key header OR an at_admin cookie whose VALUE is the real
-  // admin key (both timing-safe). A bare `at_admin=<anything>` no longer works.
-  if (isValidAdminKey(key) || isValidAdminKey(req.cookies?.at_admin)) { next(); return; }
-  res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
-};
-app.get("/admin.html", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
-app.get("/admin", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+// Admin panel — serve the public login shell. It holds no secrets: the key lives
+// in the browser's localStorage and is sent as x-admin-key on data fetches, which
+// requireAdmin validates (timing-safe). Gating the HTML here would 401 every real
+// browser navigation, since the login UI is what collects the key in the first place.
+app.get("/admin.html", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
+app.get("/admin", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));
 app.get("/sitemap.xml", (_req, res) => res.sendFile(path.join(__dirname, '../public/sitemap.xml')));
 app.get("/robots.txt", (_req, res) => res.sendFile(path.join(__dirname, '../public/robots.txt')));
 app.get("/x402-guide", (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/x402-guide.html')));
