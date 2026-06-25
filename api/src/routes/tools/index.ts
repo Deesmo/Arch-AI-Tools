@@ -102,8 +102,25 @@ function tierRateLimiter(req: AuthedRequest, res: Response, next: NextFunction):
 
 // ─── Helper: combined x402 + auth + rate limit middleware ────────────────────
 
+// Enforce OAuth scope on tool execution. x402-paid requests carry no agent
+// (allowed) and API-key auth carries no scope restriction (allowed). Only OAuth
+// access tokens have a scope — executing a tool requires `tools:execute`.
+function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFunction): void {
+  const scope = req.agent?.scope;
+  if (scope !== undefined && !scope.split(/\s+/).includes("tools:execute")) {
+    res.status(403).json({
+      ok: false,
+      error: "insufficient_scope",
+      message: "This OAuth token is not authorized to execute tools (missing tools:execute scope).",
+      request_id: reqId(),
+    });
+    return;
+  }
+  next();
+}
+
 function toolMiddleware(toolName: string) {
-  return [x402Middleware(toolName), requireAuth, tierRateLimiter];
+  return [x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
 }
 
 function isX402Paid(req: Request): boolean {

@@ -5,6 +5,14 @@ import bcrypt from "bcryptjs";
 
 const router = Router();
 
+// Only these OAuth scopes are recognized. Anything else is dropped so a client
+// cannot persist arbitrary scope strings.
+const ALLOWED_SCOPES = ["tools:read", "tools:execute"];
+function sanitizeScope(raw: string | undefined): string {
+  const requested = String(raw ?? "").split(/\s+/).filter((s) => ALLOWED_SCOPES.includes(s));
+  return requested.length ? Array.from(new Set(requested)).join(" ") : "tools:read";
+}
+
 // HTML escape to prevent XSS injection in consent page
 function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
@@ -139,7 +147,8 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
   }
 
   // Verify agent credentials — plaintext keys are no longer stored, bcrypt only.
-  const agent = await prisma.agent.findUnique({ where: { email } }).catch(() => null);
+  const normalizedEmail = String(email ?? "").toLowerCase().trim();
+  const agent = await prisma.agent.findUnique({ where: { email: normalizedEmail } }).catch(() => null);
   const validAgent = agent?.apiKeyHash
     ? await bcrypt.compare(apiKey, agent.apiKeyHash).catch(() => false)
     : false;
@@ -147,6 +156,9 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
     res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method, "Invalid email or API key. Check your credentials at archtools.dev."));
     return;
   }
+
+  // Persist only recognized scopes.
+  const grantedScope = sanitizeScope(scope);
 
   // Generate auth code
   const code = crypto.randomBytes(32).toString("base64url");
@@ -158,7 +170,7 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
       code,
       clientId: client_id,
       agentId: agent.id,
-      scope,
+      scope: grantedScope,
       redirectUri: redirect_uri,
       expiresAt,
       // Store PKCE challenge if provided
@@ -228,8 +240,12 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ error: "invalid_grant", error_description: "PKCE is required for public clients" }); return;
     }
 
-    // Mark code as used
-    await prisma.oAuthAuthCode.update({ where: { code }, data: { used: true } });
+    // Atomically mark the code used — only the first redemption wins, so a
+    // concurrent double-redemption cannot mint two tokens from one code (O-7).
+    const claimed = await prisma.oAuthAuthCode.updateMany({ where: { code, used: false }, data: { used: true } });
+    if (claimed.count !== 1) {
+      res.status(400).json({ error: "invalid_grant" }); return;
+    }
 
     const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
     const refreshTok = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;

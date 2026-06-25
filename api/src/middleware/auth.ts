@@ -11,6 +11,9 @@ export interface AuthedRequest extends Request {
     credits: number;
     tier: string;
     totalCalls: number;
+    // OAuth scope string (space-separated) when authenticated via an OAuth
+    // access token; undefined for full-access API-key auth.
+    scope?: string;
   };
 }
 
@@ -51,12 +54,14 @@ export async function requireAuth(
 
   try {
     let agent = null;
+    let oauthScope: string | undefined;
 
     // OAuth Bearer token (prefix: at_oauth_) — check OAuthToken table first
     if (apiKey.startsWith("at_oauth_")) {
       const oauthToken = await prisma.oAuthToken.findUnique({ where: { accessToken: apiKey } }).catch(() => null);
       if (oauthToken && oauthToken.expiresAt > new Date()) {
         agent = await prisma.agent.findUnique({ where: { id: oauthToken.agentId } });
+        oauthScope = oauthToken.scope;
       }
     } else {
       // Standard API key — plaintext keys are no longer stored. Lookup by the
@@ -88,6 +93,7 @@ export async function requireAuth(
       credits: agent.credits,
       tier: agent.tier,
       totalCalls: agent.totalCalls,
+      scope: oauthScope,
     };
 
     // Update last seen
