@@ -14,26 +14,31 @@ dependencies + Prisma client installed via the startup update script). The
 notes below cover only the non-obvious bits.
 
 ### Critical gotchas
-- **No dotenv auto-loading.** `api/src/` reads `process.env` directly; nothing
-  loads `api/.env`. You MUST export the env before running anything:
-  `cd api && set -a && . .env && set +a`. The local dev `api/.env` is created
-  during setup and git-ignored (it is not committed).
+- **All API commands run from `api/`** (where `package.json` lives). `npm run
+  dev`, `npm run seed`, `npm test`, `npm run build`, and `npm run db:push` all
+  work from `api/`. (Historically `dev`/`seed` had a `api/src/...` path bug; the
+  scripts were fixed to use `src/...` and the ts-node ESM loader.)
+- **`api/.env` auto-loads for the common commands.** `npm run dev`/`npm run seed`
+  load it via Node's `--env-file-if-exists=.env`, and the Prisma CLI
+  (`db:push`/`generate`) loads it automatically. The app code itself does NOT
+  import dotenv, so if you run a script that bypasses those (e.g. `node
+  dist/index.js` directly), export the env first: `set -a && . .env && set +a`.
+  The local dev `api/.env` is created during setup and git-ignored.
 - **`JWT_SECRET` is mandatory** — `api/src/routes/auth.ts` throws on boot if it
   is unset. It lives in `api/.env`.
-- **npm scripts assume cwd = repo root**, not `api/`. `package.json` `dev`/`seed`
-  use paths like `api/src/index.ts`, so `npm run dev`/`npm run seed` from inside
-  `api/` resolve to `api/api/src/...` and fail. The integration/page tests are
-  likewise run from the repo root (see `.github/workflows/test.yml`).
-- **`ts-node`/`ts-node-dev` cannot load this project directly.** The package is
-  ESM (`"type":"module"`, `module:ESNext`) and those runners error
-  (`Must use import to load ES Module` / `Unknown file extension ".ts"`). Run the
-  dev server with the ts-node ESM loader instead (see below) or run the compiled
-  `dist/`.
+- **This project is ESM** (`"type":"module"`, `module:ESNext`). Plain `ts-node`
+  and `ts-node-dev` cannot load it (`Must use import to load ES Module` /
+  `Unknown file extension ".ts"`); that is why `npm run dev`/`seed` invoke
+  `node --loader ts-node/esm` instead. The `--experimental-loader` deprecation
+  warning it prints is harmless.
 - **`prisma migrate deploy` fails from an empty DB** — migration
-  `20260313_add_api_key_hash` references an `api_key` column that `0001_init`
-  never creates. For local/dev, use `prisma db push` (the `db:push` script) to
-  sync the current `schema.prisma`; do not rely on the migration chain locally.
-- **Prisma DB columns are snake_case** (e.g. `verify_token`, `email_verified`,
+  `20260313_add_api_key_hash` backfills from an `api_key` column that `0001_init`
+  never creates. This is a latent issue in the committed migration history; it is
+  left untouched because editing an already-applied migration would change its
+  checksum and could break the live Render deploy. For local/dev/CI, use
+  `npm run db:push` to sync the current `schema.prisma` (this is the intended dev
+  workflow); do not rely on the migration chain locally.
+- **Prisma DB columns are snake_case** (e.g. `verify_token`, `email_verified`;
   `totalCalls` is camelCase) — match the actual column names in raw `psql`.
 
 ### Start PostgreSQL + Redis (not auto-started)
@@ -42,33 +47,31 @@ sudo pg_ctlcluster 16 main start          # Postgres on :5432 (db: arch_dev, rol
 sudo redis-server --daemonize yes --save "" --appendonly no   # Redis on :6379 (optional)
 ```
 
-### Run / build / test the API (from the repo ROOT, env loaded)
+### Run / build / test the API (from api/)
 ```
-cd /workspace/api && set -a && . .env && set +a   # load env (do this first)
+cd /workspace/api
 
-# Dev server (hot-loaded TS via ts-node ESM loader) — run from api/ so node resolves ts-node:
-TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm src/index.ts   # → http://localhost:8787
+npm run dev           # dev server w/ hot reload (node --watch + ts-node/esm) → :8787
+npm run build         # prisma generate && tsc  (CI type-check: npx tsc --noEmit)
+npm start             # node dist/index.js (needs env exported: set -a && . .env && set +a)
 
-# Build + production-style run:
-npm run build         # prisma generate && tsc  (also the CI type-check: npx tsc --noEmit)
-npm start             # node dist/index.js
+npm run db:push       # sync schema.prisma to the DB (fresh/dev DB path; auto-loads .env)
+npm run seed          # seed the ~61 tools (auto-loads .env)
 
-# Seed the ~61 tools (compiled path is most reliable):
-node /workspace/api/dist/seed.js     # or: npx prisma db push first if schema changed
-
-# Tests (run from repo root; default target is PROD — override for local):
-TEST_BASE_URL=http://localhost:8787 node api/tests/integration.test.js
-TEST_BASE_URL=http://localhost:8787 node api/tests/pages.test.js
+# Tests default to the PROD target — override TEST_BASE_URL for local:
+TEST_BASE_URL=http://localhost:8787 npm test   # integration + pages tests
 ```
 There is no ESLint config for `api/`; `npx tsc --noEmit` is the lint/type gate.
 
-### Known local test caveats (not setup failures)
-- `integration.test.js`: 2 of 12 checks fail locally by design —
-  (1) public `/health` returns minimal `{ok:true}` unless the `x-admin-key`
-  header matches `ADMIN_KEY` (detailed shape with `tools`/`dependencies` is
-  admin-only); (2) the unauthenticated tool call returns `401` instead of `402`
-  because no x402 wallet (`WALLET_ADDRESS`) is configured. Both pass against
-  production where those are set. `pages.test.js` passes 31/31.
+### Known local test caveats (not setup/code bugs)
+- `integration.test.js`: 2 of 12 checks fail against a keyless local server by
+  design — (1) public `/health` returns minimal `{ok:true}` unless the
+  `x-admin-key` header matches `ADMIN_KEY` (the detailed shape with
+  `tools`/`dependencies` is admin-only on purpose — see `SECURITY.md`; do NOT
+  expose it publicly to make the test pass); (2) the unauthenticated tool call
+  returns `401` instead of `402` because no x402 wallet (`WALLET_ADDRESS`) is
+  configured locally. Both pass against production where those are set.
+  `pages.test.js` passes 31/31.
 
 ### Verifying a new account locally (no email provider configured)
 Signups gate 100 credits behind email verification. Without an email provider,
