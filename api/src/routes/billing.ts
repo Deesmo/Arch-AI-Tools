@@ -83,6 +83,13 @@ const SUBSCRIPTION_PLANS = [
   },
 ];
 
+// Server-side allow-lists: a webhook may only ever grant a credit amount that
+// matches one of our configured packs/plans. This bounds the blast radius if
+// session/subscription metadata is ever tampered with (e.g. compromised Stripe
+// key) — an attacker cannot inject an arbitrary credit number.
+const ALLOWED_ONETIME_CREDITS = new Set(CREDIT_PACKS.map((p) => p.credits));
+const ALLOWED_SUB_CREDITS = new Set(SUBSCRIPTION_PLANS.map((p) => p.credits_per_month));
+
 // GET /v1/billing/plans — returns all plans (one-time + subscription)
 router.get("/plans", (_req: Request, res: Response): void => {
   res.json({
@@ -208,6 +215,14 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 
+  if (!webhookSecret) {
+    // Without the signing secret we cannot verify authenticity. Refuse rather
+    // than process unverified events. (In production this should never happen.)
+    console.error("[billing] STRIPE_WEBHOOK_SECRET is not set — refusing to process webhook.");
+    res.status(503).json({ error: "Webhook not configured" });
+    return;
+  }
+
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body as Buffer, sig as string, webhookSecret);
@@ -233,6 +248,11 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       if (session.mode === "payment") {
         const credits = parseInt(session.metadata?.credits ?? "0", 10);
         if (!credits) { res.json({ received: true }); return; }
+        if (!ALLOWED_ONETIME_CREDITS.has(credits)) {
+          console.error(`[billing] REJECTED one-time credit grant: credits=${credits} not in allowed set (agent ${agentId}, session ${stripeId})`);
+          sendAdminAlert("⚠️ Stripe webhook credit mismatch", `One-time purchase requested an out-of-range credit amount and was NOT credited.\nagent=${agentId} credits=${credits} amount=${session.amount_total ?? 0} session=${stripeId}`).catch(() => {});
+          res.json({ received: true }); return;
+        }
         await prisma.$transaction([
           prisma.purchase.create({ data: { agentId, stripeId, credits, amountCents: session.amount_total ?? 0, status: "completed" } }),
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: credits } } }),
@@ -265,6 +285,11 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         const planId = session.metadata?.plan_id ?? "";
         const planLabel = session.metadata?.plan_label ?? "Subscription";
         if (!creditsPerMonth) { res.json({ received: true }); return; }
+        if (!ALLOWED_SUB_CREDITS.has(creditsPerMonth)) {
+          console.error(`[billing] REJECTED subscription credit grant: creditsPerMonth=${creditsPerMonth} not in allowed set (agent ${agentId}, session ${stripeId})`);
+          sendAdminAlert("⚠️ Stripe webhook credit mismatch", `Subscription start requested an out-of-range credit amount and was NOT credited.\nagent=${agentId} credits_per_month=${creditsPerMonth} session=${stripeId}`).catch(() => {});
+          res.json({ received: true }); return;
+        }
         await prisma.$transaction([
           prisma.purchase.create({ data: { agentId, stripeId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId.replace(/-(monthly|annual)$/, '') } }),
@@ -288,7 +313,12 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         } catch { /* non-fatal */ }
       }
     } catch (e) {
+      // Return 5xx so Stripe retries delivery — otherwise a transient DB failure
+      // silently drops a paid customer's credits. Crediting is idempotent on
+      // stripeId, so a retry cannot double-credit.
       console.error("Webhook processing error:", e);
+      res.status(500).json({ error: "processing_failed", message: safeErr(e) });
+      return;
     }
   }
 
@@ -306,6 +336,11 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       const agentId = subscription.metadata?.agent_id;
       const creditsPerMonth = parseInt(subscription.metadata?.credits_per_month ?? "0", 10);
       if (!agentId || !creditsPerMonth) { res.json({ received: true }); return; }
+      if (!ALLOWED_SUB_CREDITS.has(creditsPerMonth)) {
+        console.error(`[billing] REJECTED renewal credit grant: creditsPerMonth=${creditsPerMonth} not in allowed set (agent ${agentId}, sub ${subscriptionId})`);
+        sendAdminAlert("⚠️ Stripe webhook credit mismatch", `Renewal requested an out-of-range credit amount and was NOT credited.\nagent=${agentId} credits_per_month=${creditsPerMonth} sub=${subscriptionId}`).catch(() => {});
+        res.json({ received: true }); return;
+      }
 
       // Idempotency: use invoice ID
       const invoiceId = invoice.id ?? subscriptionId;
@@ -331,7 +366,10 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         `Subscription renewed!\n\nCustomer: ${agentRenewal?.email ?? "unknown"}\nCredits added: ${creditsPerMonth.toLocaleString()}\nAmount: $${renewalAmount}\nSubscription: ${subscriptionId}`
       ).catch(() => {});
     } catch (e) {
+      // 5xx → Stripe retries; idempotent on invoice id so no double-credit.
       console.error("Subscription renewal error:", e);
+      res.status(500).json({ error: "processing_failed", message: safeErr(e) });
+      return;
     }
   }
 
