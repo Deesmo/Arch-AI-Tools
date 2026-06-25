@@ -703,8 +703,14 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req: AuthedRequ
   }
   const { ip } = req.body as { ip?: string };
   if (!ip) { res.status(400).json({ ok: false, error: "invalid_request", message: "ip is required", request_id: reqId() }); return; }
+  const ipClean = String(ip).trim();
+  // Restrict to IP charset (digits/hex/dot/colon) so it can't break out of the
+  // upstream URL path, then encode defensively.
+  if (!/^[0-9a-fA-F.:]{2,45}$/.test(ipClean)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "ip must be a valid IPv4 or IPv6 address", request_id: reqId() }); return;
+  }
   try {
-    const resp = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
+    const resp = await axios.get(`http://ip-api.com/json/${encodeURIComponent(ipClean)}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query`, { timeout: 6000 });
     const data = resp.data as Record<string, unknown>;
     if (data.status === "fail") { res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: reqId() }); return; }
     res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: reqId() });
@@ -2177,6 +2183,10 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
   const { text, voice_id = "EXAVITQu4vr4xnSDxMaL", model_id = "eleven_turbo_v2_5", stability = 0.5, similarity_boost = 0.75 } = req.body as { text?: string; voice_id?: string; model_id?: string; stability?: number; similarity_boost?: number };
   if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
   if (text.length > 5000) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 5000 chars or less", request_id: reqId() }); return; }
+  // voice_id is interpolated into the ElevenLabs URL path — restrict to a safe charset.
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(voice_id))) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "voice_id must be alphanumeric (letters, digits, _ or -)", request_id: reqId() }); return;
+  }
   const paid = isX402Paid(req);
   if (!paid) {
     // Metered by length: 25 base + 8 credits per 100 chars (covers ElevenLabs COGS)
@@ -2187,7 +2197,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() }); return; }
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice_id)}`, {
       method: "POST",
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
       body: JSON.stringify({ text, model_id, voice_settings: { stability, similarity_boost } })

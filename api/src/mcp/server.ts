@@ -159,7 +159,15 @@ async function callArchTool(toolName: string, args: Record<string, any>): Promis
   }
 
   if (!response.ok) {
-    return JSON.stringify({ error: `HTTP ${response.status}`, message: (await response.text()).substring(0, 500) });
+    // Forward only the structured error/message fields — never the raw upstream
+    // body — so unexpected response content can't leak to the client.
+    const raw = await response.text().catch(() => "");
+    let detail = `HTTP ${response.status}`;
+    try {
+      const j = JSON.parse(raw) as { message?: string; error?: string };
+      detail = j.message || j.error || detail;
+    } catch { /* non-JSON — keep generic */ }
+    return JSON.stringify({ error: `HTTP ${response.status}`, message: String(detail).slice(0, 300) });
   }
 
   return JSON.stringify(await response.json(), null, 2);
