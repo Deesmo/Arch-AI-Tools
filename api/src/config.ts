@@ -1,7 +1,7 @@
 export const config = {
   port: parseInt(process.env.PORT ?? "3000", 10),
   nodeEnv: process.env.NODE_ENV ?? "development",
-  adminKey: process.env.ADMIN_KEY ?? "changeme",
+  adminKey: process.env.ADMIN_KEY ?? "",
   publicSiteUrl: process.env.PUBLIC_SITE_URL ?? "https://archtools.dev",
   corsOrigin: process.env.CORS_ORIGIN ?? "https://archtools.dev",
   freeMonthlyCredits: parseInt(process.env.FREE_MONTHLY_CREDITS ?? "250", 10),

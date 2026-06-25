@@ -23,7 +23,7 @@ if (process.env.SENTRY_DSN) {
 // Routes
 import discoveryRouter from "./routes/discovery.js";
 import agentRouter from "./routes/agent.js";
-import { requireAuth, AuthedRequest } from "./middleware/auth.js";
+import { requireAuth, AuthedRequest, isValidAdminKey } from "./middleware/auth.js";
 import toolsRouter from "./routes/tools/index.js";
 import billingRouter from "./routes/billing.js";
 import adminRouter from "./routes/admin.js";
@@ -179,8 +179,9 @@ app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(__dirname, '../pub
 app.use((req: Request, res: Response, next: import('express').NextFunction): void => {
   if (req.path === "/admin.html" && req.method === "GET") {
     const key = req.headers["x-admin-key"] as string | undefined;
-    const cookie = req.headers["cookie"] ?? "";
-    if (!((key && key === config.adminKey) || cookie.includes("at_admin="))) {
+    // Accept a header key OR an at_admin cookie whose VALUE is the real admin key
+    // (timing-safe). A bare `at_admin=1` no longer grants access.
+    if (!isValidAdminKey(key) && !isValidAdminKey(req.cookies?.at_admin)) {
       res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
       return;
     }
@@ -389,9 +390,9 @@ app.get("/analytics", (_req: Request, _res: Response) => _res.sendFile(path.join
 // Admin panel — require session cookie OR x-admin-key before serving HTML
 const adminGate = (req: Request, res: Response, next: import('express').NextFunction): void => {
   const key = req.headers["x-admin-key"] as string | undefined;
-  const cookie = req.headers["cookie"] ?? "";
-  // Allow if valid admin key header OR browser session cookie present (admin login sets it)
-  if ((key && key === config.adminKey) || cookie.includes("at_admin=")) { next(); return; }
+  // Allow a valid admin key header OR an at_admin cookie whose VALUE is the real
+  // admin key (both timing-safe). A bare `at_admin=<anything>` no longer works.
+  if (isValidAdminKey(key) || isValidAdminKey(req.cookies?.at_admin)) { next(); return; }
   res.status(401).set("WWW-Authenticate", 'Bearer realm="Arch Tools Admin"').json({ ok: false, error: "unauthorized", message: "Admin authentication required" });
 };
 app.get("/admin.html", adminGate, (_req: Request, _res: Response) => _res.sendFile(path.join(__dirname, '../public/admin.html')));

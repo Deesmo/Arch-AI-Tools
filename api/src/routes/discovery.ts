@@ -4,6 +4,7 @@ import { redis } from "../lib/redis.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import { getStatusPageData } from "../middleware/analytics.js";
 import { config } from "../config.js";
+import { isValidAdminKey } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -103,7 +104,7 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
   // Public response — minimal, no internal details
   // Detailed health available to admin key holders only
   const adminKey = (_req as import("express").Request & { headers: Record<string, string | string[] | undefined> }).headers["x-admin-key"];
-  const isAdmin = adminKey && adminKey === config.adminKey;
+  const isAdmin = isValidAdminKey(typeof adminKey === "string" ? adminKey : undefined);
 
   if (!isAdmin) {
     res.status(overallOk ? 200 : 503).json({ ok: overallOk });

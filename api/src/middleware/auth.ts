@@ -108,6 +108,23 @@ export async function requireAuth(
   }
 }
 
+/**
+ * Single source of truth for admin-key validation. Timing-safe, and refuses to
+ * authenticate when ADMIN_KEY is unset or left at the insecure default. Used by
+ * requireAdmin and the admin-HTML gates so they cannot drift apart.
+ */
+export function isValidAdminKey(provided: string | undefined | null): boolean {
+  const expected = process.env.ADMIN_KEY ?? "";
+  if (!expected || expected === "changeme") return false;
+  const got = String(provided ?? "");
+  if (got.length !== expected.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
+
 export function requireAdmin(
   req: Request,
   res: Response,
@@ -122,9 +139,7 @@ export function requireAdmin(
     ""
   );
 
-  const expected = process.env.ADMIN_KEY ?? "";
-  // Timing-safe comparison to prevent timing attacks
-  if (!expected || key.length !== expected.length || !timingSafeEqual(Buffer.from(key), Buffer.from(expected))) {
+  if (!isValidAdminKey(key)) {
     res.status(403).json({ ok: false, error: "forbidden" });
     return;
   }
