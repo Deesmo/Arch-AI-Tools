@@ -140,7 +140,13 @@ const NONCE_TTL = 24 * 60 * 60;
 
 export async function checkNonce(nonce: string, providerId: string): Promise<boolean> {
   if (!redis) {
-    console.warn("[facilitator] Redis unavailable — nonce dedup disabled");
+    // Fail closed in production: without Redis we cannot detect replays, so a
+    // fresh-nonce claim must NOT be trusted. Set REDIS_URL to enable dedup.
+    if (process.env.NODE_ENV === "production") {
+      console.error("[facilitator] REDIS_URL not configured in production — failing closed (nonce dedup required).");
+      return false;
+    }
+    console.warn("[facilitator] Redis unavailable — nonce dedup disabled (non-production only)");
     return true;
   }
   const key = `facilitator:nonce:${providerId}:${nonce}`;
@@ -320,8 +326,12 @@ export async function verifyPayment(
       return { isValid: false, invalidReason: "invalid_signature" };
     }
   } catch (err) {
-    console.warn(`[facilitator] Sig verification warning:`, (err as Error).message?.slice(0, 200));
-    // Non-fatal during beta
+    // FAIL CLOSED: a thrown error (RPC failure, malformed signature, bad token
+    // metadata) must NOT be treated as a valid signature. Previously this swallowed
+    // the error and returned isValid:true, letting forged authorizations through.
+    console.warn(`[facilitator] Sig verification failed:`, (err as Error).message?.slice(0, 200));
+    await releaseNonce(auth.nonce, providerId);
+    return { isValid: false, invalidReason: "signature_verification_failed" };
   }
 
   return { isValid: true };

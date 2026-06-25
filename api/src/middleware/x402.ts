@@ -843,8 +843,14 @@ export async function checkAndStoreNonce(
   redisClient: { set: (...args: any[]) => Promise<any> } | null = redis,
 ): Promise<"new" | "replay" | "error"> {
   if (!redisClient) {
-    console.warn("[x402] Redis not configured — nonce deduplication disabled. Set REDIS_URL to enable replay protection.");
-    return "new"; // allow but warn (only reachable when REDIS_URL unset)
+    // In production, replay protection is mandatory: if REDIS_URL is unset we
+    // fail closed rather than accept potentially-replayed payments. Set REDIS_URL.
+    if (process.env.NODE_ENV === "production") {
+      console.error("[x402] REDIS_URL not configured in production — failing closed (replay protection is required).");
+      return "error";
+    }
+    console.warn("[x402] Redis not configured — nonce deduplication disabled (non-production only). Set REDIS_URL to enable replay protection.");
+    return "new";
   }
   const key = `x402:nonce:${nonce}`;
   try {
@@ -1110,6 +1116,15 @@ export function x402Middleware(toolName: string) {
         });
         return;
       }
+    } else if (process.env.NODE_ENV === "production") {
+      // No nonce could be extracted → the payment cannot be replay-protected.
+      // Reject in production rather than serve a tool against an unguarded proof.
+      res.status(402).json({
+        ok: false,
+        error: "payment_nonce_required",
+        message: "x402 payment is missing a usable nonce; a unique nonce is required for replay protection.",
+      });
+      return;
     }
 
     // Build the payment requirements for verify/settle calls.
@@ -1152,10 +1167,11 @@ export function x402Middleware(toolName: string) {
     // Settle payment using spec-compliant format
     const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
 
-    // SECURITY: require an actual successful settlement before serving the tool.
-    // A null result (facilitator error/unconfigured) or a settle response without
-    // success/transaction means funds did NOT move — do not serve, do not mark paid.
-    const settled = !!settleResult && (settleResult.success === true || !!settleResult.transaction);
+    // SECURITY: require an actual SUCCESSFUL settlement before serving the tool.
+    // success===true is mandatory — a settle response that carries a transaction
+    // hash but success!==true (e.g. a reverted/failed tx) means funds did NOT move,
+    // so it must not grant access.
+    const settled = !!settleResult && settleResult.success === true;
     if (!settled) {
       // Free the nonce so the agent can retry the payment
       if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
