@@ -45,13 +45,23 @@ const forgotLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Protect token-consuming / credential-setting endpoints from brute force.
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { ok: false, error: "too_many_attempts", message: "Too many attempts. Try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export function signSession(agentId: string): string {
   return jwt.sign({ sub: agentId }, JWT_SECRET, { expiresIn: SESSION_TTL_JWT });
 }
 
 export function verifySession(token: string): { sub: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { sub: string };
+    // Pin the algorithm so a token cannot be presented with a different/none alg.
+    return jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as { sub: string };
   } catch {
     return null;
   }
@@ -105,17 +115,16 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
     }
 
     if (!agent.passwordHash || typeof agent.passwordHash !== "string") {
-      res.status(401).json({
-        ok: false,
-        error: "no_password_set",
-        message: "This account does not have a password yet. Set one from your dashboard or welcome flow.",
-      });
+      // Don't reveal that the account exists but has no password (enumeration).
+      // Run a dummy compare so timing matches the wrong-password path (R-6).
+      bcrypt.compareSync(password, DUMMY_BCRYPT_HASH);
+      res.status(401).json({ ok: false, error: "invalid_credentials", message: "Invalid email or password." });
       return;
     }
 
     const valid = bcrypt.compareSync(password, agent.passwordHash);
     if (!valid) {
-      res.status(401).json({ ok: false, error: "invalid_credentials" });
+      res.status(401).json({ ok: false, error: "invalid_credentials", message: "Invalid email or password." });
       return;
     }
 
@@ -130,7 +139,7 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
   }
 });
 
-router.post("/set-password", async (req: Request, res: Response): Promise<void> => {
+router.post("/set-password", sensitiveLimiter, async (req: Request, res: Response): Promise<void> => {
   const { api_key, password } = req.body ?? {};
   if (typeof api_key !== "string" || typeof password !== "string" || !api_key || !password) {
     res.status(400).json({ ok: false, error: "api_key_and_password_required" });
@@ -233,7 +242,10 @@ router.post("/forgot-password", forgotLimiter, async (req: Request, res: Respons
 });
 
 router.get("/reset-password", (_req: Request, res: Response): void => {
-  const token = (_req.query.token as string) ?? "";
+  // SECURITY: the token is interpolated into inline JS below. Reset tokens are
+  // hex (crypto.randomBytes.toString("hex")), so strip everything non-hex to
+  // neutralize reflected XSS via a crafted ?token=' + payload.
+  const token = String(_req.query.token ?? "").replace(/[^a-fA-F0-9]/g, "").slice(0, 128);
   res.type("text/html").send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,7 +293,7 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
 </body></html>`);
 });
 
-router.post("/reset-password", async (req: Request, res: Response): Promise<void> => {
+router.post("/reset-password", sensitiveLimiter, async (req: Request, res: Response): Promise<void> => {
   const { token, password } = req.body ?? {};
   if (!token || !password) {
     res.status(400).json({ ok: false, error: "token_and_password_required" });
