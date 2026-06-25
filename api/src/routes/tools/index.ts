@@ -4,7 +4,7 @@ import { x402Middleware } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
-import { validateUrl } from "../../lib/ssrf.js";
+import { validateUrl, safeAxiosGet, safeFetch } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
@@ -390,7 +390,7 @@ router.post("/extract-metadata", ...toolMiddleware("extract-metadata"), async (r
     let fetchedUrl = url ?? "";
     if (url && !text) {
       try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const resp = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "ArchTools/1.5 Metadata Extractor" } });
+      const resp = await safeAxiosGet(url, { timeout: 10000, headers: { "User-Agent": "ArchTools/1.5 Metadata Extractor" } });
       html = resp.data as string;
     }
     const $ = cheerio.load(html);
@@ -420,7 +420,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
-    const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5 Web Scraper (https://archtools.dev)" } });
+    const resp = await safeAxiosGet(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5 Web Scraper (https://archtools.dev)" } });
     const cheerio = await import("cheerio");
     const $ = cheerio.load(resp.data as string);
     $("script, style, noscript, nav, footer, header, iframe").remove();
@@ -470,7 +470,7 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req: Auth
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
-    const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5" } });
+    const resp = await safeAxiosGet(url, { timeout: 15000, headers: { "User-Agent": "ArchTools/1.5" } });
     const cheerio = await import("cheerio");
     const $ = cheerio.load(resp.data as string);
     $("script, style, noscript, nav, footer, header, aside").remove();
@@ -635,7 +635,7 @@ router.post("/rss-parse", ...toolMiddleware("rss-parse"), async (req: AuthedRequ
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
-    const resp = await axios.get(url, { timeout: 10000, headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
+    const resp = await safeAxiosGet(url, { timeout: 10000, headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
     const xml2js = await import("xml2js");
     const parsed = await xml2js.parseStringPromise(resp.data as string, { explicitArray: false, mergeAttrs: true });
     const channel = parsed?.rss?.channel ?? parsed?.feed;
@@ -1204,7 +1204,7 @@ router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: Authed
       try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
       let imgResp;
       try {
-        imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)", "Accept": "image/*" } });
+        imgResp = await safeAxiosGet(image_url, { responseType: "arraybuffer", timeout: 30000, maxContentLength: 20 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)", "Accept": "image/*" } });
       } catch (dlErr) {
         const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
         console.error("[ocr-extract] image download failed:", st ?? dlErr);
@@ -1267,7 +1267,7 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
   try {
-    const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
+    const resp = await safeAxiosGet(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
     const cheerio = await import("cheerio");
     const $ = cheerio.load(resp.data as string);
     if (action === "extract" || action === "html") {
@@ -1297,7 +1297,7 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     let base64Data = pdf_base64;
     if (pdf_url && !pdf_base64) {
       try { await validateUrl(pdf_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const resp = await axios.get(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
+      const resp = await safeAxiosGet(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
       const buffer = Buffer.from(resp.data as ArrayBuffer);
       if (buffer.length > 5 * 1024 * 1024) {
         res.status(400).json({ ok: false, error: "file_too_large", message: "PDF must be under 5MB", request_id: reqId() });
@@ -1335,7 +1335,7 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
-    const resp = await axios.get(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Screenshot" } });
+    const resp = await safeAxiosGet(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Screenshot" } });
     const cheerio = await import("cheerio");
     const $ = cheerio.load(resp.data as string);
     const title = $("title").text() || "";
@@ -1370,7 +1370,7 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
     let rawHtml = html ?? "";
     if (url && !html) {
       try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const resp = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0 ArchTools" } });
+      const resp = await safeAxiosGet(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0 ArchTools" } });
       rawHtml = resp.data as string;
     }
     const cheerio = await import("cheerio");
@@ -1443,6 +1443,7 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req: Authed
   }
   const { url } = req.body as { url?: string };
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
     const resp = await axios.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { timeout: 8000 });
     const short = resp.data as string;
@@ -2170,9 +2171,11 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: reqId() }); return; }
+  try { await validateUrl(audio_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   try {
-    // Fetch audio file (60s timeout for large files)
-    const audioResp = await fetch(audio_url, { signal: AbortSignal.timeout(60000) });
+    // Fetch audio file (60s timeout for large files). safeFetch re-validates
+    // every redirect hop to prevent SSRF via attacker-controlled redirects.
+    const audioResp = await safeFetch(audio_url, { signal: AbortSignal.timeout(60000) });
     if (!audioResp.ok) { res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() }); return; }
     const audioBuffer = await audioResp.arrayBuffer();
     const contentType = audioResp.headers.get("content-type") ?? "audio/mpeg";
@@ -2954,7 +2957,7 @@ router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req
     if (image_url && !imgB64) {
       try { await validateUrl(image_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
       try {
-        const imgResp = await axios.get(image_url, { responseType: "arraybuffer", timeout: 20000, maxContentLength: 22 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)" } });
+        const imgResp = await safeAxiosGet(image_url, { responseType: "arraybuffer", timeout: 20000, maxContentLength: 22 * 1024 * 1024, headers: { "User-Agent": "ArchTools/1.0 (+https://archtools.dev)" } });
         imgB64 = Buffer.from(imgResp.data as ArrayBuffer).toString("base64");
       } catch (dlErr) {
         const st = axios.isAxiosError(dlErr) ? dlErr.response?.status : undefined;
@@ -3793,10 +3796,9 @@ router.post("/url-health-check", ...toolMiddleware("url-health-check"), async (r
     const start = Date.now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
-    const r = await fetch(url, {
+    const r = await safeFetch(url, {
       method: "HEAD",
       signal: controller.signal,
-      redirect: "follow",
       headers: { "User-Agent": "ArchTools-HealthCheck/1.0" },
     });
     clearTimeout(timeout);
@@ -3810,7 +3812,7 @@ router.post("/url-health-check", ...toolMiddleware("url-health-check"), async (r
       response_time_ms: elapsed,
       content_type: r.headers.get("content-type") ?? null,
       server: r.headers.get("server") ?? null,
-      redirected: r.redirected,
+      redirected: r.url !== url,
       final_url: r.url !== url ? r.url : null,
       request_id: reqId(),
     });

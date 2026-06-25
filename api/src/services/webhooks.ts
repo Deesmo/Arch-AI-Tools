@@ -7,6 +7,7 @@
 
 import { createHmac, randomUUID } from "crypto";
 import { prisma } from "../lib/prisma.js";
+import { safeFetch } from "../lib/ssrf.js";
 
 // ─── Event types ────────────────────────────────────────────────────────────
 export const WEBHOOK_EVENTS = [
@@ -49,7 +50,10 @@ async function deliverWebhook(
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10_000); // 10s timeout
 
-      const response = await fetch(url, {
+      // safeFetch re-validates the URL (and every redirect hop) at delivery time,
+      // closing the DNS-rebinding gap between registration-time validation and the
+      // actual outbound request.
+      const response = await safeFetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
