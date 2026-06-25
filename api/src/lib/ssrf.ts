@@ -1,5 +1,9 @@
 import { URL } from "url";
 import dns from "dns/promises";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+
+// Cap redirect chains so a malicious server can't keep us looping.
+const MAX_REDIRECTS = 5;
 
 const BLOCKED_PATTERNS = [
   /^localhost$/i,
@@ -60,4 +64,47 @@ export async function validateUrl(rawUrl: string): Promise<void> {
     // DNS lookup failure = block by default
     throw new Error("URL hostname could not be resolved");
   }
+}
+
+// Redirect-safe fetch. validateUrl() only guards the URL the caller hands us —
+// but fetch() follows redirects by default, so a public host could 30x-redirect
+// to an internal address (cloud metadata, localhost, RFC1918) and bypass the
+// check. This follows redirects manually, re-validating every hop.
+export async function safeFetch(rawUrl: string, init: RequestInit = {}): Promise<Response> {
+  let url = rawUrl;
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    await validateUrl(url);
+    const resp = await fetch(url, { ...init, redirect: "manual" });
+    const location = resp.status >= 300 && resp.status < 400 ? resp.headers.get("location") : null;
+    if (location) {
+      url = new URL(location, url).toString();
+      continue;
+    }
+    return resp;
+  }
+  throw new Error("URL exceeded maximum redirect depth");
+}
+
+// Redirect-safe axios GET — same rationale as safeFetch, for the axios call
+// sites. Disables axios's own redirect following and re-validates each hop.
+export async function safeAxiosGet(rawUrl: string, config: AxiosRequestConfig = {}): Promise<AxiosResponse> {
+  let url = rawUrl;
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    await validateUrl(url);
+    const resp = await axios.get(url, {
+      ...config,
+      maxRedirects: 0,
+      // Accept 2xx/3xx so we can inspect redirects; still throw on 4xx/5xx so
+      // callers' existing axios error handling is preserved.
+      validateStatus: (s: number) => s >= 200 && s < 400,
+    });
+    if (resp.status >= 300 && resp.status < 400) {
+      const location = resp.headers["location"] ?? resp.headers["Location"];
+      if (!location) return resp;
+      url = new URL(String(location), url).toString();
+      continue;
+    }
+    return resp;
+  }
+  throw new Error("URL exceeded maximum redirect depth");
 }
