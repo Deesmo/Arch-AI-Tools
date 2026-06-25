@@ -2168,6 +2168,7 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
   if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", byokAdjustedCost(req, 25)); if (!ok) return; }
   const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
+  try { await validateUrl(audio_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Transcription not configured", request_id: reqId() }); return; }
   try {
