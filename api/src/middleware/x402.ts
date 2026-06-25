@@ -837,20 +837,31 @@ const NONCE_TTL_SECONDS = 600; // default dedup TTL when validBefore is absent
  * fail closed). When REDIS_URL is unset, returns "new" with a warning (dedup
  * disabled by configuration).
  */
+// In-memory nonce cache used as a fast replay guard when Redis is unavailable.
+// Same-process optimization only — the AUTHORITATIVE replay guard is on-chain:
+// EIP-3009 consumes the nonce at settlement, so any replayed proof reverts and
+// fails the success===true settle gate (even across instances).
+const memNonceCache = new Map<string, number>(); // nonce -> expiry epoch ms
+function memCheckAndStoreNonce(nonce: string, ttlSeconds: number): "new" | "replay" {
+  const now = Date.now();
+  if (memNonceCache.size > 50_000) {
+    for (const [k, exp] of memNonceCache) if (exp <= now) memNonceCache.delete(k);
+  }
+  const existing = memNonceCache.get(nonce);
+  if (existing && existing > now) return "replay";
+  memNonceCache.set(nonce, now + Math.max(60, ttlSeconds) * 1000);
+  return "new";
+}
+
 export async function checkAndStoreNonce(
   nonce: string,
   ttlSeconds: number = NONCE_TTL_SECONDS,
   redisClient: { set: (...args: any[]) => Promise<any> } | null = redis,
 ): Promise<"new" | "replay" | "error"> {
   if (!redisClient) {
-    // In production, replay protection is mandatory: if REDIS_URL is unset we
-    // fail closed rather than accept potentially-replayed payments. Set REDIS_URL.
-    if (process.env.NODE_ENV === "production") {
-      console.error("[x402] REDIS_URL not configured in production — failing closed (replay protection is required).");
-      return "error";
-    }
-    console.warn("[x402] Redis not configured — nonce deduplication disabled (non-production only). Set REDIS_URL to enable replay protection.");
-    return "new";
+    // No Redis: in-memory fallback. Never hard-fail — on-chain nonce consumption
+    // at settlement is the authoritative double-spend guard.
+    return memCheckAndStoreNonce(nonce, ttlSeconds);
   }
   const key = `x402:nonce:${nonce}`;
   try {
@@ -858,10 +869,10 @@ export async function checkAndStoreNonce(
     const result = await redisClient.set(key, "1", "EX", ttlSeconds, "NX");
     return result === "OK" ? "new" : "replay"; // null = already existed (replay)
   } catch (err) {
-    // FAIL-CLOSED: when replay protection is configured (REDIS_URL set) but Redis
-    // is unreachable, reject rather than allow a potential replay through.
-    console.error(`[x402] Redis unreachable during nonce check — failing closed: ${err instanceof Error ? err.message : String(err)}`);
-    return "error";
+    // Redis configured but unreachable → fall back to in-memory dedup rather than
+    // rejecting valid payments. On-chain nonce consumption remains authoritative.
+    console.warn(`[x402] Redis unreachable during nonce check — in-memory fallback: ${err instanceof Error ? err.message : String(err)}`);
+    return memCheckAndStoreNonce(nonce, ttlSeconds);
   }
 }
 
@@ -1108,6 +1119,8 @@ export function x402Middleware(toolName: string) {
         });
         return;
       }
+      // checkAndStoreNonce no longer returns "error" (it falls back to an
+      // in-memory guard); keep this defensive branch in case that changes.
       if (nonceStatus === "error") {
         res.status(402).json({
           ok: false,
@@ -1116,16 +1129,9 @@ export function x402Middleware(toolName: string) {
         });
         return;
       }
-    } else if (process.env.NODE_ENV === "production") {
-      // No nonce could be extracted → the payment cannot be replay-protected.
-      // Reject in production rather than serve a tool against an unguarded proof.
-      res.status(402).json({
-        ok: false,
-        error: "payment_nonce_required",
-        message: "x402 payment is missing a usable nonce; a unique nonce is required for replay protection.",
-      });
-      return;
     }
+    // If no nonce could be extracted, app-level dedup is skipped — on-chain
+    // EIP-3009 nonce consumption at settlement remains the authoritative guard.
 
     // Build the payment requirements for verify/settle calls.
     // CRITICAL FIX: paymentRequirements sent to the facilitator MUST match the

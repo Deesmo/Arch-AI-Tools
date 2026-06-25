@@ -138,20 +138,33 @@ function getPublicClient(networkId: string) {
 
 const NONCE_TTL = 24 * 60 * 60;
 
-export async function checkNonce(nonce: string, providerId: string): Promise<boolean> {
-  if (!redis) {
-    // Fail closed in production: without Redis we cannot detect replays, so a
-    // fresh-nonce claim must NOT be trusted. Set REDIS_URL to enable dedup.
-    if (process.env.NODE_ENV === "production") {
-      console.error("[facilitator] REDIS_URL not configured in production — failing closed (nonce dedup required).");
-      return false;
-    }
-    console.warn("[facilitator] Redis unavailable — nonce dedup disabled (non-production only)");
-    return true;
+// In-memory fallback dedup (same-process). On-chain EIP-3009 nonce consumption
+// at settlement is the authoritative cross-instance guard.
+const memFacilitatorNonces = new Map<string, number>();
+function memCheckFacilitatorNonce(key: string): boolean {
+  const now = Date.now();
+  if (memFacilitatorNonces.size > 50_000) {
+    for (const [k, exp] of memFacilitatorNonces) if (exp <= now) memFacilitatorNonces.delete(k);
   }
+  const existing = memFacilitatorNonces.get(key);
+  if (existing && existing > now) return false; // replay
+  memFacilitatorNonces.set(key, now + NONCE_TTL * 1000);
+  return true;
+}
+
+export async function checkNonce(nonce: string, providerId: string): Promise<boolean> {
   const key = `facilitator:nonce:${providerId}:${nonce}`;
-  const result = await redis.set(key, "1", "EX", NONCE_TTL, "NX");
-  return result === "OK";
+  if (!redis) {
+    // No Redis: in-memory fallback. Settlement reverts on a consumed on-chain
+    // nonce, so this never weakens the actual double-spend guarantee.
+    return memCheckFacilitatorNonce(key);
+  }
+  try {
+    const result = await redis.set(key, "1", "EX", NONCE_TTL, "NX");
+    return result === "OK";
+  } catch {
+    return memCheckFacilitatorNonce(key);
+  }
 }
 
 export async function releaseNonce(nonce: string, providerId: string): Promise<void> {
@@ -255,13 +268,10 @@ export async function verifyPayment(
           return { isValid: false, invalidReason: "insufficient_balance" };
         }
       } catch (err) {
-        console.warn(`[facilitator] Balance check failed:`, (err as Error).message?.slice(0, 100));
-        // Fail closed in production: if we cannot confirm the payer's balance we
-        // must not assert validity. (Dev keeps the lenient path for offline RPC.)
-        if (process.env.NODE_ENV === "production") {
-          await releaseNonce(auth.nonce, providerId);
-          return { isValid: false, invalidReason: "balance_check_unavailable" };
-        }
+        // Pre-flight balance check is an optimization only — settlement reverts
+        // on insufficient balance — so a transient RPC failure must not reject a
+        // valid payer. Warn and proceed; settle is authoritative.
+        console.warn(`[facilitator] Balance check skipped (RPC):`, (err as Error).message?.slice(0, 100));
       }
 
       try {
@@ -276,17 +286,9 @@ export async function verifyPayment(
           await releaseNonce(auth.nonce, providerId);
           return { isValid: false, invalidReason: "nonce_consumed_onchain" };
         }
-      } catch (err) {
-        // authorizationState may legitimately not exist on some tokens. Fail
-        // closed in production only when the RPC itself is unreachable; for a
-        // missing-method revert viem throws a ContractFunctionExecutionError
-        // which we tolerate so non-standard-but-valid tokens still work.
-        const msg = (err as Error).message || "";
-        const methodMissing = /reverted|not a function|returned no data|execution reverted/i.test(msg);
-        if (process.env.NODE_ENV === "production" && !methodMissing) {
-          await releaseNonce(auth.nonce, providerId);
-          return { isValid: false, invalidReason: "nonce_check_unavailable" };
-        }
+      } catch {
+        // authorizationState pre-check is best-effort (not all tokens expose it,
+        // and RPC can blip). Settlement reverts on a consumed nonce, so proceed.
       }
     }
   }
