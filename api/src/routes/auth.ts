@@ -8,6 +8,7 @@ import { logAudit } from "../lib/audit.js";
 import { logger } from "../lib/logger.js";
 import { sendPasswordResetEmail } from "../services/email.js";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
+import { findAgentByApiKey } from "../lib/apiKeys.js";
 
 const router = Router();
 
@@ -65,17 +66,6 @@ export function verifySession(token: string): { sub: string } | null {
   } catch {
     return null;
   }
-}
-
-async function findAgentByApiKey(apiKey: string) {
-  // Plaintext keys are no longer stored — prefix lookup + bcrypt compare only.
-  const prefix = apiKey.slice(0, 12);
-  const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } }).catch(() => null);
-  if (candidate?.apiKeyHash) {
-    const match = await bcrypt.compare(apiKey, candidate.apiKeyHash).catch(() => false);
-    if (match) return candidate;
-  }
-  return null;
 }
 
 router.post("/login-key", loginLimiter, async (req: Request, res: Response): Promise<void> => {

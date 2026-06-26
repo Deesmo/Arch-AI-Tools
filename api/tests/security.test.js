@@ -4,7 +4,7 @@
  *  - H1: x402 settle-guard predicate (no serve on null/failed settlement)
  *  - H3: atomic credit deduction guard shape (updateMany count contract)
  *  - H2: x402 nonce extraction (authorization.nonce), no hard reject on
- *        missing nonce, replay dedup fail-closed, TTL clamp
+ *        missing nonce, replay dedup fallback, retry cleanup, TTL clamp
  *
  * Run: node tests/security.test.js  (requires `npm run build` first for dist/)
  */
@@ -121,8 +121,8 @@ async function main() {
   })();
 
   // ── H1: settle-guard predicate ────────────────────────────────────────────
-  // Mirrors: const settled = !!settleResult && (settleResult.success === true || !!settleResult.transaction);
-  const settled = (r) => !!r && (r.success === true || !!r.transaction);
+  // Mirrors: const settled = !!settleResult && settleResult.success === true;
+  const settled = (r) => !!r && r.success === true;
 
   console.log("H1 — x402 settle guard:");
   test("null settle result → NOT settled (must 402, not serve)", () =>
@@ -133,8 +133,8 @@ async function main() {
     assert.strictEqual(settled({ success: false }), false));
   test("success:true → settled", () =>
     assert.strictEqual(settled({ success: true }), true));
-  test("transaction hash present → settled", () =>
-    assert.strictEqual(settled({ transaction: "0xabc" }), true));
+  test("transaction hash without success:true → NOT settled", () =>
+    assert.strictEqual(settled({ transaction: "0xabc" }), false));
 
   // ── H3: atomic deduction contract ─────────────────────────────────────────
   // The guarded updateMany returns {count:0} when balance < cost → caller must
@@ -165,7 +165,7 @@ async function main() {
 
   // ── H2: x402 nonce extraction + replay dedup ────────────────────────────
   const x402 = await import(path.join(__dirname, "..", "dist", "middleware", "x402.js"));
-  const { extractNonce, extractNonceTtlSeconds, checkAndStoreNonce } = x402;
+  const { extractNonce, extractNonceTtlSeconds, checkAndStoreNonce, releaseStoredNonce } = x402;
   const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64");
 
   console.log("H2 — extractNonce resolution order:");
@@ -211,7 +211,7 @@ async function main() {
     assert.strictEqual(rejected, false);
   });
 
-  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  console.log("H2 — checkAndStoreNonce dedup + fallback retry cleanup:");
   const mockRedis = (impl) => ({ set: impl });
   await (async () => {
     const seen = new Set();
@@ -230,10 +230,24 @@ async function main() {
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
     const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
+    test("redis error → in-memory fallback keeps valid payments moving", () =>
+      assert.strictEqual(r, "new"));
     test("middleware maps 'error' to payment_replay_check_unavailable", () =>
       assert.ok(x402Src.includes("payment_replay_check_unavailable")));
+    await releaseStoredNonce("0xdef");
+  })();
+  await (async () => {
+    const first = await checkAndStoreNonce("0xretry", 600, null);
+    const replay = await checkAndStoreNonce("0xretry", 600, null);
+    await releaseStoredNonce("0xretry");
+    const retry = await checkAndStoreNonce("0xretry", 600, null);
+    await releaseStoredNonce("0xretry");
+    test("in-memory nonce is replay-guarded before cleanup", () => {
+      assert.strictEqual(first, "new");
+      assert.strictEqual(replay, "replay");
+    });
+    test("failed verify/settle cleanup frees in-memory nonce for retry", () =>
+      assert.strictEqual(retry, "new"));
   })();
   await (async () => {
     let capturedTtl = null;
@@ -269,6 +283,15 @@ async function main() {
       extractNonceTtlSeconds(b64({ payload: { authorization: { validBefore: "soon" } } })), 600));
   test("garbage header → default 600s (never throws)", () =>
     assert.strictEqual(extractNonceTtlSeconds("!!!"), 600));
+
+  // ── Oracle BYOK: bad user keys must not fall through to platform keys free ──
+  console.log("Oracle BYOK — platform fallback guard:");
+  const toolsSrc = fs.readFileSync(
+    path.join(__dirname, "..", "src", "routes", "tools", "index.ts"), "utf-8");
+  test("AI Oracle platform Anthropic provider is disabled while any BYOK header is present", () =>
+    assert.ok(/oraclByokAnthropicKey \|\| \(!oracleHasByok && getAnthropic\(\)\)/.test(toolsSrc)));
+  test("AI Oracle platform OpenAI provider is disabled while any BYOK header is present", () =>
+    assert.ok(/oraclByokOpenaiKey \|\| \(!oracleHasByok \? process\.env\.OPENAI_API_KEY : undefined\)/.test(toolsSrc)));
 
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);

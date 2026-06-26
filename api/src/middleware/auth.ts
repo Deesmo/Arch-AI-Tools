@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma.js";
 import { timingSafeEqual } from "crypto";
-import bcrypt from "bcryptjs";
+import { findAgentByApiKey } from "../lib/apiKeys.js";
 
 export interface AuthedRequest extends Request {
   agent?: {
@@ -64,14 +64,9 @@ export async function requireAuth(
         oauthScope = oauthToken.scope;
       }
     } else {
-      // Standard API key — plaintext keys are no longer stored. Lookup by the
-      // first 12-char prefix (fast indexed scan), then bcrypt.compare the full key.
-      const prefix = apiKey.slice(0, 12);
-      const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } });
-      if (candidate?.apiKeyHash) {
-        const match = await bcrypt.compare(apiKey, candidate.apiKeyHash);
-        agent = match ? candidate : null;
-      }
+      // Prefixes are indexed but not unique; compare every candidate so a
+      // collision cannot lock out the valid key holder.
+      agent = await findAgentByApiKey(apiKey);
     }
 
     if (!agent) {

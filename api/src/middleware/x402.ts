@@ -853,6 +853,11 @@ function memCheckAndStoreNonce(nonce: string, ttlSeconds: number): "new" | "repl
   return "new";
 }
 
+export async function releaseStoredNonce(nonce: string): Promise<void> {
+  memNonceCache.delete(nonce);
+  if (redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+}
+
 export async function checkAndStoreNonce(
   nonce: string,
   ttlSeconds: number = NONCE_TTL_SECONDS,
@@ -1161,7 +1166,7 @@ export function x402Middleware(toolName: string) {
     const verifyResult = await verifyPayment(paymentHeader, toolName, paymentRequirements);
     if (!verifyResult.isValid) {
       // Clean up nonce on verification failure so agent can retry
-      if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+      if (nonce) await releaseStoredNonce(nonce);
       res.status(402).json({
         ok: false,
         error: "payment_invalid",
@@ -1180,7 +1185,7 @@ export function x402Middleware(toolName: string) {
     const settled = !!settleResult && settleResult.success === true;
     if (!settled) {
       // Free the nonce so the agent can retry the payment
-      if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+      if (nonce) await releaseStoredNonce(nonce);
       try {
         await prisma.x402Payment.create({
           data: {

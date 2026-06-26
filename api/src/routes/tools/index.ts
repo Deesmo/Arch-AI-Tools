@@ -1765,18 +1765,21 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   const systemPrompt = "You are an expert analyst. Think step by step. Provide structured analysis with confidence levels. Always respond with valid JSON only, no markdown fences. Use this exact structure: {\"analysis\": \"<detailed analysis>\", \"confidence\": \"high\" | \"medium\" | \"low\"}";
   const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
 
-  // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
-  const providers: Array<{ name: string; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
+  // Try Claude Opus first (most capable reasoning), then GPT-4o. When a caller
+  // supplies BYOK headers, stay in BYOK mode; never fall through to platform
+  // keys for a free response after a bad user key fails.
+  const providers: Array<{ name: string; byok: boolean; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
 
-  if (getAnthropic() || oraclByokAnthropicKey) {
+  if (oraclByokAnthropicKey || (!oracleHasByok && getAnthropic())) {
     const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
+    const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
     providers.push({
       name: "anthropic",
+      byok: !!oraclByokAnthropicKey,
       fn: async () => {
         const userContent = oracleContext
           ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
           : question;
-        const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
         if (oraclByokAnthropicKey) {
           const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anthKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] }) });
           const d = await r.json() as any;
@@ -1791,10 +1794,11 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
     });
   }
 
-  const openaiKey = oraclByokOpenaiKey || process.env.OPENAI_API_KEY;
+  const openaiKey = oraclByokOpenaiKey || (!oracleHasByok ? process.env.OPENAI_API_KEY : undefined);
   if (openaiKey) {
     providers.push({
       name: "openai",
+      byok: !!oraclByokOpenaiKey,
       fn: async () => {
         const userContent = oracleContext
           ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
@@ -1855,7 +1859,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
         char_count: analysis.length,
         processed_at: new Date().toISOString(),
         arch_tools_version: "1.9.0",
-        ...(oracleHasByok ? { byok: true, byok_provider: providerName } : {}),
+        ...(provider.byok ? { byok: true, byok_provider: providerName } : {}),
         credits_used: oracleHasByok ? 0 : 25,
         request_id: reqId(),
       });

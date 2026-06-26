@@ -55,9 +55,21 @@ async function main() {
     apiKeyHash: bcrypt.hashSync(newKey, 4),
     email: "n@b.c", credits: 100, tier: "free", totalCalls: 0,
   };
-  const rows = [existingAgent, newAgent];
-  prisma.agent.findFirst = async ({ where }) =>
-    rows.find((r) => r.apiKeyPrefix === where.apiKeyPrefix) ?? null;
+  const collidingKeyA = `arch_${"a".repeat(7)}${"1".repeat(41)}`;
+  const collidingKeyB = `arch_${"a".repeat(7)}${"2".repeat(41)}`;
+  const collidingAgentA = {
+    id: "agent_collision_a", apiKeyPrefix: collidingKeyA.slice(0, 12),
+    apiKeyHash: bcrypt.hashSync(collidingKeyA, 4),
+    email: "ca@b.c", credits: 100, tier: "free", totalCalls: 0,
+  };
+  const collidingAgentB = {
+    id: "agent_collision_b", apiKeyPrefix: collidingKeyB.slice(0, 12),
+    apiKeyHash: bcrypt.hashSync(collidingKeyB, 4),
+    email: "cb@b.c", credits: 100, tier: "free", totalCalls: 0,
+  };
+  const rows = [existingAgent, newAgent, collidingAgentA, collidingAgentB];
+  prisma.agent.findMany = async ({ where }) =>
+    rows.filter((r) => r.apiKeyPrefix === where.apiKeyPrefix);
   prisma.agent.update = async () => ({});
 
   console.log("Phase B — requireAuth (hash-only):");
@@ -94,6 +106,14 @@ async function main() {
     assert.strictEqual(res.statusCode, 401);
   });
 
+  await test("API key prefix collision scans all matching hashes", async () => {
+    const req = mockReq(collidingKeyB); const res = mockRes();
+    let nexted = false;
+    await requireAuth(req, res, () => { nexted = true; });
+    assert.strictEqual(nexted, true, "next() not called");
+    assert.strictEqual(req.agent.id, "agent_collision_b");
+  });
+
   console.log("Phase B — no plaintext at rest (compiled-output contract):");
   const adminSrc = fs.readFileSync(dist("routes", "admin.js"), "utf8");
   await test("admin /lookup no longer selects/returns full apiKey", () => {
@@ -111,6 +131,9 @@ async function main() {
   const authMw = fs.readFileSync(dist("middleware", "auth.js"), "utf8");
   await test("auth middleware has no plaintext fallback lookup", () => {
     assert.ok(!/where:\s*\{\s*apiKey\s*\}/.test(authMw), "plaintext fallback still present");
+  });
+  await test("auth middleware no longer uses single-row prefix findFirst", () => {
+    assert.ok(!/findFirst\(\{\s*where:\s*\{\s*apiKeyPrefix/.test(authMw), "prefix lookup must scan all collision candidates");
   });
 
   if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }

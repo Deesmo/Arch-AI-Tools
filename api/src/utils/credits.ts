@@ -53,11 +53,11 @@ export async function deductCredits(
   }
 
   let finalized = false;
-  const finalizeCharge = async (): Promise<void> => {
+  const finalizeCharge = async (responseCompleted: boolean): Promise<void> => {
     if (finalized) return;
     finalized = true;
 
-    const succeeded = res.statusCode >= 200 && res.statusCode < 400;
+    const succeeded = responseCompleted && res.statusCode >= 200 && res.statusCode < 400;
     try {
       if (succeeded) {
         const fp = fingerprintCaller(req.headers["user-agent"]);
@@ -101,8 +101,8 @@ export async function deductCredits(
     }
   };
 
-  res.once("finish", () => { void finalizeCharge(); });
-  res.once("close", () => { void finalizeCharge(); });
+  res.once("finish", () => { void finalizeCharge(true); });
+  res.once("close", () => { void finalizeCharge(res.writableEnded); });
 
   if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
     prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
