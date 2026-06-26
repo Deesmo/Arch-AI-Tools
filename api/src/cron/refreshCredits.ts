@@ -7,7 +7,6 @@
  *
  * Safe to run multiple times — uses updatedAt guard to prevent double-grants in same month.
  */
-import "dotenv/config";
 import path from "path";
 import { fileURLToPath } from "url";
 import { prisma } from "../lib/prisma.js";

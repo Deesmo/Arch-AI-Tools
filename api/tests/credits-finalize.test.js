@@ -55,9 +55,17 @@ async function main() {
   const writes = [];
   prisma.agent.updateMany = async () => ({ count: 1 });
   prisma.agent.update = async (args) => { writes.push({ model: "agent", op: "update", args }); return {}; };
-  prisma.agent.findUnique = async () => ({ email: "a@b.c" });
+  prisma.agent.findUnique = async () => ({
+    email: "a@b.c",
+    totalCalls: 1,
+    successCount: 1,
+    errorCount: 0,
+    totalSpentUsdc: 0,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
   prisma.apiRequest.create = async (args) => { writes.push({ model: "apiRequest", op: "create", args }); return {}; };
   prisma.dailyUsage.upsert = async (args) => { writes.push({ model: "dailyUsage", op: "upsert", args }); return {}; };
+  prisma.webhook.findMany = async () => [];
 
   console.log("Credit finalization:");
   await test("finished 2xx response keeps deducted credits and logs success", async () => {
