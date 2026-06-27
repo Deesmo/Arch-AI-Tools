@@ -246,7 +246,7 @@ async function main() {
     assert.ok(!getHandler.includes("x402Middleware(toolName)"), "GET handler must not invoke settlement middleware");
   });
 
-  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  console.log("H2 — checkAndStoreNonce dedup + Redis fallback (mock redis):");
   const mockRedis = (impl) => ({ set: impl });
   await (async () => {
     const seen = new Set();
@@ -265,9 +265,9 @@ async function main() {
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
     const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
-    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
+    test("redis error → 'new' via in-memory fallback", () =>
+      assert.strictEqual(r, "new"));
+    test("middleware retains defensive mapping for explicit replay-check errors", () =>
       assert.ok(x402Src.includes("payment_replay_check_unavailable")));
   })();
   await (async () => {
