@@ -4351,7 +4351,12 @@ router.post("/html-extract-text", ...toolMiddleware("html-extract-text"), async 
 // settlement middleware on GET; a paid GET probe would collect funds without
 // executing the POST-only tool.
 router.get("/:toolName", (req: Request, res: Response): void => {
-  const toolName = req.params.toolName;
+  const paramToolName = req.params.toolName;
+  const toolName = Array.isArray(paramToolName) ? paramToolName[0] : paramToolName;
+  if (!toolName) {
+    res.status(404).json({ error: "unknown_tool", message: "Tool not found" });
+    return;
+  }
   const price = X402_PRICES[toolName];
   if (!price) {
     res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
