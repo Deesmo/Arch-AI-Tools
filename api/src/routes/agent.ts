@@ -13,7 +13,7 @@ const router = Router();
 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
-  const { name, email: rawEmail, plan, password } = req.body as { name?: string; email?: string; plan?: string; password?: string };
+  const { name, email: rawEmail, password } = req.body as { name?: string; email?: string; password?: string };
   const email = rawEmail?.toLowerCase().trim();
   if (!email) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
@@ -76,7 +76,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         // verification setup fails, the user keeps 0 credits (fail closed),
         // never an unverified balance.
         credits: 0,
-        tier: (["free","starter","pro","business"].includes(plan?.replace(/-(?:monthly|annual)$/,"") ?? "") ? plan!.replace(/-(?:monthly|annual)$/,"") : "free") as any,
+        tier: "free",
       },
     });
     // Count this IP only now that the account actually exists (F-4).

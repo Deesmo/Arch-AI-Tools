@@ -121,8 +121,8 @@ async function main() {
   })();
 
   // ── H1: settle-guard predicate ────────────────────────────────────────────
-  // Mirrors: const settled = !!settleResult && (settleResult.success === true || !!settleResult.transaction);
-  const settled = (r) => !!r && (r.success === true || !!r.transaction);
+  // Mirrors: const settled = !!settleResult && settleResult.success === true;
+  const settled = (r) => !!r && r.success === true;
 
   console.log("H1 — x402 settle guard:");
   test("null settle result → NOT settled (must 402, not serve)", () =>
@@ -133,8 +133,8 @@ async function main() {
     assert.strictEqual(settled({ success: false }), false));
   test("success:true → settled", () =>
     assert.strictEqual(settled({ success: true }), true));
-  test("transaction hash present → settled", () =>
-    assert.strictEqual(settled({ transaction: "0xabc" }), true));
+  test("transaction hash without success:true → NOT settled", () =>
+    assert.strictEqual(settled({ transaction: "0xabc" }), false));
 
   // ── H3: atomic deduction contract ─────────────────────────────────────────
   // The guarded updateMany returns {count:0} when balance < cost → caller must
@@ -209,6 +209,41 @@ async function main() {
     let rejected = false;
     if (nonce) rejected = true; // would enter dedup path
     assert.strictEqual(rejected, false);
+  });
+
+  // ── Signup tier / BYOK / x402 GET regressions ─────────────────────────────
+  const agentSrc = fs.readFileSync(
+    path.join(__dirname, "..", "src", "routes", "agent.ts"), "utf-8");
+  const toolsSrc = fs.readFileSync(
+    path.join(__dirname, "..", "src", "routes", "tools", "index.ts"), "utf-8");
+
+  console.log("Signup tier — client plan must not self-promote:");
+  test("register route always creates free-tier accounts", () => {
+    assert.ok(agentSrc.includes('tier: "free"'), "register must set tier to free");
+    assert.ok(!agentSrc.includes("includes(plan?.replace"), "register must not derive tier from client plan");
+  });
+
+  console.log("BYOK discounts — only real provider-key paths qualify:");
+  test("ai-generate BYOK discount is tied to selected model provider", () => {
+    assert.ok(toolsSrc.includes("const byokProvider ="), "ai-generate must resolve provider-specific BYOK");
+    assert.ok(!toolsSrc.includes("const hasByok = !!(byokAnthropicKey"), "ai-generate must not discount for unrelated BYOK headers");
+  });
+  test("platform-only provider tools do not use generic BYOK discounts", () => {
+    assert.ok(toolsSrc.includes("const ttsCost = 25 + 8 * Math.ceil(text.length / 100)"), "text-to-speech must charge full platform-key cost");
+    assert.ok(toolsSrc.includes('deductCredits(req, res, "transcribe-audio", 25)'), "transcribe-audio must charge full platform-key cost");
+    assert.ok(toolsSrc.includes("const videoCost = Math.max(500, duration * 125)"), "video-generate must charge full platform-key cost");
+    assert.ok(toolsSrc.includes('deductCredits(req, res, "image-remove-bg", 350)'), "image-remove-bg must charge full platform-key cost");
+  });
+  test("research-report generic BYOK discount is scoped to providers it can use", () =>
+    assert.ok(toolsSrc.includes('byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"])')));
+
+  console.log("x402 GET discovery — never settle paid probes:");
+  test("GET /v1/tools/:toolName builds payment requirement directly", () => {
+    const getHandlerStart = toolsSrc.indexOf('router.get("/:toolName"');
+    assert.ok(getHandlerStart > 0, "GET handler missing");
+    const getHandler = toolsSrc.slice(getHandlerStart);
+    assert.ok(getHandler.includes("buildPaymentRequired(toolName, price)"), "GET handler must build 402 payment requirements directly");
+    assert.ok(!getHandler.includes("x402Middleware(toolName)"), "GET handler must not invoke settlement middleware");
   });
 
   console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");

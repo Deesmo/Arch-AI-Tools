@@ -157,7 +157,7 @@ export const X402_PRICES: Record<string, string> = {
   "html-extract-text": "0.010",
 };
 
-function buildPaymentRequired(toolName: string, price: string): object {
+export function buildPaymentRequired(toolName: string, price: string): object {
   const network = config.x402.network;
   // Use x402 named network format (required by client SDK schema validation)
   // "base" / "polygon" / "solana" NOT "eip155:8453" / "eip155:137"
