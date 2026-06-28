@@ -6,6 +6,11 @@ import axios from "axios";
 const router = Router();
 
 const API_BASE = `http://localhost:${process.env.PORT ?? "3000"}`;
+const TOOL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+export function isValidWorkflowToolName(toolName: unknown): toolName is string {
+  return typeof toolName === "string" && TOOL_NAME_PATTERN.test(toolName);
+}
 
 // POST /v1/workflows/run
 router.post("/run", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
@@ -20,6 +25,17 @@ router.post("/run", requireAuth, async (req: AuthedRequest, res: Response): Prom
   if (steps.length > 8) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "Maximum 8 steps per workflow", request_id: reqId() });
     return;
+  }
+  for (const step of steps) {
+    if (!isValidWorkflowToolName(step?.tool)) {
+      res.status(400).json({
+        ok: false,
+        error: "invalid_request",
+        message: "Each workflow step must reference a valid tool slug.",
+        request_id: reqId(),
+      });
+      return;
+    }
   }
 
   const results: unknown[] = [];

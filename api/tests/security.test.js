@@ -120,6 +120,47 @@ async function main() {
     }
   })();
 
+  // ── OAuth refresh-token lifetime ──────────────────────────────────────────
+  const oauthTokens = await import(
+    path.join(__dirname, "..", "dist", "lib", "oauthTokens.js")
+  );
+
+  console.log("OAuth — refresh token lifetime:");
+  test("expired access token does NOT imply expired refresh token", () => {
+    const now = new Date("2026-06-28T05:00:00.000Z");
+    const token = { createdAt: new Date(now.getTime() - oauthTokens.OAUTH_ACCESS_TOKEN_TTL_MS - 1000) };
+    assert.strictEqual(oauthTokens.isOAuthRefreshTokenExpired(token, now), false);
+  });
+  test("refresh token expires only after refresh-token TTL", () => {
+    const now = new Date("2026-06-28T05:00:00.000Z");
+    const token = { createdAt: new Date(now.getTime() - oauthTokens.OAUTH_REFRESH_TOKEN_TTL_MS - 1000) };
+    assert.strictEqual(oauthTokens.isOAuthRefreshTokenExpired(token, now), true);
+  });
+  test("cleanup cutoff tracks refresh-token lifetime, not access-token lifetime", () => {
+    const now = new Date("2026-06-28T05:00:00.000Z");
+    const cutoff = oauthTokens.oauthRefreshCutoff(now);
+    assert.strictEqual(cutoff.getTime(), now.getTime() - oauthTokens.OAUTH_REFRESH_TOKEN_TTL_MS);
+  });
+
+  // ── Workflow tool routing guard ───────────────────────────────────────────
+  const workflows = await import(
+    path.join(__dirname, "..", "dist", "routes", "workflows.js")
+  );
+
+  console.log("Workflows — tool slug validation:");
+  test("normal tool slug is accepted", () =>
+    assert.strictEqual(workflows.isValidWorkflowToolName("generate-uuid"), true));
+  test("path traversal cannot escape /v1/tools", () =>
+    assert.strictEqual(workflows.isValidWorkflowToolName("../agent/register"), false));
+  test("encoded traversal/separators are rejected before URL normalization", () =>
+    assert.strictEqual(workflows.isValidWorkflowToolName("%2e%2e%2fagent%2fregister"), false));
+  test("absolute URLs are rejected", () =>
+    assert.strictEqual(workflows.isValidWorkflowToolName("https://example.com/tool"), false));
+  test("empty or non-string tool values are rejected", () => {
+    assert.strictEqual(workflows.isValidWorkflowToolName(""), false);
+    assert.strictEqual(workflows.isValidWorkflowToolName(null), false);
+  });
+
   // ── H1: settle-guard predicate ────────────────────────────────────────────
   // Mirrors: const settled = !!settleResult && (settleResult.success === true || !!settleResult.transaction);
   const settled = (r) => !!r && (r.success === true || !!r.transaction);
