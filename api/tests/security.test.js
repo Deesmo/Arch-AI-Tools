@@ -252,7 +252,7 @@ async function main() {
     assert.strictEqual(rejected, false);
   });
 
-  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  console.log("H2 — checkAndStoreNonce dedup + in-memory fallback (mock redis):");
   const mockRedis = (impl) => ({ set: impl });
   await (async () => {
     const seen = new Set();
@@ -271,10 +271,11 @@ async function main() {
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
     const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
-    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
-      assert.ok(x402Src.includes("payment_replay_check_unavailable")));
+    test("redis error → in-memory fallback stores a fresh nonce", () =>
+      assert.strictEqual(r, "new"));
+    const replay = await checkAndStoreNonce("0xdef", 600, failing);
+    test("redis error fallback still detects same-process replays", () =>
+      assert.strictEqual(replay, "replay"));
   })();
   await (async () => {
     let capturedTtl = null;
