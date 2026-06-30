@@ -169,10 +169,10 @@ function buildPinnedAgents(target: SafeTarget, config: AxiosRequestConfig): Pick
   };
 }
 
-function headersToObject(headers: HeadersInit | undefined): Record<string, string> | undefined {
+function headersToObject(headers: RequestInit["headers"] | undefined): Record<string, string> | undefined {
   if (!headers) return undefined;
   const out: Record<string, string> = {};
-  new Headers(headers).forEach((value, key) => {
+  new Headers(headers as any).forEach((value, key) => {
     out[key] = value;
   });
   return out;
@@ -204,7 +204,6 @@ async function fetchPinned(target: SafeTarget, init: RequestInit): Promise<Respo
       headers: headersToObject(init.headers),
       body: init.body as never,
       signal: init.signal as never,
-      maxRedirections: 0,
       dispatcher,
     });
 
