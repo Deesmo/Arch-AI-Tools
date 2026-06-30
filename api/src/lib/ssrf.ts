@@ -1,7 +1,10 @@
 import { URL } from "url";
 import dns from "dns/promises";
 import net from "net";
+import http from "http";
+import https from "https";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import { Agent as UndiciAgent, request as undiciRequest } from "undici";
 
 // Max redirect hops we will follow while re-validating each one.
 const MAX_REDIRECTS = Number(process.env.SCRAPE_MAX_REDIRECTS || 4);
@@ -14,6 +17,13 @@ const BLOCKED_HOSTS = new Set([
   "metadata.gcp.internal",
   "instance-data",
 ]);
+
+type SafeTarget = {
+  url: URL;
+  hostname: string;
+  address: string;
+  family: 4 | 6;
+};
 
 /**
  * Returns true if an IP address (v4 or v6, including IPv4-mapped IPv6) points at
@@ -65,17 +75,24 @@ function isPrivateIp(ip: string): boolean {
   return true;
 }
 
-/**
- * Validates a single URL for SSRF safety:
- *  - only http/https
- *  - hostname not in the blocked list
- *  - IP literals checked directly
- *  - DNS-resolved addresses checked post-lookup (catches numeric encodings and
- *    rebinding at validation time)
- * Throws on any violation. NOTE: this validates one URL only — to be safe across
- * redirects, use {@link safeAxiosGet} / {@link safeFetch} which re-validate every hop.
- */
-export async function validateUrl(rawUrl: string): Promise<void> {
+function normalizeHostname(hostname: string): string {
+  return hostname.toLowerCase().replace(/^\[|\]$/g, "");
+}
+
+function assertPublicHostname(parsed: URL): string {
+  const hostname = normalizeHostname(parsed.hostname);
+  if (!hostname) {
+    throw new Error("URL hostname is not allowed");
+  }
+
+  if (BLOCKED_HOSTS.has(hostname)) {
+    throw new Error("URL hostname is not allowed");
+  }
+
+  return hostname;
+}
+
+async function resolveSafeTarget(rawUrl: string): Promise<SafeTarget> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -87,25 +104,21 @@ export async function validateUrl(rawUrl: string): Promise<void> {
     throw new Error("Only http and https URLs are allowed");
   }
 
-  const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (!hostname) {
-    throw new Error("URL hostname is not allowed");
-  }
-
-  if (BLOCKED_HOSTS.has(hostname)) {
-    throw new Error("URL hostname is not allowed");
-  }
+  const hostname = assertPublicHostname(parsed);
 
   // IP literal — check directly (covers IPv4, IPv6, IPv4-mapped IPv6).
   if (net.isIP(hostname)) {
     if (isPrivateIp(hostname)) {
       throw new Error("URL hostname is not allowed (private/internal address)");
     }
-    return;
+    return { url: parsed, hostname, address: hostname, family: net.isIP(hostname) as 4 | 6 };
   }
 
-  // Resolve and check every address the name maps to.
-  let addresses: { address: string }[];
+  // Resolve once, validate every result, then pin the selected address into the
+  // actual outbound request. This closes the DNS-rebinding gap where validation
+  // sees a public address but the HTTP client performs a second lookup that
+  // resolves to localhost/metadata/private infrastructure.
+  let addresses: Array<{ address: string; family: number }>;
   try {
     addresses = await dns.lookup(hostname, { all: true });
   } catch {
@@ -115,10 +128,120 @@ export async function validateUrl(rawUrl: string): Promise<void> {
     throw new Error("URL hostname could not be resolved");
   }
   for (const addr of addresses) {
+    if (addr.family !== 4 && addr.family !== 6) {
+      throw new Error("URL hostname could not be resolved");
+    }
     if (isPrivateIp(addr.address)) {
       throw new Error("URL resolves to a private/internal address");
     }
   }
+
+  const selected = addresses.find((addr) => addr.family === 4) ?? addresses[0];
+  return { url: parsed, hostname, address: selected.address, family: selected.family as 4 | 6 };
+}
+
+export function createPinnedLookup(target: SafeTarget) {
+  return (hostname: string, options: unknown, callback?: (...args: any[]) => void): void => {
+    const cb = (typeof options === "function" ? options : callback) as (...args: any[]) => void;
+    const opts = typeof options === "object" && options !== null ? options as { all?: boolean } : {};
+    if (!cb) return;
+
+    if (normalizeHostname(hostname) !== target.hostname) {
+      const err = Object.assign(new Error("Unexpected hostname lookup during SSRF-safe request"), { code: "ENOTFOUND" });
+      cb(err);
+      return;
+    }
+
+    if (opts.all) {
+      cb(null, [{ address: target.address, family: target.family }]);
+      return;
+    }
+
+    cb(null, target.address, target.family);
+  };
+}
+
+function buildPinnedAgents(target: SafeTarget, config: AxiosRequestConfig): Pick<AxiosRequestConfig, "httpAgent" | "httpsAgent"> {
+  const lookup = createPinnedLookup(target) as never;
+  return {
+    httpAgent: config.httpAgent ?? new http.Agent({ lookup }),
+    httpsAgent: config.httpsAgent ?? new https.Agent({ lookup }),
+  };
+}
+
+function headersToObject(headers: HeadersInit | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  const out: Record<string, string> = {};
+  new Headers(headers).forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
+function responseHeadersFromUndici(headers: Record<string, string | string[] | undefined>): Headers {
+  const out = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) out.append(key, item);
+    } else if (value !== undefined) {
+      out.set(key, value);
+    }
+  }
+  return out;
+}
+
+async function fetchPinned(target: SafeTarget, init: RequestInit): Promise<Response> {
+  const dispatcher = new UndiciAgent({
+    connect: { lookup: createPinnedLookup(target) as never },
+    keepAliveTimeout: 1,
+    keepAliveMaxTimeout: 1,
+  });
+
+  try {
+    const method = init.method ?? "GET";
+    const resp = await undiciRequest(target.url, {
+      method,
+      headers: headersToObject(init.headers),
+      body: init.body as never,
+      signal: init.signal as never,
+      maxRedirections: 0,
+      dispatcher,
+    });
+
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of resp.body) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += buf.length;
+      if (total > DEFAULT_MAX_BYTES) {
+        throw new Error("Response body too large");
+      }
+      chunks.push(buf);
+    }
+
+    const body = method.toUpperCase() === "HEAD" ? null : Buffer.concat(chunks);
+    return new Response(body, {
+      status: resp.statusCode,
+      statusText: resp.statusText,
+      headers: responseHeadersFromUndici(resp.headers),
+    });
+  } finally {
+    dispatcher.close().catch(() => {});
+  }
+}
+
+/**
+ * Validates a single URL for SSRF safety:
+ *  - only http/https
+ *  - hostname not in the blocked list
+ *  - IP literals checked directly
+ *  - DNS-resolved addresses checked post-lookup (catches numeric encodings and
+ *    rebinding at validation time)
+ * Throws on any violation. NOTE: this validates one URL only — to be safe across
+ * redirects, use {@link safeAxiosGet} / {@link safeFetch} which re-validate every hop.
+ */
+export async function validateUrl(rawUrl: string): Promise<void> {
+  await resolveSafeTarget(rawUrl);
 }
 
 /**
@@ -152,10 +275,12 @@ export async function safeAxiosGet(
   let current = rawUrl;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await validateUrl(current);
+    const target = await resolveSafeTarget(current);
+    const pinnedAgents = buildPinnedAgents(target, config);
 
-    const resp = await axios.get(current, {
+    const resp = await axios.get(target.url.toString(), {
       ...config,
+      ...pinnedAgents,
       maxRedirects: 0, // we follow manually, validating each hop
       maxContentLength: config.maxContentLength ?? DEFAULT_MAX_BYTES,
       maxBodyLength: config.maxBodyLength ?? DEFAULT_MAX_BYTES,
@@ -184,9 +309,9 @@ export async function safeFetch(rawUrl: string, init: RequestInit = {}): Promise
   let current = rawUrl;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await validateUrl(current);
+    const target = await resolveSafeTarget(current);
 
-    const resp = await fetch(current, { ...init, redirect: "manual" });
+    const resp = await fetchPinned(target, { ...init, redirect: "manual" });
 
     if (resp.status >= 300 && resp.status < 400) {
       const location = resp.headers.get("location");
