@@ -30,7 +30,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "start:sse": "MCP_TRANSPORT=sse node dist/index.js"
+    "start:sse": "MCP_TRANSPORT=sse node dist/index.js",
+    "test": "node tests/anon-demo-dist.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
