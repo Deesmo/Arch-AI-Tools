@@ -39,7 +39,7 @@ function mockReq(key) {
 
 async function main() {
   const { prisma } = await import(dist("lib", "prisma.js"));
-  const { requireAuth } = await import(dist("middleware", "auth.js"));
+  const { requireAuth, requireApiKeyAuth } = await import(dist("middleware", "auth.js"));
 
   // ── Mock DB: one pre-existing agent with ONLY prefix + bcrypt hash stored ──
   const existingKey = "arch_preexisting_key_0123456789abcdef";
@@ -58,6 +58,17 @@ async function main() {
   const rows = [existingAgent, newAgent];
   prisma.agent.findFirst = async ({ where }) =>
     rows.find((r) => r.apiKeyPrefix === where.apiKeyPrefix) ?? null;
+  prisma.agent.findUnique = async ({ where }) =>
+    rows.find((r) => r.id === where.id) ?? null;
+  prisma.oAuthToken.findUnique = async ({ where }) =>
+    where.accessToken === "at_oauth_readonly"
+      ? {
+          accessToken: "at_oauth_readonly",
+          agentId: existingAgent.id,
+          scope: "tools:read",
+          expiresAt: new Date(Date.now() + 60_000),
+        }
+      : null;
   prisma.agent.update = async () => ({});
 
   console.log("Phase B — requireAuth (hash-only):");
@@ -92,6 +103,20 @@ async function main() {
     await requireAuth(req, res, () => { nexted = true; });
     assert.strictEqual(nexted, false);
     assert.strictEqual(res.statusCode, 401);
+  });
+
+  await test("OAuth token authenticates but cannot pass API-key-only key management gate", async () => {
+    const req = mockReq("at_oauth_readonly"); const res = mockRes();
+    let authed = false;
+    await requireAuth(req, res, () => { authed = true; });
+    assert.strictEqual(authed, true, "OAuth token should still authenticate");
+    assert.strictEqual(req.agent.scope, "tools:read");
+
+    let authorized = false;
+    requireApiKeyAuth(req, res, () => { authorized = true; });
+    assert.strictEqual(authorized, false, "OAuth token must not authorize key management");
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.body.error, "insufficient_authentication");
   });
 
   console.log("Phase B — no plaintext at rest (compiled-output contract):");

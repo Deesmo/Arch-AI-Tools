@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { requireApiKeyAuth, requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { sendWelcomeEmail, sendAdminAlert } from "../services/email.js";
 import { logger } from "../lib/logger.js";
@@ -265,7 +265,7 @@ export default router;
 
 // ─── POST /v1/agent/keys/rotate ──────────────────────────────────────────────
 // Generate a new API key, invalidate the old one. Returns new key ONCE.
-router.post("/keys/rotate", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.post("/keys/rotate", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 
@@ -297,7 +297,7 @@ router.post("/keys/rotate", requireAuth, async (req: AuthedRequest, res: Respons
 
 // ─── DELETE /v1/agent/keys/:prefix ───────────────────────────────────────────
 // Revoke a specific API key by prefix (for multi-key accounts in future)
-router.delete("/keys/:prefix", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.delete("/keys/:prefix", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   const { prefix } = req.params;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
