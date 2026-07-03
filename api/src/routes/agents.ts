@@ -9,7 +9,7 @@
 
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { requireApiKeyAuth, requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import {
   calculateBadge,
@@ -355,8 +355,8 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
 });
 
 // ─── PUT /api/v1/agents/profile ──────────────────────────────────────────────
-// Update agent profile (authenticated)
-router.put("/profile", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+// Update agent profile (authenticated account owner)
+router.put("/profile", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) {
     res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() });

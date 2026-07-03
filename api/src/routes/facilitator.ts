@@ -23,6 +23,7 @@ import {
   verifyPayment,
   settlePayment,
   decodePayment,
+  releaseNonce,
   calculateFee,
   calculateProviderPayout,
   getDefaultFeePercent,
@@ -326,6 +327,12 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
         },
       }).catch((err) => console.error("[facilitator] Failed to update provider stats:", err));
     } else {
+      const decoded = decodePayment(payment);
+      const nonce = decoded?.payload?.authorization?.nonce;
+      if (nonce && result.errorMessage !== "nonce_already_consumed") {
+        await releaseNonce(nonce, provider.id);
+      }
+
       // Record the failure
       await prisma.facilitatorPayment.updateMany({
         where: {

@@ -270,6 +270,24 @@ async function main() {
   test("garbage header → default 600s (never throws)", () =>
     assert.strictEqual(extractNonceTtlSeconds("!!!"), 600));
 
+  console.log("Facilitator — retryable nonce release:");
+  const facilitatorSvcSrc = fs.readFileSync(
+    path.join(__dirname, "..", "src", "services", "facilitator.ts"), "utf-8");
+  const facilitatorRouteSrc = fs.readFileSync(
+    path.join(__dirname, "..", "src", "routes", "facilitator.ts"), "utf-8");
+  test("releaseNonce clears in-memory fallback as well as Redis", () => {
+    assert.ok(
+      /memFacilitatorNonces\.delete\(key\)/.test(facilitatorSvcSrc),
+      "facilitator releaseNonce must clear Redis-less fallback nonce"
+    );
+  });
+  test("failed settlement releases retryable local nonce", () => {
+    assert.ok(
+      /result\.errorMessage !== "nonce_already_consumed"[\s\S]*await releaseNonce\(nonce, provider\.id\)/.test(facilitatorRouteSrc),
+      "settlement failure must release local nonce unless it is already consumed on-chain"
+    );
+  });
+
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);
     process.exit(1);

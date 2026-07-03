@@ -168,8 +168,10 @@ export async function checkNonce(nonce: string, providerId: string): Promise<boo
 }
 
 export async function releaseNonce(nonce: string, providerId: string): Promise<void> {
+  const key = `facilitator:nonce:${providerId}:${nonce}`;
+  memFacilitatorNonces.delete(key);
   if (!redis) return;
-  await redis.del(`facilitator:nonce:${providerId}:${nonce}`).catch(() => {});
+  await redis.del(key).catch(() => {});
 }
 
 // ─── Payment Decoding ─────────────────────────────────────────────────────────

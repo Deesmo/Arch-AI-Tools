@@ -10,15 +10,15 @@
 import { Router, Response } from "express";
 import { randomBytes } from "crypto";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { requireApiKeyAuth, requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { WEBHOOK_EVENTS, WebhookEvent, fireWebhookEvent } from "../services/webhooks.js";
 import { validateUrl } from "../lib/ssrf.js";
 
 const router = Router();
 
-// All webhook management routes require authentication
-router.use(requireAuth);
+// Webhook management is account-level state, not covered by OAuth tool scopes.
+router.use(requireAuth, requireApiKeyAuth);
 
 // ─── POST /api/v1/webhooks/register ─────────────────────────────────────────
 router.post("/register", async (req: AuthedRequest, res: Response): Promise<void> => {

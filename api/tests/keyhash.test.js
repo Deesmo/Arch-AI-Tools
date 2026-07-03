@@ -39,7 +39,7 @@ function mockReq(key) {
 
 async function main() {
   const { prisma } = await import(dist("lib", "prisma.js"));
-  const { requireAuth } = await import(dist("middleware", "auth.js"));
+  const { requireAuth, requireApiKeyAuth } = await import(dist("middleware", "auth.js"));
 
   // ── Mock DB: one pre-existing agent with ONLY prefix + bcrypt hash stored ──
   const existingKey = "arch_preexisting_key_0123456789abcdef";
@@ -58,6 +58,17 @@ async function main() {
   const rows = [existingAgent, newAgent];
   prisma.agent.findFirst = async ({ where }) =>
     rows.find((r) => r.apiKeyPrefix === where.apiKeyPrefix) ?? null;
+  prisma.agent.findUnique = async ({ where }) =>
+    rows.find((r) => r.id === where.id) ?? null;
+  prisma.oAuthToken.findUnique = async ({ where }) =>
+    where.accessToken === "at_oauth_readonly"
+      ? {
+          accessToken: "at_oauth_readonly",
+          agentId: existingAgent.id,
+          scope: "tools:read",
+          expiresAt: new Date(Date.now() + 60_000),
+        }
+      : null;
   prisma.agent.update = async () => ({});
 
   console.log("Phase B — requireAuth (hash-only):");
@@ -94,6 +105,31 @@ async function main() {
     assert.strictEqual(res.statusCode, 401);
   });
 
+  console.log("OAuth — account management gate:");
+  await test("OAuth token authenticates but cannot pass account-management gate", async () => {
+    const req = mockReq("at_oauth_readonly"); const res = mockRes();
+    let authed = false;
+    await requireAuth(req, res, () => { authed = true; });
+    assert.strictEqual(authed, true, "OAuth token should still authenticate");
+    assert.strictEqual(req.agent.scope, "tools:read");
+
+    let authorized = false;
+    requireApiKeyAuth(req, res, () => { authorized = true; });
+    assert.strictEqual(authorized, false, "OAuth token must not authorize account management");
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.body.error, "insufficient_authentication");
+  });
+
+  await test("API-key caller passes account-management gate", async () => {
+    const req = mockReq(existingKey); const res = mockRes();
+    await requireAuth(req, res, () => {});
+
+    let authorized = false;
+    requireApiKeyAuth(req, res, () => { authorized = true; });
+    assert.strictEqual(authorized, true);
+    assert.strictEqual(res.statusCode, null);
+  });
+
   console.log("Phase B — no plaintext at rest (compiled-output contract):");
   const adminSrc = fs.readFileSync(dist("routes", "admin.js"), "utf8");
   await test("admin /lookup no longer selects/returns full apiKey", () => {
@@ -112,6 +148,19 @@ async function main() {
   await test("auth middleware has no plaintext fallback lookup", () => {
     assert.ok(!/where:\s*\{\s*apiKey\s*\}/.test(authMw), "plaintext fallback still present");
   });
+  const accountRouteGates = [
+    ["routes/webhooks.js", /router\.use\(requireAuth,\s*requireApiKeyAuth\)/],
+    ["routes/agents.js", /router\.put\("\/profile",\s*requireAuth,\s*requireApiKeyAuth/],
+    ["routes/wallet.js", /router\.post\(\s*"\/provision",\s*requireAuth,\s*requireApiKeyAuth/s],
+    ["routes/referral.js", /router\.get\("\/code",\s*requireAuth,\s*requireApiKeyAuth/],
+    ["routes/referral.js", /router\.post\("\/apply",\s*requireAuth,\s*requireApiKeyAuth/],
+  ];
+  for (const [file, pattern] of accountRouteGates) {
+    const src = fs.readFileSync(dist(...file.split("/")), "utf8");
+    await test(`${file}: OAuth tool tokens cannot reach account-management route`, () => {
+      assert.ok(pattern.test(src), `${file} missing requireApiKeyAuth gate`);
+    });
+  }
 
   if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
   console.log("\nAll Phase B key-hashing tests passed.");

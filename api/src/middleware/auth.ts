@@ -114,6 +114,37 @@ export async function requireAuth(
   }
 }
 
+export function requireApiKeyAuth(
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  const agent = req.agent;
+  if (!agent) {
+    res.status(401).json({
+      ok: false,
+      error: "unauthorized",
+      message: "Authentication required",
+      request_id: crypto.randomUUID(),
+    });
+    return;
+  }
+
+  // OAuth tokens currently expose only tool scopes. Account-management routes
+  // must not accept them until explicit account scopes exist.
+  if (agent.scope !== undefined || agent.apiKey.startsWith("at_oauth_")) {
+    res.status(403).json({
+      ok: false,
+      error: "insufficient_authentication",
+      message: "API key authentication is required for account management",
+      request_id: crypto.randomUUID(),
+    });
+    return;
+  }
+
+  next();
+}
+
 /**
  * Single source of truth for admin-key validation. Timing-safe, and refuses to
  * authenticate when ADMIN_KEY is unset or left at the insecure default. Used by

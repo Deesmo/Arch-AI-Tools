@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { AuthedRequest, requireAuth } from "../middleware/auth.js";
+import { AuthedRequest, requireApiKeyAuth, requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
@@ -59,6 +59,7 @@ router.get(
 router.post(
   "/provision",
   requireAuth,
+  requireApiKeyAuth,
   async (req: AuthedRequest, res: Response): Promise<void> => {
     const agentId = req.agent?.id;
     if (!agentId) {
