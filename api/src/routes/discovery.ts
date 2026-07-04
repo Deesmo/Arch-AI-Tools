@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { redis } from "../lib/redis.js";
-import { X402_PRICES } from "../middleware/x402.js";
+import { X402_PRICES, isX402AnonymousTool } from "../middleware/x402.js";
 import { getStatusPageData } from "../middleware/analytics.js";
 import { config } from "../config.js";
 import { isValidAdminKey } from "../middleware/auth.js";
@@ -345,12 +345,14 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     accepts.push({ scheme: "exact", network: "eip155:1", asset: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", payTo: uniWallet, token: "UNI", description: "UNI governance token on Ethereum" });
   }
 
-  const endpoints = Object.entries(X402_PRICES).map(([tool, price]) => ({
-    path: `/v1/tools/${tool}`,
-    method: "POST",
-    price: `$${price}`,
-    description: TOOL_DESCRIPTIONS[tool] ?? tool,
-  }));
+  const endpoints = Object.entries(X402_PRICES)
+    .filter(([tool]) => isX402AnonymousTool(tool))
+    .map(([tool, price]) => ({
+      path: `/v1/tools/${tool}`,
+      method: "POST",
+      price: `$${price}`,
+      description: TOOL_DESCRIPTIONS[tool] ?? tool,
+    }));
 
   res.json({
     name: "Arch Tools",

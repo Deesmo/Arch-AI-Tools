@@ -157,6 +157,16 @@ export const X402_PRICES: Record<string, string> = {
   "html-extract-text": "0.010",
 };
 
+export const X402_ACCOUNT_REQUIRED_TOOLS = new Set([
+  "email-send",
+  "send-email",
+  "social-post",
+]);
+
+export function isX402AnonymousTool(toolName: string): boolean {
+  return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
+}
+
 function buildPaymentRequired(toolName: string, price: string): object {
   const network = config.x402.network;
   // Use x402 named network format (required by client SDK schema validation)
@@ -1073,6 +1083,30 @@ export function x402Middleware(toolName: string) {
 
     // v2: check Payment-Signature (primary), fall back to X-Payment (legacy)
     const paymentHeader = (req.headers["payment-signature"] ?? req.headers["x-payment"]) as string | undefined;
+    const authHeader = req.headers.authorization;
+    const apiKey = req.headers["x-api-key"] as string | undefined;
+    const hasApiCredential = !!(authHeader?.startsWith("Bearer ") || apiKey);
+
+    if (!isX402AnonymousTool(toolName)) {
+      if (paymentHeader) {
+        res.status(403).json({
+          ok: false,
+          error: "x402_not_allowed",
+          message: `${toolName} requires API-key authentication because it sends through Arch-owned external accounts.`,
+        });
+        return;
+      }
+      if (!hasApiCredential) {
+        res.status(401).json({
+          ok: false,
+          error: "authentication_required",
+          message: `${toolName} requires API-key authentication and is not available through anonymous x402 payments.`,
+        });
+        return;
+      }
+      next();
+      return;
+    }
 
     // If the SDK already handled payment, skip custom middleware
     if ((req as Request & { x402SdkPaid?: boolean }).x402SdkPaid) {
@@ -1082,9 +1116,7 @@ export function x402Middleware(toolName: string) {
 
     // No payment header — check if they have a valid API key with credits
     if (!paymentHeader) {
-      const authHeader = req.headers.authorization;
-      const apiKey = req.headers["x-api-key"] as string | undefined;
-      if (authHeader?.startsWith("Bearer ") || apiKey) {
+      if (hasApiCredential) {
         // Let auth middleware handle it (API key or Bearer token)
         next();
         return;

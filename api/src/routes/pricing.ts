@@ -8,20 +8,22 @@
  */
 
 import { Router, Request, Response } from "express";
-import { X402_PRICES } from "../middleware/x402.js";
+import { X402_PRICES, isX402AnonymousTool } from "../middleware/x402.js";
 
 const router = Router();
 
 // ─── GET /api/v1/x402/pricing ─────────────────────────────────────────────────
 router.get("/", (_req: Request, res: Response): void => {
   // Build structured pricing response
-  const tools = Object.entries(X402_PRICES).map(([name, priceUsdc]) => ({
-    tool: name,
-    price_usdc: priceUsdc,
-    price_atomic: Math.round(parseFloat(priceUsdc) * 1_000_000).toString(), // 6-decimal USDC atomic units
-    endpoint: `/v1/tools/${name}`,
-    method: "POST",
-  }));
+  const tools = Object.entries(X402_PRICES)
+    .filter(([name]) => isX402AnonymousTool(name))
+    .map(([name, priceUsdc]) => ({
+      tool: name,
+      price_usdc: priceUsdc,
+      price_atomic: Math.round(parseFloat(priceUsdc) * 1_000_000).toString(), // 6-decimal USDC atomic units
+      endpoint: `/v1/tools/${name}`,
+      method: "POST",
+    }));
 
   // Sort by price ascending
   tools.sort((a, b) => parseFloat(a.price_usdc) - parseFloat(b.price_usdc));
@@ -65,7 +67,7 @@ router.get("/:tool", (req: Request, res: Response): void => {
   const toolName = req.params.tool;
   const priceUsdc = X402_PRICES[toolName as string];
 
-  if (!priceUsdc) {
+  if (!priceUsdc || !isX402AnonymousTool(toolName)) {
     res.status(404).json({
       ok: false,
       error: "tool_not_found",

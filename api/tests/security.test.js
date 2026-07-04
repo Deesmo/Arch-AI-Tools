@@ -169,6 +169,22 @@ async function main() {
   const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64");
 
   console.log("H2 — extractNonce resolution order:");
+  test("platform side-effect tools are not anonymous x402 resources", () => {
+    assert.strictEqual(x402.isX402AnonymousTool("email-send"), false);
+    assert.strictEqual(x402.isX402AnonymousTool("send-email"), false);
+    assert.strictEqual(x402.isX402AnonymousTool("social-post"), false);
+    assert.strictEqual(x402.isX402AnonymousTool("generate-hash"), true);
+  });
+  test("account-only x402 guard runs before facilitator verify/settle", () => {
+    const x402Src = fs.readFileSync(
+      path.join(__dirname, "..", "src", "middleware", "x402.ts"), "utf-8");
+    const guardIdx = x402Src.indexOf("if (!isX402AnonymousTool(toolName))");
+    const verifyIdx = x402Src.indexOf("verifyPayment(paymentHeader");
+    const settleIdx = x402Src.indexOf("settlePayment(paymentHeader");
+    assert.ok(guardIdx > -1, "missing account-only x402 guard");
+    assert.ok(guardIdx < verifyIdx, "guard must run before payment verification");
+    assert.ok(guardIdx < settleIdx, "guard must run before payment settlement");
+  });
   test("reads standard EIP-3009 payload.authorization.nonce", () =>
     assert.strictEqual(
       extractNonce(b64({ payload: { authorization: { nonce: "0xauth" } } })),

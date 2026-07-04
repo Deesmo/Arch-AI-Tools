@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth.js";
-import { x402Middleware } from "../../middleware/x402.js";
+import { x402Middleware, X402_PRICES, isX402AnonymousTool } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
@@ -4340,10 +4340,9 @@ router.post("/html-extract-text", ...toolMiddleware("html-extract-text"), async 
 });
 
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
-// x402scan sends GET to each endpoint and expects 402 Payment Required.
-// Our tools are POST-only, so GET would 404. This catch-all returns 402 with
-// the same payment schema x402scan needs to register the resource.
-import { X402_PRICES } from "../../middleware/x402.js";
+// x402scan sends GET to each anonymous-x402 endpoint and expects 402 Payment
+// Required. Account-backed side-effect tools intentionally stay out of this
+// discovery path.
 
 // We need buildPaymentRequired but it's not exported — inline a minimal version
 // that calls x402Middleware which handles the 402 response
@@ -4351,7 +4350,7 @@ router.get("/:toolName", (req: Request, res: Response): void => {
   const toolName = req.params.toolName;
     // @ts-ignore — Express params typing
   const price = X402_PRICES[toolName];
-  if (!price) {
+  if (!price || !isX402AnonymousTool(toolName)) {
     res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
     return;
   }

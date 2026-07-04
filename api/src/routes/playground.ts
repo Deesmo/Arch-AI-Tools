@@ -9,7 +9,7 @@ import { Router, Request, Response } from "express";
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { X402_PRICES } from "../middleware/x402.js";
+import { X402_PRICES, isX402AnonymousTool } from "../middleware/x402.js";
 import { config } from "../config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +33,14 @@ const router = Router();
 // ─── GET /api/v1/x402/playground/demo ─────────────────────────────────────────
 router.get("/demo", (req: Request, res: Response): void => {
   const toolName = (req.query.tool as string) || "generate-hash";
+  if (!isX402AnonymousTool(toolName)) {
+    res.status(404).json({
+      ok: false,
+      error: "tool_not_found",
+      message: `${toolName} is account-authenticated only and is not available in the anonymous x402 playground.`,
+    });
+    return;
+  }
   const priceUsdc = X402_PRICES[toolName] || "0.001";
   const amountAtomic = Math.round(parseFloat(priceUsdc) * 1_000_000).toString();
   const walletAddress = config.x402.walletAddress || "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18";
@@ -132,12 +140,14 @@ router.get("/demo", (req: Request, res: Response): void => {
 // ─── GET /api/v1/x402/playground/tools ────────────────────────────────────────
 // Returns all tools with pricing + sample params for the playground
 router.get("/tools", (_req: Request, res: Response): void => {
-  const tools = OPENAPI_TOOL_NAMES.map((name) => ({
-    name,
-    price_usdc: X402_PRICES[name] ?? "0.010",
-    endpoint: `/v1/tools/${name}`,
-    sample_params: getSampleParams(name),
-  }));
+  const tools = OPENAPI_TOOL_NAMES
+    .filter((name) => isX402AnonymousTool(name))
+    .map((name) => ({
+      name,
+      price_usdc: X402_PRICES[name] ?? "0.010",
+      endpoint: `/v1/tools/${name}`,
+      sample_params: getSampleParams(name),
+    }));
 
   tools.sort((a, b) => a.name.localeCompare(b.name));
 
