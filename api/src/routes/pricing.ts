@@ -64,7 +64,7 @@ router.get("/", (_req: Request, res: Response): void => {
 // ─── GET /api/v1/x402/pricing/:tool ──────────────────────────────────────────
 // Get pricing for a specific tool
 router.get("/:tool", (req: Request, res: Response): void => {
-  const toolName = req.params.tool;
+  const toolName = String(req.params.tool);
   const priceUsdc = X402_PRICES[toolName as string];
 
   if (!priceUsdc || !isX402AnonymousTool(toolName)) {

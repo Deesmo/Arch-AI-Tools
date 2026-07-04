@@ -4347,7 +4347,7 @@ router.post("/html-extract-text", ...toolMiddleware("html-extract-text"), async 
 // We need buildPaymentRequired but it's not exported — inline a minimal version
 // that calls x402Middleware which handles the 402 response
 router.get("/:toolName", (req: Request, res: Response): void => {
-  const toolName = req.params.toolName;
+  const toolName = String(req.params.toolName);
     // @ts-ignore — Express params typing
   const price = X402_PRICES[toolName];
   if (!price || !isX402AnonymousTool(toolName)) {
