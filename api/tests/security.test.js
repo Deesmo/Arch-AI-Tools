@@ -178,9 +178,10 @@ async function main() {
   test("account-only x402 guard runs before facilitator verify/settle", () => {
     const x402Src = fs.readFileSync(
       path.join(__dirname, "..", "src", "middleware", "x402.ts"), "utf-8");
-    const guardIdx = x402Src.indexOf("if (!isX402AnonymousTool(toolName))");
-    const verifyIdx = x402Src.indexOf("verifyPayment(paymentHeader");
-    const settleIdx = x402Src.indexOf("settlePayment(paymentHeader");
+    const middlewareIdx = x402Src.indexOf("export function x402Middleware");
+    const guardIdx = x402Src.indexOf("if (!isX402AnonymousTool(toolName))", middlewareIdx);
+    const verifyIdx = x402Src.indexOf("const verifyResult = await verifyPayment", middlewareIdx);
+    const settleIdx = x402Src.indexOf("const settleResult = await settlePayment", middlewareIdx);
     assert.ok(guardIdx > -1, "missing account-only x402 guard");
     assert.ok(guardIdx < verifyIdx, "guard must run before payment verification");
     assert.ok(guardIdx < settleIdx, "guard must run before payment settlement");
@@ -227,7 +228,7 @@ async function main() {
     assert.strictEqual(rejected, false);
   });
 
-  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  console.log("H2 — checkAndStoreNonce dedup + fallback (mock redis):");
   const mockRedis = (impl) => ({ set: impl });
   await (async () => {
     const seen = new Set();
@@ -246,9 +247,12 @@ async function main() {
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
     const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
-    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
+    const replay = await checkAndStoreNonce("0xdef", 600, failing);
+    test("redis error → in-memory fallback accepts first nonce", () =>
+      assert.strictEqual(r, "new"));
+    test("redis error fallback still rejects repeated nonce", () =>
+      assert.strictEqual(replay, "replay"));
+    test("middleware keeps defensive 'error' branch if nonce storage policy changes", () =>
       assert.ok(x402Src.includes("payment_replay_check_unavailable")));
   })();
   await (async () => {
