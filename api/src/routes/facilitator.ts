@@ -59,6 +59,44 @@ interface FacilitatorRequest extends Request {
   };
 }
 
+type FacilitatorPaymentDetails = VerifyRequest["paymentDetails"] | SettleRequest["paymentDetails"];
+
+type PaymentDetailsValidationError = {
+  error: "invalid_payment_details" | "unsupported_network";
+  message: string;
+};
+
+export function validatePaymentDetailsForProvider(
+  paymentDetails: Partial<FacilitatorPaymentDetails> | undefined,
+  providerNetworks: string[],
+): PaymentDetailsValidationError | null {
+  const requiredFields: Array<keyof SettleRequest["paymentDetails"]> = [
+    "scheme",
+    "network",
+    "maxAmountRequired",
+    "resource",
+    "payTo",
+    "asset",
+  ];
+
+  const missing = requiredFields.filter((field) => !paymentDetails?.[field]);
+  if (missing.length > 0) {
+    return {
+      error: "invalid_payment_details",
+      message: "paymentDetails must include: scheme, network, maxAmountRequired, resource, payTo, asset",
+    };
+  }
+
+  if (!providerNetworks.includes(paymentDetails!.network!)) {
+    return {
+      error: "unsupported_network",
+      message: `Network ${paymentDetails!.network} is not enabled for your account. Supported: ${providerNetworks.join(", ")}`,
+    };
+  }
+
+  return null;
+}
+
 /**
  * Authenticate a facilitator provider via API key.
  * Expects: Authorization: Bearer <facilitator_api_key>
@@ -149,12 +187,12 @@ router.post("/verify", requireFacilitatorAuth, async (req: FacilitatorRequest, r
 
     const provider = req.facilitatorProvider!;
 
-    // Check network is supported
-    if (!provider.networks.includes(paymentDetails.network)) {
+    const validationError = validatePaymentDetailsForProvider(paymentDetails, provider.networks);
+    if (validationError) {
       res.status(400).json({
         ok: false,
-        error: "unsupported_network",
-        message: `Network ${paymentDetails.network} is not enabled for your account. Supported: ${provider.networks.join(", ")}`,
+        error: validationError.error,
+        message: validationError.message,
         request_id: reqId(),
       });
       return;
@@ -215,6 +253,17 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
     }
 
     const provider = req.facilitatorProvider!;
+
+    const validationError = validatePaymentDetailsForProvider(paymentDetails, provider.networks);
+    if (validationError) {
+      res.status(400).json({
+        ok: false,
+        error: validationError.error,
+        message: validationError.message,
+        request_id: reqId(),
+      });
+      return;
+    }
 
     // SECURITY (F-06): never settle an unverified payment. If this payment was
     // not already verified (verify→settle flow), verify it now (one-step flow).
