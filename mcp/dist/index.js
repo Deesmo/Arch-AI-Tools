@@ -3,11 +3,19 @@ import fetch from "node-fetch";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { pathToFileURL } from "node:url";
 import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { TOOL_SCHEMAS } from "./schemas.js";
 import express from "express";
-const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
-const apiKey = process.env.ARCH_API_KEY || "";
+function resolveApiConfig(overrides) {
+    return {
+        baseUrl: (overrides?.baseUrl || process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, ""),
+        apiKey: overrides?.apiKey || process.env.ARCH_API_KEY || "",
+    };
+}
+function apiHeaders(config, keyOverride) {
+    return { "x-api-key": keyOverride || config.apiKey };
+}
 // ─── Anonymous demo limits ───────────────────────────────────────────────────
 // Anonymous (no client API key) tool calls are served from a small internal
 // demo pool and are hard-capped. Real usage requires the caller's own Arch
@@ -41,6 +49,21 @@ const AUTH_REQUIRED_MESSAGE = JSON.stringify({
     signup: "https://archtools.dev/signup",
     docs: "https://archtools.dev/docs",
 }, null, 2);
+// Anonymous demo (no client key) may ONLY call cheap, local-compute tools that
+// do not hit paid upstream providers. Anything else requires the caller's own
+// API key — this prevents draining the platform ARCH_API_KEY on expensive
+// AI/media/search calls via IP rotation (H6).
+const ANON_ALLOWED_TOOLS = new Set([
+    "generate-hash", "generate-uuid", "qr-code", "barcode-generate",
+    "transform-text", "diff-text", "validate-data", "convert-format",
+    "jsonpath-query", "timezone-convert", "language-detect", "readability-score",
+]);
+const ANON_TOOL_BLOCKED_MESSAGE = JSON.stringify({
+    error: "api_key_required",
+    message: "This tool requires your own Arch Tools API key. Anonymous demo access is limited to free local utilities. Pass `x-api-key` or `Authorization: Bearer <key>`. Get a free key with signup credits at https://archtools.dev/signup",
+    signup: "https://archtools.dev/signup",
+    docs: "https://archtools.dev/docs",
+}, null, 2);
 function extractClientKey(req) {
     const xKey = req.headers["x-api-key"];
     if (typeof xKey === "string" && xKey.trim())
@@ -62,23 +85,25 @@ function clientIp(req) {
 const transport = process.env.MCP_TRANSPORT || "stdio"; // "stdio" or "sse"
 // Render-safe: prefer PORT when running as a web service
 const ssePort = Number(process.env.PORT || process.env.MCP_SSE_PORT || 3001);
-let toolCache = null;
-async function getTools() {
-    if (toolCache)
-        return toolCache;
-    const res = await fetch(`${baseUrl}/v1/tools`, {
-        headers: { "x-api-key": apiKey },
+const toolCache = new Map();
+async function getTools(config = resolveApiConfig()) {
+    const cacheKey = config.baseUrl;
+    const cachedTools = toolCache.get(cacheKey);
+    if (cachedTools)
+        return cachedTools;
+    const res = await fetch(`${config.baseUrl}/v1/tools`, {
+        headers: apiHeaders(config),
     });
     if (!res.ok)
         throw new Error(`Failed to fetch tools: ${res.status}`);
     const data = (await res.json());
-    toolCache = data.tools;
-    return toolCache;
+    toolCache.set(cacheKey, data.tools);
+    return data.tools;
 }
-async function invokeTool(toolName, input, keyOverride) {
-    const res = await fetch(`${baseUrl}/v1/tools/${toolName}`, {
+async function invokeTool(toolName, input, config = resolveApiConfig(), keyOverride) {
+    const res = await fetch(`${config.baseUrl}/v1/tools/${toolName}`, {
         method: "POST",
-        headers: { "x-api-key": keyOverride || apiKey, "Content-Type": "application/json" },
+        headers: { ...apiHeaders(config, keyOverride), "Content-Type": "application/json" },
         body: JSON.stringify(input ?? {}),
     });
     if (!res.ok) {
@@ -203,7 +228,7 @@ function getPromptMessages(name, args) {
 }
 // ─── Server factory (low-level Server for full schema control) ───────────────
 // auth: per-session client API key (empty = anonymous demo) + IP for rate limiting.
-async function createServer(auth) {
+async function createServer(auth, apiConfig = resolveApiConfig()) {
     const server = new Server({ name: "arch-tools-mcp", version: "1.8.0" }, {
         capabilities: {
             tools: { listChanged: false },
@@ -211,7 +236,7 @@ async function createServer(auth) {
             prompts: { listChanged: false },
         },
     });
-    const tools = await getTools();
+    const tools = await getTools(apiConfig);
     // tools/list — returns full inputSchema with required + annotations
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: tools.map(buildToolEntry)
@@ -220,12 +245,15 @@ async function createServer(auth) {
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // SSE sessions: enforce auth/demo limits. stdio (auth undefined) uses env key as before.
         if (auth && !auth.clientKey) {
+            if (!ANON_ALLOWED_TOOLS.has(request.params.name)) {
+                return { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true };
+            }
             const allowance = checkAnonAllowance(auth.ip);
             if (!allowance.allowed) {
                 return { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true };
             }
         }
-        const result = await invokeTool(request.params.name, request.params.arguments ?? {}, auth?.clientKey || undefined);
+        const result = await invokeTool(request.params.name, request.params.arguments ?? {}, apiConfig, auth?.clientKey || undefined);
         return { content: [{ type: "text", text: result }] };
     });
     // resources/list
@@ -236,7 +264,7 @@ async function createServer(auth) {
     server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         const uri = request.params.uri;
         if (uri === "arch://tools/catalog") {
-            const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+            const toolsRes = await fetch(`${apiConfig.baseUrl}/v1/tools`, { headers: apiHeaders(apiConfig) });
             const toolsData = await toolsRes.json();
             return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] };
         }
@@ -257,6 +285,7 @@ async function createServer(auth) {
 }
 // ─── Streamable HTTP POST handler (shared by /mcp and /sse POST) ─────────────
 async function handleStreamablePost(req, res) {
+    const apiConfig = resolveApiConfig();
     const body = req.body;
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -269,7 +298,7 @@ async function handleStreamablePost(req, res) {
         return;
     }
     try {
-        const tools = await getTools();
+        const tools = await getTools(apiConfig);
         switch (body.method) {
             case "initialize":
                 send({ jsonrpc: "2.0", id: body.id, result: {
@@ -288,13 +317,17 @@ async function handleStreamablePost(req, res) {
             case "tools/call": {
                 const clientKey = extractClientKey(req);
                 if (!clientKey) {
+                    if (!ANON_ALLOWED_TOOLS.has(body.params?.name)) {
+                        send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true } });
+                        break;
+                    }
                     const allowance = checkAnonAllowance(clientIp(req));
                     if (!allowance.allowed) {
                         send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true } });
                         break;
                     }
                 }
-                const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, clientKey || undefined);
+                const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, apiConfig, clientKey || undefined);
                 send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
                 break;
             }
@@ -304,7 +337,7 @@ async function handleStreamablePost(req, res) {
             case "resources/read": {
                 const uri = body.params?.uri;
                 if (uri === "arch://tools/catalog") {
-                    const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+                    const toolsRes = await fetch(`${apiConfig.baseUrl}/v1/tools`, { headers: apiHeaders(apiConfig) });
                     const toolsData = await toolsRes.json();
                     send({ jsonrpc: "2.0", id: body.id, result: { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] } });
                 }
@@ -415,21 +448,23 @@ async function main() {
         await server.connect(stdioTransport);
     }
 }
-main().catch(console.error);
+function isCliEntryPoint() {
+    return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+if (isCliEntryPoint()) {
+    main().catch(console.error);
+}
 // Smithery sandbox export — allows scanning without real credentials
 export async function createSandboxServer() {
     // Set a dummy key so createServer doesn't fail during scan
-    process.env.ARCH_API_KEY = process.env.ARCH_API_KEY || "sandbox_scan_key";
-    return createServer();
+    return createServer(undefined, resolveApiConfig({ apiKey: process.env.ARCH_API_KEY || "sandbox_scan_key" }));
 }
 // Default export for Smithery hosted deployment
 export default async function (opts) {
-    if (opts?.config?.apiKey)
-        process.env.ARCH_API_KEY = opts.config.apiKey;
-    if (opts?.config?.baseUrl)
-        process.env.ARCH_API_BASE_URL = opts.config.baseUrl;
-    if (opts?.env?.ARCH_API_KEY)
-        process.env.ARCH_API_KEY = opts.env.ARCH_API_KEY;
-    return createServer();
+    const apiConfig = resolveApiConfig({
+        apiKey: opts?.config?.apiKey || opts?.env?.ARCH_API_KEY,
+        baseUrl: opts?.config?.baseUrl || opts?.env?.ARCH_API_BASE_URL,
+    });
+    return createServer(undefined, apiConfig);
 }
 //# sourceMappingURL=index.js.map

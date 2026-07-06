@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { pathToFileURL } from "node:url";
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
@@ -14,8 +15,21 @@ import {
 import { TOOL_SCHEMAS } from "./schemas.js";
 import express from "express";
 
-const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
-const apiKey = process.env.ARCH_API_KEY || "";
+type ApiConfig = {
+  baseUrl: string;
+  apiKey: string;
+};
+
+function resolveApiConfig(overrides?: { baseUrl?: string; apiKey?: string }): ApiConfig {
+  return {
+    baseUrl: (overrides?.baseUrl || process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, ""),
+    apiKey: overrides?.apiKey || process.env.ARCH_API_KEY || "",
+  };
+}
+
+function apiHeaders(config: ApiConfig, keyOverride?: string): Record<string, string> {
+  return { "x-api-key": keyOverride || config.apiKey };
+}
 
 // ─── Anonymous demo limits ───────────────────────────────────────────────────
 // Anonymous (no client API key) tool calls are served from a small internal
@@ -100,22 +114,24 @@ type ToolDef = {
   inputSchema: Record<string, unknown>;
 };
 
-let toolCache: ToolDef[] | null = null;
-async function getTools(): Promise<ToolDef[]> {
-  if (toolCache) return toolCache;
-  const res = await fetch(`${baseUrl}/v1/tools`, {
-    headers: { "x-api-key": apiKey },
+const toolCache = new Map<string, ToolDef[]>();
+async function getTools(config: ApiConfig = resolveApiConfig()): Promise<ToolDef[]> {
+  const cacheKey = config.baseUrl;
+  const cachedTools = toolCache.get(cacheKey);
+  if (cachedTools) return cachedTools;
+  const res = await fetch(`${config.baseUrl}/v1/tools`, {
+    headers: apiHeaders(config),
   });
   if (!res.ok) throw new Error(`Failed to fetch tools: ${res.status}`);
   const data = (await res.json()) as { tools: ToolDef[] };
-  toolCache = data.tools;
-  return toolCache;
+  toolCache.set(cacheKey, data.tools);
+  return data.tools;
 }
 
-async function invokeTool(toolName: string, input: any, keyOverride?: string) {
-  const res = await fetch(`${baseUrl}/v1/tools/${toolName}`, {
+async function invokeTool(toolName: string, input: any, config: ApiConfig = resolveApiConfig(), keyOverride?: string) {
+  const res = await fetch(`${config.baseUrl}/v1/tools/${toolName}`, {
     method: "POST",
-    headers: { "x-api-key": keyOverride || apiKey, "Content-Type": "application/json" },
+    headers: { ...apiHeaders(config, keyOverride), "Content-Type": "application/json" },
     body: JSON.stringify(input ?? {}),
   });
   if (!res.ok) {
@@ -247,7 +263,10 @@ function getPromptMessages(name: string, args: Record<string, string>) {
 
 // ─── Server factory (low-level Server for full schema control) ───────────────
 // auth: per-session client API key (empty = anonymous demo) + IP for rate limiting.
-async function createServer(auth?: { clientKey: string; ip: string }): Promise<Server> {
+async function createServer(
+  auth?: { clientKey: string; ip: string },
+  apiConfig: ApiConfig = resolveApiConfig(),
+): Promise<Server> {
   const server = new Server(
     { name: "arch-tools-mcp", version: "1.8.0" },
     {
@@ -259,7 +278,7 @@ async function createServer(auth?: { clientKey: string; ip: string }): Promise<S
     }
   );
 
-  const tools = await getTools();
+  const tools = await getTools(apiConfig);
 
   // tools/list — returns full inputSchema with required + annotations
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -281,6 +300,7 @@ async function createServer(auth?: { clientKey: string; ip: string }): Promise<S
     const result = await invokeTool(
       request.params.name,
       request.params.arguments ?? {},
+      apiConfig,
       auth?.clientKey || undefined
     );
     return { content: [{ type: "text" as const, text: result }] };
@@ -295,7 +315,7 @@ async function createServer(auth?: { clientKey: string; ip: string }): Promise<S
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const uri = request.params.uri;
     if (uri === "arch://tools/catalog") {
-      const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+      const toolsRes = await fetch(`${apiConfig.baseUrl}/v1/tools`, { headers: apiHeaders(apiConfig) });
       const toolsData = await toolsRes.json();
       return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] };
     }
@@ -323,6 +343,7 @@ async function createServer(auth?: { clientKey: string; ip: string }): Promise<S
 
 // ─── Streamable HTTP POST handler (shared by /mcp and /sse POST) ─────────────
 async function handleStreamablePost(req: express.Request, res: express.Response): Promise<void> {
+  const apiConfig = resolveApiConfig();
   const body = req.body as any;
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -337,7 +358,7 @@ async function handleStreamablePost(req: express.Request, res: express.Response)
   }
 
   try {
-    const tools = await getTools();
+    const tools = await getTools(apiConfig);
 
     switch (body.method) {
       case "initialize":
@@ -370,7 +391,7 @@ async function handleStreamablePost(req: express.Request, res: express.Response)
             break;
           }
         }
-        const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, clientKey || undefined);
+        const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, apiConfig, clientKey || undefined);
         send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
         break;
       }
@@ -382,7 +403,7 @@ async function handleStreamablePost(req: express.Request, res: express.Response)
       case "resources/read": {
         const uri = (body.params as any)?.uri;
         if (uri === "arch://tools/catalog") {
-          const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+          const toolsRes = await fetch(`${apiConfig.baseUrl}/v1/tools`, { headers: apiHeaders(apiConfig) });
           const toolsData = await toolsRes.json();
           send({ jsonrpc: "2.0", id: body.id, result: { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] } });
         } else if (uri === "arch://docs/quickstart") {
@@ -508,19 +529,25 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+function isCliEntryPoint(): boolean {
+  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+
+if (isCliEntryPoint()) {
+  main().catch(console.error);
+}
 
 // Smithery sandbox export — allows scanning without real credentials
 export async function createSandboxServer() {
   // Set a dummy key so createServer doesn't fail during scan
-  process.env.ARCH_API_KEY = process.env.ARCH_API_KEY || "sandbox_scan_key";
-  return createServer();
+  return createServer(undefined, resolveApiConfig({ apiKey: process.env.ARCH_API_KEY || "sandbox_scan_key" }));
 }
 
 // Default export for Smithery hosted deployment
 export default async function(opts?: { config?: { apiKey?: string; baseUrl?: string }; session?: any; env?: any }) {
-  if (opts?.config?.apiKey) process.env.ARCH_API_KEY = opts.config.apiKey;
-  if (opts?.config?.baseUrl) process.env.ARCH_API_BASE_URL = opts.config.baseUrl;
-  if (opts?.env?.ARCH_API_KEY) process.env.ARCH_API_KEY = opts.env.ARCH_API_KEY;
-  return createServer();
+  const apiConfig = resolveApiConfig({
+    apiKey: opts?.config?.apiKey || opts?.env?.ARCH_API_KEY,
+    baseUrl: opts?.config?.baseUrl || opts?.env?.ARCH_API_BASE_URL,
+  });
+  return createServer(undefined, apiConfig);
 }
