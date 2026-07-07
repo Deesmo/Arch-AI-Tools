@@ -76,6 +76,16 @@ function toolMiddleware(toolName) {
 function isX402Paid(req) {
     return !!req.x402Paid;
 }
+function normalizeCdpTokenId(tokenId) {
+    if (tokenId === null || tokenId === undefined)
+        return null;
+    const cleaned = String(tokenId).trim();
+    // ERC-721/1155 token IDs are uint256 values. Keep this path segment numeric
+    // before signing the CDP request so callers cannot alter the upstream route.
+    if (!/^[0-9]{1,78}$/.test(cleaned))
+        return null;
+    return cleaned;
+}
 // ─── BYOK discount: tools called with user-provided provider keys charge 20% ───
 const BYOK_HEADER_NAMES = [
     "x-anthropic-key", "x-openai-key", "x-xai-key", "x-google-key",
@@ -3878,7 +3888,7 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
             return;
     }
     const { contractAddress, tokenId } = req.body;
-    if (!contractAddress || !tokenId) {
+    if (!contractAddress || tokenId === null || tokenId === undefined || String(tokenId).trim() === "") {
         res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress and tokenId are required", request_id: reqId() });
         return;
     }
@@ -3886,8 +3896,13 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
         res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
         return;
     }
+    const tokenIdClean = normalizeCdpTokenId(tokenId);
+    if (!tokenIdClean) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: "tokenId must be a decimal NFT token ID", request_id: reqId() });
+        return;
+    }
     try {
-        const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${tokenId}`;
+        const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${encodeURIComponent(tokenIdClean)}`;
         const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
         const jwt = await generateJwt({
             apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
@@ -3909,7 +3924,7 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
         res.json({
             ok: true,
             contractAddress,
-            tokenId,
+            tokenId: tokenIdClean,
             network: "base",
             name: data.name ?? data.token?.name ?? null,
             description: data.description ?? null,
