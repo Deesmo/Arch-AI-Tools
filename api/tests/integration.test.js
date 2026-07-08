@@ -11,6 +11,7 @@ const BASE_URL = process.env.TEST_BASE_URL || 'https://archtools.dev';
 // Detailed /health is admin-gated by design (see SECURITY.md). Provide a matching
 // admin key here to also validate the rich health payload (deps + tool count).
 const ADMIN_KEY = process.env.TEST_ADMIN_KEY || '';
+const IS_LOCAL_TARGET = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(BASE_URL);
 
 let passed = 0;
 let failed = 0;
@@ -97,6 +98,40 @@ async function run() {
     const { res, body } = await fetchJSON('/api/v1/agents/leaderboard');
     assert(res.status === 200, `status ${res.status}`);
     assert(body !== null, 'empty response body');
+  });
+
+  // ── Workflows ──
+  console.log('\n── Workflows ──');
+
+  await test('POST /v1/workflows/run malformed step → 400 without crashing', async () => {
+    if (!IS_LOCAL_TARGET) {
+      console.log('     ↳ skipped (mutating regression test only runs against local target)');
+      return;
+    }
+
+    const email = `workflow-malformed-${Date.now()}@example.com`;
+    const { res: registerRes, body: registerBody } = await fetchJSON('/v1/agent/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name: 'Workflow regression test' }),
+    });
+    assert(registerRes.status === 201, `register status ${registerRes.status}`);
+    assert(registerBody?.api_key, 'registration did not return api_key');
+
+    const { res: workflowRes, body: workflowBody } = await fetchJSON('/v1/workflows/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${registerBody.api_key}`,
+      },
+      body: JSON.stringify({ steps: [{ tool: 'generate-hash', input: null }] }),
+    });
+    assert(workflowRes.status === 400, `expected 400, got ${workflowRes.status}`);
+    assert(workflowBody?.error === 'invalid_request', `unexpected error ${workflowBody?.error}`);
+
+    const { res: healthRes, body: healthBody } = await fetchJSON('/health');
+    assert(healthRes.status === 200, `health status ${healthRes.status}`);
+    assert(healthBody?.ok === true, 'server did not remain healthy after malformed workflow');
   });
 
   // ── Tools Discovery ──
