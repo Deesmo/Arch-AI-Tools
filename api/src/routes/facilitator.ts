@@ -23,6 +23,7 @@ import {
   verifyPayment,
   settlePayment,
   decodePayment,
+  releaseNonce,
   calculateFee,
   calculateProviderPayout,
   getDefaultFeePercent,
@@ -163,22 +164,36 @@ router.post("/verify", requireFacilitatorAuth, async (req: FacilitatorRequest, r
     // Verify the payment
     const result = await verifyPayment(payment, paymentDetails, provider.id);
 
-    // Log the verification attempt
-    const decoded = decodePayment(payment);
     if (result.isValid) {
-      await prisma.facilitatorPayment.create({
-        data: {
-          providerId: provider.id,
-          paymentPayload: payment,
-          resource: paymentDetails.resource,
-          amount: paymentDetails.maxAmountRequired,
-          token: "USDC",
-          network: paymentDetails.network,
-          payerAddress: decoded?.payload?.authorization?.from || null,
-          status: "verified",
-          verifiedAt: new Date(),
-        },
-      }).catch((err) => console.error("[facilitator] Failed to log verification:", err));
+      const decoded = decodePayment(payment);
+      try {
+        await prisma.facilitatorPayment.create({
+          data: {
+            providerId: provider.id,
+            paymentPayload: payment,
+            resource: paymentDetails.resource,
+            amount: paymentDetails.maxAmountRequired,
+            token: "USDC",
+            network: paymentDetails.network,
+            payerAddress: decoded?.payload?.authorization?.from || null,
+            status: "verified",
+            verifiedAt: new Date(),
+          },
+        });
+      } catch (err) {
+        const nonce = decoded?.payload?.authorization?.nonce;
+        if (nonce) {
+          await releaseNonce(nonce, provider.id);
+        }
+        console.error("[facilitator] Failed to persist verification:", err);
+        res.status(503).json({
+          ok: false,
+          error: "verification_persistence_error",
+          message: "Payment verified but could not be safely recorded. Please retry verification.",
+          request_id: reqId(),
+        });
+        return;
+      }
     }
 
     res.json({
