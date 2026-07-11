@@ -7,6 +7,7 @@ import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
+import { enforcementTierForAccount } from "../../lib/tiers.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
@@ -68,9 +69,9 @@ setInterval(() => {
 function tierRateLimiter(req: AuthedRequest, res: Response, next: NextFunction): void {
   const agent = req.agent;
   const key = agent?.apiKey?.slice(0, 20) ?? req.ip ?? "anon";
-  const tier = agent?.tier ?? "free";
+  const tier = enforcementTierForAccount(agent?.tier);
   const limit = tier === "business" ? config.rateLimits.business
-              : (tier === "pro" || tier === "starter") ? config.rateLimits.pro
+              : tier === "pro" ? config.rateLimits.pro
               : config.rateLimits.free;
 
   const now = Date.now();
@@ -90,7 +91,7 @@ function tierRateLimiter(req: AuthedRequest, res: Response, next: NextFunction):
     res.status(429).json({
       ok: false,
       error: "rate_limited",
-      message: `Rate limit of ${limit} req/min exceeded for ${tier} tier. Upgrade at archtools.dev.`,
+      message: `Rate limit of ${limit} req/min exceeded for ${agent?.tier ?? "free"} tier. Upgrade at archtools.dev.`,
       request_id: reqId(),
     });
     return;
@@ -215,8 +216,10 @@ async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName
   const limitConfig = SIDE_EFFECT_DAILY_LIMITS[toolName];
   if (!limitConfig) return true;
 
-  const tier = agent.tier === "business" ? "business" : agent.tier === "pro" ? "pro" : agent.tier === "starter" ? "starter" : "free";
-  const limit = limitConfig[tier];
+  const tier = enforcementTierForAccount(agent.tier);
+  const limit = tier === "business" ? limitConfig.business
+    : tier === "pro" ? limitConfig.pro
+    : limitConfig.free;
   const since = new Date();
   since.setHours(0, 0, 0, 0);
 
@@ -245,7 +248,7 @@ async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName
     res.status(429).json({
       ok: false,
       error: "daily_limit_reached",
-      message: `Daily limit reached for ${toolName}. ${tier} tier allows ${limit} successful calls per day.`,
+      message: `Daily limit reached for ${toolName}. ${agent.tier} tier allows ${limit} successful calls per day.`,
       request_id: reqId(),
     });
     return false;
