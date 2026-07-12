@@ -17,6 +17,7 @@
     "npm:audit": "npm audit --json > /tmp/audit.json && echo \"Audit complete\"",
     "test": "node tests/integration.test.js && node tests/pages.test.js",
     "test:integration": "node tests/integration.test.js",
+    "test:oauth-refresh-race": "node tests/oauth-refresh-race.test.js",
     "test:pages": "node tests/pages.test.js",
     "postinstall": "node -e \"const fs=require('fs'); const p='node_modules/@coinbase/cdp-sdk/node_modules/jose'; try{ fs.rmSync(p,{recursive:true,force:true}); } catch(e){}\""
   },
