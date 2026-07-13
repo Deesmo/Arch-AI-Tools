@@ -26,6 +26,11 @@ function test(name, fn) {
 }
 
 async function main() {
+  // Facilitator on-chain checks must fail fast and deterministically in tests:
+  // dist/services/facilitator.js captures RPC overrides at import time, so pin
+  // Base mainnet RPC to a dead local port before any dist import below.
+  process.env.BASE_RPC_URL = "http://127.0.0.1:9";
+
   // ── M1: normalizeEmailIdentity ────────────────────────────────────────────
   const { normalizeEmailIdentity } = await import(
     path.join(__dirname, "..", "dist", "lib", "verification.js")
@@ -438,6 +443,75 @@ async function main() {
     );
     test("settle rejects signed recipient that differs from registered provider wallet before spending gas", () =>
       assert.strictEqual(result.errorMessage, "recipient_mismatch"));
+  })();
+
+  // ── Facilitator /verify collectability ───────────────────────────────────
+  // BASE_RPC_URL is pinned to a dead local port at the top of main() — before
+  // dist/services/facilitator.js was imported — so on-chain reads fail fast.
+  console.log("FaaS — verify fails closed when collectability checks are unavailable:");
+  await (async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const { verifyPayment } = facilitator;
+
+    const account = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945380d493218181e3a9bbbe0e9b24c3c71156");
+    const tokenAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+    const payTo = "0x000000000000000000000000000000000000dEaD";
+    const authorization = {
+      from: account.address,
+      to: payTo,
+      value: "1000",
+      validAfter: String(nowSec - 10),
+      validBefore: String(nowSec + 600),
+      nonce: "0x" + "ab".repeat(32),
+    };
+    const typedData = {
+      domain: {
+        name: "USD Coin",
+        version: "2",
+        chainId: 8453,
+        verifyingContract: tokenAddress,
+      },
+      types: {
+        TransferWithAuthorization: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "validAfter", type: "uint256" },
+          { name: "validBefore", type: "uint256" },
+          { name: "nonce", type: "bytes32" },
+        ],
+      },
+      primaryType: "TransferWithAuthorization",
+      message: {
+        ...authorization,
+        value: BigInt(authorization.value),
+        validAfter: BigInt(authorization.validAfter),
+        validBefore: BigInt(authorization.validBefore),
+      },
+    };
+    const signature = await account.signTypedData(typedData);
+    const payment = Buffer.from(JSON.stringify({
+      scheme: "exact",
+      network: "eip155:8453",
+      payload: { signature, authorization },
+    })).toString("base64");
+
+    // allowLocalNonceFallback: the shared-nonce-store fail-closed path is already
+    // covered by the reserveNonce tests above. This test targets the balance-check
+    // path, so let nonce reservation succeed via local fallback in a redis-less env.
+    const result = await verifyPayment(payment, {
+      scheme: "exact",
+      network: "eip155:8453",
+      maxAmountRequired: "1000",
+      resource: "https://provider.example/paid",
+      payTo,
+      asset: tokenAddress,
+    }, `provider-rpc-down-${Date.now()}`, undefined, { allowLocalNonceFallback: true });
+
+    test("valid signature is rejected when balance RPC cannot prove payment is collectible", () => {
+      assert.strictEqual(result.isValid, false);
+      assert.strictEqual(result.invalidReason, "balance_check_unavailable");
+    });
   })();
 
   if (failures > 0) {
