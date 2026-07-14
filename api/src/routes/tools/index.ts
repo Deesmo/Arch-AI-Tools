@@ -2755,6 +2755,7 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
 
 interface SessionData {
   session_id: string;
+  owner_key: string;
   namespace: string;
   system_prompt: string | null;
   model: string;
@@ -2763,6 +2764,15 @@ interface SessionData {
 }
 
 const sessionStore = new Map<string, SessionData>();
+
+function getSessionOwnerKey(req: AuthedRequest): string | null {
+  if (req.agent?.id) return `agent:${req.agent.id}`;
+  const payer = (req as AuthedRequest & { x402Payer?: string }).x402Payer;
+  if (isX402Paid(req) && typeof payer === "string" && payer.trim()) {
+    return `x402:${payer.trim().toLowerCase()}`;
+  }
+  return null;
+}
 
 // Clean up old sessions every 30 minutes (sessions older than 4 hours)
 setInterval(() => {
@@ -2797,12 +2807,18 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: claude, gpt4, ${ALLOWED.join(", ")}`, request_id: reqId() });
     return;
   }
+  const ownerKey = getSessionOwnerKey(req);
+  if (!ownerKey) {
+    res.status(403).json({ ok: false, error: "session_owner_required", message: "Unable to identify the caller for this session.", request_id: reqId() });
+    return;
+  }
 
   const session_id = `sess_${crypto.randomUUID().replace(/-/g, "")}`;
   const created_at = new Date().toISOString();
 
   const session: SessionData = {
     session_id,
+    owner_key: ownerKey,
     namespace: namespace.slice(0, 100),
     system_prompt: systemPrompt ? String(systemPrompt).slice(0, 4000) : null,
     model: resolvedModel,
@@ -2827,11 +2843,6 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
 // Sends a message in an existing session, maintaining conversation history.
 
 router.post("/session-message", ...toolMiddleware("session-message"), async (req: AuthedRequest, res: Response): Promise<void> => {
-  const paid = isX402Paid(req);
-  if (!paid) {
-    const ok = await deductCredits(req, res, "session-message", 20);
-    if (!ok) return;
-  }
   const { session_id, message } = req.body as { session_id?: string; message?: string };
 
   if (!session_id || typeof session_id !== "string") {
@@ -2851,6 +2862,17 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
   if (!session) {
     res.status(404).json({ ok: false, error: "session_not_found", message: `Session '${session_id}' not found or expired`, request_id: reqId() });
     return;
+  }
+  const ownerKey = getSessionOwnerKey(req);
+  if (!ownerKey || session.owner_key !== ownerKey) {
+    res.status(403).json({ ok: false, error: "session_forbidden", message: "This session belongs to a different caller.", request_id: reqId() });
+    return;
+  }
+
+  const paid = isX402Paid(req);
+  if (!paid) {
+    const ok = await deductCredits(req, res, "session-message", 20);
+    if (!ok) return;
   }
 
   // Add user message to history
