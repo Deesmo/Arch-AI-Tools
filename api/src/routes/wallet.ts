@@ -5,6 +5,26 @@ import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
+const PROVISIONING_SENTINEL_PREFIX = "pending:";
+export const WALLET_PROVISIONING_SENTINEL_TTL_MS = 15 * 60 * 1000;
+
+export function createProvisioningSentinel(agentId: string, nowMs = Date.now()): string {
+  return `${PROVISIONING_SENTINEL_PREFIX}${agentId}:${nowMs}`;
+}
+
+export function isProvisioningSentinel(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.startsWith(PROVISIONING_SENTINEL_PREFIX);
+}
+
+export function isStaleProvisioningSentinel(
+  value: string | null | undefined,
+  nowMs = Date.now(),
+  ttlMs = WALLET_PROVISIONING_SENTINEL_TTL_MS,
+): boolean {
+  if (!isProvisioningSentinel(value)) return false;
+  const timestamp = Number(value!.slice(value!.lastIndexOf(":") + 1));
+  return Number.isFinite(timestamp) && nowMs - timestamp > ttlMs;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface WalletProvisionBody {
@@ -40,9 +60,11 @@ router.get(
         select: { walletAddress: true },
       });
 
+      const walletAddress = agent?.walletAddress;
       res.json({
         ok: true,
-        wallet_address: agent?.walletAddress ?? null,
+        wallet_address: isProvisioningSentinel(walletAddress) ? null : walletAddress ?? null,
+        provisioning: isProvisioningSentinel(walletAddress),
         network: "base",
       });
     } catch (err: unknown) {
@@ -106,14 +128,28 @@ router.post(
     // concurrent requests cannot both create a wallet (TOCTOU). Only the request
     // that flips walletAddress null→sentinel proceeds; it is overwritten with the
     // real address on success, or reset to null on failure.
-    const provisioningSentinel = `pending:${agentId}`;
+    const provisioningSentinel = createProvisioningSentinel(agentId);
     const claim = await prisma.agent.updateMany({
       where: { id: agentId, walletAddress: null },
       data: { walletAddress: provisioningSentinel },
     });
     if (claim.count !== 1) {
       const cur = await prisma.agent.findUnique({ where: { id: agentId }, select: { walletAddress: true } });
-      const hasReal = cur?.walletAddress && !cur.walletAddress.startsWith("pending:");
+      if (cur?.walletAddress && isStaleProvisioningSentinel(cur.walletAddress)) {
+        const released = await prisma.agent.updateMany({
+          where: { id: agentId, walletAddress: cur.walletAddress },
+          data: { walletAddress: null },
+        });
+        if (released.count === 1) {
+          res.status(409).json({
+            ok: false,
+            error: "wallet_provision_stale",
+            message: "A previous wallet provisioning attempt expired. Please retry.",
+          });
+          return;
+        }
+      }
+      const hasReal = cur?.walletAddress && !isProvisioningSentinel(cur.walletAddress);
       res.status(409).json({
         ok: false,
         error: "wallet_exists",
@@ -155,12 +191,17 @@ router.post(
         createdAt: new Date().toISOString(),
       };
 
-      // Store wallet association (DB + in-memory cache)
-      walletStore.set(agentId, walletRecord);
-      await prisma.agent.update({
-        where: { id: agentId },
+      // Persist the real wallet address before caching or reporting success. If
+      // this fails after the external CDP call, returning 201 would lose the
+      // wallet on restart and leave the account stuck on the pending sentinel.
+      const persisted = await prisma.agent.updateMany({
+        where: { id: agentId, walletAddress: provisioningSentinel },
         data: { walletAddress: address },
-      }).catch((e: unknown) => logger.warn({ agentId, error: e }, "Failed to persist wallet to DB"));
+      });
+      if (persisted.count !== 1) {
+        throw new Error("Wallet provisioning claim was lost before persistence");
+      }
+      walletStore.set(agentId, walletRecord);
 
       logger.info({ agentId, address, network: "base" as any }, "Wallet provisioned for agent");
 
@@ -221,7 +262,7 @@ router.get(
         where: { id: agentId },
         select: { walletAddress: true, createdAt: true },
       });
-      if (dbAgent?.walletAddress) {
+      if (dbAgent?.walletAddress && !isProvisioningSentinel(dbAgent.walletAddress)) {
         wallet = {
           address: dbAgent.walletAddress,
           network: "base",
