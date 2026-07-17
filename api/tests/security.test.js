@@ -211,7 +211,7 @@ async function main() {
     assert.strictEqual(rejected, false);
   });
 
-  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  console.log("H2 — checkAndStoreNonce dedup + local fallback (mock redis):");
   const mockRedis = (impl) => ({ set: impl });
   await (async () => {
     const seen = new Set();
@@ -230,9 +230,9 @@ async function main() {
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
     const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
-    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
+    test("redis error → local fallback 'new' (settlement remains authoritative)", () =>
+      assert.strictEqual(r, "new"));
+    test("middleware still has a defensive unavailable branch", () =>
       assert.ok(x402Src.includes("payment_replay_check_unavailable")));
   })();
   await (async () => {
@@ -246,6 +246,43 @@ async function main() {
     const r = await checkAndStoreNonce("0xnone", 600, null);
     test("no redis configured → 'new' with warning (dedup disabled by config)", () =>
       assert.strictEqual(r, "new"));
+  })();
+
+  // ── FaaS facilitator: standalone /verify cannot safely use local fallback ──
+  const facilitator = await import(path.join(__dirname, "..", "dist", "services", "facilitator.js"));
+  const { reserveNonce } = facilitator;
+
+  console.log("FaaS — facilitator standalone verify replay guard:");
+  await (async () => {
+    const r = await reserveNonce("0xfacnone", "provider-a", {
+      allowLocalFallback: false,
+      redisClient: null,
+    });
+    test("standalone verify with no shared nonce store → unavailable", () =>
+      assert.strictEqual(r, "unavailable"));
+  })();
+  await (async () => {
+    const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
+    const r = await reserveNonce("0xfacfail", "provider-a", {
+      allowLocalFallback: false,
+      redisClient: failing,
+    });
+    test("standalone verify with redis error → unavailable", () =>
+      assert.strictEqual(r, "unavailable"));
+  })();
+  await (async () => {
+    const first = await reserveNonce("0xfaclocal", "provider-a", {
+      allowLocalFallback: true,
+      redisClient: null,
+    });
+    const second = await reserveNonce("0xfaclocal", "provider-a", {
+      allowLocalFallback: true,
+      redisClient: null,
+    });
+    test("one-step settle preverify can use local fallback once", () =>
+      assert.strictEqual(first, "new"));
+    test("one-step settle local fallback still detects same-process replay", () =>
+      assert.strictEqual(second, "replay"));
   })();
 
   console.log("H2 — TTL derivation from authorization.validBefore (clamped):");

@@ -224,7 +224,9 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
       where: { providerId: provider.id, paymentPayload: payment, status: "verified" },
     });
     if (!alreadyVerified) {
-      const verifyResult = await verifyPayment(payment, paymentDetails, provider.id);
+      const verifyResult = await verifyPayment(payment, paymentDetails, provider.id, {
+        allowLocalNonceFallback: true,
+      });
       if (!verifyResult.isValid) {
         res.status(400).json({
           ok: false,
