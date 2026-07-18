@@ -161,7 +161,7 @@ router.post("/verify", requireFacilitatorAuth, async (req: FacilitatorRequest, r
     }
 
     // Verify the payment
-    const result = await verifyPayment(payment, paymentDetails, provider.id);
+    const result = await verifyPayment(payment, paymentDetails, provider.id, provider.walletAddress);
 
     // Log the verification attempt
     const decoded = decodePayment(payment);
@@ -224,7 +224,7 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
       where: { providerId: provider.id, paymentPayload: payment, status: "verified" },
     });
     if (!alreadyVerified) {
-      const verifyResult = await verifyPayment(payment, paymentDetails, provider.id);
+      const verifyResult = await verifyPayment(payment, paymentDetails, provider.id, provider.walletAddress);
       if (!verifyResult.isValid) {
         res.status(400).json({
           ok: false,
@@ -238,7 +238,7 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
     }
 
     // Settle on-chain
-    const result = await settlePayment(payment, paymentDetails);
+    const result = await settlePayment(payment, paymentDetails, provider.walletAddress);
 
     // Calculate fee — use provider-specific fee or env default.
     // SECURITY (F-07): the settlement amount is the value the payer actually

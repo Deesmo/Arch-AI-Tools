@@ -270,6 +270,77 @@ async function main() {
   test("garbage header → default 600s (never throws)", () =>
     assert.strictEqual(extractNonceTtlSeconds("!!!"), 600));
 
+  // ── FaaS: provider wallet binding ────────────────────────────────────────
+  const facilitator = await import(
+    path.join(__dirname, "..", "dist", "services", "facilitator.js")
+  );
+  const providerWallet = "0x1111111111111111111111111111111111111111";
+  const rogueWallet = "0x2222222222222222222222222222222222222222";
+  const payerWallet = "0x3333333333333333333333333333333333333333";
+  const signedPaymentTo = (to) => b64({
+    scheme: "exact",
+    network: "eip155:8453",
+    payload: {
+      signature: `0x${"11".repeat(65)}`,
+      authorization: {
+        from: payerWallet,
+        to,
+        value: "1000",
+        validAfter: "0",
+        validBefore: String(Math.floor(Date.now() / 1000) + 3600),
+        nonce: `0x${"ab".repeat(32)}`,
+      },
+    },
+  });
+  const basePaymentDetails = {
+    scheme: "exact",
+    network: "eip155:8453",
+    maxAmountRequired: "1000",
+    resource: "https://provider.example/v1/paid",
+    payTo: providerWallet,
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  };
+
+  console.log("FaaS — provider wallet binding:");
+  await (async () => {
+    const result = await facilitator.verifyPayment(
+      signedPaymentTo(rogueWallet),
+      { ...basePaymentDetails, payTo: rogueWallet },
+      "provider_1",
+      providerWallet,
+    );
+    test("verify rejects client-supplied payTo that differs from registered provider wallet", () =>
+      assert.deepStrictEqual(result, { isValid: false, invalidReason: "provider_wallet_mismatch" }));
+  })();
+  await (async () => {
+    const result = await facilitator.verifyPayment(
+      signedPaymentTo(rogueWallet),
+      basePaymentDetails,
+      "provider_1",
+      providerWallet,
+    );
+    test("verify rejects signed recipient that differs from registered provider wallet", () =>
+      assert.deepStrictEqual(result, { isValid: false, invalidReason: "recipient_mismatch" }));
+  })();
+  await (async () => {
+    const result = await facilitator.settlePayment(
+      signedPaymentTo(rogueWallet),
+      { ...basePaymentDetails, payTo: rogueWallet },
+      providerWallet,
+    );
+    test("settle rejects client-supplied payTo that differs from registered provider wallet", () =>
+      assert.strictEqual(result.errorMessage, "provider_wallet_mismatch"));
+  })();
+  await (async () => {
+    const result = await facilitator.settlePayment(
+      signedPaymentTo(rogueWallet),
+      basePaymentDetails,
+      providerWallet,
+    );
+    test("settle rejects signed recipient that differs from registered provider wallet before spending gas", () =>
+      assert.strictEqual(result.errorMessage, "recipient_mismatch"));
+  })();
+
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);
     process.exit(1);

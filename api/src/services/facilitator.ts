@@ -197,6 +197,7 @@ export async function verifyPayment(
   paymentB64: string,
   paymentDetails: VerifyRequest["paymentDetails"],
   providerId: string,
+  expectedPayTo?: string,
 ): Promise<VerifyResponse> {
   // 1. Decode
   const payment = decodePayment(paymentB64);
@@ -220,6 +221,11 @@ export async function verifyPayment(
   }
 
   const auth = payment.payload.authorization;
+  const expectedRecipient = expectedPayTo ?? paymentDetails.payTo;
+
+  if (expectedPayTo && paymentDetails.payTo.toLowerCase() !== expectedPayTo.toLowerCase()) {
+    return { isValid: false, invalidReason: "provider_wallet_mismatch" };
+  }
 
   // 5. Amount check
   const paymentAmount = BigInt(auth.value);
@@ -229,7 +235,7 @@ export async function verifyPayment(
   }
 
   // 6. Recipient match
-  if (auth.to.toLowerCase() !== paymentDetails.payTo.toLowerCase()) {
+  if (auth.to.toLowerCase() !== expectedRecipient.toLowerCase()) {
     return { isValid: false, invalidReason: "recipient_mismatch" };
   }
 
@@ -359,10 +365,20 @@ export async function verifyPayment(
 export async function settlePayment(
   paymentB64: string,
   paymentDetails: SettleRequest["paymentDetails"],
+  expectedPayTo?: string,
 ): Promise<SettleResponse> {
   const payment = decodePayment(paymentB64);
   if (!payment) {
     return { success: false, errorMessage: "malformed_payment_payload" };
+  }
+
+  const auth = payment.payload.authorization;
+  const expectedRecipient = expectedPayTo ?? paymentDetails.payTo;
+  if (expectedPayTo && paymentDetails.payTo.toLowerCase() !== expectedPayTo.toLowerCase()) {
+    return { success: false, errorMessage: "provider_wallet_mismatch" };
+  }
+  if (auth.to.toLowerCase() !== expectedRecipient.toLowerCase()) {
+    return { success: false, errorMessage: "recipient_mismatch" };
   }
 
   const chain = CHAIN_MAP[payment.network];
@@ -394,8 +410,6 @@ export async function settlePayment(
     if (!tokenAddress || tokenAddress === "0x0000000000000000000000000000000000000000") {
       return { success: false, errorMessage: "native_token_settlement_not_supported" };
     }
-
-    const auth = payment.payload.authorization;
 
     // Execute transferWithAuthorization
     const txHash = await walletClient.writeContract({
