@@ -229,10 +229,13 @@ async function main() {
   })();
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
-    const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
-    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
+    const first = await checkAndStoreNonce("0xdef", 600, failing);
+    const second = await checkAndStoreNonce("0xdef", 600, failing);
+    test("redis error → in-memory fallback accepts fresh nonce", () =>
+      assert.strictEqual(first, "new"));
+    test("redis error fallback still rejects replay in-process", () =>
+      assert.strictEqual(second, "replay"));
+    test("middleware keeps defensive 'error' mapping for future fail-closed mode", () =>
       assert.ok(x402Src.includes("payment_replay_check_unavailable")));
   })();
   await (async () => {
