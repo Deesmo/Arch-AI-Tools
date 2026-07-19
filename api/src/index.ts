@@ -100,10 +100,6 @@ const globalLimiter = rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    const auth = req.headers.authorization;
-    return auth?.startsWith("Bearer ") ? auth.slice(7, 40) : (req.ip ?? "unknown");
-  },
   message: { ok: false, error: "rate_limited", message: "Too many requests. Slow down." },
   skip: (req) => req.path === "/health" || req.path.startsWith("/.well-known"),
 });
