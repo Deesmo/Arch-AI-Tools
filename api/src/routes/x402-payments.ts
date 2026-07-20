@@ -14,6 +14,13 @@ import { requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
+const EVM_TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
+const SOLANA_SIGNATURE_RE = /^[1-9A-HJ-NP-Za-km-z]{64,128}$/;
+
+export function isSupportedTxHash(txHash: string): boolean {
+  return EVM_TX_HASH_RE.test(txHash) || SOLANA_SIGNATURE_RE.test(txHash);
+}
+
 // Public receipt lookup is unauthenticated — rate-limit per IP to prevent
 // enumeration / scraping of the payment table.
 const receiptLimiter = rateLimit({
@@ -32,9 +39,9 @@ router.get("/receipt/:txHash", receiptLimiter, async (req: Request, res: Respons
   try {
     const txHash = String(req.params.txHash ?? "");
 
-    // Require a well-formed 0x EVM tx hash (66 chars) — rejects probing input.
-    if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
-      res.status(400).json({ ok: false, error: "invalid_tx_hash", message: "Provide a valid 0x transaction hash." });
+    // Accept only bounded transaction identifiers for supported x402 chains.
+    if (!isSupportedTxHash(txHash)) {
+      res.status(400).json({ ok: false, error: "invalid_tx_hash", message: "Provide a valid EVM transaction hash or Solana signature." });
       return;
     }
 
