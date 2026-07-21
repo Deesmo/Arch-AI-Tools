@@ -1,6 +1,8 @@
 import { URL } from "url";
 import dns from "dns/promises";
 import net from "net";
+import http from "http";
+import https from "https";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
 // Max redirect hops we will follow while re-validating each one.
@@ -14,6 +16,13 @@ const BLOCKED_HOSTS = new Set([
   "metadata.gcp.internal",
   "instance-data",
 ]);
+
+type SafeTarget = {
+  url: URL;
+  hostname: string;
+  address: string;
+  family: 4 | 6;
+};
 
 /**
  * Returns true if an IP address (v4 or v6, including IPv4-mapped IPv6) points at
@@ -65,17 +74,11 @@ function isPrivateIp(ip: string): boolean {
   return true;
 }
 
-/**
- * Validates a single URL for SSRF safety:
- *  - only http/https
- *  - hostname not in the blocked list
- *  - IP literals checked directly
- *  - DNS-resolved addresses checked post-lookup (catches numeric encodings and
- *    rebinding at validation time)
- * Throws on any violation. NOTE: this validates one URL only — to be safe across
- * redirects, use {@link safeAxiosGet} / {@link safeFetch} which re-validate every hop.
- */
-export async function validateUrl(rawUrl: string): Promise<void> {
+function normalizeHostname(hostname: string): string {
+  return hostname.toLowerCase().replace(/^\[|\]$/g, "");
+}
+
+async function resolveSafeTarget(rawUrl: string): Promise<SafeTarget> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -87,7 +90,7 @@ export async function validateUrl(rawUrl: string): Promise<void> {
     throw new Error("Only http and https URLs are allowed");
   }
 
-  const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const hostname = normalizeHostname(parsed.hostname);
   if (!hostname) {
     throw new Error("URL hostname is not allowed");
   }
@@ -101,11 +104,13 @@ export async function validateUrl(rawUrl: string): Promise<void> {
     if (isPrivateIp(hostname)) {
       throw new Error("URL hostname is not allowed (private/internal address)");
     }
-    return;
+    return { url: parsed, hostname, address: hostname, family: net.isIP(hostname) as 4 | 6 };
   }
 
-  // Resolve and check every address the name maps to.
-  let addresses: { address: string }[];
+  // Resolve and check every address the name maps to. Callers that perform the
+  // HTTP request must pin one of these already-validated addresses into the
+  // socket lookup to avoid a second, attacker-controlled DNS answer.
+  let addresses: Array<{ address: string; family: number }>;
   try {
     addresses = await dns.lookup(hostname, { all: true });
   } catch {
@@ -115,10 +120,59 @@ export async function validateUrl(rawUrl: string): Promise<void> {
     throw new Error("URL hostname could not be resolved");
   }
   for (const addr of addresses) {
+    if (addr.family !== 4 && addr.family !== 6) {
+      throw new Error("URL hostname could not be resolved");
+    }
     if (isPrivateIp(addr.address)) {
       throw new Error("URL resolves to a private/internal address");
     }
   }
+
+  const selected = addresses.find((addr) => addr.family === 4) ?? addresses[0];
+  return { url: parsed, hostname, address: selected.address, family: selected.family as 4 | 6 };
+}
+
+export function createPinnedLookup(target: SafeTarget) {
+  return (hostname: string, options: unknown, callback?: (...args: any[]) => void): void => {
+    const cb = (typeof options === "function" ? options : callback) as (...args: any[]) => void;
+    const opts = typeof options === "object" && options !== null ? options as { all?: boolean } : {};
+    if (!cb) return;
+
+    if (normalizeHostname(hostname) !== target.hostname) {
+      const err = Object.assign(new Error("Unexpected hostname lookup during SSRF-safe request"), { code: "ENOTFOUND" });
+      cb(err);
+      return;
+    }
+
+    if (opts.all) {
+      cb(null, [{ address: target.address, family: target.family }]);
+      return;
+    }
+
+    cb(null, target.address, target.family);
+  };
+}
+
+function buildPinnedAgents(target: SafeTarget): Pick<AxiosRequestConfig, "httpAgent" | "httpsAgent"> {
+  const lookup = createPinnedLookup(target) as never;
+  return {
+    httpAgent: new http.Agent({ lookup }),
+    httpsAgent: new https.Agent({ lookup }),
+  };
+}
+
+/**
+ * Validates a single URL for SSRF safety:
+ *  - only http/https
+ *  - hostname not in the blocked list
+ *  - IP literals checked directly
+ *  - DNS-resolved addresses checked post-lookup (catches numeric encodings and
+ *    rebinding at validation time)
+ * Throws on any violation. NOTE: this validates one URL only — to be safe across
+ * redirects, use {@link safeAxiosGet} / {@link safeFetch} which re-validate every hop.
+ */
+export async function validateUrl(rawUrl: string): Promise<void> {
+  await resolveSafeTarget(rawUrl);
 }
 
 /**
@@ -137,6 +191,44 @@ function finalizeAxios(resp: AxiosResponse, config: AxiosRequestConfig): AxiosRe
     throw err;
   }
   return resp;
+}
+
+/**
+ * SSRF-safe axios request helper for non-GET user-controlled outbound calls.
+ * The URL is resolved and validated once, then the validated address is pinned
+ * into the actual socket lookup so DNS rebinding cannot swap in an internal IP.
+ */
+export async function safeAxiosRequest(
+  rawUrl: string,
+  config: AxiosRequestConfig = {}
+): Promise<AxiosResponse> {
+  let current = rawUrl;
+  const redirectLimit = typeof config.maxRedirects === "number" ? config.maxRedirects : MAX_REDIRECTS;
+
+  for (let hop = 0; hop <= redirectLimit; hop++) {
+    const target = await resolveSafeTarget(current);
+
+    const resp = await axios.request({
+      ...config,
+      ...buildPinnedAgents(target),
+      url: target.url.toString(),
+      maxRedirects: 0, // we follow manually, validating each hop
+      maxContentLength: config.maxContentLength ?? DEFAULT_MAX_BYTES,
+      maxBodyLength: config.maxBodyLength ?? DEFAULT_MAX_BYTES,
+      validateStatus: () => true, // inspect 3xx ourselves; finalize re-applies semantics
+    });
+
+    if (resp.status >= 300 && resp.status < 400 && hop < redirectLimit) {
+      const location = (resp.headers?.location ?? resp.headers?.Location) as string | undefined;
+      if (!location) return finalizeAxios(resp, config);
+      current = new URL(String(location), current).toString();
+      continue;
+    }
+
+    return finalizeAxios(resp, config);
+  }
+
+  throw new Error("Too many redirects");
 }
 
 /**
