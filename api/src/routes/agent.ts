@@ -309,11 +309,15 @@ router.delete("/keys/:prefix", requireAuth, async (req: AuthedRequest, res: Resp
     return;
   }
 
-  // Invalidate by clearing the stored hash + prefix — no key can match.
-  await prisma.agent.update({
-    where: { id: agent.id },
-    data: { apiKeyPrefix: null, apiKeyHash: null },
-  }).catch(() => {});
+  try {
+    // Invalidate by clearing the stored hash + prefix — no key can match.
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: { apiKeyPrefix: null, apiKeyHash: null },
+    });
 
-  res.json({ ok: true, message: "API key revoked. Generate a new key via POST /v1/agent/keys/rotate.", request_id: reqId() });
+    res.json({ ok: true, message: "API key revoked. Generate a new key via POST /v1/agent/keys/rotate.", request_id: reqId() });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: "key_revocation_failed", message: safeErr(err), request_id: reqId() });
+  }
 });
