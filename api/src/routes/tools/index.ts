@@ -6,6 +6,7 @@ import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
+import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
@@ -126,6 +127,11 @@ function toolMiddleware(toolName: string) {
 function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
 }
+
+const MAX_TRANSCRIBE_AUDIO_BYTES = Number.isFinite(Number(process.env.TRANSCRIBE_MAX_AUDIO_BYTES))
+  && Number(process.env.TRANSCRIBE_MAX_AUDIO_BYTES) > 0
+  ? Number(process.env.TRANSCRIBE_MAX_AUDIO_BYTES)
+  : 25 * 1024 * 1024;
 
 // ─── BYOK discount: tools called with user-provided provider keys charge 20% ───
 const BYOK_HEADER_NAMES = [
@@ -2227,7 +2233,7 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     // every redirect hop to prevent SSRF via attacker-controlled redirects.
     const audioResp = await safeFetch(audio_url, { signal: AbortSignal.timeout(60000) });
     if (!audioResp.ok) { res.status(400).json({ ok: false, error: "fetch_error", message: `Could not fetch audio URL (${audioResp.status})`, request_id: reqId() }); return; }
-    const audioBuffer = await audioResp.arrayBuffer();
+    const audioBuffer = await readArrayBufferWithLimit(audioResp, MAX_TRANSCRIBE_AUDIO_BYTES);
     const contentType = audioResp.headers.get("content-type") ?? "audio/mpeg";
     const ext = contentType.includes("wav") ? "wav" : contentType.includes("ogg") ? "ogg" : contentType.includes("webm") ? "webm" : contentType.includes("mp4") ? "mp4" : "mp3";
 
@@ -2252,7 +2258,9 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: reqId() });
   } catch (e: any) {
     console.error("[transcribe-audio]", e);
-    if (e?.name === "TimeoutError" || e?.name === "AbortError" || String(e?.message).includes("timeout")) {
+    if (e instanceof ResponseTooLargeError) {
+      res.status(413).json({ ok: false, error: "audio_too_large", message: `Audio file exceeds ${MAX_TRANSCRIBE_AUDIO_BYTES} byte limit. Try a smaller file.`, request_id: reqId() });
+    } else if (e?.name === "TimeoutError" || e?.name === "AbortError" || String(e?.message).includes("timeout")) {
       res.status(504).json({ ok: false, error: "timeout", message: "Audio file fetch or transcription timed out. Try a smaller file or a faster URL.", request_id: reqId() });
     } else {
       res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() });
