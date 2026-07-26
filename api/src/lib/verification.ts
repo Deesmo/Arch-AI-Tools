@@ -1,8 +1,9 @@
 /**
- * Email verification gate (2026-06-10 pricing update).
+ * Email verification gate (2026-06-10 pricing update; 2026-07-26 starter split).
  *
- * New signups receive credits as `pendingCredits` (credits = 0) until they
- * verify their email via GET /v1/verify-email?token=...
+ * New signups get SIGNUP_STARTER_CREDITS usable immediately; the rest of the
+ * grant sits in `pendingCredits` until they verify their email via
+ * GET /v1/verify-email?token=...
  * Existing accounts were backfilled as verified — no clawback.
  */
 import crypto from "crypto";
@@ -13,6 +14,19 @@ import { logger } from "./logger.js";
 export const SIGNUP_FREE_CREDITS = parseInt(
   process.env.SIGNUP_FREE_CREDITS ?? "100",
   10
+);
+
+/**
+ * Portion of the signup grant usable IMMEDIATELY on register, before email
+ * verification (2026-07-26 funnel fix): autonomous agents cannot click an
+ * email link, so the first calls must work with zero human steps. The rest of
+ * the grant stays in pendingCredits until verification. The atomic
+ * SignupIdentity claim gates BOTH parts, so a duplicate identity gets neither.
+ * Set to 0 (env) to restore the fully-gated behavior without a code change.
+ */
+export const SIGNUP_STARTER_CREDITS = Math.max(
+  0,
+  parseInt(process.env.SIGNUP_STARTER_CREDITS ?? "10", 10) || 0
 );
 
 const VERIFY_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -180,20 +194,21 @@ export function recordSignupIp(ip: string | undefined): void {
 }
 
 /**
- * Set up the verification gate for a freshly-created agent:
- * moves `creditsToGate` into pendingCredits, issues a token, sends the email.
+ * Set up the verification gate for a freshly-created agent: activates a small
+ * starter allowance immediately (SIGNUP_STARTER_CREDITS), moves the remainder
+ * of the grant into pendingCredits, issues a token, sends the email.
  * Non-fatal on email failure (token can be re-issued via /v1/verify-email/resend).
  *
- * The free-credit grant is gated by an ATOMIC claim on the normalized email
- * identity (SignupIdentity unique insert). If the identity already claimed a
- * grant, the signup still succeeds but 0 credits are gated.
- * Returns the number of credits actually gated.
+ * The whole grant (starter + pending) is gated by an ATOMIC claim on the
+ * normalized email identity (SignupIdentity unique insert). If the identity
+ * already claimed a grant, the signup still succeeds but 0 credits are granted.
+ * Returns { starter, pending }: credits active now vs gated on verification.
  */
 export async function issueEmailVerification(
   agentId: string,
   email: string,
   creditsToGate: number
-): Promise<number> {
+): Promise<{ starter: number; pending: number }> {
   // Atomic DB-level guard: only the FIRST signup for a normalized identity
   // gets the free grant. Concurrent duplicates lose the unique-insert race.
   let gated = creditsToGate;
@@ -204,12 +219,16 @@ export async function issueEmailVerification(
       logger.warn({ agentId, email }, "Free-credit grant skipped — normalized identity already claimed a grant");
     }
   }
+  const starter = Math.min(SIGNUP_STARTER_CREDITS, gated);
+  const pending = gated - starter;
   const token = crypto.randomBytes(32).toString("hex");
   await prisma.agent.update({
     where: { id: agentId },
     data: {
-      credits: 0,
-      pendingCredits: gated,
+      // increment, never set — this function must not be able to wipe a
+      // balance if a future path calls it on a non-fresh agent.
+      credits: { increment: starter },
+      pendingCredits: pending,
       emailVerified: false,
       verifyToken: token,
       verifyTokenExpiry: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
@@ -219,7 +238,7 @@ export async function issueEmailVerification(
   sendVerificationEmail({ to: email, verifyUrl }).catch((e) => {
     logger.warn({ agentId, error: String(e) }, "Verification email send failed");
   });
-  return gated;
+  return { starter, pending };
 }
 
 /**

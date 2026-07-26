@@ -71,10 +71,10 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         apiKeyHash,
         email,
         name: name ?? "",
-        // Start at 0 — the free grant is moved into pendingCredits by
-        // issueEmailVerification and only activates on email verification. If
-        // verification setup fails, the user keeps 0 credits (fail closed),
-        // never an unverified balance.
+        // Start at 0 — issueEmailVerification activates the starter allowance
+        // immediately and gates the remainder in pendingCredits until email
+        // verification. If verification setup fails, the user keeps 0 credits
+        // (fail closed), never an unclaimed grant.
         credits: 0,
         tier: (["free","starter","pro","business"].includes(plan?.replace(/-(?:monthly|annual)$/,"") ?? "") ? plan!.replace(/-(?:monthly|annual)$/,"") : "free") as any,
       },
@@ -127,11 +127,15 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       logger.warn({ agentId: agent.id, error: errMsg }, "Wallet auto-creation failed (non-fatal)");
     }
 
-    // Email verification gate: credits stay pending until email verified.
-    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    // Grant split: starter credits activate immediately (agents can't read
+    // email); the rest stays pending until email verification. The whole grant
+    // is atomically claimed per normalized identity (SignupIdentity).
+    let starterCredits = 0;
     let gatedCredits = 0;
     try {
-      gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
+      const grant = await issueEmailVerification(agent.id, email, freeCredits);
+      starterCredits = grant.starter;
+      gatedCredits = grant.pending;
     } catch (e) {
       // Fail closed: do NOT grant credits if the verification gate could not be
       // set up. The user can re-trigger via the resend endpoint.
@@ -142,11 +146,13 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
-      credits: 0,
+      credits: starterCredits,
       pending_credits: gatedCredits,
       email_verification_required: true,
       wallet_address: walletAddress,
-      message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification.`,
+      message: starterCredits > 0
+        ? `Welcome! ${starterCredits} credits are active now — start calling tools immediately. Verify your email to unlock the remaining ${gatedCredits}.`
+        : `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification.`,
       docs: "https://archtools.dev",
       request_id: reqId(),
     });
