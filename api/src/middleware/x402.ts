@@ -18,6 +18,7 @@ import axios from "axios";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config.js";
 import { redis } from "../lib/redis.js";
+import { getBazaarExtension } from "./bazaarDiscovery.js";
 
 // x402scan output schema map — generated from openapi.json
 // Required by x402scan for resource registration ("Missing input schema" fix)
@@ -727,6 +728,12 @@ function buildPaymentRequired(toolName: string, price: string): object {
     },
     accepts: filteredAccepts,
     error: "PAYMENT-REQUIRED",
+    // x402 Bazaar discovery (additive): top-level `description` (≤500 chars —
+    // CDP hard-rejects verify/settle above 500) + `extensions.bazaar` with the
+    // tool's example input/output and JSON Schema. The CDP facilitator catalogs
+    // the resource from this block on its first SETTLED payment. Unknown tool →
+    // null → the 402 body is exactly what it was before.
+    ...(getBazaarExtension(toolName) ?? {}),
   };
 }
 
@@ -936,11 +943,18 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
     };
 
     if (isCdp) {
-      // v2 payload wraps the inner payload with 'accepted' field — works for both EVM and Solana
+      // v2 payload wraps the inner payload with 'accepted' field — works for both EVM and Solana.
+      // Bazaar discovery (additive): forward the client-echoed optional v2 PaymentPayload fields
+      // `resource` and `extensions` — the CDP facilitator reads paymentPayload.extensions.bazaar
+      // (+ resource) to catalog the endpoint on first settle (spec: x402 specs/extensions/bazaar.md,
+      // "Clients are expected to echo the bazaar extension from PaymentRequired into their
+      // PaymentPayload"). Absent fields → payload identical to before.
       finalPayload = {
         x402Version: 2,
         payload: (paymentPayload as any).payload,
         accepted: finalPaymentReqs,
+        ...((paymentPayload as any).resource !== undefined ? { resource: (paymentPayload as any).resource } : {}),
+        ...((paymentPayload as any).extensions !== undefined ? { extensions: (paymentPayload as any).extensions } : {}),
       };
     } else {
       finalPaymentReqs = paymentRequirements;
@@ -1018,10 +1032,15 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
     };
 
     if (isCdpSettle) {
+      // Bazaar discovery (additive): forward client-echoed v2 `resource` + `extensions` —
+      // the Bazaar catalogs the endpoint from paymentPayload.extensions.bazaar on first
+      // SETTLED payment. Absent fields → payload identical to before.
       finalPayloadSettle = {
         x402Version: 2,
         payload: (paymentPayload as any).payload,
         accepted: finalPaymentReqsSettle,
+        ...((paymentPayload as any).resource !== undefined ? { resource: (paymentPayload as any).resource } : {}),
+        ...((paymentPayload as any).extensions !== undefined ? { extensions: (paymentPayload as any).extensions } : {}),
       };
     } else {
       finalPaymentReqsSettle = paymentRequirements;
