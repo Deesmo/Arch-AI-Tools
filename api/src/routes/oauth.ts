@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
+import { isOAuthRefreshTokenExpired, oauthAccessExpiresAt } from "../lib/oauthTokens.js";
 import crypto, { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -14,19 +15,20 @@ function sanitizeScope(raw: string | undefined): string {
 }
 
 // HTML escape to prevent XSS injection in consent page
-function esc(s: string): string {
+export function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
 }
 
 const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, codeChallenge: string, codeChallengeMethod: string, error?: string) => {
 const safeClient = esc(clientName), safeScope = esc(scope), safeClientId = esc(clientId), safeRedirect = esc(redirectUri), safeState = esc(state);
 const safeCodeChallenge = esc(codeChallenge), safeCodeChallengeMethod = esc(codeChallengeMethod);
+const safeError = error != null ? esc(error) : "";
 return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connect to ${clientName} — Arch Tools</title>
+  <title>Connect to ${safeClient} — Arch Tools</title>
   <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -69,7 +71,7 @@ return `<!DOCTYPE html>
       ${safeScope.includes("tools:read") ? '<div class="scope-item"><span class="scope-dot"></span>View available tools and your usage</div>' : ""}
       ${safeScope.includes("tools:execute") ? '<div class="scope-item"><span class="scope-dot"></span>Execute tools using your credits</div>' : ""}
     </div>
-    ${error ? `<div class="error">${error}</div>` : ""}
+    ${safeError ? `<div class="error">${safeError}</div>` : ""}
     <form method="POST" action="/oauth/authorize">
       <input type="hidden" name="client_id" value="${safeClientId}">
       <input type="hidden" name="redirect_uri" value="${safeRedirect}">
@@ -249,7 +251,7 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
 
     const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
     const refreshTok = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;
-    const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
+    const expiresAt = oauthAccessExpiresAt(); // access token: 1 hour
 
     await prisma.oAuthToken.create({
       data: { id: crypto.randomUUID(), accessToken, refreshToken: refreshTok, clientId: client_id, agentId: authCode.agentId, scope: authCode.scope, expiresAt },
@@ -266,7 +268,9 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
     try {
       const rotated = await prisma.$transaction(async (tx) => {
         const oldToken = await tx.oAuthToken.findUnique({ where: { refreshToken: refresh_token } });
-        if (!oldToken || oldToken.clientId !== client_id || oldToken.expiresAt < new Date()) return null;
+        // Refresh validity keys off the refresh token's OWN lifetime (createdAt +
+        // refresh TTL), NOT the access token's 1h expiresAt (#13).
+        if (!oldToken || oldToken.clientId !== client_id || isOAuthRefreshTokenExpired(oldToken)) return null;
 
         // Concurrent refresh retries may all read the token, but only one can
         // delete the still-present row. Losers become invalid_grant, not 500s.
@@ -277,7 +281,7 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
 
         const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
         const newRefresh = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;
-        const expiresAt = new Date(Date.now() + 3600 * 1000);
+        const expiresAt = oauthAccessExpiresAt();
 
         await tx.oAuthToken.create({
           data: { id: crypto.randomUUID(), accessToken, refreshToken: newRefresh, clientId: client_id, agentId: oldToken.agentId, scope: oldToken.scope, expiresAt },
