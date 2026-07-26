@@ -14,6 +14,7 @@ import { Request, Response, NextFunction } from "express";
 import { redis } from "../lib/redis.js";
 import { sendSecurityAlert } from "../lib/alert.js";
 import { isPlatformError, isClientError } from "../utils/statusClass.js";
+import { isChargeWaived } from "../utils/credits.js";
 
 // ─── Security Anomaly Detection (Discord alerts, fail-safe) ─────────────────
 // Thresholds are env-tunable; conservative defaults. All checks run inside a
@@ -48,6 +49,7 @@ function securityAnomalyCheck(
   agentId: string | null,
   isX402: boolean,
   isAdmin: boolean,
+  chargeWaived: boolean,
 ): void {
   try {
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
@@ -77,8 +79,10 @@ function securityAnomalyCheck(
       });
     }
 
-    // (c) Credit-drain spike on a single account
-    if (agentId && toolName && statusCode < 400 && !isX402 && !isAdmin) {
+    // (c) Credit-drain spike on a single account. Empty-result responses with
+    // a waived charge (200 + credits_used: 0) consume no credits, so they
+    // don't count toward the drain window.
+    if (agentId && toolName && statusCode < 400 && !isX402 && !isAdmin && !chargeWaived) {
       const count = pushWindowed(billedCallsByAgent, agentId, CREDIT_DRAIN_WINDOW_MS);
       if (count >= CREDIT_DRAIN_THRESHOLD) {
         sendSecurityAlert({
@@ -254,7 +258,7 @@ export function analyticsMiddleware(req: Request, res: Response, next: NextFunct
       }
 
       // Security anomaly detection → Discord webhook (fail-safe, rate-limited)
-      securityAnomalyCheck(req, statusCode, toolName, agentId, isX402, !!isAdmin);
+      securityAnomalyCheck(req, statusCode, toolName, agentId, isX402, !!isAdmin, isChargeWaived(res));
     }
 
     return originalEnd.apply(res, args);

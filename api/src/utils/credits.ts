@@ -35,7 +35,7 @@ export function waiveCharge(res: Response): void {
   }
 }
 
-function isChargeWaived(res: Response): boolean {
+export function isChargeWaived(res: Response): boolean {
   return (res.locals as Record<string, unknown>)[WAIVE_FLAG] === true;
 }
 
