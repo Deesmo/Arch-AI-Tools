@@ -4,7 +4,8 @@ name: Uptime Monitor
 # Deep checks: /health liveness, homepage HTML, /pricing, and /openapi.json tool-count (==64).
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # Was */5 — cut to hourly after the July 2026 Actions minute-cap exhaustion (3,932/3,000 free min) killed all CI.
+    - cron: '0 * * * *'
   workflow_dispatch: {}
 jobs:
   check:
