@@ -13,6 +13,13 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { TOOL_SCHEMAS } from "./schemas.js";
 import express from "express";
+import { createRequire } from "node:module";
+
+// Version truth: single source = mcp/package.json. Every serverInfo site below
+// reads this constant so the reported version can never drift from the
+// published package / registry (root server.json) again.
+const requireJson = createRequire(import.meta.url);
+const SERVER_VERSION: string = requireJson("../package.json").version;
 
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
@@ -249,7 +256,7 @@ function getPromptMessages(name: string, args: Record<string, string>) {
 // auth: per-session client API key (empty = anonymous demo) + IP for rate limiting.
 async function createServer(auth?: { clientKey: string; ip: string }): Promise<Server> {
   const server = new Server(
-    { name: "arch-tools-mcp", version: "1.8.0" },
+    { name: "arch-tools-mcp", version: SERVER_VERSION },
     {
       capabilities: {
         tools: { listChanged: false },
@@ -344,7 +351,7 @@ async function handleStreamablePost(req: express.Request, res: express.Response)
         send({ jsonrpc: "2.0", id: body.id, result: {
           protocolVersion: "2024-11-05",
           capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
-          serverInfo: { name: "arch-tools-mcp", version: "1.8.0" }
+          serverInfo: { name: "arch-tools-mcp", version: SERVER_VERSION }
         }});
         break;
 
@@ -477,7 +484,7 @@ async function main() {
         res.json({
           serverInfo: {
             name: "arch-tools-mcp",
-            version: "1.8.0",
+            version: SERVER_VERSION,
             description: `${tools.length} production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.`
           },
           authentication: {
