@@ -296,10 +296,12 @@ export async function verifyPayment(
           return { isValid: false, invalidReason: "insufficient_balance" };
         }
       } catch (err) {
-        // Pre-flight balance check is an optimization only — settlement reverts
-        // on insufficient balance — so a transient RPC failure must not reject a
-        // valid payer. Warn and proceed; settle is authoritative.
-        console.warn(`[facilitator] Balance check skipped (RPC):`, (err as Error).message?.slice(0, 100));
+        // Provider-facing /verify is a payment assurance signal. If we cannot
+        // confirm collectability, do not let the provider release service before
+        // a later /settle inevitably fails.
+        console.warn(`[facilitator] Balance check failed:`, (err as Error).message?.slice(0, 100));
+        await releaseNonce(auth.nonce, providerId);
+        return { isValid: false, invalidReason: "balance_check_unavailable" };
       }
 
       try {
@@ -314,9 +316,13 @@ export async function verifyPayment(
           await releaseNonce(auth.nonce, providerId);
           return { isValid: false, invalidReason: "nonce_consumed_onchain" };
         }
-      } catch {
-        // authorizationState pre-check is best-effort (not all tokens expose it,
-        // and RPC can blip). Settlement reverts on a consumed nonce, so proceed.
+      } catch (err) {
+        // Known USDC contracts expose authorizationState. Treat read failures as
+        // unavailable verification rather than telling providers the payment is
+        // safe to honor.
+        console.warn(`[facilitator] Nonce check failed:`, (err as Error).message?.slice(0, 100));
+        await releaseNonce(auth.nonce, providerId);
+        return { isValid: false, invalidReason: "nonce_check_unavailable" };
       }
     }
   }
