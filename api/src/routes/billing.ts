@@ -98,6 +98,9 @@ router.get("/plans", (_req: Request, res: Response): void => {
   res.json({
     ok: true,
     one_time_packs: CREDIT_PACKS.map(p => ({
+      // id = the exact value POST /v1/billing/checkout accepts as `pack` —
+      // without it agents can't map labels to the checkout parameter.
+      id: p.id,
       label: p.label,
       credits: p.credits,
       price_usd: p.amount / 100,
@@ -176,21 +179,33 @@ router.post("/subscribe", requireAuthOrSession, async (req: AuthedRequest, res: 
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   if (!stripe) { res.status(503).json({ ok: false, error: "not_configured", message: "Stripe not configured", request_id: reqId() }); return; }
 
-  // Accept both `plan` and `pack`, plus bare tier names ("pro" → "pro-monthly").
-  // If the value names a one-time pack instead, answer with the exact
-  // corrective call rather than a dead-end 400.
+  // Accept both `plan` and `pack`, plus bare tier names ("pro" → "pro-monthly")
+  // — but a bare PACK id arriving via the `pack` key must NEVER silently become
+  // a recurring charge: {"pack":"business"} means the $199 one-time pack, and
+  // expanding it to business-monthly would put the buyer on an unintended
+  // subscription (all three pack ids collide with -monthly plan tiers). Exact
+  // plan ids always win regardless of key; bare-name expansion is a
+  // subscription-intent convenience reserved for the `plan` key.
   const { plan, pack } = req.body as { plan?: string; pack?: string };
   const planKey = (plan ?? pack ?? "").toLowerCase().trim();
-  const planConfig = SUBSCRIPTION_PLANS.find(p => p.id === planKey || p.id === `${planKey}-monthly`);
+  let planConfig = SUBSCRIPTION_PLANS.find(p => p.id === planKey);
   if (!planConfig) {
     const packMatch = CREDIT_PACKS.find(p => p.id === planKey);
+    const sentAsPack = plan === undefined && pack !== undefined;
     const ids = SUBSCRIPTION_PLANS.map(p => p.id).join(", ");
-    if (packMatch) {
+    if (packMatch && sentAsPack) {
       res.status(400).json({ ok: false, error: "invalid_request", message: `"${planKey}" is a one-time credit pack, not a subscription. POST /v1/billing/checkout with {"pack":"${packMatch.id}"} — or pick a plan: ${ids}.`, request_id: reqId() });
       return;
     }
-    res.status(400).json({ ok: false, error: "invalid_request", message: `plan must be one of: ${ids}`, request_id: reqId() });
-    return;
+    planConfig = SUBSCRIPTION_PLANS.find(p => p.id === `${planKey}-monthly`);
+    if (!planConfig) {
+      if (packMatch) {
+        res.status(400).json({ ok: false, error: "invalid_request", message: `"${planKey}" is a one-time credit pack, not a subscription. POST /v1/billing/checkout with {"pack":"${packMatch.id}"} — or pick a plan: ${ids}.`, request_id: reqId() });
+        return;
+      }
+      res.status(400).json({ ok: false, error: "invalid_request", message: `plan must be one of: ${ids}`, request_id: reqId() });
+      return;
+    }
   }
 
   try {
