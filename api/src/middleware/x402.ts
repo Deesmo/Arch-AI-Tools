@@ -799,6 +799,16 @@ export function extractNonceTtlSeconds(paymentHeader: string): number {
   }
 }
 
+export function extractPayerAddress(paymentHeader: string): string | null {
+  try {
+    const decoded = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf-8")) as Record<string, any>;
+    const payer = decoded.payload?.authorization?.from ?? decoded.authorization?.from ?? decoded.payer ?? decoded.from;
+    return typeof payer === "string" && payer.trim().length > 0 ? payer.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Determine the correct facilitator URL based on network.
  * - Mainnet (eip155:8453): CDP facilitator (requires CDP API keys)
@@ -1235,15 +1245,20 @@ export function x402Middleware(toolName: string) {
       // Non-fatal — don't block the request
     }
 
-    // Mark request as x402-paid so tool handler can skip credit check
+    // Mark request as x402-paid so tool handlers can skip credit checks and,
+    // for stateful tools, bind resources to the settled payer.
     (req as Request & { x402Paid?: boolean }).x402Paid = true;
+    const payer = settleResult?.payer ?? verifyResult.payer ?? extractPayerAddress(paymentHeader);
+    if (payer) {
+      (req as Request & { x402Payer?: string }).x402Payer = payer;
+    }
 
     // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 spec
     const settleResponse = {
       success: true,
       transaction: settleResult?.transaction ?? "",
       network: settleResult?.network ?? (paymentRequirements as any).network ?? config.x402.network,
-      payer: settleResult?.payer ?? verifyResult.payer ?? "",
+      payer: payer ?? "",
     };
     res.setHeader("PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResponse)).toString("base64"));
 

@@ -20,6 +20,7 @@
     "test:oauth-refresh-race": "node tests/oauth-refresh-race.test.js",
     "test:pages": "node tests/pages.test.js",
     "test:rate-limit": "node tests/global-rate-limit.test.js",
+    "test:session-ownership": "node tests/session-ownership.test.js",
     "test:tier": "node tests/tier.test.js",
     "postinstall": "node -e \"const fs=require('fs'); const p='node_modules/@coinbase/cdp-sdk/node_modules/jose'; try{ fs.rmSync(p,{recursive:true,force:true}); } catch(e){}\""
   },
