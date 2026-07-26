@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Deesmo/arch-tools-mcp",
   "websiteUrl": "https://archtools.dev",
-  "description": "64 production tools for AI agents — one API key, pay per call in USDC (x402) or Stripe credits.",
+  "description": "63 production tools for AI agents — one API key, pay per call in USDC (x402) or Stripe credits.",
   "repository": {
     "url": "https://github.com/Deesmo/Arch-AI-Tools",
     "source": "github"

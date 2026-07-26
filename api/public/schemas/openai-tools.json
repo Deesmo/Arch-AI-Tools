@@ -1651,29 +1651,6 @@
     {
       "type": "function",
       "function": {
-        "name": "social_post",
-        "description": "Post a tweet to X/Twitter via API v2",
-        "parameters": {
-          "type": "object",
-          "required": [
-            "text"
-          ],
-          "properties": {
-            "text": {
-              "type": "string",
-              "description": "Tweet text (max 280 characters)"
-            },
-            "reply_to": {
-              "type": "string",
-              "description": "Tweet ID to reply to"
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
         "name": "check_domain",
         "description": "Check if a domain is available or registered via RDAP. No API key needed.",
         "parameters": {

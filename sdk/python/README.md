@@ -1,6 +1,6 @@
 # Arch Tools Python SDK
 
-Official Python client for [Arch Tools](https://archtools.dev) — **64 production API tools** for AI agents with **x402 USDC payments** (patent-pending).
+Official Python client for [Arch Tools](https://archtools.dev) — **63 production API tools** for AI agents with **x402 USDC payments** (patent-pending).
 
 [![PyPI](https://img.shields.io/pypi/v/arch-tools)](https://pypi.org/project/arch-tools/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -77,7 +77,7 @@ analysis = client.call("ai-oracle",
 print(analysis["analysis"])
 ```
 
-## All 64 Tools
+## All 63 Tools
 
 | Category | Tools |
 |----------|-------|
@@ -87,7 +87,7 @@ print(analysis["analysis"])
 | 🛠️ Utility | generate-hash, generate-uuid, convert-format, transform-text, diff-text, validate-data, jsonpath-query |
 | 🔍 Lookup | ip-lookup, whois-lookup, email-verify, phone-validate, domain-check, email-find |
 | 🎨 Media | image-generate, design-create, image-remove-bg, ocr-extract, extract-pdf, barcode-generate, qr-code |
-| 📡 Communication | email-send, webhook-send, social-post, text-to-speech, transcribe-audio |
+| 📡 Communication | email-send, webhook-send, text-to-speech, transcribe-audio |
 | 📊 Intelligence | news-search, research-report, fact-check, readability-score, language-detect, currency-convert |
 | 🤖 Agents | workflow-agent, session-create, session-message, browser-task, screenshot-capture |
 

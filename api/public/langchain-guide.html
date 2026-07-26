@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LangChain Integration Guide — Arch Tools</title>
-  <meta name="description" content="Use Arch Tools' 64 API tools within LangChain agents. Complete integration guide with Python examples." />
+  <meta name="description" content="Use Arch Tools' 63 API tools within LangChain agents. Complete integration guide with Python examples." />
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="canonical" href="https://archtools.dev/langchain-guide" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,7 +76,7 @@
   <div class="content">
     <span class="badge">Integration Guide</span>
     <h1>LangChain + Arch Tools</h1>
-    <p class="subtitle">Use 64 production API tools inside your LangChain agents. Web scraping, AI generation, crypto data, image generation, email, and more — all as LangChain tools.</p>
+    <p class="subtitle">Use 63 production API tools inside your LangChain agents. Web scraping, AI generation, crypto data, image generation, email, and more — all as LangChain tools.</p>
 
     <div class="toc">
       <h3>Contents</h3>
@@ -84,7 +84,7 @@
         <li><a href="#overview">Overview</a></li>
         <li><a href="#install">Installation</a></li>
         <li><a href="#basic">Basic Usage — Custom Tool</a></li>
-        <li><a href="#toolkit">Full Toolkit — All 64 Tools</a></li>
+        <li><a href="#toolkit">Full Toolkit — All 63 Tools</a></li>
         <li><a href="#agent">Agent Example</a></li>
         <li><a href="#x402">x402 Payment Integration</a></li>
         <li><a href="#tips">Tips & Best Practices</a></li>
@@ -92,7 +92,7 @@
     </div>
 
     <h2 id="overview">1. Overview</h2>
-    <p>Arch Tools provides 64 production-ready API tools accessible via a single API key. Each tool is a simple POST endpoint at <code>https://archtools.dev/v1/tools/{tool-name}</code>. This makes them trivial to wrap as LangChain tools.</p>
+    <p>Arch Tools provides 63 production-ready API tools accessible via a single API key. Each tool is a simple POST endpoint at <code>https://archtools.dev/v1/tools/{tool-name}</code>. This makes them trivial to wrap as LangChain tools.</p>
     <div class="callout">
       <strong>Why Arch Tools + LangChain?</strong> Instead of managing 20+ API keys for scraping, search, AI, email, crypto, and more — use one Arch Tools key and let your LangChain agent pick the right tool automatically.
     </div>
@@ -125,7 +125,7 @@ web_scrape_tool = Tool(
     description="Scrape a webpage URL and return its content as markdown text."
 )</code></pre>
 
-    <h2 id="toolkit">4. Full Toolkit — All 64 Tools</h2>
+    <h2 id="toolkit">4. Full Toolkit — All 63 Tools</h2>
     <p>Dynamically create LangChain tools from the Arch Tools discovery endpoint:</p>
     <pre><code>import requests
 from langchain.tools import StructuredTool

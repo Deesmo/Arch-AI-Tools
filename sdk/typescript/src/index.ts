@@ -1,6 +1,6 @@
 /**
  * Arch Tools TypeScript/Node SDK
- * Official client for Arch Tools API — 64 AI agent tools with x402 payments
+ * Official client for Arch Tools API — 63 AI agent tools with x402 payments
  */
 
 export class ArchToolsError extends Error {

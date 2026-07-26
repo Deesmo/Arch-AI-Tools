@@ -2295,49 +2295,6 @@
         }
       }
     },
-    "/v1/tools/social-post": {
-      "post": {
-        "operationId": "socialPost",
-        "summary": "Generate social media post content",
-        "tags": [
-          "Communication"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "topic"
-                ],
-                "properties": {
-                  "topic": {
-                    "type": "string"
-                  },
-                  "platform": {
-                    "type": "string",
-                    "enum": [
-                      "twitter",
-                      "linkedin",
-                      "instagram"
-                    ]
-                  },
-                  "tone": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Generated social post"
-          }
-        }
-      }
-    },
     "/v1/tools/news-search": {
       "post": {
         "operationId": "newsSearch",

@@ -1,6 +1,6 @@
 # Arch Tools MCP Server
 
-Add 64 AI tools to Claude Desktop, Cursor, VS Code, Windsurf, and any MCP-compatible client.
+Add 63 AI tools to Claude Desktop, Cursor, VS Code, Windsurf, and any MCP-compatible client.
 
 ## Quick Setup
 
@@ -34,7 +34,7 @@ Add to your MCP settings:
 }
 ```
 
-## Tools Included (64 total)
+## Tools Included (63 total)
 
 - **AI**: ai-generate, summarize, ai-oracle, workflow-agent, research-report, fact-check
 - **Web**: search-web, web-scrape, extract-page, screenshot-capture, semantic-search

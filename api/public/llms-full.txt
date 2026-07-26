@@ -1,6 +1,6 @@
 # Arch Tools — Complete Documentation
 > The first API platform built for autonomous agent payments.
-> 64 production-ready tools. One API key. USDC on 9 chains via x402 or Stripe.
+> 63 production-ready tools. One API key. USDC on 9 chains via x402 or Stripe.
 > Base URL: https://archtools.dev
 
 ## Quick Start
@@ -335,11 +335,6 @@ Timezone conversion.
 Send email via Resend.
 **Body:** { "to": "string", "subject": "string", "text": "string", "html": "optional" }
 **Response:** { "ok": true, "messageId": "..." }
-
-### POST /v1/tools/social-post (5 credits)
-Post to X/Twitter.
-**Body:** { "text": "string" }
-**Response:** { "ok": true, "tweetId": "...", "url": "..." }
 
 ### POST /v1/tools/session-create (5 credits)
 Create conversation session.

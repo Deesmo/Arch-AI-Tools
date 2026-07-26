@@ -1467,26 +1467,6 @@
           }
         }
       }
-    },
-    {
-      "name": "social_post",
-      "description": "Post a tweet to X/Twitter via API v2",
-      "input_schema": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Tweet text (max 280 characters)"
-          },
-          "reply_to": {
-            "type": "string",
-            "description": "Tweet ID to reply to"
-          }
-        }
-      }
     }
   ]
 }

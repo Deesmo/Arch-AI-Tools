@@ -1,7 +1,7 @@
 {
   "name": "@deesmo/arch-tools-mcp",
   "version": "1.0.0",
-  "description": "Arch Tools MCP Server \u2014 64 AI tools as MCP actions for Claude, Cursor, VS Code",
+  "description": "Arch Tools MCP Server \u2014 63 AI tools as MCP actions for Claude, Cursor, VS Code",
   "main": "server.ts",
   "bin": {
     "arch-tools-mcp": "./run.js"

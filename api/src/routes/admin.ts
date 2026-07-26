@@ -271,7 +271,6 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
     { name: "email-send",         description: "Send transactional emails via Resend",                            category: "utility", credits: 3  },
     { name: "domain-check",       description: "Check domain availability via RDAP",                              category: "network", credits: 2  },
     { name: "semantic-search",    description: "AI-powered semantic search across web content",                    category: "ai",      credits: 10 },
-    { name: "social-post",        description: "Post content to social media platforms",                           category: "utility", credits: 5  },
   ];
 
   // First, diagnose the actual Tool table structure

@@ -832,11 +832,11 @@ export const LANDING_HTML = `<!doctype html>
   <div class="hero-inner">
     <div class="hero-badge">
       <div class="hero-badge-dot"></div>
-      Now live · 64 production tools · 100 free credits (10 instant, 90 on email verify) · No credit card required
+      Now live · 63 production tools · 100 free credits (10 instant, 90 on email verify) · No credit card required
     </div>
-    <h1>64 Tools Your AI Agent<br><span class="grad">Can Call Right Now</span></h1>
+    <h1>63 Tools Your AI Agent<br><span class="grad">Can Call Right Now</span></h1>
     <p class="hero-sub">
-      One API key. 64 ready-to-use tools — scrape websites, generate text with Claude or GPT-4,
+      One API key. 63 ready-to-use tools — scrape websites, generate text with Claude or GPT-4,
       detect PII, convert files, look up crypto prices, extract PDFs, and more.
       Agents pay autonomously in USDC. Developers pay with Stripe. No subscriptions.
     </p>
@@ -903,8 +903,8 @@ result = client.tools.invoke(
   <p class="section-sub" style="max-width:680px">
     When you build an AI agent — in Claude, ChatGPT, Cursor, or your own code — it often needs to <em>do things</em>:
     scrape a website, read a PDF, detect bad data, generate text, hash a value, look up a crypto price.
-    Instead of building each of those yourself, you give your agent one Arch Tools API key and it can call any of 64 tools instantly.
-    One key. 64 tools. Works with REST, MCP, or SDK.
+    Instead of building each of those yourself, you give your agent one Arch Tools API key and it can call any of 63 tools instantly.
+    One key. 63 tools. Works with REST, MCP, or SDK.
   </p>
   <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px">
     <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 20px;flex:1;min-width:200px">
@@ -920,7 +920,7 @@ result = client.tools.invoke(
     <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 20px;flex:1;min-width:200px">
       <div style="font-size:22px;margin-bottom:6px">🔌</div>
       <div style="font-weight:700;margin-bottom:4px">For MCP Clients</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.6)">Claude Desktop, Cursor, Windsurf — connect once via MCP and all 64 tools appear in your toolbox automatically. No extra setup.</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6)">Claude Desktop, Cursor, Windsurf — connect once via MCP and all 63 tools appear in your toolbox automatically. No extra setup.</div>
     </div>
   </div>
 </section>
@@ -1161,7 +1161,7 @@ result = client.tools.invoke(
     <div class="mcp-text">
       <h2 class="mcp-title">Model Context Protocol Native</h2>
       <p class="mcp-desc">
-        All 64 tools are auto-exposed via MCP. Connect Claude Desktop, any MCP-compatible agent platform, or deploy the SSE server yourself on Render.
+        All 63 tools are auto-exposed via MCP. Connect Claude Desktop, any MCP-compatible agent platform, or deploy the SSE server yourself on Render.
         Tools are dynamically discovered — no config needed.
       </p>
       <div class="mcp-links">
@@ -1210,7 +1210,7 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~1,000 hash calls or 50 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 64 tools</li>
+        <li>All 63 tools</li>
         <li>60 req/min rate limit</li>
         <li>REST + MCP access</li>
         <li>100 free credits (10 instant, 90 on email verify)</li>
@@ -1228,7 +1228,7 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~10,000 hashes or 500 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 64 tools</li>
+        <li>All 63 tools</li>
         <li>240 req/min rate limit</li>
         <li>REST + MCP + SDK access</li>
         <li>API key restrictions</li>
@@ -1246,7 +1246,7 @@ result = client.tools.invoke(
         <div class="plan-credits-label">credits · ~100k hashes or 5,000 scrapes</div>
       </div>
       <ul class="plan-features">
-        <li>All 64 tools</li>
+        <li>All 63 tools</li>
         <li>1,200 req/min rate limit</li>
         <li>REST + MCP + SDK access</li>
         <li>IP + origin restrictions</li>

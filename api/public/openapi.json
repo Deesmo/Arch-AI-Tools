@@ -2541,44 +2541,6 @@
         }
       }
     },
-    "/v1/tools/social-post": {
-      "post": {
-        "operationId": "socialPost",
-        "summary": "Post a tweet to X/Twitter via API v2",
-        "tags": [
-          "Communication"
-        ],
-        "description": "Requires either X_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens with write permissions enabled in the X developer app.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "text"
-                ],
-                "properties": {
-                  "text": {
-                    "type": "string",
-                    "description": "Tweet text (max 280 characters)"
-                  },
-                  "reply_to": {
-                    "type": "string",
-                    "description": "Tweet ID to reply to"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Posted tweet ID and URL"
-          }
-        }
-      }
-    },
     "/v1/tools/send-email": {
       "post": {
         "operationId": "sendEmail",

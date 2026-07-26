@@ -11,7 +11,7 @@ const TOOL_PRICING = [
   { tier: 'Web',      range: '$0.004–$0.006', tools: 'search-web, extract-page, rss-parse, web-scrape, extract-pdf, session-create, email-find' },
   { tier: 'AI',       range: '$0.008–$0.015', tools: 'sentiment-analysis, extract-entities, regex-generate, pii-detect, summarize, web-search, ocr-extract, browser-task, screenshot-capture, text-to-speech, transcribe-audio, fact-check, semantic-search, research-report' },
   { tier: 'Heavy AI', range: '$0.020–$0.030', tools: 'ai-generate, session-message, workflow-agent, ai-oracle, image-generate, design-create' },
-  { tier: 'Premium',  range: '$0.050–$0.100', tools: 'video-generate, social-post' },
+  { tier: 'Premium',  range: '$0.050–$0.100', tools: 'video-generate' },
 ]
 
 const FUNDING_STEPS = [

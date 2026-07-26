@@ -84,7 +84,7 @@ type JsonSchema = Record<string, any>;
 
 /**
  * Deep-clone a schema, stripping any $ref subtrees.
- * The served spec has no $refs today (verified across all 64 tools), but if
+ * The served spec has no $refs today (verified across all 63 tools), but if
  * one ever appears: try to inline a trivial local components ref; otherwise
  * DROP the unresolvable subtree so the emitted schema stays valid.
  */
