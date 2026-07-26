@@ -4,7 +4,7 @@ import { x402Middleware } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
-import { validateUrl, safeAxiosGet, safeFetch } from "../../lib/ssrf.js";
+import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
@@ -1527,9 +1527,8 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
   const safeHeaders = sanitizeWebhookHeaders(customHeaders);
   try {
     const start = Date.now();
-    const resp = await axios({
+    const resp = await safeAxiosRequest(webhook_url, {
       method: httpMethod as "POST",
-      url: webhook_url,
       data: payload ?? {},
       headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...safeHeaders },
       timeout: 10000,
