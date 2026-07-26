@@ -24,7 +24,7 @@
     "name": "How to Migrate from Skyfire to Arch Tools",
     "description": "Step-by-step guide for migrating AI agent payment infrastructure from Skyfire to Arch Tools",
     "step": [
-{"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits"},
+{"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits (10 instant, 90 on email verification)"},
       {"@type": "HowToStep", "name": "Replace SDK", "text": "Swap skyfire-seller-sdk-node with a simple fetch call to Arch Tools endpoints"},
       {"@type": "HowToStep", "name": "Update Payment Flow", "text": "Switch from KYAPay JWT tokens to x402 payment headers or API key auth"},
       {"@type": "HowToStep", "name": "Test", "text": "Run your agent against Arch Tools — 64 tools available immediately"}
@@ -200,7 +200,7 @@
         <tr>
           <td class="feature">Supported Chains</td>
           <td>Limited (primarily Base)</td>
-          <td><span class="check">15 networks (Base, Ethereum, Solana, Polygon, Arbitrum, etc.)</span></td>
+          <td><span class="check">9 networks (Base, Ethereum, Solana, Polygon, Arbitrum, etc.)</span></td>
         </tr>
         <tr>
           <td class="feature">Agent Identity</td>
@@ -215,7 +215,7 @@
         <tr>
           <td class="feature">Free Tier</td>
           <td><span class="cross">No</span></td>
-<td><span class="check">100 free credits on signup</span></td>
+<td><span class="check">100 free credits (10 instant, 90 on email verify)</span></td>
         </tr>
         <tr>
           <td class="feature">MCP Support</td>
@@ -297,7 +297,7 @@
     <div class="timeline">
       <div class="timeline-step">
         <h4><span class="step-num">1</span> Get Your API Key</h4>
-<p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 100 free credits. No credit card, no wallet, no KYA registration needed.</p>
+<p>Go to <a href="/#register" style="color:var(--purple);">archtools.dev</a> → enter your email → get an API key instantly. You start with 10 free credits, and 90 more on email verification. No credit card, no wallet, no KYA registration needed.</p>
       </div>
 
       <div class="timeline-step">
@@ -313,7 +313,7 @@
       <div class="timeline-step">
         <h4><span class="step-num">4</span> Choose Your Payment Path</h4>
         <p><strong>For human developers:</strong> Use API key + purchased credits via Stripe. Simple, familiar, no crypto needed.<br>
-        <strong>For autonomous agents:</strong> Use x402 payment headers. Agent discovers pricing via <code>/.well-known/x402</code>, constructs a signed payment, and includes it with each request. 15 chains, 7+ tokens supported.</p>
+        <strong>For autonomous agents:</strong> Use x402 payment headers. Agent discovers pricing via <code>/.well-known/x402</code>, constructs a signed payment, and includes it with each request. 9 chains, 7+ tokens supported.</p>
       </div>
 
       <div class="timeline-step">
@@ -420,7 +420,7 @@ const data = await response.json();
 
     <div class="callout-green callout">
       <strong>💰 15 Chains, 7+ Tokens</strong><br>
-      Skyfire supported USDC on limited chains. Arch Tools accepts USDC, USDT, ETH, SOL, BNB, TAO, and NEAR across 15 networks — Ethereum, Base, Solana, Polygon, Arbitrum, Optimism, Avalanche, BNB Chain, NEAR, Bittensor, and more.
+      Skyfire supported USDC on limited chains. Arch Tools accepts USDC, USDT, ETH, and SOL across 9 networks — Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Solana, Unichain, and Monad.
     </div>
 
     <div class="callout-green callout">
@@ -452,14 +452,14 @@ const data = await response.json();
     <p>64 production-ready tools. Check the full <a href="/directory" style="color:var(--purple);">tool directory</a> — categories include AI generation, web scraping, crypto, file conversion, security, email, and more.</p>
 
     <h3>Is there a free tier?</h3>
-<p>Yes — every account gets 100 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
+<p>Yes — every account gets 100 free credits — 10 instant on signup, 90 more on email verification. No credit card required. That's enough to try dozens of tools before buying more.</p>
   </article>
 </div>
 
 <div class="wrap">
   <div class="cta-section">
     <h2>Ready to switch?</h2>
-<p>Get your API key, 100 free credits, and access to all 64 tools — in 30 seconds.</p>
+<p>Get your API key, 100 free credits (10 instant, 90 on verify), and access to all 64 tools — in 30 seconds.</p>
     <a class="btn" href="/#register">$ get-api-key →</a>
     <a class="btn-ghost" href="/directory">Browse Tools</a>
   </div>
