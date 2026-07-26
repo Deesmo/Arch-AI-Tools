@@ -115,6 +115,45 @@ export async function requireAuth(
 }
 
 /**
+ * Key-management gate: requires a real `arch_` API key, not an OAuth access
+ * token. `requireAuth` accepts scoped OAuth tokens (prefix `at_oauth_`) and tags
+ * them by setting `req.agent.scope` — so without this gate, ANY scoped OAuth
+ * token could rotate/revoke the account's API key and receive a fresh,
+ * unrestricted `arch_` key (privilege escalation). Mount AFTER `requireAuth`.
+ */
+export function requireApiKeyAuth(
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  const agent = req.agent;
+  if (!agent) {
+    res.status(401).json({
+      ok: false,
+      error: "unauthorized",
+      message: "Authentication required",
+      request_id: crypto.randomUUID(),
+    });
+    return;
+  }
+
+  // OAuth-authenticated principals carry a defined `scope` (set in requireAuth);
+  // full-access API keys have `scope === undefined`. Belt-and-suspenders: also
+  // reject anything whose credential still bears the OAuth token prefix.
+  if (agent.scope !== undefined || agent.apiKey.startsWith("at_oauth_")) {
+    res.status(403).json({
+      ok: false,
+      error: "insufficient_authentication",
+      message: "API key authentication is required for account key management",
+      request_id: crypto.randomUUID(),
+    });
+    return;
+  }
+
+  next();
+}
+
+/**
  * Single source of truth for admin-key validation. Timing-safe, and refuses to
  * authenticate when ADMIN_KEY is unset or left at the insecure default. Used by
  * requireAdmin and the admin-HTML gates so they cannot drift apart.
