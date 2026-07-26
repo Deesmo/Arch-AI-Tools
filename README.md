@@ -56,9 +56,30 @@ No installation required — works with any MCP-compatible client that supports 
 
 ## Get Your API Key
 
-1. Visit [archtools.dev](https://archtools.dev)
+1. Visit [archtools.dev](https://archtools.dev) — or `POST /v1/agent/register` (one call, see below)
 2. Register with your email
-3. Get 250 free credits to start
+3. 10 free credits are active **instantly**; verifying your email unlocks the rest of the 100-credit grant
+
+---
+
+## For AI agents
+
+You don't need a human to start using this API. One POST returns a key with 10 credits usable
+immediately — then pay per call in USDC (x402) or with Stripe credit packs when they run out.
+
+- **Start here:** [`https://archtools.dev/llms.txt`](https://archtools.dev/llms.txt) — the whole
+  funnel (register → call tools → 402 → pay) in one agent-parseable page.
+  Full per-tool docs: [`https://archtools.dev/llms-full.txt`](https://archtools.dev/llms-full.txt)
+- **Copy-paste recipes** ([examples/agent-recipes/](examples/agent-recipes/)):
+  - [Zero-signup research agent](examples/agent-recipes/01-zero-signup-research-agent.md) — register → `search-web` → `summarize`
+  - [Crypto data agent](examples/agent-recipes/02-crypto-data-agent.md) — `crypto-price` + `crypto-fear-greed` + `ai-generate`
+  - [x402 autonomous payment flow](examples/agent-recipes/03-x402-autonomous-payment.md) — call with no key → parse the 402 → pay USDC → retry
+- **MCP-native agents:** official registry listing **`io.github.Deesmo/arch-tools-mcp`**;
+  hosted server at `https://arch-tools-mcp.onrender.com/mcp` (streamable HTTP) and
+  `https://arch-tools-mcp.onrender.com/sse` (SSE), or run locally with `npx @deesmo/arch-tools-mcp`.
+- **Live discovery:** [`/v1/tools`](https://archtools.dev/v1/tools) (catalog + schemas + credit costs) ·
+  [`/v1/discover`](https://archtools.dev/v1/discover) (everything in one call) ·
+  [`/.well-known/x402`](https://archtools.dev/.well-known/x402) (payment options)
 
 ---
 
@@ -224,9 +245,10 @@ No installation required — works with any MCP-compatible client that supports 
 
 ## Payment
 
-- **Free tier:** 250 credits on signup
-- **Credit packs:** Purchase via Stripe at [archtools.dev](https://archtools.dev)
-- **x402 (autonomous):** AI agents can pay per-call with USDC — see `/.well-known/x402`
+- **Free grant:** 100 credits on signup — 10 active instantly (no email click), 90 on email verification
+- **Credit packs:** Purchase via Stripe at [archtools.dev/pricing](https://archtools.dev/pricing)
+- **x402 (autonomous):** AI agents can pay per-call with USDC — see `/.well-known/x402` and the
+  [x402 payment recipe](examples/agent-recipes/03-x402-autonomous-payment.md)
 
 ---
 

@@ -1,30 +1,61 @@
 # Arch Tools
-> The first API platform built for autonomous agent payments.
-> 64 production-ready tools. One API key. USDC on 15+ chains via x402 or Stripe.
+> 64 production API tools for AI agents, pay-per-call.
+> Register once with a single POST (no human steps) -> 10 free credits usable instantly ->
+> call any tool -> when credits run out, pay per call in USDC via x402 or buy a Stripe credit pack.
 > Base URL: https://archtools.dev
 > Docs: https://archtools.dev/docs
 > OpenAPI: https://archtools.dev/openapi.json
-> MCP SSE: https://archtools.dev/mcp/sse
-> Discovery: https://archtools.dev/v1/tools
+> Full docs for LLMs: https://archtools.dev/llms-full.txt
+> Tool catalog (live, JSON): https://archtools.dev/v1/tools
 > Agent Card: https://archtools.dev/.well-known/agent.json
-> GitHub: https://github.com/Deesmo/Arch-AI-Tools
 
-## Authentication
-All tool endpoints require an API key:
-  Authorization: Bearer YOUR_API_KEY
+## Start Here (autonomous agents)
+Three calls from zero to a working tool response. No email verification, no credit card, no dashboard.
 
-Get a free key (100 credits) at https://archtools.dev/#register
+1. Register (once). Any real, non-disposable email string works; nothing has to be clicked:
+   POST https://archtools.dev/v1/agent/register
+   Body: {"name": "my-agent", "email": "you@example.com"}
+   -> 201 response contains "api_key" (shown ONCE — store it) and "credits": 10, active immediately.
+   Verifying the email later (link is sent automatically) unlocks the remaining 90 of the 100-credit grant.
 
-## x402 Autonomous Payment (no key required)
-AI agents can pay per-call with USDC on Base via the x402 protocol.
-No API key, no signup, no human credit card needed.
-Discovery: https://archtools.dev/.well-known/x402
-Protocol: https://x402.org
+2. Call any of the 64 tools:
+   POST https://archtools.dev/v1/tools/{tool-name}
+   Header: Authorization: Bearer YOUR_API_KEY   (x-api-key: YOUR_API_KEY also accepted)
+   Body: JSON per tool schema (schemas in GET /v1/tools)
+   -> JSON result. Response header X-Credits-Remaining shows your balance after each call.
 
-## Credit Pricing
-- Starter Pack: 3,000 credits — $9 ($0.0030/credit)
-- Pro Pack: 25,000 credits — $49 ($0.00196/credit)
-- Business Pack: 125,000 credits — $199 ($0.00159/credit)
+3. Check yourself anytime:
+   GET https://archtools.dev/v1/agent/me   (same Bearer key)
+   -> credits, pending_credits, email_verified, tier, total_calls.
+
+## When Credits Run Out (HTTP 402)
+Every tool call that cannot be covered returns HTTP 402 with machine-readable instructions. Two ways forward:
+
+A) x402 USDC payment — fully autonomous, no key or signup required at all:
+   Call any tool with NO auth header -> 402 response. The JSON body (and the base64
+   PAYMENT-REQUIRED response header) contains accepts[]: exact payment options with
+   scheme, network, amount (atomic units, USDC = 6 decimals), payTo address, and asset contract.
+   Settleable today: USDC and USDT on Base and Polygon. Sign the payment (EIP-3009, or use an
+   x402 client SDK such as x402-fetch / the x402 Python package), retry the SAME request with the
+   Payment-Signature header (legacy X-Payment also accepted). Success returns the tool result plus
+   a PAYMENT-RESPONSE header with the settled tx hash.
+   Multi-chain catalog: https://archtools.dev/.well-known/x402 | Protocol: https://x402.org
+
+B) Stripe credit packs (credits never expire):
+   - Starter:    3,000 credits — $9
+   - Pro:       25,000 credits — $49
+   - Business: 125,000 credits — $199
+   Buy at https://archtools.dev/pricing
+
+With an API key but insufficient credits, the 402 body is
+{"error": "insufficient_credits", "credits_remaining": N, "credits_needed": M, "upgrade_url": ...}.
+Retry the same call with a Payment-Signature header (and no need to top up), or buy a pack.
+
+## MCP (Model Context Protocol)
+- Hosted server (streamable HTTP): https://arch-tools-mcp.onrender.com/mcp
+- Hosted server (SSE): https://arch-tools-mcp.onrender.com/sse
+- Official registry name: io.github.Deesmo/arch-tools-mcp
+- Works with Claude Desktop, Claude Code, Cursor, Windsurf, and any MCP client.
 
 ## Tool Categories
 
@@ -48,7 +79,7 @@ Protocol: https://x402.org
 - [Web Search](https://archtools.dev/v1/tools/web-search): AI-synthesized search answer (10 credits)
 - [Browser Task](https://archtools.dev/v1/tools/browser-task): Headless Playwright automation (10 credits)
 - [Screenshot Capture](https://archtools.dev/v1/tools/screenshot-capture): Screenshot any URL (10 credits)
-- [HTML to Markdown](https://archtools.dev/v1/tools/html-to-markdown): Convert HTML to Markdown (2 credits)
+- [HTML to Markdown](https://archtools.dev/v1/tools/html-to-markdown): Convert HTML to Markdown (3 credits)
 - [RSS Parse](https://archtools.dev/v1/tools/rss-parse): Parse RSS/Atom feeds (4 credits)
 - [Extract PDF](https://archtools.dev/v1/tools/extract-pdf): Extract text from PDFs (6 credits)
 - [News Search](https://archtools.dev/v1/tools/news-search): Real-time news search (3 credits)
@@ -65,8 +96,8 @@ Protocol: https://x402.org
 - [Token Lookup](https://archtools.dev/v1/tools/token-lookup): Search tokens by name (1 credit)
 
 ### Media & Design
-- [Image Generate](https://archtools.dev/v1/tools/image-generate): SVG from text prompts (15 credits)
-- [Design Create](https://archtools.dev/v1/tools/design-create): DALL-E 3 image generation (15 credits)
+- [Image Generate](https://archtools.dev/v1/tools/image-generate): Images from text prompts (30 credits)
+- [Design Create](https://archtools.dev/v1/tools/design-create): DALL-E 3 image generation (30 credits)
 - [Video Generate](https://archtools.dev/v1/tools/video-generate): Runway Gen-3 video (500+ credits, scales with duration)
 - [Image Remove BG](https://archtools.dev/v1/tools/image-remove-bg): Remove background (350 credits)
 - [OCR Extract](https://archtools.dev/v1/tools/ocr-extract): Extract text from images (10 credits)
@@ -112,23 +143,24 @@ Protocol: https://x402.org
 ## Workflows
 POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps)
 
-## Discovery Endpoints (no auth required)
-- GET /v1/tools — Full tool list with schemas
-- GET /v1/discover — All tools + pricing + payment info
-- GET /openapi.json — OpenAPI 3.1 specification
-- GET /health — Service health + dependency status
-- GET /.well-known/x402 — x402 payment discovery
-- GET /.well-known/agent.json — A2A Agent Card
-- GET /.well-known/ai-plugin.json — ChatGPT plugin manifest
-- GET /llms.txt — This file
-- GET /llms-full.txt — Complete documentation
+## Account Endpoints (Bearer key)
+- POST /v1/agent/register — one-shot signup, returns api_key + 10 instant credits (no auth)
+- GET /v1/agent/me — credits, pending_credits, email_verified, tier
+- GET /v1/agent/balance — quick balance check
+- GET /v1/agent/usage — balance + recent calls
+- POST /v1/agent/keys/rotate — rotate your API key
 
-## MCP Integration
-- SSE: https://archtools.dev/mcp/sse
-- Streamable HTTP: https://archtools.dev/mcp/mcp
-- Registry: io.github.Deesmo/arch-tools-mcp
-- Compatible: Claude Desktop, Cursor, Windsurf, any MCP client
+## Discovery Endpoints (no auth required)
+- GET /v1/tools — Full tool list with schemas and credit costs
+- GET /v1/discover — All tools + pricing + payment info in one call
+- GET /openapi.json — OpenAPI specification
+- GET /health — Service health
+- GET /.well-known/x402 — x402 payment discovery (all supported chains)
+- GET /.well-known/agent.json — A2A Agent Card
+- GET /llms.txt — This file
+- GET /llms-full.txt — Complete per-tool documentation
 
 ## Legal
+Credits are non-transferable and non-refundable.
 - [Terms](https://archtools.dev/terms.html)
 - [Privacy](https://archtools.dev/privacy.html)

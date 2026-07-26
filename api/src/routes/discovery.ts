@@ -552,8 +552,8 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
         },
       },
       mcp: {
-        sse: "https://archtools.dev/mcp/sse",
-        http: "https://archtools.dev/mcp/mcp",
+        sse: "https://arch-tools-mcp.onrender.com/sse",
+        http: "https://arch-tools-mcp.onrender.com/mcp",
         registry: "io.github.Deesmo/arch-tools-mcp",
       },
     });
@@ -646,31 +646,42 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 };
 
 const LLMS_TXT = `# Arch Tools
-> The first API platform built for autonomous agent payments.
-> 64 production-ready tools. One key. USDC on 15+ chains via x402 or Stripe.
+> 64 production API tools for AI agents, pay-per-call.
+> Register once (one POST, no human steps) -> 10 free credits usable instantly ->
+> when they run out, pay per call in USDC via x402 or buy a Stripe credit pack.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
-> MCP SSE: https://archtools.dev/mcp/sse
+> MCP (hosted): https://arch-tools-mcp.onrender.com/mcp
 
-## Authentication
-All tool endpoints require an API key:
-  x-api-key: YOUR_API_KEY
-
-Get a free key (100 credits) at ${BASE_URL}/#register
+## Start Here (autonomous agents)
+1. Register once (no verification click needed to start):
+     POST ${API_BASE}/v1/agent/register   {"name": "my-agent", "email": "you@example.com"}
+   -> 201 with "api_key" (shown ONCE) + 10 credits active immediately.
+   Verifying the email later unlocks the remaining 90 of the 100-credit grant.
+2. Call tools with the key:
+     POST ${API_BASE}/v1/tools/{tool-name}
+     Authorization: Bearer YOUR_API_KEY   (x-api-key also accepted)
+3. Check yourself: GET ${API_BASE}/v1/agent/me -> credits, pending_credits, email_verified.
 
 ## x402 Autonomous Payment (no key required)
-AI agents can pay per-call with USDC on Base via the x402 protocol.
-No API key, no signup, no human credit card needed.
+Call any tool with NO auth header -> HTTP 402. The JSON body (also base64 in the
+PAYMENT-REQUIRED header) lists accepts[]: exact options (scheme, network, amount in
+atomic units, payTo, asset). Settleable today: USDC/USDT on Base and Polygon.
+Sign (EIP-3009 / x402 client SDK), retry the SAME request with the Payment-Signature
+header (legacy X-Payment accepted). Success adds a PAYMENT-RESPONSE header (tx hash).
 Discovery: ${API_BASE}/.well-known/x402
 Protocol: https://x402.org
 
 ## Credit System
 Tools cost credits per call. Credits never expire. Non-transferable.
+Free grant: 100 credits on registration (10 instant, 90 on email verification).
 
   Starter Pack:    3,000 credits — $9     ($0.0030/credit)
   Pro Pack:       25,000 credits — $49    ($0.00196/credit)
   Business Pack: 125,000 credits — $199   ($0.00159/credit)
+
+Buy packs: ${BASE_URL}/pricing — or pay per call with x402 (above).
 
 ## All Tools (64 total)
 
@@ -763,16 +774,19 @@ POST /v1/tools/session-create       (5 credits)  — Create a managed conversati
 ## Workflows
 POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps)
 
-## Discovery Endpoints
-GET  /v1/tools        — Full tool list with schemas
-GET  /openapi.json    — OpenAPI 3.0 spec
-GET  /health          — Service health + tool count
-GET  /v1/agent/usage  — Credit balance for your key
+## Discovery & Account Endpoints
+GET  /v1/tools           — Full tool list with schemas
+GET  /openapi.json       — OpenAPI 3.0 spec
+GET  /health             — Service health + tool count
+POST /v1/agent/register  — one-shot signup: api_key + 10 instant credits
+GET  /v1/agent/me        — credits, pending_credits, email_verified
+GET  /v1/agent/usage     — Credit balance + recent calls for your key
 
 ## MCP Integration
-SSE endpoint: https://archtools.dev/mcp/sse
+Hosted (streamable HTTP): https://arch-tools-mcp.onrender.com/mcp
+Hosted (SSE): https://arch-tools-mcp.onrender.com/sse
 Registry: io.github.Deesmo/arch-tools-mcp
-Compatible with: Claude Desktop, Cursor, Windsurf, any MCP client
+Compatible with: Claude Desktop, Claude Code, Cursor, Windsurf, any MCP client
 
 ## Legal
 Credits are non-transferable, non-refundable, tied to one API key.

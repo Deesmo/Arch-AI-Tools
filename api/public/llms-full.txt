@@ -1,14 +1,24 @@
 # Arch Tools — Complete Documentation
-> The first API platform built for autonomous agent payments.
-> 64 production-ready tools. One API key. USDC on 15+ chains via x402 or Stripe.
+> 64 production API tools for AI agents, pay-per-call.
+> Register once (one POST, no human steps) -> 10 free credits usable instantly ->
+> when they run out, pay per call in USDC via x402 or buy a Stripe credit pack.
 > Base URL: https://archtools.dev
 
-## Quick Start
+## Quick Start (zero human steps)
 
-1. Register: POST https://archtools.dev/v1/agent/register with {"name": "my-agent", "email": "agent@example.com"}
+1. Register once — any real, non-disposable email string; nothing has to be clicked:
+   POST https://archtools.dev/v1/agent/register
+   Body: {"name": "my-agent", "email": "agent@example.com"}
+   -> 201 with "api_key" (shown ONCE — store it) and "credits": 10, usable immediately.
+   The remaining 90 of the 100-credit grant sits in "pending_credits" and activates
+   when the email is verified (a verification link is sent automatically).
 2. Use your API key: Authorization: Bearer YOUR_API_KEY
-3. Call tools: POST https://archtools.dev/v1/tools/{tool-name} with JSON body
-4. Or pay with x402: Send USDC on Base per-call — no key needed
+3. Call tools: POST https://archtools.dev/v1/tools/{tool-name} with a JSON body.
+   Every response carries X-Credits-Remaining.
+4. Check yourself: GET https://archtools.dev/v1/agent/me
+   -> credits, pending_credits, email_verified, tier, total_calls.
+5. Out of credits? Every uncovered call returns HTTP 402 with machine-readable payment
+   instructions: pay per call in USDC via x402, or buy a Stripe pack at https://archtools.dev/pricing
 
 ## Authentication
 
@@ -23,12 +33,16 @@ x-api-key: YOUR_API_KEY
 ```
 
 ### x402 Autonomous Payment
-Agents can pay per-call with USDC on Base (and 15+ other chains) via the x402 protocol.
-No API key, no signup, no human credit card needed.
-- Discovery: GET https://archtools.dev/.well-known/x402
+Agents can pay per-call in USDC via the x402 protocol. No API key, no signup, no human credit card needed.
+- Call any tool with NO auth header -> HTTP 402. The JSON body (also base64-encoded in the
+  PAYMENT-REQUIRED response header) lists accepts[]: exact payment options with scheme ("exact"),
+  network, amount in atomic units (USDC = 6 decimals), payTo address, and asset contract.
+- Settleable networks today: USDC and USDT on Base and Polygon (pick only from the accepts[] you receive).
+- Sign the payment (EIP-3009 authorization — the x402 client SDKs do this for you) and retry the SAME
+  request with the Payment-Signature header (legacy X-Payment also accepted).
+- Success returns the tool result plus a PAYMENT-RESPONSE header (base64 JSON with the settled tx hash).
+- Discovery (all supported chains): GET https://archtools.dev/.well-known/x402
 - Protocol spec: https://x402.org
-- When a tool returns 402 Payment Required, the response includes payment instructions.
-- Agent sends USDC to the specified address, includes the payment receipt in the next request.
 
 ### OAuth 2.1
 For agent-to-agent integrations:
@@ -39,10 +53,18 @@ For agent-to-agent integrations:
 
 ## Credit System
 Tools cost credits per call. Credits never expire. Non-transferable.
-- Free tier: 100 credits on registration
+- Free grant on registration: 100 credits — 10 active instantly, 90 unlock on email verification
 - Starter Pack: 3,000 credits — $9 ($0.0030/credit)
 - Pro Pack: 25,000 credits — $49 ($0.00196/credit)
 - Business Pack: 125,000 credits — $199 ($0.00159/credit)
+- Buy packs: https://archtools.dev/pricing
+
+## Account Endpoints
+- POST /v1/agent/register — one-shot signup (no auth). Returns api_key + 10 instant credits.
+- GET /v1/agent/me — account snapshot: credits, pending_credits, email_verified, tier (Bearer key)
+- GET /v1/agent/balance — quick balance check (Bearer key)
+- GET /v1/agent/usage — balance + last 10 calls (Bearer key)
+- POST /v1/agent/keys/rotate — rotate API key, returned once (Bearer key)
 
 ## Tool Reference
 
@@ -91,9 +113,9 @@ Detect and optionally redact PII.
 **Body:** { "text": "string", "redact": true }
 **Response:** { "ok": true, "pii_found": [...], "redacted_text": "..." }
 
-### POST /v1/tools/research-report (15 credits)
+### POST /v1/tools/research-report (40 credits)
 Structured research report on any topic.
-**Body:** { "topic": "string", "depth": "brief|standard|deep" }
+**Body:** { "topic": "string", "depth": "brief|standard|comprehensive" }
 **Response:** { "ok": true, "report": { "title": "...", "summary": "...", "sections": [...], "sources": [...] } }
 
 ### POST /v1/tools/fact-check (10 credits)
@@ -136,7 +158,7 @@ Screenshot any URL as PNG.
 **Body:** { "url": "string", "width": 1280, "height": 720, "fullPage": false }
 **Response:** { "ok": true, "image": "base64 PNG" }
 
-### POST /v1/tools/html-to-markdown (2 credits)
+### POST /v1/tools/html-to-markdown (3 credits)
 Convert HTML to clean Markdown.
 **Body:** { "html": "string" }
 **Response:** { "ok": true, "markdown": "..." }
@@ -201,22 +223,22 @@ Search token by name or ticker.
 **Body:** { "query": "solana" }
 **Response:** { "ok": true, "tokens": [{ "id": "solana", "symbol": "SOL", "name": "Solana", "platforms": {...} }] }
 
-### POST /v1/tools/image-generate (15 credits)
-Generate SVG from text prompts.
+### POST /v1/tools/image-generate (30 credits)
+Generate images from text prompts.
 **Body:** { "prompt": "string" }
 **Response:** { "ok": true, "svg": "..." }
 
-### POST /v1/tools/design-create (15 credits)
+### POST /v1/tools/design-create (30 credits)
 DALL-E 3 image generation.
 **Body:** { "prompt": "string", "size": "1024x1024|1792x1024|1024x1792" }
 **Response:** { "ok": true, "image": "base64 PNG", "url": "..." }
 
-### POST /v1/tools/video-generate (50 credits)
-Runway Gen-3 video generation.
+### POST /v1/tools/video-generate (500+ credits, metered by duration)
+Runway Gen-3 video generation (125 credits/second, 500 minimum).
 **Body:** { "prompt": "string", "duration": 4 }
 **Response:** { "ok": true, "video_url": "..." }
 
-### POST /v1/tools/image-remove-bg (10 credits)
+### POST /v1/tools/image-remove-bg (350 credits)
 Remove background from image.
 **Body:** { "url": "string" } or { "base64": "..." }
 **Response:** { "ok": true, "image": "base64 PNG" }
@@ -226,12 +248,12 @@ Extract text from images.
 **Body:** { "url": "string" } or { "base64": "..." }
 **Response:** { "ok": true, "text": "..." }
 
-### POST /v1/tools/text-to-speech (5 credits)
-ElevenLabs TTS.
+### POST /v1/tools/text-to-speech (25+ credits, metered by length)
+ElevenLabs TTS (25 base + 8 credits per 100 characters).
 **Body:** { "text": "string", "voice": "optional" }
 **Response:** { "ok": true, "audio": "base64 MP3" }
 
-### POST /v1/tools/transcribe-audio (8 credits)
+### POST /v1/tools/transcribe-audio (25 credits)
 Whisper transcription.
 **Body:** { "url": "string" }
 **Response:** { "ok": true, "text": "...", "language": "en" }
@@ -365,8 +387,10 @@ POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps).
 ## Error Codes
 - 400: Bad request (missing/invalid parameters)
 - 401: Unauthorized (missing or invalid API key)
-- 402: Payment Required (x402 — includes payment instructions)
-- 403: Forbidden (insufficient credits)
+- 402: Payment Required — two shapes:
+  - no auth header: x402 payment instructions in the body + PAYMENT-REQUIRED header
+  - valid key, not enough credits: { "error": "insufficient_credits", "credits_remaining", "credits_needed", "upgrade_url" }
+- 403: Forbidden (e.g. OAuth token missing the tools:execute scope)
 - 429: Rate limited
 - 500: Internal server error
 
@@ -375,12 +399,13 @@ POST /v1/workflows/run — Execute multiple tools in sequence (up to 8 steps).
 - Auth endpoints: 20 requests/15 minutes
 - Registration: 5 per hour per IP
 
-## SDKs
+## SDKs & MCP
 - Python: `pip install archtools` — https://pypi.org/project/archtools/
-- Node.js: `npm install archtools` — https://www.npmjs.com/package/archtools
-- MCP: https://archtools.dev/mcp/sse
+- Node.js: `npm install @deesmo/arch-tools-sdk` — https://www.npmjs.com/package/@deesmo/arch-tools-sdk
+- MCP (hosted, streamable HTTP): https://arch-tools-mcp.onrender.com/mcp
+- MCP (hosted, SSE): https://arch-tools-mcp.onrender.com/sse
+- MCP (local): `npx @deesmo/arch-tools-mcp` — registry name io.github.Deesmo/arch-tools-mcp
 
 ## Support
 - Docs: https://archtools.dev/docs
-- GitHub: https://github.com/Deesmo/Arch-AI-Tools
 - Email: support@archtools.dev
