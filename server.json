@@ -1,36 +1,20 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.deesmo/arch-ai-tools",
-  "description": "64 production-ready AI tools for AI agents — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation, audio transcription, text-to-speech, email, NLP, and more. Pay with Stripe credits or autonomous USDC via x402 micropayment protocol.",
+  "name": "io.github.deesmo/arch-tools",
+  "description": "64 production tools for AI agents — one API key, pay per call in USDC (x402) or Stripe credits.",
   "repository": {
     "url": "https://github.com/Deesmo/Arch-AI-Tools",
     "source": "github"
   },
   "version": "2.0.0",
-  "packages": [
+  "remotes": [
     {
-      "registryType": "npm",
-      "identifier": "@deesmo/arch-tools-mcp",
-      "version": "2.0.0",
-      "transport": [
-        {
-          "type": "sse",
-          "url": "https://arch-tools-mcp.onrender.com/sse"
-        },
-        {
-          "type": "streamable-http",
-          "url": "https://arch-tools-mcp.onrender.com/mcp"
-        }
-      ],
-      "environmentVariables": [
-        {
-          "description": "Your Arch Tools API key from archtools.dev",
-          "isRequired": true,
-          "format": "string",
-          "isSecret": true,
-          "name": "ARCH_API_KEY"
-        }
-      ]
+      "type": "streamable-http",
+      "url": "https://arch-tools-mcp.onrender.com/mcp"
+    },
+    {
+      "type": "sse",
+      "url": "https://arch-tools-mcp.onrender.com/sse"
     }
   ]
 }
