@@ -191,7 +191,7 @@ router.post("/subscribe", requireAuthOrSession, async (req: AuthedRequest, res: 
   let planConfig = SUBSCRIPTION_PLANS.find(p => p.id === planKey);
   if (!planConfig) {
     const packMatch = CREDIT_PACKS.find(p => p.id === planKey);
-    const sentAsPack = plan === undefined && pack !== undefined;
+    const sentAsPack = plan == null && pack != null;
     const ids = SUBSCRIPTION_PLANS.map(p => p.id).join(", ");
     if (packMatch && sentAsPack) {
       res.status(400).json({ ok: false, error: "invalid_request", message: `"${planKey}" is a one-time credit pack, not a subscription. POST /v1/billing/checkout with {"pack":"${packMatch.id}"} — or pick a plan: ${ids}.`, request_id: reqId() });
