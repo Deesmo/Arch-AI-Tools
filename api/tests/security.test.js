@@ -211,7 +211,7 @@ async function main() {
     assert.strictEqual(rejected, false);
   });
 
-  console.log("H2 — checkAndStoreNonce dedup + fail-closed (mock redis):");
+  console.log("H2 — checkAndStoreNonce dedup + local fallback (mock redis):");
   const mockRedis = (impl) => ({ set: impl });
   await (async () => {
     const seen = new Set();
@@ -231,10 +231,12 @@ async function main() {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
     const first = await checkAndStoreNonce("0xdef", 600, failing);
     const second = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → in-memory fallback allows first nonce", () =>
+    test("redis error → in-memory fallback accepts fresh nonce", () =>
       assert.strictEqual(first, "new"));
-    test("redis error → in-memory fallback catches same-process replay", () =>
+    test("redis error fallback still rejects replay in-process", () =>
       assert.strictEqual(second, "replay"));
+    test("middleware keeps defensive 'error' mapping for future fail-closed mode", () =>
+      assert.ok(x402Src.includes("payment_replay_check_unavailable")));
   })();
   await (async () => {
     let capturedTtl = null;
@@ -247,6 +249,43 @@ async function main() {
     const r = await checkAndStoreNonce("0xnone", 600, null);
     test("no redis configured → 'new' with warning (dedup disabled by config)", () =>
       assert.strictEqual(r, "new"));
+  })();
+
+  // ── FaaS facilitator: standalone /verify cannot safely use local fallback ──
+  const facilitator = await import(path.join(__dirname, "..", "dist", "services", "facilitator.js"));
+  const { reserveNonce } = facilitator;
+
+  console.log("FaaS — facilitator standalone verify replay guard:");
+  await (async () => {
+    const r = await reserveNonce("0xfacnone", "provider-a", {
+      allowLocalFallback: false,
+      redisClient: null,
+    });
+    test("standalone verify with no shared nonce store → unavailable", () =>
+      assert.strictEqual(r, "unavailable"));
+  })();
+  await (async () => {
+    const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
+    const r = await reserveNonce("0xfacfail", "provider-a", {
+      allowLocalFallback: false,
+      redisClient: failing,
+    });
+    test("standalone verify with redis error → unavailable", () =>
+      assert.strictEqual(r, "unavailable"));
+  })();
+  await (async () => {
+    const first = await reserveNonce("0xfaclocal", "provider-a", {
+      allowLocalFallback: true,
+      redisClient: null,
+    });
+    const second = await reserveNonce("0xfaclocal", "provider-a", {
+      allowLocalFallback: true,
+      redisClient: null,
+    });
+    test("one-step settle preverify can use local fallback once", () =>
+      assert.strictEqual(first, "new"));
+    test("one-step settle local fallback still detects same-process replay", () =>
+      assert.strictEqual(second, "replay"));
   })();
 
   console.log("H2 — TTL derivation from authorization.validBefore (clamped):");
@@ -288,6 +327,75 @@ async function main() {
     assert.strictEqual(isSupportedTxHash("../not-a-transaction"), false));
   test("rejects unbounded receipt identifiers", () =>
     assert.strictEqual(isSupportedTxHash("1".repeat(129)), false));
+
+  // ── FaaS: provider wallet binding ────────────────────────────────────────
+  // (facilitator module already imported by the replay-guard block above)
+  const providerWallet = "0x1111111111111111111111111111111111111111";
+  const rogueWallet = "0x2222222222222222222222222222222222222222";
+  const payerWallet = "0x3333333333333333333333333333333333333333";
+  const signedPaymentTo = (to) => b64({
+    scheme: "exact",
+    network: "eip155:8453",
+    payload: {
+      signature: `0x${"11".repeat(65)}`,
+      authorization: {
+        from: payerWallet,
+        to,
+        value: "1000",
+        validAfter: "0",
+        validBefore: String(Math.floor(Date.now() / 1000) + 3600),
+        nonce: `0x${"ab".repeat(32)}`,
+      },
+    },
+  });
+  const basePaymentDetails = {
+    scheme: "exact",
+    network: "eip155:8453",
+    maxAmountRequired: "1000",
+    resource: "https://provider.example/v1/paid",
+    payTo: providerWallet,
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  };
+
+  console.log("FaaS — provider wallet binding:");
+  await (async () => {
+    const result = await facilitator.verifyPayment(
+      signedPaymentTo(rogueWallet),
+      { ...basePaymentDetails, payTo: rogueWallet },
+      "provider_1",
+      providerWallet,
+    );
+    test("verify rejects client-supplied payTo that differs from registered provider wallet", () =>
+      assert.deepStrictEqual(result, { isValid: false, invalidReason: "provider_wallet_mismatch" }));
+  })();
+  await (async () => {
+    const result = await facilitator.verifyPayment(
+      signedPaymentTo(rogueWallet),
+      basePaymentDetails,
+      "provider_1",
+      providerWallet,
+    );
+    test("verify rejects signed recipient that differs from registered provider wallet", () =>
+      assert.deepStrictEqual(result, { isValid: false, invalidReason: "recipient_mismatch" }));
+  })();
+  await (async () => {
+    const result = await facilitator.settlePayment(
+      signedPaymentTo(rogueWallet),
+      { ...basePaymentDetails, payTo: rogueWallet },
+      providerWallet,
+    );
+    test("settle rejects client-supplied payTo that differs from registered provider wallet", () =>
+      assert.strictEqual(result.errorMessage, "provider_wallet_mismatch"));
+  })();
+  await (async () => {
+    const result = await facilitator.settlePayment(
+      signedPaymentTo(rogueWallet),
+      basePaymentDetails,
+      providerWallet,
+    );
+    test("settle rejects signed recipient that differs from registered provider wallet before spending gas", () =>
+      assert.strictEqual(result.errorMessage, "recipient_mismatch"));
+  })();
 
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);

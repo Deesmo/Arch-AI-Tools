@@ -138,8 +138,9 @@ function getPublicClient(networkId: string) {
 
 const NONCE_TTL = 24 * 60 * 60;
 
-// In-memory fallback dedup (same-process). On-chain EIP-3009 nonce consumption
-// at settlement is the authoritative cross-instance guard.
+// In-memory fallback dedup (same-process). This is safe only for immediate
+// verify-then-settle flows; standalone /verify must use shared storage because
+// providers may serve content before settlement consumes the on-chain nonce.
 const memFacilitatorNonces = new Map<string, number>();
 function memCheckFacilitatorNonce(key: string): boolean {
   const now = Date.now();
@@ -152,19 +153,32 @@ function memCheckFacilitatorNonce(key: string): boolean {
   return true;
 }
 
-export async function checkNonce(nonce: string, providerId: string): Promise<boolean> {
+type RedisNonceClient = { set: (...args: any[]) => Promise<any> } | null;
+export type FacilitatorNonceStatus = "new" | "replay" | "unavailable";
+
+export async function reserveNonce(
+  nonce: string,
+  providerId: string,
+  options: { allowLocalFallback?: boolean; redisClient?: RedisNonceClient } = {},
+): Promise<FacilitatorNonceStatus> {
   const key = `facilitator:nonce:${providerId}:${nonce}`;
-  if (!redis) {
-    // No Redis: in-memory fallback. Settlement reverts on a consumed on-chain
-    // nonce, so this never weakens the actual double-spend guarantee.
-    return memCheckFacilitatorNonce(key);
-  }
+  const redisClient = options.redisClient === undefined ? redis : options.redisClient;
+  const useLocalFallback = () => (
+    options.allowLocalFallback ? (memCheckFacilitatorNonce(key) ? "new" : "replay") : "unavailable"
+  );
+
+  if (!redisClient) return useLocalFallback();
+
   try {
-    const result = await redis.set(key, "1", "EX", NONCE_TTL, "NX");
-    return result === "OK";
+    const result = await redisClient.set(key, "1", "EX", NONCE_TTL, "NX");
+    return result === "OK" ? "new" : "replay";
   } catch {
-    return memCheckFacilitatorNonce(key);
+    return useLocalFallback();
   }
+}
+
+export async function checkNonce(nonce: string, providerId: string): Promise<boolean> {
+  return (await reserveNonce(nonce, providerId, { allowLocalFallback: true })) === "new";
 }
 
 export async function releaseNonce(nonce: string, providerId: string): Promise<void> {
@@ -197,6 +211,8 @@ export async function verifyPayment(
   paymentB64: string,
   paymentDetails: VerifyRequest["paymentDetails"],
   providerId: string,
+  expectedPayTo?: string,
+  options: { allowLocalNonceFallback?: boolean } = {},
 ): Promise<VerifyResponse> {
   // 1. Decode
   const payment = decodePayment(paymentB64);
@@ -220,6 +236,11 @@ export async function verifyPayment(
   }
 
   const auth = payment.payload.authorization;
+  const expectedRecipient = expectedPayTo ?? paymentDetails.payTo;
+
+  if (expectedPayTo && paymentDetails.payTo.toLowerCase() !== expectedPayTo.toLowerCase()) {
+    return { isValid: false, invalidReason: "provider_wallet_mismatch" };
+  }
 
   // 5. Amount check
   const paymentAmount = BigInt(auth.value);
@@ -229,7 +250,7 @@ export async function verifyPayment(
   }
 
   // 6. Recipient match
-  if (auth.to.toLowerCase() !== paymentDetails.payTo.toLowerCase()) {
+  if (auth.to.toLowerCase() !== expectedRecipient.toLowerCase()) {
     return { isValid: false, invalidReason: "recipient_mismatch" };
   }
 
@@ -242,9 +263,16 @@ export async function verifyPayment(
     return { isValid: false, invalidReason: "payment_expired" };
   }
 
-  // 8. Nonce replay (Redis)
-  const isNew = await checkNonce(auth.nonce, providerId);
-  if (!isNew) {
+  // 8. Nonce replay. Standalone /verify must fail closed if shared nonce
+  // storage is unavailable; otherwise another instance could approve the same
+  // still-unsettled payment and a provider might serve twice before /settle.
+  const nonceStatus = await reserveNonce(auth.nonce, providerId, {
+    allowLocalFallback: options.allowLocalNonceFallback === true,
+  });
+  if (nonceStatus === "unavailable") {
+    return { isValid: false, invalidReason: "replay_protection_unavailable" };
+  }
+  if (nonceStatus === "replay") {
     return { isValid: false, invalidReason: "nonce_already_used" };
   }
 
@@ -359,10 +387,20 @@ export async function verifyPayment(
 export async function settlePayment(
   paymentB64: string,
   paymentDetails: SettleRequest["paymentDetails"],
+  expectedPayTo?: string,
 ): Promise<SettleResponse> {
   const payment = decodePayment(paymentB64);
   if (!payment) {
     return { success: false, errorMessage: "malformed_payment_payload" };
+  }
+
+  const auth = payment.payload.authorization;
+  const expectedRecipient = expectedPayTo ?? paymentDetails.payTo;
+  if (expectedPayTo && paymentDetails.payTo.toLowerCase() !== expectedPayTo.toLowerCase()) {
+    return { success: false, errorMessage: "provider_wallet_mismatch" };
+  }
+  if (auth.to.toLowerCase() !== expectedRecipient.toLowerCase()) {
+    return { success: false, errorMessage: "recipient_mismatch" };
   }
 
   const chain = CHAIN_MAP[payment.network];
@@ -394,8 +432,6 @@ export async function settlePayment(
     if (!tokenAddress || tokenAddress === "0x0000000000000000000000000000000000000000") {
       return { success: false, errorMessage: "native_token_settlement_not_supported" };
     }
-
-    const auth = payment.payload.authorization;
 
     // Execute transferWithAuthorization
     const txHash = await walletClient.writeContract({
