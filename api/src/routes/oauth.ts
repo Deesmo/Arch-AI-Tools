@@ -263,20 +263,36 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
   if (grant_type === "refresh_token") {
     if (!refresh_token) { res.status(400).json({ error: "invalid_request" }); return; }
 
-    const oldToken = await prisma.oAuthToken.findUnique({ where: { refreshToken: refresh_token } }).catch(() => null);
-    if (!oldToken || oldToken.clientId !== client_id || oldToken.expiresAt < new Date()) { res.status(400).json({ error: "invalid_grant" }); return; }
+    try {
+      const rotated = await prisma.$transaction(async (tx) => {
+        const oldToken = await tx.oAuthToken.findUnique({ where: { refreshToken: refresh_token } });
+        if (!oldToken || oldToken.clientId !== client_id || oldToken.expiresAt < new Date()) return null;
 
-    // Rotate tokens
-    const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
-    const newRefresh = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;
-    const expiresAt = new Date(Date.now() + 3600 * 1000);
+        // Concurrent refresh retries may all read the token, but only one can
+        // delete the still-present row. Losers become invalid_grant, not 500s.
+        const claimed = await tx.oAuthToken.deleteMany({
+          where: { id: oldToken.id, refreshToken: refresh_token, clientId: client_id },
+        });
+        if (claimed.count !== 1) return null;
 
-    await prisma.oAuthToken.delete({ where: { id: oldToken.id } });
-    await prisma.oAuthToken.create({
-      data: { id: crypto.randomUUID(), accessToken, refreshToken: newRefresh, clientId: client_id, agentId: oldToken.agentId, scope: oldToken.scope, expiresAt },
-    });
+        const accessToken = `at_oauth_${crypto.randomBytes(32).toString("base64url")}`;
+        const newRefresh = `rt_oauth_${crypto.randomBytes(32).toString("base64url")}`;
+        const expiresAt = new Date(Date.now() + 3600 * 1000);
 
-    res.json({ access_token: accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: newRefresh, scope: oldToken.scope });
+        await tx.oAuthToken.create({
+          data: { id: crypto.randomUUID(), accessToken, refreshToken: newRefresh, clientId: client_id, agentId: oldToken.agentId, scope: oldToken.scope, expiresAt },
+        });
+
+        return { accessToken, newRefresh, scope: oldToken.scope };
+      });
+
+      if (!rotated) { res.status(400).json({ error: "invalid_grant" }); return; }
+
+      res.json({ access_token: rotated.accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: rotated.newRefresh, scope: rotated.scope });
+    } catch (error) {
+      console.error("OAuth refresh rotation failed:", error);
+      res.status(500).json({ error: "server_error" });
+    }
     return;
   }
 

@@ -17,6 +17,7 @@
     "npm:audit": "npm audit --json > /tmp/audit.json && echo \"Audit complete\"",
     "test": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm tests/wallet-provisioning.test.js && node --loader ts-node/esm tests/ssrf.test.js && node tests/integration.test.js && node tests/pages.test.js",
     "test:integration": "node tests/integration.test.js",
+    "test:oauth-refresh-race": "node tests/oauth-refresh-race.test.js",
     "test:pages": "node tests/pages.test.js",
     "test:rate-limit": "node tests/global-rate-limit.test.js",
     "test:tier": "node tests/tier.test.js",
