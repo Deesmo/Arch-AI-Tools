@@ -290,7 +290,7 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res: Response): Promis
       tier: fresh.tier,
       total_calls: fresh.totalCalls,
       created_at: fresh.createdAt,
-      ...(fresh.emailVerified ? {} : { verify_hint: `Verify your email to activate ${fresh.pendingCredits} pending credits.` }),
+      ...(!fresh.emailVerified && fresh.pendingCredits > 0 ? { verify_hint: `Verify your email to activate ${fresh.pendingCredits} pending credits.` } : {}),
       buy_credits: "https://archtools.dev/pricing",
       request_id: reqId(),
     });
