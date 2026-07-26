@@ -22,6 +22,7 @@ import {
 } from "../middleware/analytics.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import { reqId, safeErr } from "../utils/credits.js";
+import { isPlatformError, isClientError } from "../utils/statusClass.js";
 
 const router = Router();
 
@@ -374,22 +375,27 @@ router.get("/realtime", requireAdmin, async (req: Request, res: Response): Promi
     const sinceMs = Date.now() - minutes * 60 * 1000;
     const metrics = getMetricsSince(sinceMs);
 
-    // Aggregate
-    const byTool: Record<string, { count: number; totalMs: number; errors: number }> = {};
+    // Aggregate. "errors" counts PLATFORM errors only (>= 500); caller
+    // conditions (4xx: bad input, out of credits, rate limits, no-result)
+    // are tracked separately as client_errors — they don't mean we're broken.
+    const byTool: Record<string, { count: number; totalMs: number; errors: number; clientErrors: number }> = {};
     let totalCalls = 0;
     let totalErrors = 0;
+    let totalClientErrors = 0;
     let totalMs = 0;
 
     for (const m of metrics) {
       totalCalls++;
       totalMs += m.responseMs;
-      if (m.statusCode >= 400) totalErrors++;
+      if (isPlatformError(m.statusCode)) totalErrors++;
+      else if (isClientError(m.statusCode)) totalClientErrors++;
 
       if (m.toolName) {
-        if (!byTool[m.toolName]) byTool[m.toolName] = { count: 0, totalMs: 0, errors: 0 };
+        if (!byTool[m.toolName]) byTool[m.toolName] = { count: 0, totalMs: 0, errors: 0, clientErrors: 0 };
         byTool[m.toolName].count++;
         byTool[m.toolName].totalMs += m.responseMs;
-        if (m.statusCode >= 400) byTool[m.toolName].errors++;
+        if (isPlatformError(m.statusCode)) byTool[m.toolName].errors++;
+        else if (isClientError(m.statusCode)) byTool[m.toolName].clientErrors++;
       }
     }
 
@@ -400,6 +406,7 @@ router.get("/realtime", requireAdmin, async (req: Request, res: Response): Promi
         calls: data.count,
         avg_ms: data.count > 0 ? Math.round(data.totalMs / data.count) : 0,
         error_rate: data.count > 0 ? Math.round((data.errors / data.count) * 100) / 100 : 0,
+        client_error_rate: data.count > 0 ? Math.round((data.clientErrors / data.count) * 100) / 100 : 0,
       }));
 
     res.json({
@@ -407,7 +414,9 @@ router.get("/realtime", requireAdmin, async (req: Request, res: Response): Promi
       window_minutes: minutes,
       total_calls: totalCalls,
       total_errors: totalErrors,
+      total_client_errors: totalClientErrors,
       error_rate: totalCalls > 0 ? Math.round((totalErrors / totalCalls) * 10000) / 100 : 0,
+      client_error_rate: totalCalls > 0 ? Math.round((totalClientErrors / totalCalls) * 10000) / 100 : 0,
       avg_response_ms: totalCalls > 0 ? Math.round(totalMs / totalCalls) : 0,
       tools: toolBreakdown,
       request_id: reqId(),

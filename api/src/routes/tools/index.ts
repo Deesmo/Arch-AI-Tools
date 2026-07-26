@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth.js";
 import { x402Middleware } from "../../middleware/x402.js";
-import { deductCredits, reqId, safeErr } from "../../utils/credits.js";
+import { deductCredits, reqId, safeErr, waiveCharge } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
@@ -3090,13 +3090,25 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
     if (hasFullName) {
       const data = await resp.json() as { data?: { email?: string; confidence?: number; sources?: unknown[]; first_name?: string; last_name?: string; position?: string; company?: string } };
       const result = data.data;
-      if (!result?.email) { res.status(404).json({ ok: false, error: "not_found", message: "No email found for the given parameters", request_id: reqId() }); return; }
+      if (!result?.email) {
+        // Empty result is NOT an error — Hunter.io answered fine, it just has
+        // no email for this person. 200 + waived charge (agents don't pay for nothing).
+        waiveCharge(res);
+        res.json({ ok: true, email: null, results: [], count: 0, match_type: "person", message: "No email address found for the given name and domain.", credits_used: 0, request_id: reqId() });
+        return;
+      }
       res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, match_type: "person", credits_used: 5, request_id: reqId() });
       return;
     }
     const data = await resp.json() as { data?: { emails?: Array<{ value?: string; confidence?: number; first_name?: string; last_name?: string; position?: string; department?: string }> ; organization?: string } };
     const emails = data.data?.emails ?? [];
-    if (!emails.length) { res.status(404).json({ ok: false, error: "not_found", message: "No emails found for the given domain", request_id: reqId() }); return; }
+    if (!emails.length) {
+      // Empty result is NOT an error — Hunter.io answered fine, it just has
+      // no emails for this domain. 200 + waived charge (agents don't pay for nothing).
+      waiveCharge(res);
+      res.json({ ok: true, domain, company: data.data?.organization ?? null, results: [], count: 0, match_type: "domain", message: "No email addresses found for this domain.", credits_used: 0, request_id: reqId() });
+      return;
+    }
     res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 5, request_id: reqId() });
   } catch (e) {
     console.error("[email-find]", e);
