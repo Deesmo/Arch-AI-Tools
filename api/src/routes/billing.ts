@@ -130,7 +130,7 @@ router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: R
   // checkout is a lost sale. If the value names a subscription instead,
   // answer with the exact corrective call.
   const { pack, plan } = req.body as { pack?: string; plan?: string };
-  const packKey = (pack ?? plan ?? "").toLowerCase().trim();
+  const packKey = (pack?.trim() || plan?.trim() || "").toLowerCase();
   const packConfig = packKey
     ? CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey))
     : undefined;
@@ -180,7 +180,7 @@ router.post("/subscribe", requireAuthOrSession, async (req: AuthedRequest, res: 
   // If the value names a one-time pack instead, answer with the exact
   // corrective call rather than a dead-end 400.
   const { plan, pack } = req.body as { plan?: string; pack?: string };
-  const planKey = (plan ?? pack ?? "").toLowerCase().trim();
+  const planKey = (plan?.trim() || pack?.trim() || "").toLowerCase();
   const planConfig = SUBSCRIPTION_PLANS.find(p => p.id === planKey || p.id === `${planKey}-monthly`);
   if (!planConfig) {
     const packMatch = CREDIT_PACKS.find(p => p.id === planKey);
