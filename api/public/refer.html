@@ -64,7 +64,7 @@
 <div class="step"><div class="step-num">4</div><div class="step-text">They get 100 free credits to try all 64 tools with no card required</div></div>
     </div>
 
-    <a href="/signin" class="cta">Sign in to get your link →</a>
+    <a href="/login" class="cta">Sign in to get your link →</a>
   </div>
 
   <script>
@@ -87,7 +87,7 @@
 
     function copyLink() {
       const url = document.getElementById('ref-url').textContent;
-      if (url.includes('Sign in')) { window.location.href = '/signin'; return; }
+      if (url.includes('Sign in')) { window.location.href = '/login'; return; }
       navigator.clipboard.writeText(url).then(() => {
         document.getElementById('copied-msg').style.display = 'block';
         setTimeout(() => { document.getElementById('copied-msg').style.display = 'none'; }, 2000);

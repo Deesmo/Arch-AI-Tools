@@ -395,7 +395,7 @@ app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signu
 app.get("/get-api-key", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 // /get-started → /signup redirect (docs/marketing links use this path)
 app.get("/get-started", (_req: Request, res: Response) => res.redirect(301, "/signup"));
-// /signin → /signup redirect (the blog/byok/refer CTAs link /signin, which 404'd)
+// /signin → /signup redirect (the blog/byok acquisition CTAs link /signin, which 404'd; sign-in flows like refer link /login directly)
 app.get("/signin", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 // /tools (human URL guess; /v1/tools and /tools.json are the APIs) → docs
 app.get("/tools", (_req: Request, res: Response) => res.redirect(301, "/docs"));
