@@ -39,7 +39,7 @@
     "@x402/extensions": "^2.7.0",
     "@x402/svm": "^2.9.0",
     "ajv": "^8.18.0",
-    "axios": "^1.7.9",
+    "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.0.0",
     "cookie-parser": "^1.4.7",
@@ -60,7 +60,7 @@
     "libphonenumber-js": "^1.11.18",
     "lru-cache": "^11.0.2",
     "marked": "^15.0.6",
-    "morgan": "^1.10.0",
+    "morgan": "^1.11.0",
     "node-fetch": "^2.7.0",
     "posthog-node": "^5.28.2",
     "qrcode": "^1.5.4",
@@ -99,7 +99,8 @@
   },
   "overrides": {
     "@coinbase/cdp-sdk": {
-      "jose": "5.10.0"
+      "jose": "5.10.0",
+      "axios": "$axios"
     },
     "ws": "8.21.0",
     "@opentelemetry/core": "2.8.0",
