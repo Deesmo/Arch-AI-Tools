@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { requireApiKeyAuth, requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { sendWelcomeEmail, sendAdminAlert } from "../services/email.js";
 import { logger } from "../lib/logger.js";
@@ -13,7 +13,7 @@ const router = Router();
 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
-  const { name, email: rawEmail, plan, password } = req.body as { name?: string; email?: string; plan?: string; password?: string };
+  const { name, email: rawEmail, password } = req.body as { name?: string; email?: string; password?: string };
   const email = rawEmail?.toLowerCase().trim();
   if (!email) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
@@ -76,7 +76,10 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         // verification. If verification setup fails, the user keeps 0 credits
         // (fail closed), never an unclaimed grant.
         credits: 0,
-        tier: (["free","starter","pro","business"].includes(plan?.replace(/-(?:monthly|annual)$/,"") ?? "") ? plan!.replace(/-(?:monthly|annual)$/,"") : "free") as any,
+        // Security (#12): new accounts are ALWAYS free tier. A client-supplied
+        // `plan`/`tier` must never self-promote to a paid tier — paid tiers are
+        // only ever set by the Stripe subscription webhook (see lib/tiers.ts).
+        tier: "free",
       },
     });
     // Count this IP only now that the account actually exists (F-4).
@@ -303,7 +306,7 @@ export default router;
 
 // ─── POST /v1/agent/keys/rotate ──────────────────────────────────────────────
 // Generate a new API key, invalidate the old one. Returns new key ONCE.
-router.post("/keys/rotate", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.post("/keys/rotate", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 
@@ -335,7 +338,7 @@ router.post("/keys/rotate", requireAuth, async (req: AuthedRequest, res: Respons
 
 // ─── DELETE /v1/agent/keys/:prefix ───────────────────────────────────────────
 // Revoke a specific API key by prefix (for multi-key accounts in future)
-router.delete("/keys/:prefix", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.delete("/keys/:prefix", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   const { prefix } = req.params;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
