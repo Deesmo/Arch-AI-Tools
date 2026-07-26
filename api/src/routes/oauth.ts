@@ -1,6 +1,10 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import { isOAuthRefreshTokenExpired, oauthAccessExpiresAt } from "../lib/oauthTokens.js";
+import { isOAuthRefreshTokenExpired, oauthAccessExpiresAt, OAUTH_ACCESS_TOKEN_TTL_MS } from "../lib/oauthTokens.js";
+
+// OAuth expires_in is expressed in seconds; keep it derived from the shared TTL
+// so the response can never drift from the stored expiresAt.
+const OAUTH_ACCESS_TOKEN_TTL_SECONDS = Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000);
 import crypto, { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -257,7 +261,7 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
       data: { id: crypto.randomUUID(), accessToken, refreshToken: refreshTok, clientId: client_id, agentId: authCode.agentId, scope: authCode.scope, expiresAt },
     });
 
-    res.json({ access_token: accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: refreshTok, scope: authCode.scope });
+    res.json({ access_token: accessToken, token_type: "Bearer", expires_in: OAUTH_ACCESS_TOKEN_TTL_SECONDS, refresh_token: refreshTok, scope: authCode.scope });
     return;
   }
 
@@ -292,7 +296,7 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
 
       if (!rotated) { res.status(400).json({ error: "invalid_grant" }); return; }
 
-      res.json({ access_token: rotated.accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: rotated.newRefresh, scope: rotated.scope });
+      res.json({ access_token: rotated.accessToken, token_type: "Bearer", expires_in: OAUTH_ACCESS_TOKEN_TTL_SECONDS, refresh_token: rotated.newRefresh, scope: rotated.scope });
     } catch (error) {
       console.error("OAuth refresh rotation failed:", error);
       res.status(500).json({ error: "server_error" });
