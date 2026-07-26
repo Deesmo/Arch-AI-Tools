@@ -49,12 +49,16 @@ const CREDIT_PACKS = [
 ];
 
 // Legacy pack aliases — the packs were once marketed as Small/Medium/Large.
-// Old integrations may still send those names; map them to the canonical ids
+// Old integrations may still send those names (or the full labels that
+// GET /v1/billing/plans used to return); map them to the canonical ids
 // so their checkouts keep working.
 const LEGACY_PACK_ALIASES = new Map<string, string>([
   ["small", "starter"],
+  ["small pack", "starter"],
   ["medium", "pro"],
+  ["medium pack", "pro"],
   ["large", "business"],
+  ["large pack", "business"],
 ]);
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
