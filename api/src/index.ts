@@ -292,8 +292,10 @@ app.use("/api/v1/x402", x402PaymentsRouter);
 // Facilitator-as-a-Service — let other API providers use Arch Tools as their x402 facilitator
 app.use("/api/v1/facilitator", facilitatorRouter);
 
-// Referral system
+// Referral system — mounted at BOTH prefixes: 402 bodies and error hints
+// advertise /v1/referral/code, so that path must resolve (it 404'd before).
 app.use("/api/v1/referral", referralRouter);
+app.use("/v1/referral", referralRouter);
 
 // Free trial system — trial activation is a credit-granting signup path,
 // so it gets the same strict per-IP registration limiter.

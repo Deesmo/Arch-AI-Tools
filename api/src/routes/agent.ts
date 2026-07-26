@@ -267,6 +267,38 @@ router.get("/balance", requireAuth, async (req: AuthedRequest, res: Response): P
   }
 });
 
+// ─── GET /v1/agent/me ────────────────────────────────────────────────────────
+// Account snapshot: balance + verification status. Agents need a zero-guess
+// way to see whether their credits are active or still pending verification.
+router.get("/me", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+  const agent = req.agent;
+  if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
+  try {
+    const fresh = await prisma.agent.findUnique({
+      where: { id: agent.id },
+      select: { id: true, email: true, name: true, credits: true, pendingCredits: true, emailVerified: true, tier: true, totalCalls: true, createdAt: true },
+    });
+    if (!fresh) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
+    res.json({
+      ok: true,
+      agent_id: fresh.id,
+      email: fresh.email,
+      name: fresh.name,
+      credits: fresh.credits,
+      pending_credits: fresh.pendingCredits,
+      email_verified: fresh.emailVerified,
+      tier: fresh.tier,
+      total_calls: fresh.totalCalls,
+      created_at: fresh.createdAt,
+      ...(fresh.emailVerified ? {} : { verify_hint: `Verify your email to activate ${fresh.pendingCredits} pending credits.` }),
+      buy_credits: "https://archtools.dev/pricing",
+      request_id: reqId(),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
 export default router;
 
 // ─── POST /v1/agent/keys/rotate ──────────────────────────────────────────────
