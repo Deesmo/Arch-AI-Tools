@@ -206,7 +206,7 @@ export async function sendWelcomeEmail(to: string, agentId: string, apiKey: stri
       <div class="stat"><span>Plan</span>Free</div>
       <div class="stat"><span>Agent ID</span>${agentId.slice(0, 14)}…</div>
     </div>
-    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 64 AI tools — enough to really put Arch Tools through its paces.</p>
+    <p>That's <strong>${creditsGranted.toLocaleString()} free credits</strong> to explore all 64 AI tools — a starter allowance is usable immediately, and the rest unlock when you verify your email.</p>
     <p>Use your key in any HTTP request:</p>
     <div class="key-box" style="font-size:13px;">x-api-key: ${apiKey.slice(0, 12)}…</div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Read the docs →</a></div>
@@ -225,9 +225,9 @@ export async function sendLowCreditAlert(to: string, creditsRemaining: number, a
     <div class="alert-warn"><strong>⚠️ Running low:</strong> You have <strong>${creditsRemaining} credits</strong> remaining. Top up now to keep your pipelines running without interruption.</div>
     <p>Add credits with one click — they never expire and stack on your existing balance.</p>
     <div class="stats">
-      <div class="stat"><span>Starter</span>1,000 credits · $9</div>
-      <div class="stat"><span>Pro</span>10,000 credits · $49</div>
-      <div class="stat"><span>Business</span>100,000 credits · $199</div>
+      <div class="stat"><span>Starter</span>3,000 credits · $9</div>
+      <div class="stat"><span>Pro</span>25,000 credits · $49</div>
+      <div class="stat"><span>Business</span>125,000 credits · $199</div>
     </div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/#pricing">Top up credits →</a></div>
     <hr class="divider">
@@ -292,7 +292,7 @@ export async function sendMonthlyRefreshEmail(to: string, credits: number, newBa
     </div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/docs.html">Start building →</a></div>
     <hr class="divider">
-    <p style="font-size:13px;color:#8A85B0;">Need more credits? <a href="${SITE}/#pricing">Upgrade your plan</a> for up to 100,000 credits per month.</p>
+    <p style="font-size:13px;color:#8A85B0;">Need more credits? <a href="${SITE}/#pricing">Upgrade your plan</a> for up to 175,000 credits per month.</p>
   `);
   await sendEmail(to, subject, html);
 }
@@ -408,9 +408,9 @@ export async function sendEmail80PctAlert(to: string, creditsRemaining: number, 
     <div class="alert-warn"><strong>⚠️ 80% consumed:</strong> You've used most of your credits. Only <strong>${creditsRemaining}</strong> remain.</div>
     <p>Top up now to avoid interruptions. Your agents will receive a <code>402</code> response when credits hit zero — but they can still pay per-call via x402 USDC.</p>
     <div class="stats">
-      <div class="stat"><span>Starter</span>1,000 credits · $9</div>
-      <div class="stat"><span>Pro</span>10,000 credits · $49</div>
-      <div class="stat"><span>Business</span>100,000 credits · $199</div>
+      <div class="stat"><span>Starter</span>3,000 credits · $9</div>
+      <div class="stat"><span>Pro</span>25,000 credits · $49</div>
+      <div class="stat"><span>Business</span>125,000 credits · $199</div>
     </div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/pricing">Upgrade now →</a></div>
     <hr class="divider">
