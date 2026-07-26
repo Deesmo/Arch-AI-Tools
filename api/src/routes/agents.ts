@@ -325,11 +325,15 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // Count this IP only now that the account actually exists (F-4).
     recordSignupIp(req.ip);
 
-    // Email verification gate: credits stay pending until email verified.
-    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    // Grant split: starter credits activate immediately (agents can't read
+    // email); the rest stays pending until email verification. The whole grant
+    // is atomically claimed per normalized identity (SignupIdentity).
+    let starterCredits = 0;
     let gatedCredits = 0;
     try {
-      gatedCredits = await issueEmailVerification(agent.id, email, freeCredits);
+      const grant = await issueEmailVerification(agent.id, email, freeCredits);
+      starterCredits = grant.starter;
+      gatedCredits = grant.pending;
     } catch (e) {
       console.error("Verification setup failed (credits remain 0, user can resend):", e);
     }
@@ -338,13 +342,15 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
-      credits: 0,
+      credits: starterCredits,
       pending_credits: gatedCredits,
       email_verification_required: true,
       reputation_score: 50,
       badge: "none",
       profile_url: `https://archtools.dev/api/v1/agents/${agent.id}`,
-      message: `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. Your public profile is live.`,
+      message: starterCredits > 0
+        ? `Welcome! ${starterCredits} credits are active now — start calling tools immediately. Verify your email to unlock the remaining ${gatedCredits}. Your public profile is live.`
+        : `Welcome! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. Your public profile is live.`,
       docs: "https://archtools.dev/agents",
       request_id: reqId(),
     });

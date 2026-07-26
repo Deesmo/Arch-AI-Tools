@@ -105,28 +105,34 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
     // Count this IP only now that the account actually exists (F-4).
     recordSignupIp(req.ip);
 
-    // Email verification gate: credits stay pending until email verified.
-    // Grant is atomically claimed per normalized identity (SignupIdentity).
+    // Grant split: starter credits activate immediately (agents can't read
+    // email); the rest stays pending until email verification. The whole grant
+    // is atomically claimed per normalized identity (SignupIdentity).
+    let starterCredits = 0;
     let gatedCredits = 0;
     try {
-      gatedCredits = await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
+      const grant = await issueEmailVerification(agent.id, email, TRIAL_CREDITS);
+      starterCredits = grant.starter;
+      gatedCredits = grant.pending;
     } catch (e) {
       logger.warn({ agentId: agent.id, error: String(e) }, "Verification setup failed (credits remain 0)");
     }
 
-    logger.info({ agentId: agent.id, email, credits: gatedCredits }, "Trial account activated (pending email verification)");
-    captureEvent(agent.id, "trial_activated", { email, credits: gatedCredits });
-    identifyUser(agent.id, { email, tier: "free", credits: gatedCredits, source: "trial" });
+    logger.info({ agentId: agent.id, email, starterCredits, pendingCredits: gatedCredits }, "Trial account activated (starter credits live, remainder pending verification)");
+    captureEvent(agent.id, "trial_activated", { email, starter_credits: starterCredits, pending_credits: gatedCredits });
+    identifyUser(agent.id, { email, tier: "free", credits: starterCredits, source: "trial" });
 
     res.status(201).json({
       ok: true,
       agent_id: agent.id,
       api_key: apiKey,
-      credits: 0,
+      credits: starterCredits,
       pending_credits: gatedCredits,
       email_verification_required: true,
       tier: "free",
-      message: `Trial created! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
+      message: starterCredits > 0
+        ? `Trial created! ${starterCredits} credits are active now — start calling tools immediately. Verify your email to unlock the remaining ${gatedCredits}. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`
+        : `Trial created! Check your email to verify your address — your ${gatedCredits} free credits activate on verification. When depleted, pay per-call with USDC via x402 or purchase more at https://archtools.dev/pricing`,
       upgrade_url: "https://archtools.dev/pricing",
       docs: "https://archtools.dev/docs",
       request_id: reqId(),
