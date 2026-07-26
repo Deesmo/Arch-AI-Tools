@@ -214,14 +214,26 @@ async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName
   const since = new Date();
   since.setHours(0, 0, 0, 0);
 
-  const count = await prisma.apiRequest.count({
-    where: {
-      agentId: agent.id,
-      toolName,
-      createdAt: { gte: since },
-      status: "SUCCESS",
-    },
-  }).catch(() => 0);
+  let count: number;
+  try {
+    count = await prisma.apiRequest.count({
+      where: {
+        agentId: agent.id,
+        toolName,
+        createdAt: { gte: since },
+        status: "SUCCESS",
+      },
+    });
+  } catch (err) {
+    console.error(`[tools] Daily limit check failed for ${toolName}:`, err);
+    res.status(503).json({
+      ok: false,
+      error: "limit_check_unavailable",
+      message: `Unable to verify the daily limit for ${toolName}. Try again shortly.`,
+      request_id: reqId(),
+    });
+    return false;
+  }
 
   if (count >= limit) {
     res.status(429).json({

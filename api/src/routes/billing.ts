@@ -398,7 +398,15 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
     const subscription = event.data.object as { metadata?: { agent_id?: string }; id?: string };
     const agentId = subscription.metadata?.agent_id;
     if (agentId) {
-      await prisma.agent.update({ where: { id: agentId }, data: { tier: "free" } }).catch(() => {});
+      try {
+        await prisma.agent.update({ where: { id: agentId }, data: { tier: "free" } });
+      } catch (e) {
+        // 5xx tells Stripe to retry; acknowledging here would leave a cancelled
+        // subscription with paid-tier access after a transient DB failure.
+        console.error("Subscription cancellation error:", e);
+        res.status(500).json({ error: "subscription_cancellation_failed", message: safeErr(e) });
+        return;
+      }
       console.log(`[billing] Subscription cancelled for agent ${agentId}`);
     }
   }
