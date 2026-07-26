@@ -2,45 +2,45 @@ import Link from 'next/link'
 
 const TIERS = [
   {
-    name: 'Starter',
+    name: 'Starter Pack',
     price: '$9',
-    credits: 1_000,
+    credits: 3_000,
     blurb: 'For prototypes and weekend builds.',
     highlight: false,
     link: 'https://buy.stripe.com/fZu8wQdd19Y70LB8qF9fW06',
-    per: '$0.009 / credit',
+    per: '$0.003 / credit',
   },
   {
-    name: 'Pro',
+    name: 'Pro Pack',
     price: '$49',
-    credits: 10_000,
+    credits: 25_000,
     blurb: 'For serious developers shipping agents.',
     highlight: true,
     link: 'https://buy.stripe.com/5kQ14o4Gvc6f8e3cGV9fW07',
-    per: '$0.0049 / credit',
+    per: '$0.00196 / credit',
   },
   {
-    name: 'Business',
+    name: 'Business Pack',
     price: '$199',
-    credits: 100_000,
+    credits: 125_000,
     blurb: 'For teams and production workloads.',
     highlight: false,
     link: 'https://buy.stripe.com/bJecN65Kz1rBgKz5et9fW08',
-    per: '$0.002 / credit',
+    per: '$0.00159 / credit',
   },
 ]
 
 const TOOL_COSTS = [
-  { tier: 'Cheapest',  tools: 'validate-data, generate-hash, timezone-convert, generate-uuid', credits: 1,  examples: '1,000 calls / $9 pack' },
-  { tier: 'Core',      tools: 'qr-code, convert-format, diff-text, phone-validate, currency-convert', credits: 2, examples: '500 calls / $9 pack' },
-  { tier: 'Standard',  tools: 'transform-text, extract-metadata, readability-score, whois-lookup, email-verify, ip-lookup', credits: 3, examples: '333 calls / $9 pack' },
-  { tier: 'Web',       tools: 'search-web, extract-page, rss-parse', credits: 4, examples: '250 calls / $9 pack' },
-  { tier: 'Scrape',    tools: 'web-scrape', credits: 5, examples: '200 calls / $9 pack' },
-  { tier: 'Extract',   tools: 'extract-pdf', credits: 6, examples: '166 calls / $9 pack' },
-  { tier: 'AI light',  tools: 'language-detect, regex-generate', credits: 8, examples: '125 calls / $9 pack' },
-  { tier: 'AI mid',    tools: 'sentiment-analysis, extract-entities, pii-detect, summarize, web-search', credits: 10, examples: '100 calls / $9 pack' },
-  { tier: 'Browser',   tools: 'browser-task, ocr-extract', credits: 10, examples: '100 calls / $9 pack' },
-  { tier: 'AI heavy',  tools: 'ai-generate (Claude)', credits: 20, examples: '50 calls / $9 pack' },
+  { tier: 'Cheapest',  tools: 'validate-data, generate-hash, timezone-convert, generate-uuid', credits: 1,  examples: '3,000 calls / $9 pack' },
+  { tier: 'Core',      tools: 'qr-code, convert-format, diff-text, phone-validate, currency-convert', credits: 2, examples: '1,500 calls / $9 pack' },
+  { tier: 'Standard',  tools: 'transform-text, extract-metadata, readability-score, whois-lookup, email-verify, ip-lookup', credits: 3, examples: '1,000 calls / $9 pack' },
+  { tier: 'Web',       tools: 'search-web, extract-page, rss-parse', credits: 4, examples: '750 calls / $9 pack' },
+  { tier: 'Scrape',    tools: 'web-scrape', credits: 5, examples: '600 calls / $9 pack' },
+  { tier: 'Extract',   tools: 'extract-pdf', credits: 6, examples: '500 calls / $9 pack' },
+  { tier: 'AI light',  tools: 'language-detect, regex-generate', credits: 8, examples: '375 calls / $9 pack' },
+  { tier: 'AI mid',    tools: 'sentiment-analysis, extract-entities, pii-detect, summarize, web-search', credits: 10, examples: '300 calls / $9 pack' },
+  { tier: 'Browser',   tools: 'browser-task, ocr-extract', credits: 10, examples: '300 calls / $9 pack' },
+  { tier: 'AI heavy',  tools: 'ai-generate (Claude)', credits: 20, examples: '150 calls / $9 pack' },
 ]
 
 export default function PricingPage() {
@@ -90,7 +90,7 @@ export default function PricingPage() {
                   : 'bg-white text-[#070812]'
               }`}
             >
-              Buy {t.name} pack →
+              Buy {t.name} →
             </a>
           </div>
         ))}
