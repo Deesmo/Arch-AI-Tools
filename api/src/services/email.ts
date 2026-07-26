@@ -225,9 +225,9 @@ export async function sendLowCreditAlert(to: string, creditsRemaining: number, a
     <div class="alert-warn"><strong>⚠️ Running low:</strong> You have <strong>${creditsRemaining} credits</strong> remaining. Top up now to keep your pipelines running without interruption.</div>
     <p>Add credits with one click — they never expire and stack on your existing balance.</p>
     <div class="stats">
-      <div class="stat"><span>Starter</span>3,000 credits · $9</div>
-      <div class="stat"><span>Pro</span>25,000 credits · $49</div>
-      <div class="stat"><span>Business</span>125,000 credits · $199</div>
+      <div class="stat"><span>Starter Pack</span>3,000 credits · $9</div>
+      <div class="stat"><span>Pro Pack</span>25,000 credits · $49</div>
+      <div class="stat"><span>Business Pack</span>125,000 credits · $199</div>
     </div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/#pricing">Top up credits →</a></div>
     <hr class="divider">
@@ -408,9 +408,9 @@ export async function sendEmail80PctAlert(to: string, creditsRemaining: number, 
     <div class="alert-warn"><strong>⚠️ 80% consumed:</strong> You've used most of your credits. Only <strong>${creditsRemaining}</strong> remain.</div>
     <p>Top up now to avoid interruptions. Your agents will receive a <code>402</code> response when credits hit zero — but they can still pay per-call via x402 USDC.</p>
     <div class="stats">
-      <div class="stat"><span>Starter</span>3,000 credits · $9</div>
-      <div class="stat"><span>Pro</span>25,000 credits · $49</div>
-      <div class="stat"><span>Business</span>125,000 credits · $199</div>
+      <div class="stat"><span>Starter Pack</span>3,000 credits · $9</div>
+      <div class="stat"><span>Pro Pack</span>25,000 credits · $49</div>
+      <div class="stat"><span>Business Pack</span>125,000 credits · $199</div>
     </div>
     <div class="btn-wrap"><a class="btn" href="${SITE}/pricing">Upgrade now →</a></div>
     <hr class="divider">

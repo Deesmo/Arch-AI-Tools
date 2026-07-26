@@ -129,9 +129,9 @@
     "model": "credits",
     "freeCredits": 100,
     "packs": [
-      { "name": "Starter", "credits": 3000, "price": "$9" },
-      { "name": "Pro", "credits": 25000, "price": "$49" },
-      { "name": "Business", "credits": 125000, "price": "$199" }
+      { "id": "starter", "name": "Starter Pack", "credits": 3000, "price": "$9" },
+      { "id": "pro", "name": "Pro Pack", "credits": 25000, "price": "$49" },
+      { "id": "business", "name": "Business Pack", "credits": 125000, "price": "$199" }
     ],
     "x402": {
       "description": "Pay-per-call with USDC — no signup needed",

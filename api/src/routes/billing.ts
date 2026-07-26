@@ -44,9 +44,18 @@ async function requireAuthOrSession(req: AuthedRequest, res: Response, next: Nex
 // ─── One-time credit packs ──────────────────────────────────────────────────
 const CREDIT_PACKS = [
   { id: "starter",  credits: 3000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
-  { id: "pro",      credits: 25000,  amount: 4900,  label: "Medium Pack",    priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
-  { id: "business", credits: 125000, amount: 19900, label: "Large Pack",     priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
+  { id: "pro",      credits: 25000,  amount: 4900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
+  { id: "business", credits: 125000, amount: 19900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },
 ];
+
+// Legacy pack aliases — the packs were once marketed as Small/Medium/Large.
+// Old integrations may still send those names; map them to the canonical ids
+// so their checkouts keep working.
+const LEGACY_PACK_ALIASES = new Map<string, string>([
+  ["small", "starter"],
+  ["medium", "pro"],
+  ["large", "business"],
+]);
 
 // ─── Monthly subscription plans ────────────────────────────────────────────
 const SUBSCRIPTION_PLANS = [
@@ -133,7 +142,8 @@ router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: R
   // checkout is a lost sale. If the value names a subscription instead,
   // answer with the exact corrective call.
   const { pack, plan } = req.body as { pack?: string; plan?: string };
-  const packKey = (pack ?? plan ?? "").toLowerCase().trim();
+  const rawKey = (pack ?? plan ?? "").toLowerCase().trim();
+  const packKey = LEGACY_PACK_ALIASES.get(rawKey) ?? rawKey;
   const packConfig = packKey
     ? CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey))
     : undefined;
@@ -143,7 +153,7 @@ router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: R
       res.status(400).json({ ok: false, error: "invalid_request", message: `"${packKey}" is a subscription, not a one-time pack. POST /v1/billing/subscribe with {"plan":"${subMatch.id}"}.`, request_id: reqId() });
       return;
     }
-    res.status(400).json({ ok: false, error: "invalid_request", message: "pack must be one of: starter, pro, business", request_id: reqId() });
+    res.status(400).json({ ok: false, error: "invalid_request", message: "pack must be one of: starter, pro, business (legacy aliases small, medium, large are also accepted)", request_id: reqId() });
     return;
   }
   if (!packConfig.priceId) {

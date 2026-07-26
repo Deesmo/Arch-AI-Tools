@@ -1138,9 +1138,9 @@ result = client.tools.invoke(
       <span class="payment-tag tag-stripe">Stripe</span>
       <div class="payment-title">For Developers</div>
       <div class="payment-desc">Standard Stripe checkout. Buy credit packs with any card. Instant grant, permanent balance.</div>
-      <div class="payment-detail">Starter: 1,000 credits — $9</div>
-      <div class="payment-detail">Pro: 10,000 credits — $49</div>
-      <div class="payment-detail">Business: 123,000 credits — $199</div>
+      <div class="payment-detail">Starter Pack: 3,000 credits — $9</div>
+      <div class="payment-detail">Pro Pack: 25,000 credits — $49</div>
+      <div class="payment-detail">Business Pack: 125,000 credits — $199</div>
     </div>
     <div class="payment-card">
       <span class="payment-tag tag-crypto">x402 / USDC</span>
@@ -1202,12 +1202,12 @@ result = client.tools.invoke(
   Need more? Buy a one-time credit pack. Credits never expire. No subscription ever.</p>
   <div class="pricing-grid">
     <div class="plan-card">
-      <div class="plan-name">Starter</div>
+      <div class="plan-name">Starter Pack</div>
       <div class="plan-price"><sup>$</sup>9</div>
       <div class="plan-freq">one-time · no subscription</div>
       <div class="plan-credits">
-        <div class="plan-credits-num">1,000</div>
-        <div class="plan-credits-label">credits · ~1,000 hash calls or 50 scrapes</div>
+        <div class="plan-credits-num">3,000</div>
+        <div class="plan-credits-label">credits · ~3,000 hash calls or 600 scrapes</div>
       </div>
       <ul class="plan-features">
         <li>All 63 tools</li>
@@ -1220,12 +1220,12 @@ result = client.tools.invoke(
 
     <div class="plan-card featured">
       <div class="plan-featured-badge">Most Popular</div>
-      <div class="plan-name">Pro</div>
+      <div class="plan-name">Pro Pack</div>
       <div class="plan-price"><sup>$</sup>49</div>
       <div class="plan-freq">one-time · no subscription</div>
       <div class="plan-credits">
-        <div class="plan-credits-num">10,000</div>
-        <div class="plan-credits-label">credits · ~10,000 hashes or 500 scrapes</div>
+        <div class="plan-credits-num">25,000</div>
+        <div class="plan-credits-label">credits · ~25,000 hashes or 5,000 scrapes</div>
       </div>
       <ul class="plan-features">
         <li>All 63 tools</li>
@@ -1238,12 +1238,12 @@ result = client.tools.invoke(
     </div>
 
     <div class="plan-card">
-      <div class="plan-name">Business</div>
+      <div class="plan-name">Business Pack</div>
       <div class="plan-price"><sup>$</sup>199</div>
       <div class="plan-freq">one-time · no subscription</div>
       <div class="plan-credits">
-        <div class="plan-credits-num">100,000</div>
-        <div class="plan-credits-label">credits · ~100k hashes or 5,000 scrapes</div>
+        <div class="plan-credits-num">125,000</div>
+        <div class="plan-credits-label">credits · ~125k hashes or 25,000 scrapes</div>
       </div>
       <ul class="plan-features">
         <li>All 63 tools</li>
