@@ -4,7 +4,7 @@
  *  - H1: x402 settle-guard predicate (no serve on null/failed settlement)
  *  - H3: atomic credit deduction guard shape (updateMany count contract)
  *  - H2: x402 nonce extraction (authorization.nonce), no hard reject on
- *        missing nonce, replay dedup fail-closed, TTL clamp
+ *        missing nonce, replay dedup/fallback behavior, TTL clamp
  *
  * Run: node tests/security.test.js  (requires `npm run build` first for dist/)
  */
@@ -229,11 +229,12 @@ async function main() {
   })();
   await (async () => {
     const failing = mockRedis(async () => { throw new Error("ECONNREFUSED"); });
-    const r = await checkAndStoreNonce("0xdef", 600, failing);
-    test("redis error → 'error' (fail-closed 402 payment_replay_check_unavailable)", () =>
-      assert.strictEqual(r, "error"));
-    test("middleware maps 'error' to payment_replay_check_unavailable", () =>
-      assert.ok(x402Src.includes("payment_replay_check_unavailable")));
+    const first = await checkAndStoreNonce("0xdef", 600, failing);
+    const second = await checkAndStoreNonce("0xdef", 600, failing);
+    test("redis error → in-memory fallback allows first nonce", () =>
+      assert.strictEqual(first, "new"));
+    test("redis error → in-memory fallback catches same-process replay", () =>
+      assert.strictEqual(second, "replay"));
   })();
   await (async () => {
     let capturedTtl = null;
@@ -269,6 +270,24 @@ async function main() {
       extractNonceTtlSeconds(b64({ payload: { authorization: { validBefore: "soon" } } })), 600));
   test("garbage header → default 600s (never throws)", () =>
     assert.strictEqual(extractNonceTtlSeconds("!!!"), 600));
+
+  // ── x402 receipt hash validation ─────────────────────────────────────────
+  const payments = await import(
+    path.join(__dirname, "..", "dist", "routes", "x402-payments.js")
+  );
+  const { isSupportedTxHash } = payments;
+
+  console.log("x402 receipts — supported transaction identifiers:");
+  test("accepts EVM 0x transaction hashes", () =>
+    assert.strictEqual(isSupportedTxHash(`0x${"a".repeat(64)}`), true));
+  test("accepts Solana base58 signatures", () =>
+    assert.strictEqual(
+      isSupportedTxHash("5J7sX2F7L2WbP7aG7hWkM4pJ8dQ9nV6rB3sY1uT5cR8mN2kL4qP6zA9xD3eF7gH1jK2mN5pQ8rS"),
+      true));
+  test("rejects malformed receipt probes", () =>
+    assert.strictEqual(isSupportedTxHash("../not-a-transaction"), false));
+  test("rejects unbounded receipt identifiers", () =>
+    assert.strictEqual(isSupportedTxHash("1".repeat(129)), false));
 
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);
