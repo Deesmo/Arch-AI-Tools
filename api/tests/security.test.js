@@ -30,6 +30,9 @@ async function main() {
   const { normalizeEmailIdentity } = await import(
     path.join(__dirname, "..", "dist", "lib", "verification.js")
   );
+  const { readArrayBufferWithLimit, ResponseTooLargeError } = await import(
+    path.join(__dirname, "..", "dist", "utils", "responseBody.js")
+  );
 
   console.log("M1 — normalizeEmailIdentity:");
   test("lowercases and trims", () =>
@@ -58,6 +61,46 @@ async function main() {
     assert.strictEqual(a, b);
     assert.strictEqual(b, c);
   });
+
+  // ── Media fetch size guard ────────────────────────────────────────────────
+  console.log("Media — bounded response buffering:");
+  await (async () => {
+    let threw = false;
+    try {
+      await readArrayBufferWithLimit(
+        new Response("tiny", { headers: { "content-length": "999" } }),
+        10
+      );
+    } catch (e) {
+      threw = e instanceof ResponseTooLargeError;
+    }
+    test("declared oversized response is rejected before buffering", () =>
+      assert.strictEqual(threw, true));
+  })();
+
+  await (async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array(6));
+        controller.enqueue(new Uint8Array(6));
+        controller.close();
+      },
+    });
+    let threw = false;
+    try {
+      await readArrayBufferWithLimit(new Response(stream), 10);
+    } catch (e) {
+      threw = e instanceof ResponseTooLargeError;
+    }
+    test("streaming response is rejected once it crosses the byte cap", () =>
+      assert.strictEqual(threw, true));
+  })();
+
+  await (async () => {
+    const body = await readArrayBufferWithLimit(new Response("safe"), 10);
+    test("under-limit response still buffers successfully", () =>
+      assert.strictEqual(Buffer.from(body).toString("utf8"), "safe"));
+  })();
 
   // ── M1b: atomic identity claim (SignupIdentity unique guard) ────────────
   // Exercises the REAL claimSignupIdentity path with prisma.$executeRaw
