@@ -393,6 +393,8 @@ app.get("/agents", (_req: Request, _res: Response) => _res.sendFile(path.join(__
 app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 // /get-api-key → /signup redirect (homepage CTA target)
 app.get("/get-api-key", (_req: Request, res: Response) => res.redirect(301, "/signup"));
+// /get-started → /signup redirect (docs/marketing links use this path)
+app.get("/get-started", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 
 app.get("/usage", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/usage.html')));
 app.get("/status", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/status.html')));

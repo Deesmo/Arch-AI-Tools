@@ -126,12 +126,20 @@ router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: R
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   if (!stripe) { res.status(503).json({ ok: false, error: "not_configured", message: "Stripe not configured", request_id: reqId() }); return; }
 
-  const { pack } = req.body as { pack?: string };
-  const packKey = (pack ?? "").toLowerCase().trim();
+  // Accept both `pack` and `plan` — agents mix the two up, and a failed
+  // checkout is a lost sale. If the value names a subscription instead,
+  // answer with the exact corrective call.
+  const { pack, plan } = req.body as { pack?: string; plan?: string };
+  const packKey = (pack ?? plan ?? "").toLowerCase().trim();
   const packConfig = packKey
     ? CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey))
     : undefined;
   if (!packConfig) {
+    const subMatch = SUBSCRIPTION_PLANS.find(p => p.id === packKey || p.id === `${packKey}-monthly`);
+    if (subMatch) {
+      res.status(400).json({ ok: false, error: "invalid_request", message: `"${packKey}" is a subscription, not a one-time pack. POST /v1/billing/subscribe with {"plan":"${subMatch.id}"}.`, request_id: reqId() });
+      return;
+    }
     res.status(400).json({ ok: false, error: "invalid_request", message: "pack must be one of: starter, pro, business", request_id: reqId() });
     return;
   }
@@ -168,10 +176,19 @@ router.post("/subscribe", requireAuthOrSession, async (req: AuthedRequest, res: 
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
   if (!stripe) { res.status(503).json({ ok: false, error: "not_configured", message: "Stripe not configured", request_id: reqId() }); return; }
 
-  const { plan } = req.body as { plan?: string };
-  const planConfig = SUBSCRIPTION_PLANS.find(p => p.id === plan);
+  // Accept both `plan` and `pack`, plus bare tier names ("pro" → "pro-monthly").
+  // If the value names a one-time pack instead, answer with the exact
+  // corrective call rather than a dead-end 400.
+  const { plan, pack } = req.body as { plan?: string; pack?: string };
+  const planKey = (plan ?? pack ?? "").toLowerCase().trim();
+  const planConfig = SUBSCRIPTION_PLANS.find(p => p.id === planKey || p.id === `${planKey}-monthly`);
   if (!planConfig) {
+    const packMatch = CREDIT_PACKS.find(p => p.id === planKey);
     const ids = SUBSCRIPTION_PLANS.map(p => p.id).join(", ");
+    if (packMatch) {
+      res.status(400).json({ ok: false, error: "invalid_request", message: `"${planKey}" is a one-time credit pack, not a subscription. POST /v1/billing/checkout with {"pack":"${packMatch.id}"} — or pick a plan: ${ids}.`, request_id: reqId() });
+      return;
+    }
     res.status(400).json({ ok: false, error: "invalid_request", message: `plan must be one of: ${ids}`, request_id: reqId() });
     return;
   }
