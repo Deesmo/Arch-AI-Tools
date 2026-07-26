@@ -32,8 +32,32 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+// The suite runs against the LIVE site, which is often mid-deploy when CI
+// fires (Render swaps instances → a few seconds of 502/503/504 at the edge).
+// A transient gateway error is NOT a product failure, so retry it a few times
+// with backoff before letting the assertion see it. Real 4xx/5xx from the app
+// pass straight through.
+const TRANSIENT = new Set([502, 503, 504]);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchWithRetry(url, options = {}, tries = 4) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (!TRANSIENT.has(res.status) || i === tries - 1) return res;
+      last = res;
+    } catch (e) {
+      last = e;
+      if (i === tries - 1) throw e;
+    }
+    await sleep(2000 * (i + 1)); // 2s, 4s, 6s
+  }
+  return last;
+}
+
 async function fetchJSON(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetchWithRetry(`${BASE_URL}${path}`, {
     ...options,
     headers: { 'Accept': 'application/json', ...options.headers },
   });
@@ -41,7 +65,7 @@ async function fetchJSON(path, options = {}) {
 }
 
 async function fetchRaw(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, options);
+  const res = await fetchWithRetry(`${BASE_URL}${path}`, options);
   return { res, text: await res.text() };
 }
 
