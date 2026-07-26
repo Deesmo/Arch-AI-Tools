@@ -1,6 +1,6 @@
 # Arch Tools
 > The first API platform built for autonomous agent payments.
-> 63 production-ready tools. One API key. USDC on 15+ chains via x402 or Stripe.
+> 63 production-ready tools. One API key. USDC on 9 chains via x402 or Stripe.
 > Base URL: https://archtools.dev
 > Docs: https://archtools.dev/docs
 > OpenAPI: https://archtools.dev/openapi.json
@@ -13,7 +13,7 @@
 All tool endpoints require an API key:
   Authorization: Bearer YOUR_API_KEY
 
-Get a free key (100 credits) at https://archtools.dev/#register
+Get a free key (100 credits — 10 instant, 90 on email verify) at https://archtools.dev/#register
 
 ## x402 Autonomous Payment (no key required)
 AI agents can pay per-call with USDC on Base via the x402 protocol.

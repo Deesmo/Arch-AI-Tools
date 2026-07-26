@@ -43,7 +43,7 @@
       },
       {
         "type": "x402",
-        "description": "Pay-per-call with USDC on 15+ chains. No signup required.",
+        "description": "Pay-per-call with USDC on 9 chains. No signup required.",
         "discoveryUrl": "https://archtools.dev/.well-known/x402"
       }
     ]
@@ -129,9 +129,9 @@
     "model": "credits",
     "freeCredits": 100,
     "packs": [
-      { "name": "Starter", "credits": 10000, "price": "$9" },
-      { "name": "Pro", "credits": 60000, "price": "$49" },
-      { "name": "Business", "credits": 250000, "price": "$199" }
+      { "name": "Starter", "credits": 3000, "price": "$9" },
+      { "name": "Pro", "credits": 25000, "price": "$49" },
+      { "name": "Business", "credits": 125000, "price": "$199" }
     ],
     "x402": {
       "description": "Pay-per-call with USDC — no signup needed",

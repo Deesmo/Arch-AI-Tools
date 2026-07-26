@@ -1,6 +1,6 @@
 # Arch Tools — Complete Documentation
 > The first API platform built for autonomous agent payments.
-> 63 production-ready tools. One API key. USDC on 15+ chains via x402 or Stripe.
+> 63 production-ready tools. One API key. USDC on 9 chains via x402 or Stripe.
 > Base URL: https://archtools.dev
 
 ## Quick Start
@@ -23,7 +23,7 @@ x-api-key: YOUR_API_KEY
 ```
 
 ### x402 Autonomous Payment
-Agents can pay per-call with USDC on Base (and 15+ other chains) via the x402 protocol.
+Agents can pay per-call with USDC on Base (and 8 other chains) via the x402 protocol.
 No API key, no signup, no human credit card needed.
 - Discovery: GET https://archtools.dev/.well-known/x402
 - Protocol spec: https://x402.org
@@ -39,7 +39,7 @@ For agent-to-agent integrations:
 
 ## Credit System
 Tools cost credits per call. Credits never expire. Non-transferable.
-- Free tier: 100 credits on registration
+- Free tier: 100 credits (10 instant on registration, 90 on email verification)
 - Starter Pack: 3,000 credits — $9 ($0.0030/credit)
 - Pro Pack: 25,000 credits — $49 ($0.00196/credit)
 - Business Pack: 125,000 credits — $199 ($0.00159/credit)

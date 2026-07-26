@@ -324,19 +324,6 @@ router.get("/sitemap", (_req: Request, res: Response) => {
   }
 });
 
-// ─── GET /api/v1/x402/directory/:id — Single service ─────────────────────────
-router.get("/:id", (req: Request, res: Response): void => {
-  const data = loadDirectory();
-  const service = data.services.find(s => s.id === req.params.id);
-
-  if (!service) {
-    res.status(404).json({ ok: false, error: "service_not_found", message: `No service found with id '${req.params.id}'` });
-    return;
-  }
-
-  res.json({ ok: true, service });
-});
-
 // ─── POST /api/v1/x402/directory/submit — Submit a new service ───────────────
 router.post("/submit", (req: Request, res: Response): void => {
   const { name, url, description, contact_email, endpoints } = req.body;
@@ -640,6 +627,21 @@ router.get("/tiers", (_req: Request, res: Response): void => {
     ],
     upgrade_url: "/api/v1/x402/directory/upgrade",
   });
+});
+
+// ─── GET /api/v1/x402/directory/:id — Single service ─────────────────────────
+// MUST stay LAST among the GET routes: /:id matches any single path segment,
+// so registering it earlier shadows literal routes like /tiers and /listings.
+router.get("/:id", (req: Request, res: Response): void => {
+  const data = loadDirectory();
+  const service = data.services.find(s => s.id === req.params.id);
+
+  if (!service) {
+    res.status(404).json({ ok: false, error: "service_not_found", message: `No service found with id '${req.params.id}'` });
+    return;
+  }
+
+  res.json({ ok: true, service });
 });
 
 export default router;

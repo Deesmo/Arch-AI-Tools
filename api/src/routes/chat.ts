@@ -39,15 +39,15 @@ About Arch Tools:
 - One API key gives access to: AI text generation, image generation, code analysis, web scraping, crypto data, DNS tools, QR codes, PDF generation, language translation, sentiment analysis, and much more
 
 Pricing:
-- Free tier: 250 credits on signup, refreshed monthly, no credit card required
+- Free tier: 100 credits on signup (10 instant, 90 on email verification), refreshed monthly, no credit card required
 - Credit packs and subscription plans are available — see archtools.dev/pricing for current pricing and credit amounts
-- Subscriptions: Starter $9/mo, Pro $49/mo, Business $149/mo (annual plans available at a discount)
+- Subscriptions: Starter $19/mo, Pro $49/mo, Growth $99/mo, Business $199/mo (annual plans available at a discount)
 - Referral program: refer a friend and earn 500 bonus credits when they sign up
 - Each tool costs between 1-50 credits per call (most are 5-10 credits)
 - BYOK (Bring Your Own Key): use your own API keys for AI providers to skip credit costs on AI tools
 
 Getting Started:
-1. Sign up at archtools.dev/signup — you get 250 free credits instantly
+1. Sign up at archtools.dev/signup — you get 10 free credits instantly, plus 90 more on email verification (100 total)
 2. Copy your API key from the dashboard
 3. Make API calls to any endpoint using Authorization: Bearer YOUR_KEY
 4. Base URL: https://archtools.dev/v1/tools/TOOL_NAME

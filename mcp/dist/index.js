@@ -6,6 +6,12 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { TOOL_SCHEMAS } from "./schemas.js";
 import express from "express";
+import { createRequire } from "node:module";
+// Version truth: single source = mcp/package.json. Every serverInfo site below
+// reads this constant so the reported version can never drift from the
+// published package / registry (root server.json) again.
+const requireJson = createRequire(import.meta.url);
+const SERVER_VERSION = requireJson("../package.json").version;
 const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
 const apiKey = process.env.ARCH_API_KEY || "";
 // ─── Anonymous demo limits ───────────────────────────────────────────────────
@@ -38,6 +44,21 @@ function checkAnonAllowance(ip) {
 const AUTH_REQUIRED_MESSAGE = JSON.stringify({
     error: "api_key_required",
     message: "Anonymous demo limit reached. Pass your Arch Tools API key via the `x-api-key` header (or `Authorization: Bearer <key>`) to continue. Get a free key with signup credits at https://archtools.dev/signup",
+    signup: "https://archtools.dev/signup",
+    docs: "https://archtools.dev/docs",
+}, null, 2);
+// Anonymous demo (no client key) may ONLY call cheap, local-compute tools that
+// do not hit paid upstream providers. Anything else requires the caller's own
+// API key — this prevents draining the platform ARCH_API_KEY on expensive
+// AI/media/search calls via IP rotation (H6).
+const ANON_ALLOWED_TOOLS = new Set([
+    "generate-hash", "generate-uuid", "qr-code", "barcode-generate",
+    "transform-text", "diff-text", "validate-data", "convert-format",
+    "jsonpath-query", "timezone-convert", "language-detect", "readability-score",
+]);
+const ANON_TOOL_BLOCKED_MESSAGE = JSON.stringify({
+    error: "api_key_required",
+    message: "This tool requires your own Arch Tools API key. Anonymous demo access is limited to free local utilities. Pass `x-api-key` or `Authorization: Bearer <key>`. Get a free key with signup credits at https://archtools.dev/signup",
     signup: "https://archtools.dev/signup",
     docs: "https://archtools.dev/docs",
 }, null, 2);
@@ -204,7 +225,7 @@ function getPromptMessages(name, args) {
 // ─── Server factory (low-level Server for full schema control) ───────────────
 // auth: per-session client API key (empty = anonymous demo) + IP for rate limiting.
 async function createServer(auth) {
-    const server = new Server({ name: "arch-tools-mcp", version: "1.8.0" }, {
+    const server = new Server({ name: "arch-tools-mcp", version: SERVER_VERSION }, {
         capabilities: {
             tools: { listChanged: false },
             resources: { listChanged: false },
@@ -220,6 +241,9 @@ async function createServer(auth) {
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // SSE sessions: enforce auth/demo limits. stdio (auth undefined) uses env key as before.
         if (auth && !auth.clientKey) {
+            if (!ANON_ALLOWED_TOOLS.has(request.params.name)) {
+                return { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true };
+            }
             const allowance = checkAnonAllowance(auth.ip);
             if (!allowance.allowed) {
                 return { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true };
@@ -275,7 +299,7 @@ async function handleStreamablePost(req, res) {
                 send({ jsonrpc: "2.0", id: body.id, result: {
                         protocolVersion: "2024-11-05",
                         capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
-                        serverInfo: { name: "arch-tools-mcp", version: "1.8.0" }
+                        serverInfo: { name: "arch-tools-mcp", version: SERVER_VERSION }
                     } });
                 break;
             case "notifications/initialized":
@@ -288,6 +312,10 @@ async function handleStreamablePost(req, res) {
             case "tools/call": {
                 const clientKey = extractClientKey(req);
                 if (!clientKey) {
+                    if (!ANON_ALLOWED_TOOLS.has(body.params?.name)) {
+                        send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true } });
+                        break;
+                    }
                     const allowance = checkAnonAllowance(clientIp(req));
                     if (!allowance.allowed) {
                         send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true } });
@@ -387,7 +415,7 @@ async function main() {
                 res.json({
                     serverInfo: {
                         name: "arch-tools-mcp",
-                        version: "1.8.0",
+                        version: SERVER_VERSION,
                         description: `${tools.length} production-ready API tools for AI agents: web scraping, AI generation (Claude/GPT-4/Grok/Gemini), OCR, image generation (DALL-E 3), audio transcription, text-to-speech, crypto data, email, domain check, and more. Pay via Stripe credits or autonomous x402 USDC.`
                     },
                     authentication: {

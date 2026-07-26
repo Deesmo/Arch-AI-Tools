@@ -57,6 +57,8 @@ import { analyticsMiddleware } from "./middleware/analytics.js";
 import analyticsRouter from "./routes/analytics.js";
 import statsRouter from "./routes/stats.js";
 
+import { reqId } from "./utils/credits.js";
+
 const app = express();
 const corsOrigins = config.corsOrigin
   .split(",")
@@ -154,6 +156,25 @@ app.use(globalLimiter);
 app.use("/webhooks/stripe", express.raw({ type: "application/json" }));
 
 app.use(express.json({ limit: "10mb" }));
+
+// ─── Malformed JSON body → 400 (not the generic 500) ─────────────────────────
+// express.json() (body-parser) reports an unparseable body by forwarding a
+// SyntaxError with { type: "entity.parse.failed", status: 400 }. Catch it here,
+// right after the parser, so clients get a clear 400; everything else falls
+// through to the generic error handler at the bottom of this file.
+app.use((err: Error & { type?: string; status?: number }, _req: Request, res: Response, next: NextFunction) => {
+  if (err?.type === "entity.parse.failed" || (err instanceof SyntaxError && err.status === 400)) {
+    res.status(400).json({
+      ok: false,
+      error: "invalid_json",
+      message: "Request body is not valid JSON",
+      request_id: reqId(),
+    });
+    return;
+  }
+  next(err);
+});
+
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
