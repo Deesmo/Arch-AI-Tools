@@ -1,4 +1,5 @@
 import { logger } from "./logger.js";
+import { oauthRefreshCutoff } from "./oauthTokens.js";
 import { prisma } from "./prisma.js";
 
 /**
@@ -19,12 +20,15 @@ export async function recordJobRun(
  */
 export async function cleanupExpiredOAuthRecords(): Promise<void> {
   const now = new Date();
+  // Tokens are only stale once the REFRESH token has outlived its TTL — deleting
+  // by the access token's 1h expiresAt would nuke still-valid refresh tokens (#13).
+  const refreshCutoff = oauthRefreshCutoff(now);
   try {
     const deletedCodes = await prisma.oAuthAuthCode.deleteMany({
       where: { expiresAt: { lt: now } },
     });
     const deletedTokens = await prisma.oAuthToken.deleteMany({
-      where: { expiresAt: { lt: now } },
+      where: { createdAt: { lte: refreshCutoff } },
     });
     logger.info(`[cleanup] Deleted ${deletedCodes.count} auth codes, ${deletedTokens.count} tokens`);
   } catch (e) {
