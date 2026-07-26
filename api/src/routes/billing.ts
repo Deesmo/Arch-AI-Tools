@@ -7,6 +7,7 @@ import { reqId } from "../utils/credits.js";
 import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
 import { safeErr } from "../utils/credits.js";
+import { tierFromSubscriptionPlanId } from "../lib/tiers.js";
 
 const router = Router();
 
@@ -327,7 +328,7 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         }
         await prisma.$transaction([
           prisma.purchase.create({ data: { agentId, stripeId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
-          prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: planId.replace(/-(monthly|annual)$/, '') } }),
+          prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: tierFromSubscriptionPlanId(planId) } }),
         ]);
         console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
         // Fire webhook event (non-blocking)
