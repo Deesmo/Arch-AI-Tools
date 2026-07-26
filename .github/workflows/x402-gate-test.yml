@@ -6,8 +6,9 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Run every hour to catch silent regressions
-    - cron: '0 * * * *'
+    # Was hourly — cut to every 90 min (two offset crons) after the July 2026 Actions minute-cap exhaustion (3,932/3,000 free min) killed all CI.
+    - cron: '0 0-21/3 * * *'
+    - cron: '30 1-22/3 * * *'
 
 jobs:
   x402-gate:
