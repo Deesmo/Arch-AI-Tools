@@ -5,6 +5,39 @@ import { fingerprintCaller } from "../lib/fingerprint.js";
 import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
 import { recordAgentCall, updateAgentReputation } from "../services/reputation.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
+import { classifyStatus } from "./statusClass.js";
+
+// ─── No-charge (empty-result) waiver ─────────────────────────────────────────
+// A tool handler that legitimately found nothing (e.g. a search with zero
+// results) can waive the charge so agents don't pay for nothing. The request
+// still finishes as a 200 SUCCESS row, but the up-front deduction is refunded
+// and creditsUsed is logged as 0.
+const WAIVE_FLAG = "archToolChargeWaived";
+const CHARGE_CTX = "archToolChargeContext";
+
+interface ChargeContext {
+  cost: number;
+  agent: { credits: number };
+}
+
+/**
+ * Waive the current request's credit charge (call before sending the 200
+ * response). No-op when the request was not charged via deductCredits
+ * (e.g. x402-paid — on-chain settlement cannot be refunded here).
+ */
+export function waiveCharge(res: Response): void {
+  const locals = res.locals as Record<string, unknown>;
+  locals[WAIVE_FLAG] = true;
+  const ctx = locals[CHARGE_CTX] as ChargeContext | undefined;
+  if (ctx && !res.headersSent) {
+    res.setHeader("X-Credits-Used", "0");
+    res.setHeader("X-Credits-Remaining", (ctx.agent.credits + ctx.cost).toString());
+  }
+}
+
+function isChargeWaived(res: Response): boolean {
+  return (res.locals as Record<string, unknown>)[WAIVE_FLAG] === true;
+}
 
 export async function deductCredits(
   req: AuthedRequest,
@@ -45,6 +78,7 @@ export async function deductCredits(
   }
 
   agent.credits -= cost;
+  (res.locals as Record<string, unknown>)[CHARGE_CTX] = { cost, agent } satisfies ChargeContext;
 
   res.setHeader("X-Credits-Remaining", agent.credits.toString());
   res.setHeader("X-Credits-Used", cost.toString());
@@ -60,12 +94,22 @@ export async function deductCredits(
     const succeeded = res.statusCode >= 200 && res.statusCode < 400;
     try {
       if (succeeded) {
+        // Empty-result waiver: the call succeeded but found nothing, so the
+        // handler asked us not to charge — refund the up-front deduction.
+        const waived = isChargeWaived(res);
+        if (waived) {
+          await prisma.agent.update({
+            where: { id: agent.id },
+            data: { credits: { increment: cost } },
+          });
+        }
+
         const fp = fingerprintCaller(req.headers["user-agent"]);
         await prisma.apiRequest.create({
           data: {
             agentId: agent.id,
             toolName,
-            creditsUsed: cost,
+            creditsUsed: waived ? 0 : cost,
             status: "SUCCESS",
             statusCode: res.statusCode,
             responseMs: Date.now() - requestStartMs,
@@ -140,7 +184,9 @@ export async function logError(
         agentId,
         toolName,
         creditsUsed: cost,
-        status: "ERROR",
+        // Three-way: 4xx = CLIENT_ERROR (caller condition), 5xx or no
+        // response = ERROR (real platform failure).
+        status: classifyStatus(statusCode),
         statusCode: statusCode ?? null,
         responseMs: responseMs ?? null,
       },

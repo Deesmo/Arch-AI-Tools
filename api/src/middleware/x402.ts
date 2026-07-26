@@ -19,6 +19,7 @@ import { prisma } from "../lib/prisma.js";
 import { config } from "../config.js";
 import { redis } from "../lib/redis.js";
 import { getBazaarExtension } from "./bazaarDiscovery.js";
+import { classifyStatus } from "../utils/statusClass.js";
 
 // x402scan output schema map — generated from openapi.json
 // Required by x402scan for resource registration ("Missing input schema" fix)
@@ -1260,7 +1261,8 @@ export function x402Middleware(toolName: string) {
             agentId: "x402_anonymous",
             toolName,
             creditsUsed: 0,
-            status: res.statusCode >= 200 && res.statusCode < 400 ? "SUCCESS" : "ERROR",
+            // Three-way: SUCCESS (<400) | CLIENT_ERROR (4xx) | ERROR (5xx)
+            status: classifyStatus(res.statusCode),
             statusCode: res.statusCode,
             responseMs: Date.now() - requestStartMs,
             callerType: "x402",

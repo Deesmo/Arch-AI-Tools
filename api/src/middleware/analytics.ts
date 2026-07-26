@@ -13,6 +13,7 @@
 import { Request, Response, NextFunction } from "express";
 import { redis } from "../lib/redis.js";
 import { sendSecurityAlert } from "../lib/alert.js";
+import { isPlatformError, isClientError } from "../utils/statusClass.js";
 
 // ─── Security Anomaly Detection (Discord alerts, fail-safe) ─────────────────
 // Thresholds are env-tunable; conservative defaults. All checks run inside a
@@ -499,6 +500,7 @@ export function getStatusPageData(): {
   total_calls_24h: number;
   unique_agents_24h: number;
   error_rate_24h: number;
+  client_error_rate_24h: number;
   active_endpoints: number;
 } {
   const now = Date.now();
@@ -507,7 +509,11 @@ export function getStatusPageData(): {
 
   const responseTimes = recent.map(m => m.responseMs).sort((a, b) => a - b);
   const totalCalls = recent.length;
-  const errors = recent.filter(m => m.statusCode >= 400).length;
+  // error_rate_24h counts PLATFORM errors only (>= 500). Caller conditions
+  // (402 out-of-credits, 404 no-result, 429 rate-limit) are reported
+  // separately as client_error_rate_24h — they don't mean we're broken.
+  const errors = recent.filter(m => isPlatformError(m.statusCode)).length;
+  const clientErrors = recent.filter(m => isClientError(m.statusCode)).length;
   const uniqueAgents = new Set(recent.filter(m => m.agentId).map(m => m.agentId)).size;
   const activeEndpoints = new Set(recent.map(m => m.endpoint)).size;
 
@@ -526,6 +532,7 @@ export function getStatusPageData(): {
     total_calls_24h: totalCalls,
     unique_agents_24h: uniqueAgents,
     error_rate_24h: totalCalls > 0 ? Math.round((errors / totalCalls) * 10000) / 100 : 0,
+    client_error_rate_24h: totalCalls > 0 ? Math.round((clientErrors / totalCalls) * 10000) / 100 : 0,
     active_endpoints: activeEndpoints,
   };
 }
