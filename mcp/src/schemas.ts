@@ -487,14 +487,6 @@ TOOL_SCHEMAS["session-message"] = {
   },
   required: ["session_id", "message"]
 };
-TOOL_SCHEMAS["social-post"] = {
-  type: "object",
-  properties: {
-    text: { type: "string", description: "Tweet text (max 280 characters)" },
-    reply_to: { type: "string", description: "Tweet ID to reply to (optional)" }
-  },
-  required: ["text"]
-};
 TOOL_SCHEMAS["video-generate"] = {
   type: "object",
   properties: {

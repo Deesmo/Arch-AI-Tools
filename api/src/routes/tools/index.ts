@@ -201,7 +201,6 @@ const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; star
   "webhook-send": { free: 10, pro: 50, starter: 50, business: 200 },
   "email-send": { free: 5, pro: 25, starter: 25, business: 100 },
   "send-email": { free: 5, pro: 25, starter: 25, business: 100 },
-  "social-post": { free: 3, pro: 15, starter: 15, business: 50 },
   "video-generate": { free: 3, pro: 20, starter: 20, business: 100 },
 };
 
@@ -3162,106 +3161,6 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
     const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", text: (r.text ?? "").slice(0, 1000), score: r.score ?? 0, published_date: r.publishedDate ?? null, author: r.author ?? null }));
     res.json({ ok: true, query, type, results, count: results.length, credits_used: 8, request_id: reqId() });
   } catch (e) { console.error("[semantic-search]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
-});
-
-// ─── 58. SOCIAL-POST (X/Twitter) ─────────────────────────────────────────────
-router.post("/social-post", ...toolMiddleware("social-post"), async (req: AuthedRequest, res: Response): Promise<void> => {
-  const paid = isX402Paid(req);
-  if (!paid) {
-    const withinLimit = await enforceDailyToolLimit(req, res, "social-post");
-    if (!withinLimit) return;
-    const ok = await deductCredits(req, res, "social-post", 5);
-    if (!ok) return;
-  }
-  const { text, reply_to } = req.body as { text?: string; reply_to?: string };
-  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
-  if (text.length > 280) { res.status(400).json({ ok: false, error: "invalid_request", message: "text must be 280 characters or less", request_id: reqId() }); return; }
-  const apiKey = process.env.X_API_KEY;
-  const apiSecret = process.env.X_API_SECRET;
-  const accessToken = process.env.X_ACCESS_TOKEN;
-  const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
-  const oauth2UserToken =
-    process.env.X_USER_ACCESS_TOKEN
-    ?? process.env.X_OAUTH2_USER_ACCESS_TOKEN
-    ?? (accessToken && !accessTokenSecret ? accessToken : undefined)
-    ?? undefined;
-  const hasOauth1 = !!(apiKey && apiSecret && accessToken && accessTokenSecret);
-  if (!oauth2UserToken && !hasOauth1) {
-    res.status(503).json({
-      ok: false,
-      error: "not_configured",
-      message: "X posting requires either X_USER_ACCESS_TOKEN/X_OAUTH2_USER_ACCESS_TOKEN (OAuth 2.0 user context) or OAuth 1.0a user tokens",
-      request_id: reqId()
-    }); return;
-  }
-  try {
-    const body: Record<string, unknown> = { text };
-    if (reply_to) body.reply = { in_reply_to_tweet_id: reply_to };
-    const url = "https://api.twitter.com/2/tweets";
-    const errors: string[] = [];
-    let data: { data?: { id?: string; text?: string } } | null = null;
-
-    if (oauth2UserToken) {
-      const bearerResp = await axios.post(url, body, {
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${oauth2UserToken}` },
-        timeout: 15000,
-        validateStatus: () => true,
-      });
-      if (bearerResp.status >= 200 && bearerResp.status < 300) {
-        data = bearerResp.data as { data?: { id?: string; text?: string } };
-      } else {
-        const err = typeof bearerResp.data === "string" ? bearerResp.data : JSON.stringify(bearerResp.data);
-        errors.push(`Bearer auth returned ${bearerResp.status}: ${err.slice(0, 300)}`);
-      }
-    }
-
-    if (!data && hasOauth1 && apiKey && apiSecret && accessToken && accessTokenSecret) {
-      const method = "POST";
-      const timestamp = Math.floor(Date.now() / 1000).toString();
-      const nonce = crypto.randomBytes(16).toString("hex");
-      const oauthParams: Record<string, string> = {
-        oauth_consumer_key: apiKey,
-        oauth_nonce: nonce,
-        oauth_signature_method: "HMAC-SHA1",
-        oauth_timestamp: timestamp,
-        oauth_token: accessToken,
-        oauth_version: "1.0",
-      };
-      const sortedParams = Object.entries(oauthParams).sort(([a], [b]) => a.localeCompare(b));
-      const paramString = sortedParams.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-      const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
-      const signingKey = `${apiSecret}&${accessTokenSecret}`;
-      const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
-      const authHeader = `OAuth oauth_consumer_key="${encodeURIComponent(apiKey)}", oauth_nonce="${encodeURIComponent(nonce)}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${timestamp}", oauth_token="${encodeURIComponent(accessToken)}", oauth_version="1.0"`;
-      const oauthResp = await axios.post(url, body, {
-        headers: { "Content-Type": "application/json", "Authorization": authHeader },
-        timeout: 15000,
-        validateStatus: () => true,
-      });
-      if (oauthResp.status >= 200 && oauthResp.status < 300) {
-        data = oauthResp.data as { data?: { id?: string; text?: string } };
-      } else {
-        const err = typeof oauthResp.data === "string" ? oauthResp.data : JSON.stringify(oauthResp.data);
-        errors.push(`OAuth 1.0a returned ${oauthResp.status}: ${err.slice(0, 300)}`);
-      }
-    }
-
-    if (!data) {
-      console.error("[social-post] X auth failed:", errors.join(" | "));
-      const authConfigError = errors.some(msg => /unsupported authentication|oauth1 app permissions/i.test(msg));
-      res.status(authConfigError ? 503 : 502).json({
-        ok: false,
-        error: authConfigError ? "not_configured" : "twitter_error",
-        message: authConfigError
-          ? "X posting is configured with unsupported auth. Use X_USER_ACCESS_TOKEN or X_OAUTH2_USER_ACCESS_TOKEN for OAuth 2.0 user context, or enable write permissions for your OAuth 1.0a app and regenerate the access token."
-          : (errors.join(" | ") || "X API post failed"),
-        request_id: reqId()
-      });
-      return;
-    }
-    const tweetId = data.data?.id ?? "";
-    res.json({ ok: true, tweet_id: tweetId, url: tweetId ? `https://x.com/i/web/status/${tweetId}` : "", text: data.data?.text ?? text, credits_used: 5, request_id: reqId() });
-  } catch (e) { console.error("[social-post]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
 // ─── wallet-balance ──────────────────────────────────────────────────────────

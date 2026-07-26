@@ -74,7 +74,7 @@ class ArchToolsAuthError(ArchToolsError):
     pass
 
 
-# ─── Tool catalog (all 64 tools) ─────────────────────────────────────────────
+# ─── Tool catalog (all 63 tools) ─────────────────────────────────────────────
 
 TOOL_NAMES: list[str] = [
     "validate-data", "generate-hash", "qr-code", "convert-format",
@@ -91,7 +91,7 @@ TOOL_NAMES: list[str] = [
     "session-create", "session-message", "text-to-speech", "transcribe-audio",
     "email-send", "design-create", "domain-check", "news-search",
     "research-report", "fact-check", "video-generate", "image-remove-bg",
-    "email-find", "semantic-search", "social-post",
+    "email-find", "semantic-search",
 ]
 
 

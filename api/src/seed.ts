@@ -55,7 +55,6 @@ const TOOLS = [
   // Communication tools
   { name: "email-send", description: "Send transactional emails via Resend — plain text or HTML", category: "communication", credits: 3 },
   { name: "email-find", description: "Find email address for a person at a company via Hunter.io", category: "communication", credits: 5 },
-  { name: "social-post", description: "Post a tweet to X/Twitter via API v2", category: "social", credits: 5 },
   // Image & design tools
   { name: "design-create", description: "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)", category: "media", credits: 30 },
   { name: "image-remove-bg", description: "Remove background from any image via RemoveBG", category: "media", credits: 350 },

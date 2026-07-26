@@ -1,6 +1,6 @@
 # Arch AI Tools
 
-**64 production-ready API tools for AI agents** — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation (DALL-E 3), audio transcription, text-to-speech, email, domain lookup, and more.
+**63 production-ready API tools for AI agents** — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation (DALL-E 3), audio transcription, text-to-speech, email, domain lookup, and more.
 
 [![Smithery](https://smithery.ai/badge/mcmetaverse/arch-tools)](https://smithery.ai/server/mcmetaverse/arch-tools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -62,7 +62,7 @@ No installation required — works with any MCP-compatible client that supports 
 
 ---
 
-## All 64 Tools
+## All 63 Tools
 
 ### 🤖 AI & Generation
 | Tool | Description | Credits |
@@ -139,7 +139,6 @@ No installation required — works with any MCP-compatible client that supports 
 | `email-send` | Transactional email via Resend | 3 |
 | `email-verify` | Deep validation: syntax, MX, disposable detection | 3 |
 | `email-find` | Find email for a person at a company via Hunter.io | 5 |
-| `social-post` | Post a tweet to X/Twitter via API v2 | 5 |
 
 ### 🔍 Lookup & Validation
 | Tool | Description | Credits |

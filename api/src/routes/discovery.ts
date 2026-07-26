@@ -354,7 +354,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   res.json({
     name: "Arch Tools",
-    description: "The first API platform built for autonomous agent payments. 64 production tools, USDC on 15+ chains via x402 or Stripe.",
+    description: "The first API platform built for autonomous agent payments. 63 production tools, USDC on 15+ chains via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
     version: "1",
@@ -518,7 +518,7 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
     res.json({
       ok: true,
       name: "Arch Tools",
-      description: "64 production-ready API tools for AI agents. Pay with API key or USDC (x402).",
+      description: "63 production-ready API tools for AI agents. Pay with API key or USDC (x402).",
       version: "1.10.0",
       baseUrl: API_BASE,
       tools: toolList,
@@ -570,7 +570,7 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
     res.json({
       ok: true,
       name: "Arch Tools",
-      description: "64 production-ready API tools for AI agents.",
+      description: "63 production-ready API tools for AI agents.",
       version: "1.10.0",
       baseUrl: API_BASE,
       tools: toolList,
@@ -642,12 +642,11 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   "image-remove-bg": "Remove background from any image via RemoveBG",
   "email-find": "Find email address for a person at a company via Hunter.io",
   "semantic-search": "Neural/semantic web search via Exa AI",
-  "social-post": "Post a tweet to X/Twitter via API v2",
 };
 
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 64 production-ready tools. One key. USDC on 15+ chains via x402 or Stripe.
+> 63 production-ready tools. One key. USDC on 15+ chains via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
@@ -672,7 +671,7 @@ Tools cost credits per call. Credits never expire. Non-transferable.
   Pro Pack:       25,000 credits — $49    ($0.00196/credit)
   Business Pack: 125,000 credits — $199   ($0.00159/credit)
 
-## All Tools (64 total)
+## All Tools (63 total)
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20+ credits, scales w/ max_tokens) — Text generation via Claude Sonnet
@@ -699,7 +698,6 @@ POST /v1/tools/design-create        (30 credits) — Generate images from text p
 POST /v1/tools/image-remove-bg      (350 credits) — Remove background from any image via RemoveBG
 
 ### Social & Communication
-POST /v1/tools/social-post          (5 credits)  — Post a tweet to X/Twitter
 POST /v1/tools/email-send           (3 credits)  — Send transactional emails via Resend
 POST /v1/tools/email-find           (5 credits)  — Find email address for a person at a company via Hunter.io
 
@@ -791,8 +789,8 @@ const OPENAPI_STUB = {
 const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
   name,
   description,
-  credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 25, "transcribe-audio": 25, "email-send": 3, "design-create": 30, "domain-check": 2, "ai-oracle": 25, "session-create": 5, "session-message": 20, "news-search": 3, "research-report": 40, "fact-check": 10, "video-generate": 500, "image-remove-bg": 350, "email-find": 5, "semantic-search": 8, "social-post": 5 }).find(([k]) => k === name)?.[1] ?? 5,
-  category: ["ai-generate","ocr-extract","sentiment-analysis","summarize","extract-entities","regex-generate","pii-detect","web-search","language-detect","ai-oracle","session-create","session-message","research-report","fact-check","semantic-search","workflow-agent"].includes(name) ? "ai" : ["web-scrape","search-web","extract-page","browser-task","rss-parse","news-search"].includes(name) ? "web" : ["video-generate","design-create","image-remove-bg","text-to-speech","transcribe-audio","image-generate","generate-image"].includes(name) ? "media" : ["social-post","email-send","email-find"].includes(name) ? "communication" : ["crypto-price","crypto-market-cap","crypto-ohlcv","crypto-sentiment","crypto-news","crypto-fear-greed","token-lookup"].includes(name) ? "crypto" : "utility",
+  credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 25, "transcribe-audio": 25, "email-send": 3, "design-create": 30, "domain-check": 2, "ai-oracle": 25, "session-create": 5, "session-message": 20, "news-search": 3, "research-report": 40, "fact-check": 10, "video-generate": 500, "image-remove-bg": 350, "email-find": 5, "semantic-search": 8 }).find(([k]) => k === name)?.[1] ?? 5,
+  category: ["ai-generate","ocr-extract","sentiment-analysis","summarize","extract-entities","regex-generate","pii-detect","web-search","language-detect","ai-oracle","session-create","session-message","research-report","fact-check","semantic-search","workflow-agent"].includes(name) ? "ai" : ["web-scrape","search-web","extract-page","browser-task","rss-parse","news-search"].includes(name) ? "web" : ["video-generate","design-create","image-remove-bg","text-to-speech","transcribe-audio","image-generate","generate-image"].includes(name) ? "media" : ["email-send","email-find"].includes(name) ? "communication" : ["crypto-price","crypto-market-cap","crypto-ohlcv","crypto-sentiment","crypto-news","crypto-fear-greed","token-lookup"].includes(name) ? "crypto" : "utility",
   active: true,
   endpoint: `/v1/tools/${name}`,
   method: "POST",

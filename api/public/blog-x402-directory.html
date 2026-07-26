@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>How We Built the First x402 Service Directory — Arch Tools</title>
-  <meta name="description" content="The first comprehensive catalog of x402-enabled APIs. Search 64 AI tools by category, chain, or price. Machine-readable API included. List your service today.">
+  <meta name="description" content="The first comprehensive catalog of x402-enabled APIs. Search 63 AI tools by category, chain, or price. Machine-readable API included. List your service today.">
   <meta name="keywords" content="x402, API marketplace, AI tools, crypto payments, Coinbase, x402 directory, service catalog, micropayments, USDC, agent payments, agentic commerce">
   <meta property="og:title" content="How We Built the First x402 Service Directory">
-  <meta property="og:description" content="No one had built a catalog for x402 services. So we built one — 64 AI tools, 15+ chains, machine-readable API, open submissions. Here's how.">
+  <meta property="og:description" content="No one had built a catalog for x402 services. So we built one — 63 AI tools, 15+ chains, machine-readable API, open submissions. Here's how.">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://archtools.dev/blog/x402-directory">
   <meta property="og:image" content="https://archtools.dev/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="How We Built the First x402 Service Directory">
-  <meta name="twitter:description" content="The first comprehensive catalog of x402-enabled APIs. 64 tools, 15+ chains, machine-readable API.">
+  <meta name="twitter:description" content="The first comprehensive catalog of x402-enabled APIs. 63 tools, 15+ chains, machine-readable API.">
   <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
   <link rel="canonical" href="https://archtools.dev/blog/x402-directory">
   <script type="application/ld+json">
@@ -102,7 +102,7 @@
 
     <p>The x402 protocol lets AI agents pay for API calls with crypto — no credit card, no subscription, no human in the loop. Coinbase built the protocol. Developers started building services. But nobody built the directory.</p>
 
-    <p>We just shipped it. <a href="/directory.html">The x402 Service Directory</a> is the first comprehensive catalog of x402-enabled APIs — <strong>64 tools</strong> across <strong>15+ chains</strong>, searchable by category, network, and price. With a machine-readable API so your agents can discover services programmatically.</p>
+    <p>We just shipped it. <a href="/directory.html">The x402 Service Directory</a> is the first comprehensive catalog of x402-enabled APIs — <strong>63 tools</strong> across <strong>15+ chains</strong>, searchable by category, network, and price. With a machine-readable API so your agents can discover services programmatically.</p>
 
     <div class="stat-grid">
       <div class="stat-card">
@@ -155,7 +155,7 @@
 
     <div class="callout">
       <strong>For Developers (the UI)</strong><br><br>
-      Browse all 64 tools with filtering by category (AI, scraping, crypto, utilities), chain support, token type, and price range. Each listing shows endpoint, pricing, supported networks, and a direct link to test it in the <a href="/playground.html">x402 Playground</a>.
+      Browse all 63 tools with filtering by category (AI, scraping, crypto, utilities), chain support, token type, and price range. Each listing shows endpoint, pricing, supported networks, and a direct link to test it in the <a href="/playground.html">x402 Playground</a>.
     </div>
 
     <div class="callout-green">
@@ -186,7 +186,7 @@ curl https://archtools.dev/api/v1/directory
     },
     ...
   ],
-  "total": 64,
+  "total": 63,
   "updated": "2026-03-17T00:00:00Z"
 }</span>
 
@@ -205,7 +205,7 @@ curl https://archtools.dev/api/v1/directory?max_price=0.005</code></pre>
     <p>Beyond the directory, we shipped a complete x402 integration layer:</p>
 
     <h3>1. Coinbase x402 SDK Integration</h3>
-    <p>Every one of our 64 tools accepts x402 payments using the official <code>@x402/express</code> SDK from Coinbase. The middleware handles payment verification, on-chain settlement, and receipt generation. We didn't roll our own — we use the standard.</p>
+    <p>Every one of our 63 tools accepts x402 payments using the official <code>@x402/express</code> SDK from Coinbase. The middleware handles payment verification, on-chain settlement, and receipt generation. We didn't roll our own — we use the standard.</p>
 
     <h3>2. Agent Wallet Funding Page</h3>
     <p>The <a href="/fund.html">funding page</a> lets agent operators load USDC into their agent's wallet. Connect via WalletConnect, MetaMask, or Coinbase Wallet. Pick a network. Fund and go. Your agent can start calling APIs in minutes.</p>
@@ -301,7 +301,7 @@ curl https://archtools.dev/api/v1/directory?max_price=0.005</code></pre>
     <p>Everything is live. No waitlist.</p>
 
     <ul>
-      <li><strong><a href="/directory.html">Browse the Directory</a></strong> — Search all 64 Arch Tools</li>
+      <li><strong><a href="/directory.html">Browse the Directory</a></strong> — Search all 63 Arch Tools</li>
       <li><strong><a href="/playground.html">Try the Playground</a></strong> — Make a real x402 payment and see it work</li>
       <li><strong><a href="/fund.html">Fund an Agent Wallet</a></strong> — Load USDC and start calling APIs</li>
       <li><strong><a href="/docs-x402-guide.html">Integration Guide</a></strong> — Add x402 payments to your API in 5 minutes</li>

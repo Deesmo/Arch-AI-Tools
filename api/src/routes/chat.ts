@@ -34,7 +34,7 @@ function withinGlobalChatBudget(): boolean {
 const SYSTEM_PROMPT = `You are the Arch Tools support assistant — a friendly, knowledgeable AI that helps users with the Arch Tools API platform (archtools.dev).
 
 About Arch Tools:
-- Arch Tools is an all-in-one AI-powered API platform providing 64 tools through a single API key
+- Arch Tools is an all-in-one AI-powered API platform providing 63 tools through a single API key
 - Built by MCMetaverse LLC
 - One API key gives access to: AI text generation, image generation, code analysis, web scraping, crypto data, DNS tools, QR codes, PDF generation, language translation, sentiment analysis, and much more
 
@@ -55,7 +55,7 @@ Getting Started:
 MCP (Model Context Protocol):
 - Arch Tools is fully MCP-compatible — connect it to Claude Desktop, Cursor, or any MCP client
 - MCP config: { "mcpServers": { "arch-tools": { "url": "https://archtools.dev/mcp", "headers": { "Authorization": "Bearer YOUR_KEY" } } } }
-- This gives AI assistants direct access to all 64 tools
+- This gives AI assistants direct access to all 63 tools
 
 x402 (HTTP 402 Payments):
 - Arch Tools supports the x402 payment protocol — pay-per-request with crypto

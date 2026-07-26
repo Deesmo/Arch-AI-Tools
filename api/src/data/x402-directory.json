@@ -3,7 +3,7 @@
     {
       "id": "arch-tools",
       "name": "Arch Tools",
-      "description": "The first API platform built for autonomous agent payments. 64 production-ready tools spanning AI, web scraping, crypto, media, validation, and more.",
+      "description": "The first API platform built for autonomous agent payments. 63 production-ready tools spanning AI, web scraping, crypto, media, validation, and more.",
       "base_url": "https://archtools.dev",
       "website_url": "https://archtools.dev",
       "logo_url": "https://archtools.dev/arch-icon.svg",
@@ -52,7 +52,7 @@
         "min": "$0.001",
         "max": "$0.10"
       },
-      "total_endpoints": 64,
+      "total_endpoints": 63,
       "endpoints": [
         {
           "path": "/v1/tools/ai-generate",
@@ -143,7 +143,7 @@
   ],
   "meta": {
     "total_services": 1,
-    "total_endpoints": 64,
+    "total_endpoints": 63,
     "total_chains": 18,
     "last_updated": "2026-03-17T00:00:00Z",
     "version": "2.0.0"

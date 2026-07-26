@@ -27,7 +27,7 @@
 {"@type": "HowToStep", "name": "Get an API Key", "text": "Register at archtools.dev and get your API key with 100 free credits"},
       {"@type": "HowToStep", "name": "Replace SDK", "text": "Swap skyfire-seller-sdk-node with a simple fetch call to Arch Tools endpoints"},
       {"@type": "HowToStep", "name": "Update Payment Flow", "text": "Switch from KYAPay JWT tokens to x402 payment headers or API key auth"},
-      {"@type": "HowToStep", "name": "Test", "text": "Run your agent against Arch Tools — 64 tools available immediately"}
+      {"@type": "HowToStep", "name": "Test", "text": "Run your agent against Arch Tools — 63 tools available immediately"}
     ]
   }
   </script>
@@ -160,7 +160,7 @@
       1. <a href="/#register" style="color:var(--green);">Get an Arch Tools API key</a> (free, 100 credits included)<br>
       2. Replace Skyfire SDK calls with simple <code>fetch()</code> to <code>archtools.dev/v1/tools/*</code><br>
       3. For autonomous agent payments: use x402 headers instead of KYAPay tokens<br><br>
-      That's it. 64 tools available immediately. No wallet setup, no KYA registration, no USDC pre-loading.
+      That's it. 63 tools available immediately. No wallet setup, no KYA registration, no USDC pre-loading.
     </div>
 
     <!-- COMPARISON TABLE -->
@@ -185,7 +185,7 @@
         <tr>
           <td class="feature">Available Tools</td>
           <td><span class="cross">0 — payment network only</span></td>
-          <td><span class="check">64 tools (web scrape, AI generate, crypto, email, etc.)</span></td>
+          <td><span class="check">63 tools (web scrape, AI generate, crypto, email, etc.)</span></td>
         </tr>
         <tr>
           <td class="feature">Payment Protocol</td>
@@ -220,7 +220,7 @@
         <tr>
           <td class="feature">MCP Support</td>
           <td><span class="partial">Demo only</span></td>
-          <td><span class="check">Full MCP server — all 64 tools in Claude Desktop, Cursor, etc.</span></td>
+          <td><span class="check">Full MCP server — all 63 tools in Claude Desktop, Cursor, etc.</span></td>
         </tr>
         <tr>
           <td class="feature">Open Source</td>
@@ -318,7 +318,7 @@
 
       <div class="timeline-step">
         <h4><span class="step-num">5</span> Test and Ship</h4>
-        <p>Hit any endpoint with your API key and verify it works. All 64 tools are available immediately — no per-tool signup. Your agent is live.</p>
+        <p>Hit any endpoint with your API key and verify it works. All 63 tools are available immediately — no per-tool signup. Your agent is live.</p>
       </div>
     </div>
 
@@ -393,7 +393,7 @@ const data = await response.json();
 // { output: "Here's the latest...", paid_via: "x402", receipt: "0x..." }</span></code></pre>
 
     <h3>MCP Setup (Claude Desktop / Cursor / Windsurf)</h3>
-    <pre><code><span class="comment">// Add to your MCP config — all 64 tools appear instantly</span>
+    <pre><code><span class="comment">// Add to your MCP config — all 63 tools appear instantly</span>
 <span class="add">{
   "mcpServers": {
     "arch-tools": {
@@ -410,7 +410,7 @@ const data = await response.json();
 
     <div class="callout-green callout">
       <strong>🛠️ 64 Ready-to-Use Tools</strong><br>
-      Skyfire was a payment rail — you still had to build or find the services to pay for. Arch Tools is tools <em>and</em> payments in one. Web scrape, AI text generation (Claude, GPT-4, Grok, Gemini), crypto prices, email, PDF parsing, fact-checking, domain lookup — 64 tools behind a single API key.
+      Skyfire was a payment rail — you still had to build or find the services to pay for. Arch Tools is tools <em>and</em> payments in one. Web scrape, AI text generation (Claude, GPT-4, Grok, Gemini), crypto prices, email, PDF parsing, fact-checking, domain lookup — 63 tools behind a single API key.
     </div>
 
     <div class="callout-green callout">
@@ -449,7 +449,7 @@ const data = await response.json();
     <p>You don't need one — it's a REST API. <code>fetch()</code> or <code>curl</code> is all you need. For MCP users, install the MCP server config and all tools appear natively in Claude Desktop, Cursor, and Windsurf.</p>
 
     <h3>What tools are available?</h3>
-    <p>64 production-ready tools. Check the full <a href="/directory" style="color:var(--purple);">tool directory</a> — categories include AI generation, web scraping, crypto, file conversion, security, email, and more.</p>
+    <p>63 production-ready tools. Check the full <a href="/directory" style="color:var(--purple);">tool directory</a> — categories include AI generation, web scraping, crypto, file conversion, security, email, and more.</p>
 
     <h3>Is there a free tier?</h3>
 <p>Yes — every account gets 100 free credits on signup. No credit card required. That's enough to try dozens of tools before buying more.</p>
@@ -459,7 +459,7 @@ const data = await response.json();
 <div class="wrap">
   <div class="cta-section">
     <h2>Ready to switch?</h2>
-<p>Get your API key, 100 free credits, and access to all 64 tools — in 30 seconds.</p>
+<p>Get your API key, 100 free credits, and access to all 63 tools — in 30 seconds.</p>
     <a class="btn" href="/#register">$ get-api-key →</a>
     <a class="btn-ghost" href="/directory">Browse Tools</a>
   </div>
