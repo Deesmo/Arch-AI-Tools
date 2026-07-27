@@ -6,6 +6,7 @@ import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
+import { applyModelCost } from "../../lib/modelCost.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
 import crypto from "crypto";
@@ -1189,7 +1190,16 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000.
     const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
     let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
-    if (byokProvider) aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
+    if (byokProvider) {
+      // BYOK: the caller pays the model's inference cost themselves, so our credit
+      // charge is flat platform overhead — do NOT scale it by the model (council
+      // finding 2026-07-27: multiplying then discounting distorts the BYOK fee).
+      aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
+    } else {
+      // Scale by the selected model's real cost (Opus ≈ 2×, Haiku ≈ 0.4× vs the
+      // Sonnet-tuned base) so an expensive model isn't served at a cheap price.
+      aiGenCost = applyModelCost(aiGenCost, model);
+    }
     const ok = await deductCredits(req, res, "ai-generate", aiGenCost);
     if (!ok) return;
   }
@@ -1776,7 +1786,10 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
 
   const paid = isX402Paid(req);
   if (!paid && !oracleHasByok) {
-    const ok = await deductCredits(req, res, "ai-oracle", 25);
+    // deep mode runs Opus (≈2× the Sonnet-tuned base); standard runs Sonnet (1×).
+    const oracleModelForCost = (req.body as { reasoning_depth?: string })?.reasoning_depth === "deep"
+      ? "claude-opus-4-6" : "claude-sonnet-4-6";
+    const ok = await deductCredits(req, res, "ai-oracle", applyModelCost(25, oracleModelForCost));
     if (!ok) return;
   }
   const { question, context: oracleContext, reasoning_depth = "standard" } = req.body as {
