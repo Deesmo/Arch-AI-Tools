@@ -5,6 +5,7 @@
  * Run: node api/tests/billing-helpers.test.mjs (after npm run build)
  */
 process.env.DATABASE_URL ??= "postgresql://stub:stub@127.0.0.1:5432/stub";
+process.env.JWT_SECRET ??= "test-secret-for-billing-helper-import";
 
 const { paymentIntentIdFromCheckoutSession } = await import("../dist/routes/billing.js");
 
