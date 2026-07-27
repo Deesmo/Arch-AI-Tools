@@ -1100,7 +1100,7 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       finalPayloadSettle = {
         ...v1PayloadSettle,
         ...((paymentRequirements as any).resource ? { resource: (paymentRequirements as any).resource } : {}),
-        ...(bazaarBlock ? { extensions: { bazaar: bazaarBlock } } : {}),
+        ...(bazaarBlock ? { extensions: bazaarBlock.extensions } : {}),
       };
       finalPaymentReqsSettle = toV1Requirements(paymentRequirements);
     } else if (isCdpSettle) {
