@@ -65,12 +65,17 @@ export async function requireAuth(
       }
     } else {
       // Standard API key — plaintext keys are no longer stored. Lookup by the
-      // first 12-char prefix (fast indexed scan), then bcrypt.compare the full key.
+      // first 12-char prefix (fast indexed scan), then bcrypt.compare the full
+      // key. Multiple accounts CAN share a 12-char prefix; findFirst would only
+      // ever check one, silently locking out every other holder of a colliding
+      // prefix. Check ALL candidates so the real key always authenticates.
       const prefix = apiKey.slice(0, 12);
-      const candidate = await prisma.agent.findFirst({ where: { apiKeyPrefix: prefix } });
-      if (candidate?.apiKeyHash) {
-        const match = await bcrypt.compare(apiKey, candidate.apiKeyHash);
-        agent = match ? candidate : null;
+      const candidates = await prisma.agent.findMany({ where: { apiKeyPrefix: prefix } });
+      for (const candidate of candidates) {
+        if (candidate.apiKeyHash && await bcrypt.compare(apiKey, candidate.apiKeyHash)) {
+          agent = candidate;
+          break;
+        }
       }
     }
 
