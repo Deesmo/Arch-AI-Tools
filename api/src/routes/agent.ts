@@ -362,3 +362,72 @@ router.delete("/keys/:prefix", requireAuth, requireApiKeyAuth, async (req: Authe
     res.status(500).json({ ok: false, error: "key_revocation_failed", message: safeErr(err), request_id: reqId() });
   }
 });
+
+// ─── DELETE /v1/agent — GDPR Art.17 / CCPA account deletion ──────────────────
+// Backs the deletion right promised on the privacy page. Requires the full API key
+// (requireApiKeyAuth blocks OAuth-scoped tokens from destroying an account) plus an
+// explicit confirmation so it can't fire by accident. Erases all PII + usage logs;
+// retains ANONYMIZED financial rows (Purchase / X402Payment) under the GDPR Art.17(3)
+// legal-obligation exemption (tax/accounting). Verified 2026-07-27: those tables hold
+// NO personal data — Purchase = {agentId, stripeId, paymentIntentId, credits, amount,
+// status}; X402Payment = {agentId, toolName, amountUsdc, txHash, network} (card/address
+// live only in Stripe, a separate processor with its own deletion; txHash is public
+// on-chain). requireApiKeyAuth blocks OAuth-scoped tokens (auth.ts) so only the account
+// holder's real API key can trigger this.
+router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+  const agent = req.agent;
+  if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
+  // Body-only confirmation (not a query param — query strings leak into access logs).
+  const confirm = (req.body as { confirm?: string })?.confirm;
+  if (confirm !== "DELETE") {
+    res.status(400).json({
+      ok: false,
+      error: "confirmation_required",
+      message: "Account deletion is permanent. Re-send with body {\"confirm\":\"DELETE\"} to proceed. This erases your profile, keys, and usage history. Financial records are retained in anonymized form as required by tax law.",
+      request_id: reqId(),
+    });
+    return;
+  }
+
+  try {
+    const email = agent.email ?? "";
+    const result = await prisma.$transaction(async (tx) => {
+      const reqs = await tx.apiRequest.deleteMany({ where: { agentId: agent.id } });
+      const toks = await tx.oAuthToken.deleteMany({ where: { agentId: agent.id } });
+      const codes = await tx.oAuthAuthCode.deleteMany({ where: { agentId: agent.id } });
+      // Erase the email suppression record so no plaintext email remains (GDPR erasure
+      // wins over the bounded free-signup-again risk).
+      const ident = email ? await tx.signupIdentity.deleteMany({ where: { normalizedEmail: email.toLowerCase().trim() } }) : { count: 0 };
+      // Anonymize the Agent row in place — keeps Purchase/X402Payment FK integrity for
+      // financial retention while removing every PII field.
+      await tx.agent.update({
+        where: { id: agent.id },
+        data: {
+          email: `deleted-${agent.id}@deleted.invalid`,
+          name: null, description: null,
+          apiKeyHash: null, apiKeyPrefix: null, passwordHash: null,
+          resetToken: null, resetTokenExpiry: null,
+          verifyToken: null, verifyTokenExpiry: null,
+          walletAddress: null, callbackUrl: null,
+          credits: 0, pendingCredits: 0,
+          emailVerified: false, isPublic: false,
+        },
+      });
+      return { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count };
+    });
+
+    // Audit log (no PII — id + counts only). Serves as the deletion record until a
+    // dedicated DataDeletionAudit table is added.
+    logger.info(`[gdpr] account deleted agent=${agent.id} erased=${JSON.stringify(result)} at=${new Date().toISOString()}`);
+
+    res.json({
+      ok: true,
+      message: "Account deleted. Your profile, API keys, OAuth grants, and usage history have been erased. Anonymized financial records are retained as required by tax law. This cannot be undone.",
+      erased: result,
+      retained: "anonymized purchase/payment records (tax/accounting compliance — no personal data)",
+      request_id: reqId(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: "account_deletion_failed", message: safeErr(err), request_id: reqId() });
+  }
+});
