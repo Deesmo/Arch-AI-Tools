@@ -6,7 +6,7 @@ import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
-import { applyModelCost } from "../../lib/modelCost.js";
+import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
 import crypto from "crypto";
@@ -1160,8 +1160,20 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     "grok": "grok-3",
   };
   const requestedModel = explicitModel ? (MODEL_ALIASES[explicitModel.toLowerCase()] ?? explicitModel) : undefined;
-  const model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
+  let model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
   const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
+
+  // x402 flat pricing gap (council finding 2026-07-27): the flat x402 price for
+  // this tool ($0.040) covers the standard Sonnet-tier cost, but the 402 challenge
+  // is generated before the model is known, so an x402 caller could otherwise get
+  // a premium model (Opus ≈ 2× cost) at the flat price. Pin x402-paid calls to the
+  // default model; premium models require the credits/subscription path (which
+  // prices per-model via applyModelCost). NOT when the caller brought their own key
+  // (BYOK pays its own inference, so the model choice costs the platform nothing).
+  const anyByokKey = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey);
+  if (paid && !anyByokKey && modelCostMultiplier(model) > 1.0) {
+    model = AI_MODE_PRESETS.smart; // claude-sonnet-4-6
+  }
 
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
   const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
@@ -1813,7 +1825,12 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   }
 
   const systemPrompt = "You are an expert analyst. Think step by step. Provide structured analysis with confidence levels. Always respond with valid JSON only, no markdown fences. Use this exact structure: {\"analysis\": \"<detailed analysis>\", \"confidence\": \"high\" | \"medium\" | \"low\"}";
-  const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
+  // x402 flat pricing gap (council finding 2026-07-27): the flat x402 price ($0.025)
+  // covers the standard (Sonnet) depth; "deep" runs Opus (≈2× cost). Pin x402-paid
+  // calls to standard so the flat price matches what's served; deep requires the
+  // credits path (which charges applyModelCost(25, opus) = 50). Credits path unaffected.
+  const effectiveDepth = paid && !oracleHasByok && reasoning_depth === "deep" ? "standard" : reasoning_depth;
+  const maxTokens = effectiveDepth === "deep" ? 4096 : 2048;
 
   // Try Claude Opus first (most capable reasoning), then GPT-4o. When a caller
   // supplies BYOK headers, stay in BYOK mode; never fall through to platform
@@ -1821,7 +1838,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   const providers: Array<{ name: string; byok: boolean; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
 
   if (oraclByokAnthropicKey || (!oracleHasByok && getAnthropic())) {
-    const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
+    const oracleModel = effectiveDepth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
     const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
     providers.push({
       name: "anthropic",
