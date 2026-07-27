@@ -131,6 +131,26 @@ function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
 }
 
+// ─── email recipient anti-abuse (CAN-SPAM) ───────────────────────────────────
+// Per-recipient daily send cap, independent of the per-agent limit, so one address
+// can't be spammed via many accounts. In-memory + per-instance (resets daily / on
+// restart) — a deliberate first control; a shared Redis-backed counter can replace it.
+export const EMAIL_RECIPIENT_DAILY_CAP = Number(process.env.EMAIL_RECIPIENT_DAILY_CAP || 10);
+const _emailRecipCounts = new Map<string, number>();
+let _emailRecipDay = "";
+function recipientHash(recipient: string): string {
+  return crypto.createHash("sha256").update(recipient).digest("hex").slice(0, 16);
+}
+function emailRecipientGate(recipient: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== _emailRecipDay) { _emailRecipCounts.clear(); _emailRecipDay = today; }
+  const key = recipientHash(recipient);
+  const used = _emailRecipCounts.get(key) || 0;
+  if (used >= EMAIL_RECIPIENT_DAILY_CAP) return false;
+  _emailRecipCounts.set(key, used + 1);
+  return true;
+}
+
 function normalizeCdpTokenId(tokenId: unknown): string | null {
   if (tokenId === null || tokenId === undefined) return null;
   const cleaned = String(tokenId).trim();
@@ -2356,6 +2376,18 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
   if (!to.includes("@")) { res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return; }
   if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
   if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
+  // CAN-SPAM / anti-abuse (legal audit 2026-07-27): the per-agent daily limit doesn't
+  // stop one address being hammered across many agents. Cap sends per RECIPIENT and log
+  // every send (hashed recipient + agent) for an abuse trail. In-memory + per-instance
+  // is a reasonable first control; a shared store can back it later.
+  {
+    const recip = to.toLowerCase().trim();
+    if (!emailRecipientGate(recip)) {
+      res.status(429).json({ ok: false, error: "recipient_rate_limited", message: `This recipient has received the maximum ${EMAIL_RECIPIENT_DAILY_CAP} messages today via Arch Tools — a limit that protects against spam (CAN-SPAM).`, request_id: reqId() });
+      return;
+    }
+    console.info(`[email-send] agent=${req.agent?.id ?? "?"} recipient_hash=${recipientHash(recip)} at=${new Date().toISOString()}`);
+  }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return; }
   try {
@@ -2396,6 +2428,18 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
   }
   if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
   if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
+  // CAN-SPAM / anti-abuse (legal audit 2026-07-27): the per-agent daily limit doesn't
+  // stop one address being hammered across many agents. Cap sends per RECIPIENT and log
+  // every send (hashed recipient + agent) for an abuse trail. In-memory + per-instance
+  // is a reasonable first control; a shared store can back it later.
+  {
+    const recip = to.toLowerCase().trim();
+    if (!emailRecipientGate(recip)) {
+      res.status(429).json({ ok: false, error: "recipient_rate_limited", message: `This recipient has received the maximum ${EMAIL_RECIPIENT_DAILY_CAP} messages today via Arch Tools — a limit that protects against spam (CAN-SPAM).`, request_id: reqId() });
+      return;
+    }
+    console.info(`[email-send] agent=${req.agent?.id ?? "?"} recipient_hash=${recipientHash(recip)} at=${new Date().toISOString()}`);
+  }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
     res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return;
