@@ -10,7 +10,7 @@
  */
 process.env.DATABASE_URL ??= "postgresql://stub:stub@127.0.0.1:5432/stub";
 
-const { clawbackAmount } = await import("../dist/lib/clawback.js");
+const { clawbackAmount, clawbackDelta, proratedClawbackTarget } = await import("../dist/lib/clawback.js");
 
 let passed = 0;
 let failed = 0;
@@ -35,6 +35,15 @@ assert(clawbackAmount(NaN, 100) === 0, "NaN grant → 0");
 assert(clawbackAmount(100, NaN) === 0, "NaN balance → 0");
 // Fractional inputs are truncated (credits are integers).
 assert(clawbackAmount(100.9, 50.9) === 50, "fractional inputs truncated to integer credits");
+
+console.log("\nPartial refunds — cumulative target and delta:");
+assert(proratedClawbackTarget(3000, 900, 300) === 1000, "one-third refund targets one-third of granted credits");
+assert(proratedClawbackTarget(3000, 900, 450) === 1500, "half refund targets half of granted credits");
+assert(proratedClawbackTarget(3000, 900, 1200) === 3000, "over-refund is capped at full grant");
+assert(proratedClawbackTarget(3000, 0, 100) === 0, "missing purchase amount cannot prorate");
+assert(clawbackDelta(1500, 1000, 3000) === 500, "second partial refund claws back only the new delta");
+assert(clawbackDelta(1500, 1500, 3000) === 0, "duplicate cumulative target is a no-op");
+assert(clawbackDelta(3000, 1000, 250) === 250, "delta is floored at current balance");
 
 console.log("\nIdempotency — redelivered event = single decrement:");
 // Simulate the guard-table + $transaction logic the webhook runs. The DB UNIQUE

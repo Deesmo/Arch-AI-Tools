@@ -27,6 +27,18 @@ export function isStaleProvisioningSentinel(
   return Number.isFinite(timestamp) && nowMs - timestamp > ttlMs;
 }
 
+export type WalletAddressState = "empty" | "real_wallet" | "active_sentinel" | "stale_sentinel";
+
+export function classifyWalletAddress(
+  value: string | null | undefined,
+  nowMs = Date.now(),
+): WalletAddressState {
+  if (!value) return "empty";
+  if (isStaleProvisioningSentinel(value, nowMs)) return "stale_sentinel";
+  if (isProvisioningSentinel(value)) return "active_sentinel";
+  return "real_wallet";
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface WalletProvisionBody {
   label?: string; // optional friendly name for the wallet
@@ -95,8 +107,31 @@ router.post(
       where: { id: agentId },
       select: { walletAddress: true },
     });
-    const existing = agentRecord?.walletAddress
-      ? { address: agentRecord.walletAddress, network: "base", label: "" }
+    const walletAddressState = classifyWalletAddress(agentRecord?.walletAddress);
+    if (walletAddressState === "stale_sentinel") {
+      const released = await prisma.agent.updateMany({
+        where: { id: agentId, walletAddress: agentRecord!.walletAddress },
+        data: { walletAddress: null },
+      });
+      if (released.count === 1) {
+        res.status(409).json({
+          ok: false,
+          error: "wallet_provision_stale",
+          message: "A previous wallet provisioning attempt expired. Please retry.",
+        });
+        return;
+      }
+    }
+    if (walletAddressState === "active_sentinel") {
+      res.status(409).json({
+        ok: false,
+        error: "wallet_exists",
+        message: "Agent already has a wallet being provisioned.",
+      });
+      return;
+    }
+    const existing = walletAddressState === "real_wallet"
+      ? { address: agentRecord!.walletAddress!, network: "base", label: "" }
       : walletStore.get(agentId);
     if (existing) {
       res.status(409).json({

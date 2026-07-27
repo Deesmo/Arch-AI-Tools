@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import {
   WALLET_PROVISIONING_SENTINEL_TTL_MS,
+  classifyWalletAddress,
   createProvisioningSentinel,
   isProvisioningSentinel,
   isStaleProvisioningSentinel,
@@ -43,6 +44,15 @@ test("expired timestamped sentinels are stale", () => {
 
 test("legacy pending sentinels are treated as active", () => {
   assert.equal(isStaleProvisioningSentinel("pending:agent_123", Date.now()), false);
+});
+
+test("classifies stale sentinels before real wallet addresses", () => {
+  const now = 1_000_000;
+  const stale = createProvisioningSentinel("agent_123", now - WALLET_PROVISIONING_SENTINEL_TTL_MS - 1);
+  assert.equal(classifyWalletAddress(stale, now), "stale_sentinel");
+  assert.equal(classifyWalletAddress(createProvisioningSentinel("agent_123", now), now), "active_sentinel");
+  assert.equal(classifyWalletAddress("0x1234", now), "real_wallet");
+  assert.equal(classifyWalletAddress(null, now), "empty");
 });
 
 console.log(`Wallet provisioning sentinel tests passed: ${passed}`);
