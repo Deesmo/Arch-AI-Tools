@@ -117,15 +117,18 @@ function stripeObjectId(value: unknown): string | null {
   return null;
 }
 
-async function paymentIntentIdFromCheckoutSession(session: {
+export async function paymentIntentIdFromCheckoutSession(session: {
   payment_intent?: unknown;
   invoice?: unknown;
+}, retrieveInvoice: (invoiceId: string) => Promise<{ payment_intent?: unknown }> = async (invoiceId) => {
+  if (!stripe) return {};
+  return stripe.invoices.retrieve(invoiceId);
 }): Promise<string | null> {
   const directPaymentIntentId = stripeObjectId(session.payment_intent);
   if (directPaymentIntentId) return directPaymentIntentId;
   const invoiceId = stripeObjectId(session.invoice);
-  if (!invoiceId || !stripe) return null;
-  const invoice = await stripe.invoices.retrieve(invoiceId);
+  if (!invoiceId) return null;
+  const invoice = await retrieveInvoice(invoiceId);
   return stripeObjectId(invoice.payment_intent);
 }
 
