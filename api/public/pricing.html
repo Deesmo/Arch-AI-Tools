@@ -315,6 +315,10 @@ async function startCheckout(endpoint, body) {
         // A stored key failed — clear it and send them to sign back in.
         try { localStorage.removeItem('arch_api_key'); sessionStorage.removeItem('arch_api_key'); } catch(e) {}
         window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+      } else if (/(?:^|;\s*)arch_has_account=/.test(document.cookie)) {
+        // Returning account whose session expired (no stored key, but the
+        // arch_has_account marker survives) — send them to sign back in.
+        window.location.href = '/login?next=' + encodeURIComponent('/pricing');
       } else {
         // Anonymous buy-intent: they have no account to log into — send them to
         // sign up (free), then return to pricing to complete the purchase.

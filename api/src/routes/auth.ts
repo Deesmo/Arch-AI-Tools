@@ -27,6 +27,22 @@ const COOKIE_OPTS = {
   maxAge: SESSION_TTL_MS,
   path: "/",
 };
+// Client-readable (non-httpOnly) marker that this browser has an account, so
+// pages like /pricing can send an expired-session user to /login instead of
+// /signup on a 401. Outlives the session on purpose; never cleared on logout.
+const HAS_ACCOUNT_COOKIE = "arch_has_account";
+const HAS_ACCOUNT_COOKIE_OPTS = {
+  httpOnly: false,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 365 * 24 * 60 * 60 * 1000,
+  path: "/",
+};
+
+function setSessionCookies(res: Response, agentId: string): void {
+  res.cookie(COOKIE_NAME, signSession(agentId), COOKIE_OPTS);
+  res.cookie(HAS_ACCOUNT_COOKIE, "1", HAS_ACCOUNT_COOKIE_OPTS);
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -91,8 +107,7 @@ router.post("/login-key", loginLimiter, async (req: Request, res: Response): Pro
     return;
   }
 
-  const token = signSession(agent.id);
-  res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+  setSessionCookies(res, agent.id);
   logger.info({ agentId: agent.id }, "Agent logged in via API key");
   captureEvent(agent.id, "login", { method: "api_key" });
   res.json({ ok: true, redirect: "/dashboard" });
@@ -128,8 +143,7 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
       return;
     }
 
-    const token = signSession(agent.id);
-    res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+    setSessionCookies(res, agent.id);
     logger.info({ agentId: agent.id }, "Agent logged in");
     captureEvent(agent.id, "login", { method: "email_password" });
     res.json({ ok: true, redirect: "/dashboard" });
@@ -160,8 +174,7 @@ router.post("/set-password", sensitiveLimiter, async (req: Request, res: Respons
     const hash = bcrypt.hashSync(password, 10);
     await prisma.agent.update({ where: { id: agent.id }, data: { passwordHash: hash } });
 
-    const token = signSession(agent.id);
-    res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
+    setSessionCookies(res, agent.id);
     logger.info({ agentId: agent.id }, "Agent set password + logged in");
     captureEvent(agent.id, "signup_password_set", { email: agent.email, tier: agent.tier });
     identifyUser(agent.id, { email: agent.email, tier: agent.tier, credits: agent.credits });
@@ -318,8 +331,7 @@ router.post("/reset-password", sensitiveLimiter, async (req: Request, res: Respo
     data: { passwordHash: hash, resetToken: null, resetTokenExpiry: null },
   });
 
-  const sessionToken = signSession(agent.id);
-  res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
+  setSessionCookies(res, agent.id);
   logger.info({ agentId: agent.id }, "Agent reset password + logged in");
   res.json({ ok: true, redirect: "/dashboard" });
 });
