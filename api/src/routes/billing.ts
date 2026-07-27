@@ -346,8 +346,19 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           sendAdminAlert("⚠️ Stripe webhook credit mismatch", `Subscription start requested an out-of-range credit amount and was NOT credited.\nagent=${agentId} credits_per_month=${creditsPerMonth} session=${stripeId}`).catch(() => {});
           res.json({ received: true }); return;
         }
+        // session.payment_intent is only populated in payment mode — for a
+        // subscription the signup charge lives on the session's first invoice.
+        // Resolve it from there so a later refund/dispute of that charge can
+        // find this Purchase. (Throws → outer catch → 5xx → Stripe retries.)
+        let subPaymentIntentId = paymentIntentId;
+        if (!subPaymentIntentId && session.invoice) {
+          const invoiceId = typeof session.invoice === "string" ? session.invoice : session.invoice.id;
+          const firstInvoice = await stripe.invoices.retrieve(invoiceId);
+          const invoicePi = (firstInvoice as { payment_intent?: string | { id?: string } | null }).payment_intent;
+          subPaymentIntentId = typeof invoicePi === "string" ? invoicePi : invoicePi?.id ?? null;
+        }
         await prisma.$transaction([
-          prisma.purchase.create({ data: { agentId, stripeId, paymentIntentId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
+          prisma.purchase.create({ data: { agentId, stripeId, paymentIntentId: subPaymentIntentId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: tierFromSubscriptionPlanId(planId) } }),
         ]);
         console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
@@ -408,9 +419,15 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         ? invoice.payment_intent
         : invoice.payment_intent?.id ?? null;
 
+      // Restore the paid tier: a failed payment downgrades the agent to free
+      // (invoice.payment_failed below), so a later successful invoice must put
+      // them back on their plan's tier. Guarded on plan_id so legacy
+      // subscriptions without that metadata are never downgraded by a renewal.
+      const renewalPlanId = subscription.metadata?.plan_id ?? "";
+
       await prisma.$transaction([
         prisma.purchase.create({ data: { agentId, stripeId: invoiceId, paymentIntentId: renewalPaymentIntentId, credits: creditsPerMonth, amountCents: invoice.amount_paid ?? 0, status: "completed" } }),
-        prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth } } }),
+        prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, ...(renewalPlanId ? { tier: tierFromSubscriptionPlanId(renewalPlanId) } : {}) } }),
       ]);
       console.log(`[billing] Renewal: +${creditsPerMonth} credits to agent ${agentId}`);
       // Fire webhook event (non-blocking)
@@ -467,8 +484,14 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       id?: string;
       payment_intent?: string | { id?: string } | null;
       charge?: string | { id?: string; payment_intent?: string | { id?: string } | null } | null;
+      refunds?: { data?: Array<{ id?: string }> } | null; // Charge shape only
     };
-    const eventObjectId = obj.id ?? event.id; // refund/dispute id — the idempotency key
+    // charge.refunded fires for EVERY refund on a charge (partials included)
+    // with the same Charge object id, so key idempotency on the individual
+    // Refund id (refunds.data is most-recent-first) — otherwise a later partial
+    // refund is dropped as a duplicate. Disputes key on the Dispute id.
+    const latestRefundId = !isDispute ? obj.refunds?.data?.[0]?.id : undefined;
+    const eventObjectId = latestRefundId ?? obj.id ?? event.id; // idempotency key
     // Resolve the payment_intent for either shape.
     let paymentIntentId: string | null = null;
     if (typeof obj.payment_intent === "string") paymentIntentId = obj.payment_intent;
@@ -505,11 +528,25 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           ON CONFLICT ("event_id") DO NOTHING`;
         if (inserted === 0) return { clawed: 0, already: true };
 
-        // Server-derived amount: what we granted for THIS purchase, floored to
-        // the agent's current balance so the balance can never go negative.
-        const agentRow = await tx.agent.findUnique({ where: { id: purchase.agentId }, select: { credits: true } });
-        const currentBalance = agentRow?.credits ?? 0;
-        const toClaw = clawbackAmount(purchase.credits, currentBalance);
+        // Lock the agent row for the rest of the transaction so the
+        // read-compute-decrement below is atomic: concurrent spends/clawbacks
+        // block until commit and cannot interleave to drive the balance
+        // negative (mirrors deductCredits' guarded-decrement invariant).
+        const agentRows = await tx.$queryRaw<Array<{ credits: number }>>`
+          SELECT "credits" FROM "Agent" WHERE "id" = ${purchase.agentId} FOR UPDATE`;
+        const currentBalance = agentRows[0]?.credits ?? 0;
+
+        // Server-derived amount: what we granted for THIS purchase, minus what
+        // previous reversal events (a refund AND a dispute, or multiple partial
+        // refunds, can all reference the same purchase) already clawed back —
+        // the CUMULATIVE clawback can never exceed the grant. Floored to the
+        // agent's current balance so the balance can never go negative.
+        const prior = await tx.clawback.aggregate({
+          where: { purchaseStripeId: purchase.stripeId },
+          _sum: { credits: true },
+        });
+        const remainingGrant = purchase.credits - (prior._sum.credits ?? 0);
+        const toClaw = clawbackAmount(remainingGrant, currentBalance);
 
         if (toClaw > 0) {
           await tx.agent.update({ where: { id: purchase.agentId }, data: { credits: { decrement: toClaw } } });
