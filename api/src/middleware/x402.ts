@@ -1089,7 +1089,19 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
     };
 
     if (isCdpSettle && v1PayloadSettle) {
-      finalPayloadSettle = v1PayloadSettle;
+      // Bazaar cataloging (additive, SERVER-authoritative — never client-echoed): the
+      // facilitator catalogs a resource when the settled PaymentPayload carries the
+      // bazaar extension (spec: x402 specs/extensions/bazaar.md "Facilitator Behavior").
+      // CDP's x402V1PaymentPayload accepts optional resource/extensions — proven live
+      // 2026-07-27 (direct /verify 200 isValid on this exact shape). Settle without
+      // these fields never cataloged (0 archtools entries across all 14,256 Bazaar
+      // resources after 61 plain-V1 settles).
+      const bazaarBlock = getBazaarExtension(toolName);
+      finalPayloadSettle = {
+        ...v1PayloadSettle,
+        ...((paymentRequirements as any).resource ? { resource: (paymentRequirements as any).resource } : {}),
+        ...(bazaarBlock ? { extensions: bazaarBlock.extensions } : {}),
+      };
       finalPaymentReqsSettle = toV1Requirements(paymentRequirements);
     } else if (isCdpSettle) {
       // Bazaar discovery (additive): forward client-echoed v2 `resource` + `extensions` —
@@ -1122,6 +1134,9 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       }
     );
     console.log(`[x402] Settle response: ${JSON.stringify(res.data)}`);
+    // Bazaar cataloging outcome (spec: EXTENSION-RESPONSES header — success | processing | error)
+    const extResponses = res.headers?.["extension-responses"];
+    if (extResponses) console.log(`[x402] Settle EXTENSION-RESPONSES: ${extResponses}`);
     return {
       success: res.data?.success === true,
       transaction: res.data?.transaction ?? res.data?.txHash ?? undefined,
