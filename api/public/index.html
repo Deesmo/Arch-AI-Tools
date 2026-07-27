@@ -1147,7 +1147,7 @@
       </div>
       <div style="background:rgba(24,96,255,0.05);border:1px solid rgba(24,96,255,0.15);border-radius:14px;padding:28px;">
         <div style="font-size:28px;margin-bottom:14px;">⛓️</div>
-        <h3 style="font-family:var(--display);font-size:17px;font-weight:700;margin-bottom:8px;color:var(--text);">15+ Chains Supported</h3>
+        <h3 style="font-family:var(--display);font-size:17px;font-weight:700;margin-bottom:8px;color:var(--text);">Pay on Base &amp; Polygon</h3>
         <p style="font-size:14px;color:var(--muted);line-height:1.65;">Base, Ethereum, Solana, Arbitrum, Polygon, Optimism, Avalanche, and more. Pay with USDC, USDT, or native tokens on whichever chain you prefer.</p>
       </div>
     </div>
@@ -1783,10 +1783,10 @@
       <div>
         <div class="section-tag">x402 Protocol · 9 Networks</div>
         <h2 class="section-title">AI agents pay with USDC, USDT, or ETH. Automatically.</h2>
-        <p class="section-sub">Arch supports the x402 payment protocol - built on <strong style="color:var(--fg);">Coinbase Base</strong>, Ethereum, Arbitrum, Polygon, Optimism, and Solana. Your agent discovers tools, sees the price in USDC, pays autonomously, and calls the endpoint. No human in the loop, no wallet setup, no credit card management.</p>
+        <p class="section-sub">Arch supports the x402 payment protocol - built on <strong style="color:var(--fg);">Coinbase Base</strong> and Polygon, settled in USDC/USDT. Your agent discovers tools, sees the price in USDC, pays autonomously, and calls the endpoint. No human in the loop, no wallet setup, no credit card management.</p>
         <ul class="feature-list">
           <li>→ Agent hits endpoint → receives HTTP 402 with price + wallet address</li>
-          <li>→ Agent pays in USDC on <strong style="color:var(--fg);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Aptos, Noble (Cosmos)</strong>, or <strong style="color:var(--fg);">Solana</strong> - settles in seconds</li>
+          <li>→ Agent pays in USDC on <strong style="color:var(--fg);">Base</strong> or <strong style="color:var(--fg);">Polygon</strong> (USDC or USDT) - settles in seconds</li>
           <li>→ Endpoint unlocks, tool executes, result returned</li>
           <li>→ No wallet setup on your side - the protocol handles everything</li>
           <li>→ Fallback: Stripe credits always available if you prefer traditional billing</li>
@@ -1794,25 +1794,9 @@
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center;">
           <span style="font-size:11px;color:rgba(255,255,255,0.35);font-family:var(--mono);">BUILT ON</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,82,255,0.12);color:#4d8eff;border:1px solid rgba(0,82,255,0.3);">Coinbase Base</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(98,126,234,0.12);color:#7b8cde;border:1px solid rgba(98,126,234,0.3);">Ethereum</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(40,160,240,0.12);color:#28a0f0;border:1px solid rgba(40,160,240,0.3);">Arbitrum</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(130,71,229,0.12);color:#8247E5;border:1px solid rgba(130,71,229,0.3);">Polygon</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,4,32,0.12);color:#ff0420;border:1px solid rgba(255,4,32,0.3);">Optimism</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(232,65,66,0.12);color:#e84142;border:1px solid rgba(232,65,66,0.3);">Avalanche</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,180,120,0.12);color:#00b478;border:1px solid rgba(0,180,120,0.3);">Aptos</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(100,149,237,0.12);color:#6495ed;border:1px solid rgba(100,149,237,0.3);">Noble (Cosmos)</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,102,180,0.12);color:#0066b4;border:1px solid rgba(0,102,180,0.3);">Algorand</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(16,109,234,0.12);color:#106dea;border:1px solid rgba(16,109,234,0.3);">Stellar</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(100,196,254,0.12);color:#64c4fe;border:1px solid rgba(100,196,254,0.3);">Sui</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,0,122,0.12);color:#ff007a;border:1px solid rgba(255,0,122,0.3);">Unichain</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(132,0,255,0.12);color:#8400ff;border:1px solid rgba(132,0,255,0.3);">Monad</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(230,0,122,0.12);color:#e6007a;border:1px solid rgba(230,0,122,0.3);">Polkadot</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(153,69,255,0.12);color:#9945FF;border:1px solid rgba(153,69,255,0.3);">Solana</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,229,176,0.10);color:#00e5b0;border:1px solid rgba(0,229,176,0.25);">USDC</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(38,161,123,0.12);color:#26a17b;border:1px solid rgba(38,161,123,0.3);">USDT</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(98,126,234,0.15);color:#7b8cde;border:1px solid rgba(98,126,234,0.4);">ETH (native)</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(243,186,47,0.12);color:#f3ba2f;border:1px solid rgba(243,186,47,0.3);">BNB (native)</span>
-          <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(68,168,80,0.12);color:#44a850;border:1px solid rgba(68,168,80,0.3);">TAO (Bittensor)</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(0,236,151,0.12);color:#00ec97;border:1px solid rgba(0,236,151,0.3);">NEAR</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,144,16,0.10);color:#FFB030;border:1px solid rgba(255,144,16,0.25);">x402 Protocol</span>
           <span style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);border:1px solid var(--border);">Stripe</span>
