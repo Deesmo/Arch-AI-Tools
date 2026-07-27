@@ -913,6 +913,27 @@ export async function checkAndStoreNonce(
   }
 }
 
+/**
+ * Canonical x402 V1 PaymentRequirements — exactly the fields the V1 spec defines.
+ * Facilitator validators are strict unions: our accepts[] entries carry a duplicate
+ * `amount` alongside `maxAmountRequired`, and extra keys can fail the union match.
+ */
+function toV1Requirements(r: any): object {
+  return {
+    scheme: r.scheme,
+    network: r.network,
+    maxAmountRequired: r.maxAmountRequired ?? r.amount,
+    resource: r.resource,
+    description: r.description,
+    mimeType: r.mimeType,
+    payTo: r.payTo,
+    maxTimeoutSeconds: r.maxTimeoutSeconds || 60,
+    asset: r.asset,
+    ...(r.extra !== undefined ? { extra: r.extra } : {}),
+    ...(r.outputSchema !== undefined ? { outputSchema: r.outputSchema } : {}),
+  };
+}
+
 async function verifyPayment(paymentHeader: string, toolName: string, paymentRequirements: object): Promise<{ isValid: boolean; payer?: string }> {
   const facilitatorUrl = getFacilitatorUrl();
   if (!facilitatorUrl) return { isValid: false };
@@ -957,6 +978,15 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
     // Detect Solana vs EVM
     const isSolana = (paymentRequirements as any).network?.includes("solana");
 
+    // V1 client payload (x402Version:1 with top-level scheme/network — every EIP-3009 EVM
+    // agent paying against our V1 402s). CDP's verify/settle accept x402V1PaymentPayload
+    // but REQUIRE `scheme` (CDP 400: "x402V1PaymentPayload requires 'scheme'"); the v2
+    // re-wrap below strips scheme/network, so it broke ALL V1 payments. V1 must pass
+    // through UNCHANGED — the same pass-through @x402/core's HTTPFacilitatorClient sends.
+    const isV1Payload = (paymentPayload as any).x402Version === 1
+      && typeof (paymentPayload as any).scheme === "string"
+      && (paymentPayload as any).payload !== undefined;
+
     let finalPaymentReqs: object;
     let finalPayload: object;
 
@@ -972,7 +1002,10 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       extra: (paymentRequirements as any).extra,
     };
 
-    if (isCdp) {
+    if (isCdp && isV1Payload) {
+      finalPayload = paymentPayload;
+      finalPaymentReqs = toV1Requirements(paymentRequirements);
+    } else if (isCdp) {
       // v2 payload wraps the inner payload with 'accepted' field — works for both EVM and Solana.
       // Bazaar discovery (additive): forward the client-echoed optional v2 PaymentPayload fields
       // `resource` and `extensions` — the CDP facilitator reads paymentPayload.extensions.bazaar
@@ -991,12 +1024,12 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       finalPayload = paymentPayload;
     }
 
-    const payloadFormat = isSolana ? "solana-v2" : (isCdp ? "evm-v2" : "v1");
+    const payloadFormat = isSolana ? "solana-v2" : (isCdp ? (isV1Payload ? "evm-v1-passthrough" : "evm-v2") : "v1");
     console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName}, format: ${payloadFormat}, network: ${(paymentRequirements as any).network})`);
     const res = await axios.post(
       `${facilitatorUrl}/verify`,
       {
-        x402Version: isCdp ? 2 : 1,
+        x402Version: isCdp && !isV1Payload ? 2 : 1,
         paymentPayload: finalPayload,
         paymentRequirements: finalPaymentReqs,
       },
@@ -1047,6 +1080,12 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
     // Detect Solana vs EVM
     const isSolanaSettle = (paymentRequirements as any).network?.includes("solana");
 
+    // Same V1 pass-through as verifyPayment — CDP settle rejects the v2 re-wrap of a V1
+    // payload for the identical reason (scheme/network stripped).
+    const isV1PayloadSettle = (paymentPayload as any).x402Version === 1
+      && typeof (paymentPayload as any).scheme === "string"
+      && (paymentPayload as any).payload !== undefined;
+
     let finalPaymentReqsSettle: object;
     let finalPayloadSettle: object;
 
@@ -1061,7 +1100,10 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       extra: (paymentRequirements as any).extra,
     };
 
-    if (isCdpSettle) {
+    if (isCdpSettle && isV1PayloadSettle) {
+      finalPayloadSettle = paymentPayload;
+      finalPaymentReqsSettle = toV1Requirements(paymentRequirements);
+    } else if (isCdpSettle) {
       // Bazaar discovery (additive): forward client-echoed v2 `resource` + `extensions` —
       // the Bazaar catalogs the endpoint from paymentPayload.extensions.bazaar on first
       // SETTLED payment. Absent fields → payload identical to before.
@@ -1077,12 +1119,12 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       finalPayloadSettle = paymentPayload;
     }
 
-    const settleFormat = isSolanaSettle ? "solana-v2" : (isCdpSettle ? "evm-v2" : "v1");
+    const settleFormat = isSolanaSettle ? "solana-v2" : (isCdpSettle ? (isV1PayloadSettle ? "evm-v1-passthrough" : "evm-v2") : "v1");
     console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName}, format: ${settleFormat})`);
     const res = await axios.post(
       `${facilitatorUrl}/settle`,
       {
-        x402Version: isCdpSettle ? 2 : 1,
+        x402Version: isCdpSettle && !isV1PayloadSettle ? 2 : 1,
         paymentPayload: finalPayloadSettle,
         paymentRequirements: finalPaymentReqsSettle,
       },
