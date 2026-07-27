@@ -220,6 +220,48 @@ app.get("/.well-known/glama.json", (_req: Request, res: Response): void => {
   });
 });
 
+// ─── OAuth 2.0 discovery metadata (for remote MCP one-click connectors) ──
+// archtools.dev is the OAuth 2.1 Authorization Server (endpoints in routes/oauth.ts:
+// /oauth/authorize, /oauth/token, /oauth/register — PKCE S256 + DCR). MCP clients
+// (Claude/ChatGPT/Grok connectors) discover it via RFC 8414. The MCP resource server
+// points here through its own RFC 9728 protected-resource metadata.
+// Spec: modelcontextprotocol.io/specification/2025-06-18/basic/authorization
+const OAUTH_ISSUER = "https://archtools.dev";
+function serveAuthServerMetadata(_req: Request, res: Response): void {
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.json({
+    issuer: OAUTH_ISSUER,
+    authorization_endpoint: `${OAUTH_ISSUER}/oauth/authorize`,
+    token_endpoint: `${OAUTH_ISSUER}/oauth/token`,
+    registration_endpoint: `${OAUTH_ISSUER}/oauth/register`,
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
+    code_challenge_methods_supported: ["S256"],
+    token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+    scopes_supported: ["tools:read", "tools:execute"],
+  });
+}
+// RFC 8414 defines both the bare path and an issuer-path-suffixed variant; some
+// MCP clients probe /.well-known/oauth-authorization-server/mcp. Serve both.
+app.get("/.well-known/oauth-authorization-server", serveAuthServerMetadata);
+app.get("/.well-known/oauth-authorization-server/mcp", serveAuthServerMetadata);
+
+// RFC 9728 protected-resource metadata for the archtools.dev/mcp resource, in case
+// a client treats archtools.dev as the resource origin. Points at this auth server.
+function serveProtectedResourceMetadata(req: Request, res: Response): void {
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.json({
+    resource: `${OAUTH_ISSUER}/mcp`,
+    authorization_servers: [OAUTH_ISSUER],
+    scopes_supported: ["tools:read", "tools:execute"],
+    bearer_methods_supported: ["header"],
+  });
+}
+app.get("/.well-known/oauth-protected-resource", serveProtectedResourceMetadata);
+app.get("/.well-known/oauth-protected-resource/mcp", serveProtectedResourceMetadata);
+
 // ─── og-image.png — serve actual PNG from public directory ──────────────
 app.get("/og-image.png", (_req: Request, res: Response): void => {
   res.setHeader("Content-Type", "image/png");
