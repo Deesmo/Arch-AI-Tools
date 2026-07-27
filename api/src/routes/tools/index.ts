@@ -1785,11 +1785,12 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   const oracleHasByok = !!(oraclByokAnthropicKey || oraclByokOpenaiKey);
 
   const paid = isX402Paid(req);
+  // deep mode runs Opus (≈2× the Sonnet-tuned base); standard runs Sonnet (1×).
+  const oracleModelForCost = (req.body as { reasoning_depth?: string })?.reasoning_depth === "deep"
+    ? "claude-opus-4-6" : "claude-sonnet-4-6";
+  const oracleCreditCost = applyModelCost(25, oracleModelForCost);
   if (!paid && !oracleHasByok) {
-    // deep mode runs Opus (≈2× the Sonnet-tuned base); standard runs Sonnet (1×).
-    const oracleModelForCost = (req.body as { reasoning_depth?: string })?.reasoning_depth === "deep"
-      ? "claude-opus-4-6" : "claude-sonnet-4-6";
-    const ok = await deductCredits(req, res, "ai-oracle", applyModelCost(25, oracleModelForCost));
+    const ok = await deductCredits(req, res, "ai-oracle", oracleCreditCost);
     if (!ok) return;
   }
   const { question, context: oracleContext, reasoning_depth = "standard" } = req.body as {
@@ -1909,7 +1910,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
         processed_at: new Date().toISOString(),
         arch_tools_version: "1.9.0",
         ...(provider.byok ? { byok: true, byok_provider: providerName } : {}),
-        credits_used: oracleHasByok ? 0 : 25,
+        credits_used: oracleHasByok ? 0 : oracleCreditCost,
         request_id: reqId(),
       });
       return;
