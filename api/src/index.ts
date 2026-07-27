@@ -45,6 +45,7 @@ import mcpMarketplaceRouter from "./routes/mcp-marketplace.js";
 import referralRouter from "./routes/referral.js";
 import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
+import mcpRouter from "./routes/mcp.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus, warmX402Sdk } from "./middleware/x402-sdk.js";
@@ -232,6 +233,13 @@ app.get("/og-image.png", (_req: Request, res: Response): void => {
 // Discovery & health (no auth)
 app.use("/", discoveryRouter);
 
+// Native MCP endpoint (archtools.dev/mcp) for one-click OAuth connectors. Mounted
+// here — after discovery, well before the extensionless-HTML fallback + 404 — and
+// NOT behind requireAuth: auth is evaluated inside the handler so it can emit the
+// MCP-shaped 401 + WWW-Authenticate that triggers the client OAuth flow. Tool calls
+// forward over localhost to /v1/tools/:name (which runs the real auth/credit chain).
+app.use("/mcp", mcpRouter);
+
 // /api/discovery — alias for /v1/tools (agent-friendly discovery endpoint)
 app.get("/api/discovery", async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -271,8 +279,24 @@ app.get("/v1/credits", requireAuth, async (req: AuthedRequest, res: Response) =>
   agentRouter(req, res, () => res.status(404).json({ ok: false, error: "not_found" }));
 });
 
-// OAuth (rate limited to prevent brute force)
-app.use("/oauth", authLimiter, oauthRouter);
+// OAuth. The credential submit (POST /oauth/authorize) keeps the strict 20/15min
+// brute-force limiter. The machine endpoints /oauth/token and /oauth/register (DCR
+// + code exchange) need burst headroom — a one-click connector does register +
+// authorize + token in quick succession, and many users behind one corporate NAT
+// share an IP; the strict cap would 429 mid-handshake. Give those two a generous
+// limiter (they are not credential-guessing surfaces).
+const oauthMachineLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many OAuth requests. Try again shortly." },
+});
+app.use("/oauth", (req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/token" || req.path === "/register") return oauthMachineLimiter(req, res, next);
+  return authLimiter(req, res, next);
+}, oauthRouter);
 
 // x402 SDK middleware (PRIMARY) — official Coinbase @x402/express protocol
 // SDK middleware DISABLED — causes infinite hangs on Render/Cloudflare setup.
