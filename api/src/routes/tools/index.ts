@@ -1138,7 +1138,12 @@ router.post("/pii-detect", ...toolMiddleware("pii-detect"), async (req: AuthedRe
     });
     const raw = msg.content.find(b => b.type === "text")?.text ?? "{}";
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as { found?: unknown[]; has_pii?: boolean; redacted?: string };
-    res.json({ ok: true, has_pii: parsed.has_pii ?? false, found: parsed.found ?? [], count: (parsed.found ?? []).length, ...(redact ? { redacted: parsed.redacted ?? text } : {}), request_id: reqId() });
+    // Consent/retention transparency (legal audit 2026-07-27): pii-detect handles
+    // SSN/CC/etc. Signal detection via a header and remind callers that inputs aren't
+    // retained and real PII should be handled per their own consent obligations.
+    if (parsed.has_pii) res.setHeader("X-PII-Detected", "true");
+    res.setHeader("X-Data-Retention", "not-stored");
+    res.json({ ok: true, has_pii: parsed.has_pii ?? false, found: parsed.found ?? [], count: (parsed.found ?? []).length, ...(redact ? { redacted: parsed.redacted ?? text } : {}), notice: "Inputs are processed transiently and not stored by Arch Tools. You are responsible for having a lawful basis/consent to process any real personal data you submit.", request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "pii_error", message: safeErr(e), request_id: reqId() });
   }
