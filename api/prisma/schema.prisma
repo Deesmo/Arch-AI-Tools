@@ -112,10 +112,34 @@ model Purchase {
   agentId   String
   agent     Agent    @relation(fields: [agentId], references: [id])
   stripeId  String   @unique
+  // Stripe PaymentIntent id for this purchase — the ONLY reliable link from a
+  // charge.refunded / charge.dispute.created event (which carry a Charge +
+  // payment_intent, never the checkout-session id we key `stripeId` on) back
+  // to the granted credits. Populated at grant time; nullable for legacy rows.
+  paymentIntentId String? @map("payment_intent_id")
   credits   Int
   amountCents Int
-  status    String   @default("pending")  // pending | completed | refunded
+  status    String   @default("pending")  // pending | completed | refunded | disputed
+  clawedBackAt DateTime? @map("clawed_back_at")  // set when credits reversed (refund/dispute)
   createdAt DateTime @default(now())
+
+  @@index([agentId])
+  @@index([paymentIntentId])
+}
+
+// Idempotency guard for credit clawbacks. One row per Stripe reversal event
+// object id (refund / dispute / failed-invoice id). The UNIQUE constraint makes
+// "have we already processed this reversal?" a DB-level decision (no TOCTOU) —
+// a redelivered webhook loses the INSERT and cannot double-decrement. Mirrors
+// the SignupIdentity guard pattern. Starts empty; populated going forward.
+model Clawback {
+  id        String   @id @default(cuid())
+  eventId   String   @unique @map("event_id")  // Stripe refund/dispute/invoice id
+  kind      String                              // refund | dispute | payment_failed
+  agentId   String?  @map("agent_id")
+  purchaseStripeId String? @map("purchase_stripe_id")
+  credits   Int      @default(0)                // credits actually clawed back
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([agentId])
 }
