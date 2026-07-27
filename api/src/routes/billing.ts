@@ -8,6 +8,7 @@ import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
 import { safeErr } from "../utils/credits.js";
 import { tierFromSubscriptionPlanId } from "../lib/tiers.js";
+import { clawbackAmount } from "../lib/clawback.js";
 
 const router = Router();
 
@@ -287,6 +288,11 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
     const session = event.data.object;
     const agentId = session.metadata?.agent_id;
     const stripeId = session.id;
+    // Store the PaymentIntent id so a later refund/dispute (which references the
+    // charge's payment_intent, not this session id) can find this purchase.
+    const paymentIntentId = typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
 
     if (!agentId) { res.json({ received: true }); return; }
 
@@ -304,7 +310,7 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           res.json({ received: true }); return;
         }
         await prisma.$transaction([
-          prisma.purchase.create({ data: { agentId, stripeId, credits, amountCents: session.amount_total ?? 0, status: "completed" } }),
+          prisma.purchase.create({ data: { agentId, stripeId, paymentIntentId, credits, amountCents: session.amount_total ?? 0, status: "completed" } }),
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: credits } } }),
         ]);
         console.log(`[billing] One-time: +${credits} credits to agent ${agentId}`);
@@ -341,7 +347,7 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           res.json({ received: true }); return;
         }
         await prisma.$transaction([
-          prisma.purchase.create({ data: { agentId, stripeId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
+          prisma.purchase.create({ data: { agentId, stripeId, paymentIntentId, credits: creditsPerMonth, amountCents: session.amount_total ?? 0, status: "completed" } }),
           prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth }, tier: tierFromSubscriptionPlanId(planId) } }),
         ]);
         console.log(`[billing] Subscription start: +${creditsPerMonth} credits/month (${planLabel}) to agent ${agentId}`);
@@ -374,7 +380,7 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
 
   // ─── Subscription renewal (monthly/annual invoice paid) ──────────────────
   if (event.type === "invoice.paid") {
-    const invoice = event.data.object as { subscription?: string; customer?: string; billing_reason?: string; amount_paid?: number; id?: string };
+    const invoice = event.data.object as { subscription?: string; customer?: string; billing_reason?: string; amount_paid?: number; id?: string; payment_intent?: string | { id?: string } | null };
     // Skip the very first invoice (handled by checkout.session.completed above)
     if (invoice.billing_reason === "subscription_create") { res.json({ received: true }); return; }
 
@@ -397,8 +403,13 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       const existing = await prisma.purchase.findUnique({ where: { stripeId: invoiceId } });
       if (existing) { res.json({ received: true }); return; }
 
+      // Link the renewal charge so a later refund/dispute can claw it back.
+      const renewalPaymentIntentId = typeof invoice.payment_intent === "string"
+        ? invoice.payment_intent
+        : invoice.payment_intent?.id ?? null;
+
       await prisma.$transaction([
-        prisma.purchase.create({ data: { agentId, stripeId: invoiceId, credits: creditsPerMonth, amountCents: invoice.amount_paid ?? 0, status: "completed" } }),
+        prisma.purchase.create({ data: { agentId, stripeId: invoiceId, paymentIntentId: renewalPaymentIntentId, credits: creditsPerMonth, amountCents: invoice.amount_paid ?? 0, status: "completed" } }),
         prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth } } }),
       ]);
       console.log(`[billing] Renewal: +${creditsPerMonth} credits to agent ${agentId}`);
@@ -438,6 +449,148 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         return;
       }
       console.log(`[billing] Subscription cancelled for agent ${agentId}`);
+    }
+  }
+
+  // ─── Refund / chargeback — claw back the granted credits ─────────────────
+  // A customer must not be able to buy a pack, spend the credits, then refund or
+  // charge back and keep the value. Both events carry a Charge whose
+  // payment_intent links to the Purchase we stored at grant time. Amounts are
+  // server-derived from that Purchase (never the event's client-influenced
+  // fields), floored at 0, and idempotent on the reversal event id via the
+  // Clawback guard table so a redelivered event cannot double-decrement.
+  if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
+    const isDispute = event.type === "charge.dispute.created";
+    // charge.refunded → object is a Charge (payment_intent on it directly).
+    // charge.dispute.created → object is a Dispute (charge + payment_intent).
+    const obj = event.data.object as {
+      id?: string;
+      payment_intent?: string | { id?: string } | null;
+      charge?: string | { id?: string; payment_intent?: string | { id?: string } | null } | null;
+    };
+    const eventObjectId = obj.id ?? event.id; // refund/dispute id — the idempotency key
+    // Resolve the payment_intent for either shape.
+    let paymentIntentId: string | null = null;
+    if (typeof obj.payment_intent === "string") paymentIntentId = obj.payment_intent;
+    else if (obj.payment_intent?.id) paymentIntentId = obj.payment_intent.id;
+    if (!paymentIntentId && obj.charge && typeof obj.charge === "object") {
+      const c = obj.charge;
+      if (typeof c.payment_intent === "string") paymentIntentId = c.payment_intent;
+      else if (c.payment_intent?.id) paymentIntentId = c.payment_intent.id;
+    }
+    const kind = isDispute ? "dispute" : "refund";
+
+    if (!paymentIntentId) {
+      // Nothing to link to — record nothing, ack so Stripe stops retrying.
+      console.warn(`[billing] ${kind} ${eventObjectId} had no payment_intent — cannot link to a purchase.`);
+      sendAdminAlert(`⚠️ Stripe ${kind} unlinked`, `A ${kind} (${eventObjectId}) arrived with no payment_intent — no credits were clawed back. Investigate manually.`).catch(() => {});
+      res.json({ received: true }); return;
+    }
+
+    try {
+      const purchase = await prisma.purchase.findFirst({ where: { paymentIntentId } });
+      if (!purchase) {
+        // No matching purchase (e.g. pre-migration legacy charge). Ack and alert.
+        console.warn(`[billing] ${kind} ${eventObjectId}: no purchase for payment_intent ${paymentIntentId}.`);
+        sendAdminAlert(`⚠️ Stripe ${kind} — no matching purchase`, `A ${kind} (${eventObjectId}) referenced payment_intent ${paymentIntentId} but no Purchase was found — credits could NOT be clawed back automatically. Review manually.`).catch(() => {});
+        res.json({ received: true }); return;
+      }
+
+      const { clawed, already } = await prisma.$transaction(async (tx) => {
+        // Idempotency guard: the DB decides whether we've processed this reversal.
+        // A redelivered event loses this INSERT (0 rows) → we skip the decrement.
+        const inserted = await tx.$executeRaw`
+          INSERT INTO "Clawback" ("id", "event_id", "kind", "agent_id", "purchase_stripe_id", "credits")
+          VALUES (${crypto.randomUUID()}, ${eventObjectId}, ${kind}, ${purchase.agentId}, ${purchase.stripeId}, ${0})
+          ON CONFLICT ("event_id") DO NOTHING`;
+        if (inserted === 0) return { clawed: 0, already: true };
+
+        // Server-derived amount: what we granted for THIS purchase, floored to
+        // the agent's current balance so the balance can never go negative.
+        const agentRow = await tx.agent.findUnique({ where: { id: purchase.agentId }, select: { credits: true } });
+        const currentBalance = agentRow?.credits ?? 0;
+        const toClaw = clawbackAmount(purchase.credits, currentBalance);
+
+        if (toClaw > 0) {
+          await tx.agent.update({ where: { id: purchase.agentId }, data: { credits: { decrement: toClaw } } });
+        }
+        await tx.purchase.update({
+          where: { id: purchase.id },
+          data: { status: isDispute ? "disputed" : "refunded", clawedBackAt: new Date() },
+        });
+        await tx.clawback.update({ where: { eventId: eventObjectId }, data: { credits: toClaw } });
+        return { clawed: toClaw, already: false };
+      });
+
+      if (already) {
+        console.log(`[billing] ${kind} ${eventObjectId} already processed — no double-decrement.`);
+        res.json({ received: true }); return;
+      }
+
+      console.log(`[billing] ${kind}: -${clawed} credits from agent ${purchase.agentId} (purchase ${purchase.stripeId})`);
+      const agentInfo = await prisma.agent.findUnique({ where: { id: purchase.agentId }, select: { email: true, credits: true } }).catch(() => null);
+      // A dispute is a fraud signal — always alert; a plain refund alerts too so
+      // ops can watch for abuse patterns.
+      sendAdminAlert(
+        isDispute ? `🚨 Stripe DISPUTE — credits clawed back` : `↩️ Stripe refund — credits clawed back`,
+        `${isDispute ? "Chargeback/dispute" : "Refund"} processed.\n\nAgent: ${purchase.agentId} (${agentInfo?.email ?? "unknown"})\nPurchase: ${purchase.stripeId}\nGranted: ${purchase.credits.toLocaleString()}\nClawed back: ${clawed.toLocaleString()}\nRemaining balance: ${(agentInfo?.credits ?? 0).toLocaleString()}\n${kind} id: ${eventObjectId}${isDispute ? "\n\n⚠️ Dispute is a fraud signal — review this account." : ""}`
+      ).catch(() => {});
+      res.json({ received: true }); return;
+    } catch (e) {
+      // 5xx → Stripe retries; the Clawback guard makes the retry idempotent so
+      // no double-decrement, but a transient failure won't silently keep the
+      // customer's clawed-back credits.
+      console.error(`[billing] ${kind} clawback error:`, e);
+      res.status(500).json({ error: "clawback_failed", message: safeErr(e) });
+      return;
+    }
+  }
+
+  // ─── Failed subscription payment — stop paid-tier access ─────────────────
+  // A lapsed subscriber (card declined, etc.) must not keep paid-tier limits.
+  // Downgrade the agent to the free tier. Idempotent on the invoice id via the
+  // Clawback guard; 5xx-on-failure so Stripe retries (mirrors the
+  // customer.subscription.deleted handler).
+  if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object as { id?: string; subscription?: string | { id?: string } | null };
+    const eventObjectId = invoice.id ?? event.id; // invoice id — idempotency key
+    const subscriptionId = typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : invoice.subscription?.id ?? null;
+    if (!subscriptionId || !stripe) { res.json({ received: true }); return; }
+
+    try {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const agentId = subscription.metadata?.agent_id;
+      if (!agentId) { res.json({ received: true }); return; }
+
+      const downgraded = await prisma.$transaction(async (tx) => {
+        // Idempotency: a redelivered failed-invoice event loses this INSERT.
+        const inserted = await tx.$executeRaw`
+          INSERT INTO "Clawback" ("id", "event_id", "kind", "agent_id", "purchase_stripe_id", "credits")
+          VALUES (${crypto.randomUUID()}, ${eventObjectId}, ${"payment_failed"}, ${agentId}, ${null}, ${0})
+          ON CONFLICT ("event_id") DO NOTHING`;
+        if (inserted === 0) return false;
+        await tx.agent.update({ where: { id: agentId }, data: { tier: "free" } });
+        return true;
+      });
+
+      if (downgraded) {
+        console.log(`[billing] Payment failed — agent ${agentId} downgraded to free (invoice ${eventObjectId}).`);
+        const agentInfo = await prisma.agent.findUnique({ where: { id: agentId }, select: { email: true } }).catch(() => null);
+        sendAdminAlert(
+          `⚠️ Arch Tools subscription payment failed`,
+          `A subscription payment failed — agent downgraded to free tier.\n\nAgent: ${agentId} (${agentInfo?.email ?? "unknown"})\nSubscription: ${subscriptionId}\nInvoice: ${eventObjectId}`
+        ).catch(() => {});
+      } else {
+        console.log(`[billing] payment_failed ${eventObjectId} already processed — no-op.`);
+      }
+    } catch (e) {
+      // 5xx tells Stripe to retry; acknowledging on a transient failure would
+      // leave a lapsed subscriber with paid-tier access.
+      console.error("Subscription payment_failed error:", e);
+      res.status(500).json({ error: "payment_failed_downgrade_failed", message: safeErr(e) });
+      return;
     }
   }
 
