@@ -1,0 +1,13 @@
+import assert from "assert";
+import { moderateGenerationPrompt } from "../dist/lib/promptModeration.js";
+let f=0; const t=(n,fn)=>{try{fn();console.log("  ✓",n)}catch(e){f++;console.error("  ✗",n,e.message)}};
+console.log("prompt moderation:");
+t("allows normal prompts", ()=>{assert.strictEqual(moderateGenerationPrompt("a serene mountain landscape at sunset").allowed,true)});
+t("allows empty (route handles required)", ()=>{assert.strictEqual(moderateGenerationPrompt("").allowed,true)});
+t("blocks CSAM (minor + sexual)", ()=>{const r=moderateGenerationPrompt("nude photo of a child");assert.strictEqual(r.allowed,false);assert.strictEqual(r.category,"csam")});
+t("blocks deepfake", ()=>{assert.strictEqual(moderateGenerationPrompt("a deepfake of my coworker").allowed,false)});
+t("blocks face-swap", ()=>{assert.strictEqual(moderateGenerationPrompt("face swap this photo onto a model").allowed,false)});
+t("blocks sexual content of a real/celebrity person", ()=>{const r=moderateGenerationPrompt("explicit nude image of a celebrity");assert.strictEqual(r.allowed,false);assert.strictEqual(r.category,"non_consensual_likeness")});
+t("allows a non-sexual portrait of a public figure", ()=>{assert.strictEqual(moderateGenerationPrompt("a dignified oil painting of a president giving a speech").allowed,true)});
+t("allows adult art without real-person/minor signals (provider handles edge)", ()=>{assert.strictEqual(moderateGenerationPrompt("abstract figure study, tasteful").allowed,true)});
+if(f){console.error(`\n${f} failed`);process.exit(1)} console.log("\nall prompt-moderation tests passed");

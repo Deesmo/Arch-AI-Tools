@@ -7,6 +7,7 @@ import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
 import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
+import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
 import crypto from "crypto";
@@ -1685,6 +1686,7 @@ router.post("/image-generate", ...toolMiddleware("image-generate"), async (req: 
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
   const { prompt, style = "svg", width = 400, height = 300 } = req.body as { prompt?: string; style?: string; width?: number; height?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  { const _mod = moderateGenerationPrompt(prompt); if (!_mod.allowed) { console.warn(`[moderation] blocked category=${_mod.category} tool=image-generate`); res.status(400).json({ ok: false, error: "content_policy", category: _mod.category, message: _mod.reason, request_id: reqId() }); return; } }
   try {
     const msg = await getAnthropic()!.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -2420,6 +2422,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
   const paid = isX402Paid(req);
   const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; n?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  { const _mod = moderateGenerationPrompt(prompt); if (!_mod.allowed) { console.warn(`[moderation] blocked category=${_mod.category} tool=design-create`); res.status(400).json({ ok: false, error: "content_policy", category: _mod.category, message: _mod.reason, request_id: reqId() }); return; } }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
   let safeSize = validSizes.includes(size) ? size : "1024x1024";
   // gpt-image-1 quality → cost (profitability audit 2026-07-27): low ≈ $0.011,
@@ -2532,6 +2535,7 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req: A
   const paid = isX402Paid(req);
   const { prompt, size = "1024x1024", quality = "medium" } = req.body as { prompt?: string; size?: string; quality?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  { const _mod = moderateGenerationPrompt(prompt); if (!_mod.allowed) { console.warn(`[moderation] blocked category=${_mod.category} tool=generate-image`); res.status(400).json({ ok: false, error: "content_policy", category: _mod.category, message: _mod.reason, request_id: reqId() }); return; } }
   const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
   if (!OPENAI_KEY) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: reqId() }); return; }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
@@ -3016,6 +3020,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body as { prompt?: string; duration?: number; aspect_ratio?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  { const _mod = moderateGenerationPrompt(prompt); if (!_mod.allowed) { console.warn(`[moderation] blocked category=${_mod.category} tool=video-generate`); res.status(400).json({ ok: false, error: "content_policy", category: _mod.category, message: _mod.reason, request_id: reqId() }); return; } }
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
   // Scaled by duration at 140 credits/second, 700 minimum (5s = 700, 10s = 1400).
