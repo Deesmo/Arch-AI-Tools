@@ -182,8 +182,14 @@ export async function checkNonce(nonce: string, providerId: string): Promise<boo
 }
 
 export async function releaseNonce(nonce: string, providerId: string): Promise<void> {
+  // Always clear the in-memory fallback (used when Redis is absent — see
+  // reserveNonce's local path). Previously this early-returned when Redis was
+  // unset, leaving a failed settle's nonce reserved forever and blocking legit
+  // retries in Redis-less deployments.
+  const key = `facilitator:nonce:${providerId}:${nonce}`;
+  memFacilitatorNonces.delete(key);
   if (!redis) return;
-  await redis.del(`facilitator:nonce:${providerId}:${nonce}`).catch(() => {});
+  await redis.del(key).catch(() => {});
 }
 
 // ─── Payment Decoding ─────────────────────────────────────────────────────────

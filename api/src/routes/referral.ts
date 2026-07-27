@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { requireAccountAuth } from "../middleware/requireAccountAuth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import crypto from "crypto";
@@ -16,7 +17,7 @@ function generateReferralCode(): string {
 
 // ─── GET /api/v1/referral/code ──────────────────────────────────────────────
 // Get (or create) the authenticated user's referral code
-router.get("/code", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.get("/code", requireAuth, requireAccountAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 
@@ -57,7 +58,7 @@ router.get("/code", requireAuth, async (req: AuthedRequest, res: Response): Prom
 
 // ─── POST /api/v1/referral/apply ────────────────────────────────────────────
 // Apply a referral code during/after signup. Rewards BOTH users.
-router.post("/apply", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.post("/apply", requireAuth, requireAccountAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 

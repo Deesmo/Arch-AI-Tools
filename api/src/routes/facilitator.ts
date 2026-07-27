@@ -60,6 +60,50 @@ interface FacilitatorRequest extends Request {
   };
 }
 
+type FacilitatorPaymentDetails = VerifyRequest["paymentDetails"] | SettleRequest["paymentDetails"];
+
+type PaymentDetailsValidationError = {
+  error: "invalid_payment_details" | "unsupported_network";
+  message: string;
+};
+
+/**
+ * SECURITY (F-08): validates required paymentDetails fields AND enforces the
+ * PER-PROVIDER network allowlist. Both /verify and /settle must run this — a
+ * direct /settle that skips the allowlist would let a Base-only provider settle
+ * on any chain (e.g. eip155:1) via the one-step verify→settle path.
+ */
+export function validatePaymentDetailsForProvider(
+  paymentDetails: Partial<FacilitatorPaymentDetails> | undefined,
+  providerNetworks: string[],
+): PaymentDetailsValidationError | null {
+  const requiredFields: Array<keyof SettleRequest["paymentDetails"]> = [
+    "scheme",
+    "network",
+    "maxAmountRequired",
+    "resource",
+    "payTo",
+    "asset",
+  ];
+
+  const missing = requiredFields.filter((field) => !paymentDetails?.[field]);
+  if (missing.length > 0) {
+    return {
+      error: "invalid_payment_details",
+      message: "paymentDetails must include: scheme, network, maxAmountRequired, resource, payTo, asset",
+    };
+  }
+
+  if (!providerNetworks.includes(paymentDetails!.network!)) {
+    return {
+      error: "unsupported_network",
+      message: `Network ${paymentDetails!.network} is not enabled for your account. Supported: ${providerNetworks.join(", ")}`,
+    };
+  }
+
+  return null;
+}
+
 /**
  * Authenticate a facilitator provider via API key.
  * Expects: Authorization: Bearer <facilitator_api_key>
@@ -150,12 +194,13 @@ router.post("/verify", requireFacilitatorAuth, async (req: FacilitatorRequest, r
 
     const provider = req.facilitatorProvider!;
 
-    // Check network is supported
-    if (!provider.networks.includes(paymentDetails.network)) {
+    // Check network is supported (per-provider allowlist)
+    const validationError = validatePaymentDetailsForProvider(paymentDetails, provider.networks);
+    if (validationError) {
       res.status(400).json({
         ok: false,
-        error: "unsupported_network",
-        message: `Network ${paymentDetails.network} is not enabled for your account. Supported: ${provider.networks.join(", ")}`,
+        error: validationError.error,
+        message: validationError.message,
         request_id: reqId(),
       });
       return;
@@ -230,6 +275,21 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
     }
 
     const provider = req.facilitatorProvider!;
+
+    // SECURITY (F-08): enforce the per-provider network allowlist BEFORE any
+    // verification/settlement. /verify already does this; without it here a
+    // direct one-step /settle bypasses the allowlist and settles on a chain the
+    // provider never enabled (e.g. eip155:1 against a Base-only provider).
+    const validationError = validatePaymentDetailsForProvider(paymentDetails, provider.networks);
+    if (validationError) {
+      res.status(400).json({
+        ok: false,
+        error: validationError.error,
+        message: validationError.message,
+        request_id: reqId(),
+      });
+      return;
+    }
 
     // SECURITY (F-06): never settle an unverified payment. If this payment was
     // not already verified (verify→settle flow), verify it now (one-step flow).
@@ -343,6 +403,15 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
         },
       }).catch((err) => console.error("[facilitator] Failed to update provider stats:", err));
     } else {
+      // SECURITY (F-09): a settlement failure that did NOT consume the on-chain
+      // nonce must release the reserved nonce so a legit retry isn't blocked
+      // forever. releaseNonce clears both Redis and the in-memory fallback.
+      const decoded = decodePayment(payment);
+      const nonce = decoded?.payload?.authorization?.nonce;
+      if (nonce && result.errorMessage !== "nonce_already_consumed") {
+        await releaseNonce(nonce, provider.id);
+      }
+
       // Record the failure
       await prisma.facilitatorPayment.updateMany({
         where: {

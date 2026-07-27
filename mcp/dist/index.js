@@ -7,13 +7,21 @@ import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSche
 import { TOOL_SCHEMAS } from "./schemas.js";
 import express from "express";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 // Version truth: single source = mcp/package.json. Every serverInfo site below
 // reads this constant so the reported version can never drift from the
 // published package / registry (root server.json) again.
 const requireJson = createRequire(import.meta.url);
 const SERVER_VERSION = requireJson("../package.json").version;
-const baseUrl = (process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, "");
-const apiKey = process.env.ARCH_API_KEY || "";
+function resolveApiConfig(overrides) {
+    return {
+        baseUrl: (overrides?.baseUrl || process.env.ARCH_API_BASE_URL || "https://archtools.dev").replace(/\/$/, ""),
+        apiKey: overrides?.apiKey || process.env.ARCH_API_KEY || "",
+    };
+}
+function apiHeaders(config, keyOverride) {
+    return { "x-api-key": keyOverride || config.apiKey };
+}
 // ─── Anonymous demo limits ───────────────────────────────────────────────────
 // Anonymous (no client API key) tool calls are served from a small internal
 // demo pool and are hard-capped. Real usage requires the caller's own Arch
@@ -83,23 +91,24 @@ function clientIp(req) {
 const transport = process.env.MCP_TRANSPORT || "stdio"; // "stdio" or "sse"
 // Render-safe: prefer PORT when running as a web service
 const ssePort = Number(process.env.PORT || process.env.MCP_SSE_PORT || 3001);
-let toolCache = null;
-async function getTools() {
-    if (toolCache)
-        return toolCache;
-    const res = await fetch(`${baseUrl}/v1/tools`, {
-        headers: { "x-api-key": apiKey },
+const toolCache = new Map();
+async function getTools(config = resolveApiConfig()) {
+    const cached = toolCache.get(config.baseUrl);
+    if (cached)
+        return cached;
+    const res = await fetch(`${config.baseUrl}/v1/tools`, {
+        headers: apiHeaders(config),
     });
     if (!res.ok)
         throw new Error(`Failed to fetch tools: ${res.status}`);
     const data = (await res.json());
-    toolCache = data.tools;
-    return toolCache;
+    toolCache.set(config.baseUrl, data.tools);
+    return data.tools;
 }
-async function invokeTool(toolName, input, keyOverride) {
-    const res = await fetch(`${baseUrl}/v1/tools/${toolName}`, {
+async function invokeTool(toolName, input, config = resolveApiConfig(), keyOverride) {
+    const res = await fetch(`${config.baseUrl}/v1/tools/${toolName}`, {
         method: "POST",
-        headers: { "x-api-key": keyOverride || apiKey, "Content-Type": "application/json" },
+        headers: { ...apiHeaders(config, keyOverride), "Content-Type": "application/json" },
         body: JSON.stringify(input ?? {}),
     });
     if (!res.ok) {
@@ -113,7 +122,7 @@ async function invokeTool(toolName, input, keyOverride) {
 const WRITE_TOOLS = new Set([
     "send-email", "email-send", "generate-image", "text-to-speech", "browser-task",
     "transcribe-audio", "image-generate", "webhook-send", "design-create",
-    "social-post", "video-generate", "image-remove-bg", "session-create", "session-message"
+    "video-generate", "image-remove-bg", "session-create", "session-message"
 ]);
 const OPEN_WORLD_TOOLS = new Set([
     "web-scrape", "web-search", "search-web", "rss-parse",
@@ -144,7 +153,7 @@ const RESOURCES = [
     {
         uri: "arch://tools/catalog",
         name: "Arch AI Tools Catalog",
-        description: "Complete catalog of all 64 available Arch AI Tools with descriptions, categories, and credit costs",
+        description: "Complete catalog of all 63 available Arch AI Tools with descriptions, categories, and credit costs",
         mimeType: "application/json"
     },
     {
@@ -156,7 +165,7 @@ const RESOURCES = [
 ];
 const QUICKSTART_MD = `# Arch AI Tools — Quick Start
 
-Connect to 64 powerful AI tools via MCP.
+Connect to 63 powerful AI tools via MCP.
 
 ## Authentication
 All tools require an \`x-api-key\` header with your Arch API key.
@@ -224,7 +233,7 @@ function getPromptMessages(name, args) {
 }
 // ─── Server factory (low-level Server for full schema control) ───────────────
 // auth: per-session client API key (empty = anonymous demo) + IP for rate limiting.
-async function createServer(auth) {
+async function createServer(auth, apiConfig = resolveApiConfig()) {
     const server = new Server({ name: "arch-tools-mcp", version: SERVER_VERSION }, {
         capabilities: {
             tools: { listChanged: false },
@@ -232,7 +241,7 @@ async function createServer(auth) {
             prompts: { listChanged: false },
         },
     });
-    const tools = await getTools();
+    const tools = await getTools(apiConfig);
     // tools/list — returns full inputSchema with required + annotations
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: tools.map(buildToolEntry)
@@ -249,7 +258,7 @@ async function createServer(auth) {
                 return { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true };
             }
         }
-        const result = await invokeTool(request.params.name, request.params.arguments ?? {}, auth?.clientKey || undefined);
+        const result = await invokeTool(request.params.name, request.params.arguments ?? {}, apiConfig, auth?.clientKey || undefined);
         return { content: [{ type: "text", text: result }] };
     });
     // resources/list
@@ -260,7 +269,7 @@ async function createServer(auth) {
     server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         const uri = request.params.uri;
         if (uri === "arch://tools/catalog") {
-            const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+            const toolsRes = await fetch(`${apiConfig.baseUrl}/v1/tools`, { headers: apiHeaders(apiConfig) });
             const toolsData = await toolsRes.json();
             return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] };
         }
@@ -281,6 +290,7 @@ async function createServer(auth) {
 }
 // ─── Streamable HTTP POST handler (shared by /mcp and /sse POST) ─────────────
 async function handleStreamablePost(req, res) {
+    const apiConfig = resolveApiConfig();
     const body = req.body;
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -293,7 +303,7 @@ async function handleStreamablePost(req, res) {
         return;
     }
     try {
-        const tools = await getTools();
+        const tools = await getTools(apiConfig);
         switch (body.method) {
             case "initialize":
                 send({ jsonrpc: "2.0", id: body.id, result: {
@@ -322,7 +332,7 @@ async function handleStreamablePost(req, res) {
                         break;
                     }
                 }
-                const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, clientKey || undefined);
+                const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, apiConfig, clientKey || undefined);
                 send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
                 break;
             }
@@ -332,7 +342,7 @@ async function handleStreamablePost(req, res) {
             case "resources/read": {
                 const uri = body.params?.uri;
                 if (uri === "arch://tools/catalog") {
-                    const toolsRes = await fetch(`${baseUrl}/v1/tools`, { headers: { "x-api-key": apiKey } });
+                    const toolsRes = await fetch(`${apiConfig.baseUrl}/v1/tools`, { headers: apiHeaders(apiConfig) });
                     const toolsData = await toolsRes.json();
                     send({ jsonrpc: "2.0", id: body.id, result: { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(toolsData, null, 2) }] } });
                 }
@@ -443,21 +453,29 @@ async function main() {
         await server.connect(stdioTransport);
     }
 }
-main().catch(console.error);
+// Only autostart the stdio/SSE CLI when this file is the process entry point.
+// Under hosted (Smithery) deployment the module is IMPORTED for its default
+// export — running main() on import would spuriously boot a stdio server.
+function isEntrypoint() {
+    return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+if (isEntrypoint()) {
+    main().catch(console.error);
+}
 // Smithery sandbox export — allows scanning without real credentials
 export async function createSandboxServer() {
-    // Set a dummy key so createServer doesn't fail during scan
-    process.env.ARCH_API_KEY = process.env.ARCH_API_KEY || "sandbox_scan_key";
-    return createServer();
+    // Pass a dummy key through the resolved config so createServer doesn't fail
+    // during scan (without mutating process.env).
+    return createServer(undefined, resolveApiConfig({ apiKey: process.env.ARCH_API_KEY || "sandbox_scan_key" }));
 }
-// Default export for Smithery hosted deployment
+// Default export for Smithery hosted deployment. Resolve the hosted config and
+// thread it directly into createServer (call-time) rather than mutating
+// process.env after import — the old approach never reached the frozen consts.
 export default async function (opts) {
-    if (opts?.config?.apiKey)
-        process.env.ARCH_API_KEY = opts.config.apiKey;
-    if (opts?.config?.baseUrl)
-        process.env.ARCH_API_BASE_URL = opts.config.baseUrl;
-    if (opts?.env?.ARCH_API_KEY)
-        process.env.ARCH_API_KEY = opts.env.ARCH_API_KEY;
-    return createServer();
+    const apiConfig = resolveApiConfig({
+        apiKey: opts?.config?.apiKey || opts?.env?.ARCH_API_KEY,
+        baseUrl: opts?.config?.baseUrl || opts?.env?.ARCH_API_BASE_URL,
+    });
+    return createServer(undefined, apiConfig);
 }
 //# sourceMappingURL=index.js.map
