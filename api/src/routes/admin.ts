@@ -176,7 +176,11 @@ const SELF_EMAIL_PATTERNS = [
   /verify[-.]/i,            // verify-… / verify.… throwaways
   /^test/i, /\+test/i,
   /@example\.(com|org)$/i,
-  ...String(process.env.SELF_EMAIL_PATTERNS ?? "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => new RegExp(s, "i")),
+  // Env-supplied patterns: an invalid regex must degrade (skip + warn), not
+  // throw at module load and take the API down with it.
+  ...String(process.env.SELF_EMAIL_PATTERNS ?? "").split(",").map((s) => s.trim()).filter(Boolean).flatMap((s) => {
+    try { return [new RegExp(s, "i")]; } catch { logger.warn({ pattern: s }, "Ignoring invalid SELF_EMAIL_PATTERNS regex"); return []; }
+  }),
 ];
 const isSelfEmail = (email: string | null | undefined): boolean =>
   !!email && SELF_EMAIL_PATTERNS.some((re) => re.test(email));
@@ -186,40 +190,48 @@ const REAL_CLIENT_NAMES = new Set(["claude-desktop", "claude", "cursor", "openai
 
 router.get("/traffic", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
-    const [agents, requests, purchases, x402] = await Promise.all([
-      prisma.agent.findMany({ select: { email: true, createdAt: true } }),
-      prisma.apiRequest.findMany({ select: { callerType: true, callerName: true, agentId: true, createdAt: true, status: true } }),
-      prisma.purchase.findMany({ where: { status: "completed" }, select: { amountCents: true, createdAt: true } }),
-      prisma.x402Payment.findMany({ where: { status: "settled" }, select: { amountUsdc: true, createdAt: true } }),
+    const [agents, requestGroups, purchases, x402] = await Promise.all([
+      prisma.agent.findMany({ select: { email: true } }),
+      // Aggregate ApiRequest in the DB — it grows with every tool call and must
+      // not be materialized row-by-row for a read-only diagnostic. Grouping by
+      // fingerprint keeps the result bounded by distinct caller pairs.
+      prisma.apiRequest.groupBy({ by: ["callerType", "callerName"], _count: { _all: true } }),
+      prisma.purchase.findMany({ where: { status: "completed" }, select: { amountCents: true, agent: { select: { email: true } } } }),
+      prisma.x402Payment.findMany({ where: { status: "settled" }, select: { amountUsdc: true } }),
     ]);
 
     const externalAgents = agents.filter((a) => !isSelfEmail(a.email));
+    // Stripe purchases from self-pattern accounts are seeding, not demand —
+    // classify them the same way signups are.
+    const externalPurchases = purchases.filter((p) => !isSelfEmail(p.agent.email));
 
-    // Tool calls: a call is "real" if the caller fingerprint names a known client
-    // OR callerType is a genuine agent/sdk; script/unknown/null = likely self-test.
-    const realCall = (r: { callerType: string | null; callerName: string | null }) =>
-      (r.callerName != null && REAL_CLIENT_NAMES.has(r.callerName.toLowerCase())) ||
-      (r.callerType != null && ["ai-agent", "sdk"].includes(r.callerType.toLowerCase()));
-    const realCalls = requests.filter(realCall);
+    // Tool calls: a call is "real" only if the caller fingerprint names a known
+    // client OR callerType is a genuine ai-agent. Generic HTTP runtimes (curl,
+    // python, axios… — fingerprinted as "sdk") and script/unknown/null = likely self-test.
+    const realGroup = (g: { callerType: string | null; callerName: string | null }) =>
+      (g.callerName != null && REAL_CLIENT_NAMES.has(g.callerName.toLowerCase())) ||
+      (g.callerType != null && g.callerType.toLowerCase() === "ai-agent");
+    const totalCalls = requestGroups.reduce((s, g) => s + g._count._all, 0);
+    const realCallCount = requestGroups.filter(realGroup).reduce((s, g) => s + g._count._all, 0);
 
     const stripeRevenueUsd = purchases.reduce((s, p) => s + p.amountCents, 0) / 100;
     const x402TotalUsdc = x402.reduce((s, p) => s + (parseFloat(p.amountUsdc) || 0), 0);
 
-    // Top real-client fingerprints (what's actually calling us)
+    // Top caller fingerprints (what's actually calling us)
     const byClient: Record<string, number> = {};
-    for (const r of requests) { const k = r.callerName || r.callerType || "unknown"; byClient[k] = (byClient[k] || 0) + 1; }
+    for (const g of requestGroups) { const k = g.callerName || g.callerType || "unknown"; byClient[k] = (byClient[k] || 0) + g._count._all; }
     const topClients = Object.entries(byClient).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count }));
 
-    const externalDemand = externalAgents.length > 0 || purchases.length > 0 || realCalls.length > 0;
+    const externalDemand = externalAgents.length > 0 || externalPurchases.length > 0 || realCallCount > 0;
 
     res.json({
       ok: true,
       generated_at: new Date().toISOString(),
-      note: "Heuristic separation of external demand from self-testing/seeding. Self = email matches a test pattern; real tool calls = a known client fingerprint or agent/sdk caller type. x402 payments do not store a payer address, so treat x402 counts as self-seeded until a non-self signup or paid conversion appears.",
-      verdict: { external_demand: externalDemand, meaning: externalDemand ? "At least one non-self signup, paid conversion, or real-client tool call exists." : "No external demand detected yet — all traffic looks self-generated." },
+      note: "Heuristic separation of external demand from self-testing/seeding. Self = email matches a test pattern (applied to signups AND Stripe purchases); real tool calls = a known client fingerprint or ai-agent caller type (generic HTTP runtimes like curl/python count as self-test). x402 payments do not store a payer address, so treat x402 counts as self-seeded until a non-self signup or paid conversion appears.",
+      verdict: { external_demand: externalDemand, meaning: externalDemand ? "At least one non-self signup, non-self paid conversion, or real-client tool call exists." : "No external demand detected yet — all traffic looks self-generated." },
       signups: { total: agents.length, external: externalAgents.length, self: agents.length - externalAgents.length },
-      tool_calls: { total: requests.length, real_client: realCalls.length, self_or_unknown: requests.length - realCalls.length },
-      stripe: { completed_purchases: purchases.length, revenue_usd: Number(stripeRevenueUsd.toFixed(2)) },
+      tool_calls: { total: totalCalls, real_client: realCallCount, self_or_unknown: totalCalls - realCallCount },
+      stripe: { completed_purchases: purchases.length, external_purchases: externalPurchases.length, revenue_usd: Number(stripeRevenueUsd.toFixed(2)) },
       x402: { settled_payments: x402.length, total_usdc: Number(x402TotalUsdc.toFixed(4)), note: "payer not stored; currently self-seeded" },
       top_caller_fingerprints: topClients,
     });

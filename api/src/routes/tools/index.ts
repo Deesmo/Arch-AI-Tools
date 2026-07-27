@@ -1161,7 +1161,22 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   };
   const requestedModel = explicitModel ? (MODEL_ALIASES[explicitModel.toLowerCase()] ?? explicitModel) : undefined;
   let model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
-  const resolvedMode = explicitModel ? undefined : (mode ?? "smart");
+  let resolvedMode = explicitModel ? undefined : (mode ?? "smart");
+
+  const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
+  const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
+  const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
+  const GROK_MODELS = ["grok-3", "grok-3-fast", "grok-2"];
+
+  // BYOK key for a given model's provider. Only a key matching the selected
+  // model's provider counts — an unrelated BYOK header still runs inference on
+  // a platform key and must not change pricing or pinning decisions.
+  const byokKeyForModel = (m: string): string | undefined =>
+    GPT_MODELS.includes(m) ? byokOpenaiKey :
+    GEMINI_MODELS.includes(m) ? byokGoogleKey :
+    GROK_MODELS.includes(m) ? byokXaiKey :
+    CLAUDE_MODELS.includes(m) ? byokAnthropicKey :
+    undefined;
 
   // x402 flat pricing gap (council finding 2026-07-27): the flat x402 price for
   // this tool ($0.040) covers the standard Sonnet-tier cost, but the 402 challenge
@@ -1169,16 +1184,12 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   // a premium model (Opus ≈ 2× cost) at the flat price. Pin x402-paid calls to the
   // default model; premium models require the credits/subscription path (which
   // prices per-model via applyModelCost). NOT when the caller brought their own key
-  // (BYOK pays its own inference, so the model choice costs the platform nothing).
-  const anyByokKey = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey);
-  if (paid && !anyByokKey && modelCostMultiplier(model) > 1.0) {
+  // for the selected model's provider (BYOK pays its own inference, so the model
+  // choice costs the platform nothing).
+  if (paid && !byokKeyForModel(model) && modelCostMultiplier(model) > 1.0) {
     model = AI_MODE_PRESETS.smart; // claude-sonnet-4-6
+    if (resolvedMode) resolvedMode = "smart"; // echo what is actually served, not the requested mode
   }
-
-  const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
-  const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
-  const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
-  const GROK_MODELS = ["grok-3", "grok-3-fast", "grok-2"];
 
   const maxTok = Math.min(max_tokens, 4096);
 
@@ -1920,7 +1931,8 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
         analysis,
         confidence,
         model_used: result.model,
-        reasoning_depth,
+        // Echo the depth actually served (x402 pinning can downgrade deep→standard).
+        reasoning_depth: effectiveDepth,
         reasoning_tokens: result.usage?.output_tokens ?? undefined,
         word_count: analysis.split(/\s+/).filter(Boolean).length,
         char_count: analysis.length,
