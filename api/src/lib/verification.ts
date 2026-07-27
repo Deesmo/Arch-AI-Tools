@@ -26,7 +26,11 @@ export const SIGNUP_FREE_CREDITS = parseInt(
  */
 export const SIGNUP_STARTER_CREDITS = Math.max(
   0,
-  parseInt(process.env.SIGNUP_STARTER_CREDITS ?? "10", 10) || 0
+  // Default 25 so a new agent's FIRST real AI call succeeds instantly: the
+  // cheapest AI tool (ai-generate on the default Sonnet model) costs 20 credits,
+  // and a first-touch 402 paywall is the verified #1 activation killer. Env-tunable;
+  // set to 0 to restore fully-gated behavior without a code change.
+  parseInt(process.env.SIGNUP_STARTER_CREDITS ?? "25", 10) || 0
 );
 
 const VERIFY_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes

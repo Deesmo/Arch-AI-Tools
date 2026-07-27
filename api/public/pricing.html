@@ -311,8 +311,15 @@ async function startCheckout(endpoint, body) {
   try {
     var res = await fetch(endpoint, { method: 'POST', headers: headers, credentials: 'include', body: JSON.stringify(body) });
     if (res.status === 401) {
-      if (apiKey) { try { localStorage.removeItem('arch_api_key'); sessionStorage.removeItem('arch_api_key'); } catch(e) {} }
-      window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+      if (apiKey) {
+        // A stored key failed — clear it and send them to sign back in.
+        try { localStorage.removeItem('arch_api_key'); sessionStorage.removeItem('arch_api_key'); } catch(e) {}
+        window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+      } else {
+        // Anonymous buy-intent: they have no account to log into — send them to
+        // sign up (free), then return to pricing to complete the purchase.
+        window.location.href = '/signup?next=' + encodeURIComponent('/pricing');
+      }
       return;
     }
     var data = await res.json();
