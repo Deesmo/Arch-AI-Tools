@@ -639,7 +639,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
 router.post("/web-search", ...toolMiddleware("web-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
-    const ok = await deductCredits(req, res, "web-search", 10);
+    const ok = await deductCredits(req, res, "web-search", 14);
     if (!ok) return;
   }
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
@@ -1302,7 +1302,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
 router.post("/ocr-extract", ...toolMiddleware("ocr-extract"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
-    const ok = await deductCredits(req, res, "ocr-extract", 10);
+    const ok = await deductCredits(req, res, "ocr-extract", 12);
     if (!ok) return;
   }
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
@@ -2418,14 +2418,23 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
 // ─── design-create ────────────────────────────────────────────────────────────
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
   const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; n?: number };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
-  const safeSize = validSizes.includes(size) ? size : "1024x1024";
-  // gpt-image-1 quality: low/medium/high
+  let safeSize = validSizes.includes(size) ? size : "1024x1024";
+  // gpt-image-1 quality → cost (profitability audit 2026-07-27): low ≈ $0.011,
+  // medium ≈ $0.042, high ≈ $0.167 per 1024². Map anything unrecognized (incl. the
+  // ambiguous "auto") to medium so the price is always known.
   const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
-  const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
+  let safeQuality = ["low", "medium", "high"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
+  // x402 is a FLAT price ($0.055 = medium quality @ 1024²). Pin x402-paid calls to
+  // that base tier — high quality (≈$0.167) and non-square sizes (~1.5× cost) can't be
+  // gotten at the medium/base flat price; they require the credits path, which charges
+  // the higher tier below (council finding 2026-07-27: n is already hard-capped to 1).
+  if (paid) { if (safeQuality === "high") safeQuality = "medium"; safeSize = "1024x1024"; }
+  const sizeMult = safeSize === "1024x1024" ? 1 : 1.5;
+  const designCredits = Math.ceil((safeQuality === "high" ? 180 : safeQuality === "low" ? 15 : 50) * sizeMult);
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", designCredits); if (!ok) return; }
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Image generation not configured", request_id: reqId() }); return; }
   try {
@@ -2521,15 +2530,19 @@ router.post("/domain-check", ...toolMiddleware("domain-check"), async (req: Auth
 router.post("/generate-image", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   req.url = "/design-create";
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "design-create", 30); if (!ok) return; }
   const { prompt, size = "1024x1024", quality = "medium" } = req.body as { prompt?: string; size?: string; quality?: string };
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
   if (!OPENAI_KEY) { res.status(503).json({ ok: false, error: "service_unavailable", message: "Image generation not configured.", request_id: reqId() }); return; }
-  const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
-  const safeQuality = ["low", "medium", "high", "auto"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
   const validSizes = ["1024x1024", "1792x1024", "1024x1792"];
-  const safeSize = validSizes.includes(size) ? size : "1024x1024";
+  let safeSize = validSizes.includes(size) ? size : "1024x1024";
+  const qualityMap: Record<string, string> = { standard: "medium", hd: "high", vivid: "medium", natural: "medium" };
+  let safeQuality = ["low", "medium", "high"].includes(quality) ? quality : (qualityMap[quality] ?? "medium");
+  // Quality+size-aware pricing + x402 base-tier pin — same as /design-create (its alias).
+  if (paid) { if (safeQuality === "high") safeQuality = "medium"; safeSize = "1024x1024"; }
+  const sizeMult = safeSize === "1024x1024" ? 1 : 1.5;
+  const designCredits = Math.ceil((safeQuality === "high" ? 180 : safeQuality === "low" ? 15 : 50) * sizeMult);
+  if (!paid) { const ok = await deductCredits(req, res, "design-create", designCredits); if (!ok) return; }
   try {
     const r = await axios.post("https://api.openai.com/v1/images/generations",
       { model: "gpt-image-1", prompt, n: 1, size: safeSize, quality: safeQuality },
@@ -2572,7 +2585,7 @@ router.post("/check-domain", ...toolMiddleware("domain-check"), async (req: Auth
 // ─── 51. NEWS-SEARCH ──────────────────────────────────────────────────────────
 router.post("/news-search", ...toolMiddleware("news-search"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "news-search", 3); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "news-search", 12); if (!ok) return; }
   const query = String(req.body.query ?? req.query.query ?? "").trim();
   const limit = Math.min(Number(req.body.limit ?? req.query.limit ?? 5), 10);
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
@@ -2714,7 +2727,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
 // ─── 53. FACT-CHECK ───────────────────────────────────────────────────────────
 router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "fact-check", 10); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "fact-check", 14); if (!ok) return; }
   const claim = String(req.body.claim ?? req.query.claim ?? "").trim();
   if (!claim) return void res.status(400).json({ ok: false, error: "missing_param", message: "claim is required" });
 
@@ -3005,8 +3018,10 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
-  // Scaled by duration at 125 credits/second, 500 minimum (5s = 625, 10s = 1250)
-  const videoCost = Math.max(500, duration * 125);
+  // Scaled by duration at 140 credits/second, 700 minimum (5s = 700, 10s = 1400).
+  // Runway gen4.5 ≈ $0.80–1.00 for 10s; at the worst-case $0.00114/credit bulk rate
+  // 1400 credits = $1.60, keeping a safe margin over the top-tier COGS (audit 2026-07-27).
+  const videoCost = Math.max(700, duration * 140);
   const paid = isX402Paid(req);
   if (!paid) {
     const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
@@ -3146,7 +3161,7 @@ router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req
 // ─── 56. EMAIL-FIND (Hunter.io) ──────────────────────────────────────────────
 router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "email-find", 5); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "email-find", 110); if (!ok) return; }
   const { domain, first_name, last_name } = req.body as { domain?: string; first_name?: string; last_name?: string };
   if (!domain) { res.status(400).json({ ok: false, error: "invalid_request", message: "domain is required", request_id: reqId() }); return; }
   const hunterKey = process.env.HUNTER_API_KEY;
