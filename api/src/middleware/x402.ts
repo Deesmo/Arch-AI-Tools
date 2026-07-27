@@ -20,7 +20,7 @@ import { config } from "../config.js";
 import { redis } from "../lib/redis.js";
 import { getBazaarExtension } from "./bazaarDiscovery.js";
 import { classifyStatus } from "../utils/statusClass.js";
-import { toV1Requirements, asV1Payload, claimsV1 } from "../lib/x402V1.js";
+import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
 
 // x402scan output schema map — generated from openapi.json
 // Required by x402scan for resource registration ("Missing input schema" fix)
@@ -988,9 +988,22 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       extra: (paymentRequirements as any).extra,
     };
 
+    let verifyAsV2 = false;
     if (isCdp && v1Payload) {
-      finalPayload = v1Payload;
-      finalPaymentReqs = toV1Requirements(paymentRequirements);
+      // Same v2 translation as settlePayment — verify and settle MUST use the same
+      // protocol version for one payment (council 2026-07-27: no verify(V1)/settle(v2)
+      // version skew on a single nonce). Falls back to the proven V1 pass-through
+      // when no bazaar block / CAIP-2 mapping / resource URL exists.
+      const bazaarBlockV = getBazaarExtension(toolName);
+      const v2 = bazaarBlockV ? toV2Payload(v1Payload, paymentRequirements, bazaarBlockV.extensions) : null;
+      if (v2) {
+        finalPayload = v2;
+        finalPaymentReqs = toV2Requirements(paymentRequirements) as object;
+        verifyAsV2 = true;
+      } else {
+        finalPayload = v1Payload;
+        finalPaymentReqs = toV1Requirements(paymentRequirements);
+      }
     } else if (isCdp) {
       // v2 payload wraps the inner payload with 'accepted' field — works for both EVM and Solana.
       // Bazaar discovery (additive): forward the client-echoed optional v2 PaymentPayload fields
@@ -1010,12 +1023,12 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       finalPayload = paymentPayload;
     }
 
-    const payloadFormat = isSolana ? "solana-v2" : (isCdp ? (v1Payload ? "evm-v1-passthrough" : "evm-v2") : "v1");
+    const payloadFormat = isSolana ? "solana-v2" : (isCdp ? (v1Payload ? (verifyAsV2 ? "evm-v1-to-v2-bazaar" : "evm-v1-passthrough") : "evm-v2") : "v1");
     console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName}, format: ${payloadFormat}, network: ${(paymentRequirements as any).network})`);
     const res = await axios.post(
       `${facilitatorUrl}/verify`,
       {
-        x402Version: isCdp && !v1Payload ? 2 : 1,
+        x402Version: verifyAsV2 || (isCdp && !v1Payload) ? 2 : 1,
         paymentPayload: finalPayload,
         paymentRequirements: finalPaymentReqs,
       },
@@ -1088,21 +1101,26 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       extra: (paymentRequirements as any).extra,
     };
 
+    let settleAsV2 = false;
     if (isCdpSettle && v1PayloadSettle) {
-      // Bazaar cataloging (additive, SERVER-authoritative — never client-echoed): the
-      // facilitator catalogs a resource when the settled PaymentPayload carries the
-      // bazaar extension (spec: x402 specs/extensions/bazaar.md "Facilitator Behavior").
-      // CDP's x402V1PaymentPayload accepts optional resource/extensions — proven live
-      // 2026-07-27 (direct /verify 200 isValid on this exact shape). Settle without
-      // these fields never cataloged (0 archtools entries across all 14,256 Bazaar
-      // resources after 61 plain-V1 settles).
+      // Bazaar cataloging (SERVER-authoritative — never client-echoed): the facilitator
+      // only processes protocol extensions on x402 v2 payloads. Proven live 2026-07-27:
+      // V1 payload + extensions → EXTENSION-RESPONSES "e30=" ({}) and 0 catalog entries
+      // across 14,260 Bazaar resources; the v2 translation of the SAME payment →
+      // {"bazaar":{"status":"processing"}} with isValid:true (EIP-3009 signs the chain's
+      // EIP-712 domain, not the protocol representation, so the signature is unchanged).
+      // Translate to v2 when we have a bazaar block + a CAIP-2 network mapping;
+      // otherwise keep the plain V1 pass-through (#62) that already settles correctly.
       const bazaarBlock = getBazaarExtension(toolName);
-      finalPayloadSettle = {
-        ...v1PayloadSettle,
-        ...((paymentRequirements as any).resource ? { resource: (paymentRequirements as any).resource } : {}),
-        ...(bazaarBlock ? { extensions: bazaarBlock.extensions } : {}),
-      };
-      finalPaymentReqsSettle = toV1Requirements(paymentRequirements);
+      const v2 = bazaarBlock ? toV2Payload(v1PayloadSettle, paymentRequirements, bazaarBlock.extensions) : null;
+      if (v2) {
+        finalPayloadSettle = v2;
+        finalPaymentReqsSettle = toV2Requirements(paymentRequirements) as object;
+        settleAsV2 = true;
+      } else {
+        finalPayloadSettle = v1PayloadSettle;
+        finalPaymentReqsSettle = toV1Requirements(paymentRequirements);
+      }
     } else if (isCdpSettle) {
       // Bazaar discovery (additive): forward client-echoed v2 `resource` + `extensions` —
       // the Bazaar catalogs the endpoint from paymentPayload.extensions.bazaar on first
@@ -1119,12 +1137,12 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       finalPayloadSettle = paymentPayload;
     }
 
-    const settleFormat = isSolanaSettle ? "solana-v2" : (isCdpSettle ? (v1PayloadSettle ? "evm-v1-passthrough" : "evm-v2") : "v1");
+    const settleFormat = isSolanaSettle ? "solana-v2" : (isCdpSettle ? (v1PayloadSettle ? (settleAsV2 ? "evm-v1-to-v2-bazaar" : "evm-v1-passthrough") : "evm-v2") : "v1");
     console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName}, format: ${settleFormat})`);
     const res = await axios.post(
       `${facilitatorUrl}/settle`,
       {
-        x402Version: isCdpSettle && !v1PayloadSettle ? 2 : 1,
+        x402Version: settleAsV2 || (isCdpSettle && !v1PayloadSettle) ? 2 : 1,
         paymentPayload: finalPayloadSettle,
         paymentRequirements: finalPaymentReqsSettle,
       },

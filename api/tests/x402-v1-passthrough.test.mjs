@@ -6,7 +6,7 @@
  *   cd api && npm run build && node tests/x402-v1-passthrough.test.mjs
  */
 import assert from "assert";
-import { toV1Requirements, asV1Payload, claimsV1 } from "../dist/lib/x402V1.js";
+import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements, V1_TO_CAIP2 } from "../dist/lib/x402V1.js";
 
 let failures = 0;
 function test(name, fn) {
@@ -106,6 +106,52 @@ test("claimsV1 matches numeric 1 and string \"1\", not 2 or garbage", () => {
   assert.strictEqual(claimsV1({ x402Version: 2 }), false);
   assert.strictEqual(claimsV1({ raw: "zzz" }), false);
   assert.strictEqual(claimsV1(undefined), false);
+});
+
+test("toV2Requirements maps V1 network to CAIP-2 and uses amount (v2 spec)", () => {
+  const out = toV2Requirements(REQS);
+  assert.strictEqual(out.network, "eip155:8453");
+  assert.strictEqual(out.amount, "10000");
+  assert.ok(!("maxAmountRequired" in out) && !("resource" in out));
+});
+
+test("toV2Requirements returns null for unmapped networks", () => {
+  assert.strictEqual(toV2Requirements({ ...REQS, network: "iotex" }), null);
+});
+
+test("toV2Payload builds spec 5.2 shape with server extensions", () => {
+  const ext = { bazaar: { info: { input: { type: "http", method: "POST", bodyType: "json", body: {} } } } };
+  const out = toV2Payload(asV1Payload(V1_PAYLOAD, REQS), REQS, ext);
+  assert.deepStrictEqual(Object.keys(out).sort(), ["accepted", "extensions", "payload", "resource", "x402Version"]);
+  assert.strictEqual(out.x402Version, 2);
+  assert.strictEqual(out.accepted.network, "eip155:8453");
+  assert.strictEqual(out.resource.url, REQS.resource);
+  assert.strictEqual(out.extensions.bazaar.info.input.type, "http");
+});
+
+test("toV2Payload omits extensions when absent and nulls on unmapped network", () => {
+  const p = asV1Payload(V1_PAYLOAD, REQS);
+  assert.ok(!("extensions" in toV2Payload(p, REQS)));
+  assert.strictEqual(toV2Payload(p, { ...REQS, network: "iotex" }), null);
+});
+
+test("toV2Payload preserves economic terms exactly (amount/asset/payTo == challenge)", () => {
+  const out = toV2Payload(asV1Payload(V1_PAYLOAD, REQS), REQS, null);
+  assert.strictEqual(out.accepted.amount, REQS.maxAmountRequired);
+  assert.strictEqual(out.accepted.asset, REQS.asset);
+  assert.strictEqual(out.accepted.payTo, REQS.payTo);
+  assert.strictEqual(out.accepted.maxTimeoutSeconds, REQS.maxTimeoutSeconds);
+  assert.deepStrictEqual(out.payload, V1_PAYLOAD.payload);
+});
+
+test("toV2Payload declines (null) when resource url is missing — caller falls back to V1", () => {
+  const { resource: _omit, ...noRes } = REQS;
+  assert.strictEqual(toV2Payload(asV1Payload(V1_PAYLOAD, REQS), noRes, null), null);
+});
+
+test("V1_TO_CAIP2 covers the networks our 402s offer", () => {
+  assert.strictEqual(V1_TO_CAIP2.base, "eip155:8453");
+  assert.strictEqual(V1_TO_CAIP2.polygon, "eip155:137");
 });
 
 if (failures) {

@@ -50,3 +50,54 @@ export function asV1Payload(p: any, reqs: any): object | null {
 export function claimsV1(p: any): boolean {
   return Number(p?.x402Version) === 1;
 }
+
+/**
+ * V1 network names → CAIP-2 identifiers (x402 v2 spec requires CAIP-2).
+ * Deliberately ONLY the networks our 402s actually offer and that are proven with the
+ * CDP facilitator (council 2026-07-27: do not enable unproven networks by mapping).
+ */
+export const V1_TO_CAIP2: Record<string, string> = {
+  base: "eip155:8453",
+  "base-sepolia": "eip155:84532",
+  polygon: "eip155:137",
+  "polygon-amoy": "eip155:80002",
+};
+
+/** x402 v2 PaymentRequirements (spec §5.1.2): `amount` + CAIP-2 network. */
+export function toV2Requirements(r: any): object | null {
+  const network = V1_TO_CAIP2[r?.network];
+  if (!network) return null;
+  return {
+    scheme: r.scheme,
+    network,
+    amount: r.maxAmountRequired ?? r.amount,
+    asset: r.asset,
+    payTo: r.payTo,
+    maxTimeoutSeconds: r.maxTimeoutSeconds ?? 60,
+    ...(r.extra !== undefined ? { extra: r.extra } : {}),
+  };
+}
+
+/**
+ * Translate a sanitized V1 payment into an x402 v2 PaymentPayload (spec §5.2) so the
+ * facilitator processes protocol extensions — the Bazaar only catalogs from v2
+ * payloads (proven live 2026-07-27: V1+extensions → EXTENSION-RESPONSES {} and no
+ * catalog entry; v2 translation → {"bazaar":{"status":"processing"}}). The EIP-3009
+ * signature is bound to the chain's EIP-712 domain, not the protocol representation,
+ * so the same signed payload verifies identically. Returns null when the network has
+ * no CAIP-2 mapping — caller falls back to plain V1 pass-through.
+ */
+export function toV2Payload(v1Payload: any, reqs: any, extensions?: object | null): object | null {
+  const accepted = toV2Requirements(reqs);
+  if (!accepted || !v1Payload?.payload) return null;
+  // resource.url must be a real URL — decline translation (caller falls back to the
+  // proven V1 pass-through) rather than send a malformed v2 resource (council finding).
+  if (typeof reqs?.resource !== "string" || reqs.resource.length === 0) return null;
+  return {
+    x402Version: 2,
+    resource: { url: reqs.resource, description: reqs.description, mimeType: reqs.mimeType },
+    accepted,
+    payload: v1Payload.payload,
+    ...(extensions ? { extensions } : {}),
+  };
+}
