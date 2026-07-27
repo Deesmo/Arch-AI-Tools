@@ -45,7 +45,7 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
   // Check DB connection
   let dbStatus: "connected" | "error" = "error";
   let dbLatencyMs = 0;
-  let toolCount = 64;
+  let toolCount = 63; // stale-safe fallback; overwritten by prisma.tool.count() below
   let agentCount = 0;
   try {
     const dbStart = Date.now();
