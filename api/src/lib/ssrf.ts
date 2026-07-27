@@ -4,6 +4,7 @@ import net from "net";
 import http from "http";
 import https from "https";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import { Agent as UndiciAgent, request as undiciRequest } from "undici";
 
 // Max redirect hops we will follow while re-validating each one.
 const MAX_REDIRECTS = Number(process.env.SCRAPE_MAX_REDIRECTS || 4);
@@ -161,6 +162,80 @@ function buildPinnedAgents(target: SafeTarget): Pick<AxiosRequestConfig, "httpAg
   };
 }
 
+function headersToObject(headers: RequestInit["headers"] | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  const out: Record<string, string> = {};
+  new Headers(headers as ConstructorParameters<typeof Headers>[0]).forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
+function responseHeadersFromUndici(headers: Record<string, string | string[] | undefined>): Headers {
+  const out = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) out.append(key, item);
+    } else if (value !== undefined) {
+      out.set(key, value);
+    }
+  }
+  return out;
+}
+
+/**
+ * Performs a single fetch with the validated address pinned into the socket
+ * lookup via an undici dispatcher. The global fetch cannot take a custom lookup,
+ * so we use undici.request directly and adapt the result into a global Response
+ * (preserving `.status`/`.statusText`/`.headers.get()`/`.url` and the body).
+ */
+async function fetchPinned(target: SafeTarget, init: RequestInit): Promise<Response> {
+  const dispatcher = new UndiciAgent({
+    connect: { lookup: createPinnedLookup(target) as never },
+    keepAliveTimeout: 1,
+    keepAliveMaxTimeout: 1,
+  });
+
+  try {
+    const method = (init.method ?? "GET").toUpperCase();
+    const resp = await undiciRequest(target.url, {
+      method: method as never,
+      headers: headersToObject(init.headers),
+      body: init.body as never,
+      signal: init.signal as never,
+      dispatcher,
+    });
+
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of resp.body) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += buf.length;
+      if (total > DEFAULT_MAX_BYTES) {
+        throw new Error("Response body too large");
+      }
+      chunks.push(buf);
+    }
+
+    // HEAD (and other bodiless) responses must not carry a body in a Response.
+    const bodyless = method === "HEAD" || resp.statusCode === 204 || resp.statusCode === 304;
+    const out = new Response(bodyless ? null : Buffer.concat(chunks), {
+      status: resp.statusCode,
+      headers: responseHeadersFromUndici(resp.headers),
+    });
+    // Response.url is read-only via the constructor; pin the final URL so callers
+    // that compare resp.url (e.g. redirect detection) keep working.
+    try {
+      Object.defineProperty(out, "url", { value: target.url.toString(), configurable: true });
+    } catch {
+      /* url stays "" — non-fatal */
+    }
+    return out;
+  } finally {
+    dispatcher.close().catch(() => {});
+  }
+}
+
 /**
  * Validates a single URL for SSRF safety:
  *  - only http/https
@@ -244,10 +319,14 @@ export async function safeAxiosGet(
   let current = rawUrl;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await validateUrl(current);
+    // Resolve+validate AND pin the validated address into the socket lookup so a
+    // second, attacker-controlled DNS answer (rebinding) cannot swap in an
+    // internal IP between validation and connect (TOCTOU).
+    const target = await resolveSafeTarget(current);
 
-    const resp = await axios.get(current, {
+    const resp = await axios.get(target.url.toString(), {
       ...config,
+      ...buildPinnedAgents(target),
       maxRedirects: 0, // we follow manually, validating each hop
       maxContentLength: config.maxContentLength ?? DEFAULT_MAX_BYTES,
       maxBodyLength: config.maxBodyLength ?? DEFAULT_MAX_BYTES,
@@ -276,9 +355,12 @@ export async function safeFetch(rawUrl: string, init: RequestInit = {}): Promise
   let current = rawUrl;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await validateUrl(current);
+    // Resolve+validate AND pin the validated address into the socket lookup so a
+    // second, attacker-controlled DNS answer (rebinding) cannot swap in an
+    // internal IP between validation and connect (TOCTOU).
+    const target = await resolveSafeTarget(current);
 
-    const resp = await fetch(current, { ...init, redirect: "manual" });
+    const resp = await fetchPinned(target, { ...init, redirect: "manual" });
 
     if (resp.status >= 300 && resp.status < 400) {
       const location = resp.headers.get("location");

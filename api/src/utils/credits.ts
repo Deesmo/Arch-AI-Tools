@@ -87,11 +87,14 @@ export async function deductCredits(
   }
 
   let finalized = false;
-  const finalizeCharge = async (): Promise<void> => {
+  const finalizeCharge = async (responseCompleted: boolean): Promise<void> => {
     if (finalized) return;
     finalized = true;
 
-    const succeeded = res.statusCode >= 200 && res.statusCode < 400;
+    // A 2xx status alone is not proof of delivery: if the socket closed before
+    // the response body was fully written (client abort), the caller never got
+    // a result, so we must refund rather than charge.
+    const succeeded = responseCompleted && res.statusCode >= 200 && res.statusCode < 400;
     try {
       if (succeeded) {
         // Empty-result waiver: the call succeeded but found nothing, so the
@@ -145,8 +148,8 @@ export async function deductCredits(
     }
   };
 
-  res.once("finish", () => { void finalizeCharge(); });
-  res.once("close", () => { void finalizeCharge(); });
+  res.once("finish", () => { void finalizeCharge(true); });
+  res.once("close", () => { void finalizeCharge(res.writableEnded); });
 
   if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
     prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })

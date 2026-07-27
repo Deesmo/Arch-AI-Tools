@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth.js";
-import { x402Middleware } from "../../middleware/x402.js";
+import { x402Middleware, X402_PRICES, isX402AnonymousTool, buildPaymentRequired } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr, waiveCharge } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
@@ -129,6 +129,15 @@ function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
 }
 
+function normalizeCdpTokenId(tokenId: unknown): string | null {
+  if (tokenId === null || tokenId === undefined) return null;
+  const cleaned = String(tokenId).trim();
+  // ERC-721/1155 token IDs are uint256 values. Keep this path segment numeric
+  // before signing the CDP request so callers cannot alter the upstream route.
+  if (!/^[0-9]{1,78}$/.test(cleaned)) return null;
+  return cleaned;
+}
+
 const MAX_TRANSCRIBE_AUDIO_BYTES = Number.isFinite(Number(process.env.TRANSCRIBE_MAX_AUDIO_BYTES))
   && Number(process.env.TRANSCRIBE_MAX_AUDIO_BYTES) > 0
   ? Number(process.env.TRANSCRIBE_MAX_AUDIO_BYTES)
@@ -140,11 +149,14 @@ const BYOK_HEADER_NAMES = [
   "x-firecrawl-key", "x-brave-key", "x-tavily-key", "x-exa-key",
   "x-elevenlabs-key", "x-removebg-key", "x-runway-key",
 ];
-function hasByokKeys(req: Request): boolean {
-  return BYOK_HEADER_NAMES.some((h) => !!req.headers[h]);
+function hasByokKeys(req: Request, headerNames: readonly string[] = BYOK_HEADER_NAMES): boolean {
+  return headerNames.some((h) => {
+    const value = req.headers[h];
+    return typeof value === "string" ? value.trim().length > 0 : Array.isArray(value) && value.some((v) => v.trim().length > 0);
+  });
 }
-function byokAdjustedCost(req: Request, cost: number): number {
-  return hasByokKeys(req) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
+function byokAdjustedCost(req: Request, cost: number, headerNames: readonly string[] = BYOK_HEADER_NAMES): number {
+  return hasByokKeys(req, headerNames) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
 }
 
 function extractJsonObject(text: string): string | null {
@@ -1125,22 +1137,9 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   const byokOpenaiKey = req.headers["x-openai-key"] as string | undefined;
   const byokXaiKey = req.headers["x-xai-key"] as string | undefined;
   const byokGoogleKey = req.headers["x-google-key"] as string | undefined;
-  const byokFirecrawlKey = req.headers["x-firecrawl-key"] as string | undefined;
-  const byokBraveKey = req.headers["x-brave-key"] as string | undefined;
-  const byokTavilyKey = req.headers["x-tavily-key"] as string | undefined;
-  const byokExaKey = req.headers["x-exa-key"] as string | undefined;
-  const hasByok = !!(byokAnthropicKey || byokOpenaiKey || byokXaiKey || byokGoogleKey || byokBraveKey || byokTavilyKey || byokExaKey || byokFirecrawlKey);
 
   const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
   const paid = isX402Paid(req);
-  if (!paid) {
-    // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000
-    const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
-    let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
-    if (hasByok) aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
-    const ok = await deductCredits(req, res, "ai-generate", aiGenCost);
-    if (!ok) return;
-  }
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
   if (prompt.length > MAX_PROMPT) { res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() }); return; }
@@ -1170,6 +1169,31 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
 
   const maxTok = Math.min(max_tokens, 4096);
 
+  const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
+  if (!allModels.includes(model)) {
+    res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: claude, gpt4, gemini, grok, ${allModels.join(", ")}`, request_id: reqId() });
+    return;
+  }
+
+  // BYOK discount applies ONLY when the caller's key matches the selected
+  // model's provider — an unrelated BYOK header must not discount platform-key
+  // inference.
+  const byokProvider =
+    GPT_MODELS.includes(model) && byokOpenaiKey ? "openai" :
+    GEMINI_MODELS.includes(model) && byokGoogleKey ? "google" :
+    GROK_MODELS.includes(model) && byokXaiKey ? "xai" :
+    CLAUDE_MODELS.includes(model) && byokAnthropicKey ? "anthropic" :
+    null;
+
+  if (!paid) {
+    // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000.
+    const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
+    let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
+    if (byokProvider) aiGenCost = Math.max(1, Math.ceil(aiGenCost * 0.2));
+    const ok = await deductCredits(req, res, "ai-generate", aiGenCost);
+    if (!ok) return;
+  }
+
   try {
     // ── OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) — check before Claude to avoid default fallthrough ──
     if (GPT_MODELS.includes(model)) {
@@ -1183,7 +1207,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
       const _u = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: _u, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_u.input_tokens * 0.000003 + _u.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "openai" } : {}), request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: _u, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_u.input_tokens * 0.000003 + _u.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "openai" ? { byok: true, byok_provider: "openai" } : {}), request_id: reqId() });
       return;
     }
 
@@ -1200,7 +1224,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       const data = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       const _ug = { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 };
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.000001 + _ug.output_tokens * 0.000004).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.000001 + _ug.output_tokens * 0.000004).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "google" ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
       return;
     }
 
@@ -1216,14 +1240,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const text = data.choices?.[0]?.message?.content ?? "";
       const _ux = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.000005 + _ux.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
-      return;
-    }
-
-    // Validate model
-    const allModels = [...CLAUDE_MODELS, ...GPT_MODELS, ...GEMINI_MODELS, ...GROK_MODELS];
-    if (!allModels.includes(model)) {
-      res.status(400).json({ ok: false, error: "invalid_model", message: `Unknown model '${model}'. Valid models: claude, gpt4, gemini, grok, ${allModels.join(", ")}`, request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.000005 + _ux.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "xai" ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
       return;
     }
 
@@ -1243,7 +1260,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
       }
       const text = msg.content.find((b: any) => b.type === "text")?.text ?? "";
       const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: _ua, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ua.input_tokens * 0.000003 + _ua.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(hasByok ? { byok: true, byok_provider: "anthropic" } : {}), request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: _ua, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ua.input_tokens * 0.000003 + _ua.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "anthropic" ? { byok: true, byok_provider: "anthropic" } : {}), request_id: reqId() });
       return;
     }
   } catch (e) {
@@ -1784,18 +1801,21 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   const systemPrompt = "You are an expert analyst. Think step by step. Provide structured analysis with confidence levels. Always respond with valid JSON only, no markdown fences. Use this exact structure: {\"analysis\": \"<detailed analysis>\", \"confidence\": \"high\" | \"medium\" | \"low\"}";
   const maxTokens = reasoning_depth === "deep" ? 4096 : 2048;
 
-  // Try Claude Opus first (most capable reasoning), then GPT-4o, then Claude Sonnet
-  const providers: Array<{ name: string; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
+  // Try Claude Opus first (most capable reasoning), then GPT-4o. When a caller
+  // supplies BYOK headers, stay in BYOK mode; never fall through to platform
+  // keys for a free response after a bad user key fails.
+  const providers: Array<{ name: string; byok: boolean; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
 
-  if (getAnthropic() || oraclByokAnthropicKey) {
+  if (oraclByokAnthropicKey || (!oracleHasByok && getAnthropic())) {
     const oracleModel = reasoning_depth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
+    const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
     providers.push({
       name: "anthropic",
+      byok: !!oraclByokAnthropicKey,
       fn: async () => {
         const userContent = oracleContext
           ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
           : question;
-        const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
         if (oraclByokAnthropicKey) {
           const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anthKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] }) });
           const d = await r.json() as any;
@@ -1810,10 +1830,11 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
     });
   }
 
-  const openaiKey = oraclByokOpenaiKey || process.env.OPENAI_API_KEY;
+  const openaiKey = oraclByokOpenaiKey || (!oracleHasByok ? process.env.OPENAI_API_KEY : undefined);
   if (openaiKey) {
     providers.push({
       name: "openai",
+      byok: !!oraclByokOpenaiKey,
       fn: async () => {
         const userContent = oracleContext
           ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
@@ -1874,7 +1895,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
         char_count: analysis.length,
         processed_at: new Date().toISOString(),
         arch_tools_version: "1.9.0",
-        ...(oracleHasByok ? { byok: true, byok_provider: providerName } : {}),
+        ...(provider.byok ? { byok: true, byok_provider: providerName } : {}),
         credits_used: oracleHasByok ? 0 : 25,
         request_id: reqId(),
       });
@@ -2209,7 +2230,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
   const paid = isX402Paid(req);
   if (!paid) {
     // Metered by length: 25 base + 8 credits per 100 chars (covers ElevenLabs COGS)
-    const ttsCost = byokAdjustedCost(req, 25 + 8 * Math.ceil(text.length / 100));
+    const ttsCost = 25 + 8 * Math.ceil(text.length / 100);
     const ok = await deductCredits(req, res, "text-to-speech", ttsCost);
     if (!ok) return;
   }
@@ -2235,7 +2256,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
 // ─── transcribe-audio ─────────────────────────────────────────────────────────
 router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", byokAdjustedCost(req, 25)); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "transcribe-audio", 25); if (!ok) return; }
   const { audio_url, language, prompt: whisperPrompt } = req.body as { audio_url?: string; language?: string; prompt?: string };
   if (!audio_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "audio_url is required", request_id: reqId() }); return; }
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -2575,7 +2596,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
 router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "research-report", byokAdjustedCost(req, 40)); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"])); if (!ok) return; }
   const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
@@ -2947,7 +2968,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   const validDurations = [5, 10];
   if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
   // Scaled by duration at 125 credits/second, 500 minimum (5s = 625, 10s = 1250)
-  const videoCost = byokAdjustedCost(req, Math.max(500, duration * 125));
+  const videoCost = Math.max(500, duration * 125);
   const paid = isX402Paid(req);
   if (!paid) {
     const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
@@ -3035,7 +3056,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
 // ─── 55. IMAGE-REMOVE-BG (RemoveBG) ──────────────────────────────────────────
 router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", byokAdjustedCost(req, 350)); if (!ok) return; }
+  if (!paid) { const ok = await deductCredits(req, res, "image-remove-bg", 350); if (!ok) return; }
   const { image_url, image_base64: inputBase64, size = "auto" } = req.body as { image_url?: string; image_base64?: string; size?: string };
   if (!image_url && !inputBase64) { res.status(400).json({ ok: false, error: "invalid_request", message: "image_url or image_base64 is required", request_id: reqId() }); return; }
   const validSizes = ["auto", "preview", "hd", "full"];
@@ -3296,8 +3317,8 @@ router.post("/gas-price", ...toolMiddleware("gas-price"), async (req: AuthedRequ
 router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) { const ok = await deductCredits(req, res, "base-nft-metadata", 1); if (!ok) return; }
-  const { contractAddress, tokenId } = req.body as { contractAddress?: string; tokenId?: string };
-  if (!contractAddress || !tokenId) {
+  const { contractAddress, tokenId } = req.body as { contractAddress?: string; tokenId?: unknown };
+  if (!contractAddress || tokenId === null || tokenId === undefined || String(tokenId).trim() === "") {
     res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress and tokenId are required", request_id: reqId() });
     return;
   }
@@ -3305,8 +3326,13 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
     res.status(400).json({ ok: false, error: "invalid_request", message: "contractAddress must be a valid Ethereum address (0x + 40 hex chars)", request_id: reqId() });
     return;
   }
+  const tokenIdClean = normalizeCdpTokenId(tokenId);
+  if (!tokenIdClean) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "tokenId must be a decimal NFT token ID", request_id: reqId() });
+    return;
+  }
   try {
-    const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${tokenId}`;
+    const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${encodeURIComponent(tokenIdClean)}`;
     const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
     const jwt = await generateJwt({
       apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
@@ -3328,7 +3354,7 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
     res.json({
       ok: true,
       contractAddress,
-      tokenId,
+      tokenId: tokenIdClean,
       network: "base",
       name: data.name ?? data.token?.name ?? null,
       description: data.description ?? null,
@@ -4295,35 +4321,31 @@ router.post("/html-extract-text", ...toolMiddleware("html-extract-text"), async 
 });
 
 // ─── GET handler for x402scan compatibility ─────────────────────────────────
-// x402scan sends GET to each endpoint and expects 402 Payment Required.
-// Our tools are POST-only, so GET would 404. This catch-all returns 402 with
-// the same payment schema x402scan needs to register the resource.
-import { X402_PRICES } from "../../middleware/x402.js";
-
-// We need buildPaymentRequired but it's not exported — inline a minimal version
-// that calls x402Middleware which handles the 402 response
+// x402scan sends GET to each anonymous-x402 endpoint and expects 402 Payment
+// Required. Account-backed side-effect tools intentionally stay out of this
+// discovery path. Never run settlement middleware on GET: a paid GET probe
+// would collect funds without ever executing the POST-only tool
+// (pay-and-get-nothing) — so build the 402 payment requirement DIRECTLY.
 router.get("/:toolName", (req: Request, res: Response): void => {
-  const toolName = req.params.toolName;
-    // @ts-ignore — Express params typing
+  const paramToolName = req.params.toolName;
+  const toolName = Array.isArray(paramToolName) ? paramToolName[0] : paramToolName;
+  if (!toolName) {
+    res.status(404).json({ error: "unknown_tool", message: "Tool not found" });
+    return;
+  }
   const price = X402_PRICES[toolName];
-  if (!price) {
+  if (!price || !isX402AnonymousTool(toolName)) {
     res.status(404).json({ error: "unknown_tool", message: `Tool '${toolName}' not found` });
     return;
   }
-  // Return 402 by passing through the x402 middleware
-  // x402Middleware checks for X-Payment header first; with no header on GET, it returns 402
-    // @ts-ignore — Express params typing
-  const middleware = x402Middleware(toolName);
-  // x402Middleware returns an array or function — call it as middleware
-  const handler = Array.isArray(middleware) ? middleware[0] : middleware;
-  if (typeof handler === 'function') {
-    handler(req, res, () => {
-      // If somehow it passes (shouldn't without auth), return 402 anyway
-      res.status(402).json({ error: "payment_required" });
-    });
-  } else {
-    res.status(402).json({ error: "payment_required" });
-  }
+
+  const paymentRequired = buildPaymentRequired(toolName, price);
+  const paymentRequiredB64 = Buffer.from(JSON.stringify(paymentRequired)).toString("base64");
+  res.status(402)
+    .header("Content-Type", "application/json")
+    .header("PAYMENT-REQUIRED", paymentRequiredB64)
+    .header("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, Payment-Required, PAYMENT-SIGNATURE, Payment-Signature, PAYMENT-RESPONSE, Payment-Response, X-Payment, X-Payment-Response")
+    .json(paymentRequired);
 });
 
 export default router;

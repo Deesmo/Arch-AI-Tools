@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import { AuthedRequest, requireAuth } from "../middleware/auth.js";
+import { requireAccountAuth } from "../middleware/requireAccountAuth.js";
 import { config } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
@@ -81,6 +82,7 @@ router.get(
 router.post(
   "/provision",
   requireAuth,
+  requireAccountAuth,
   async (req: AuthedRequest, res: Response): Promise<void> => {
     const agentId = req.agent?.id;
     if (!agentId) {

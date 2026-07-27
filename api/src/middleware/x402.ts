@@ -158,7 +158,19 @@ export const X402_PRICES: Record<string, string> = {
   "html-extract-text": "0.010",
 };
 
-function buildPaymentRequired(toolName: string, price: string): object {
+// Tools that act through Arch-owned external accounts (Resend, etc.) must NOT be
+// reachable via anonymous x402 payments — they require API-key authentication so
+// the side effect is attributable to a real account.
+export const X402_ACCOUNT_REQUIRED_TOOLS = new Set([
+  "email-send",
+  "send-email",
+]);
+
+export function isX402AnonymousTool(toolName: string): boolean {
+  return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
+}
+
+export function buildPaymentRequired(toolName: string, price: string): object {
   const network = config.x402.network;
   // Use x402 named network format (required by client SDK schema validation)
   // "base" / "polygon" / "solana" NOT "eip155:8453" / "eip155:137"
@@ -870,6 +882,14 @@ function memCheckAndStoreNonce(nonce: string, ttlSeconds: number): "new" | "repl
   return "new";
 }
 
+// Release a reserved nonce from BOTH stores so a legit payer can retry after a
+// failed verify/settle. The Redis-only cleanup left the in-memory fallback
+// reservation in place, blocking retries when Redis was unavailable.
+export async function releaseStoredNonce(nonce: string): Promise<void> {
+  memNonceCache.delete(nonce);
+  if (redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+}
+
 export async function checkAndStoreNonce(
   nonce: string,
   ttlSeconds: number = NONCE_TTL_SECONDS,
@@ -1102,6 +1122,34 @@ export function x402Middleware(toolName: string) {
 
     // v2: check Payment-Signature (primary), fall back to X-Payment (legacy)
     const paymentHeader = (req.headers["payment-signature"] ?? req.headers["x-payment"]) as string | undefined;
+    const authHeader = req.headers.authorization;
+    const apiKey = req.headers["x-api-key"] as string | undefined;
+    const hasApiCredential = !!(authHeader?.startsWith("Bearer ") || apiKey);
+
+    // Platform side-effect tools (email through Arch-owned Resend, etc.) must
+    // NOT be reachable via anonymous x402 — require API-key authentication so
+    // the send is attributable to a real account and subject to its limits.
+    // This guard runs BEFORE any facilitator verify/settle.
+    if (!isX402AnonymousTool(toolName)) {
+      if (paymentHeader) {
+        res.status(403).json({
+          ok: false,
+          error: "x402_not_allowed",
+          message: `${toolName} requires API-key authentication because it sends through Arch-owned external accounts.`,
+        });
+        return;
+      }
+      if (!hasApiCredential) {
+        res.status(401).json({
+          ok: false,
+          error: "authentication_required",
+          message: `${toolName} requires API-key authentication and is not available through anonymous x402 payments.`,
+        });
+        return;
+      }
+      next();
+      return;
+    }
 
     // If the SDK already handled payment, skip custom middleware
     if ((req as Request & { x402SdkPaid?: boolean }).x402SdkPaid) {
@@ -1111,9 +1159,7 @@ export function x402Middleware(toolName: string) {
 
     // No payment header — check if they have a valid API key with credits
     if (!paymentHeader) {
-      const authHeader = req.headers.authorization;
-      const apiKey = req.headers["x-api-key"] as string | undefined;
-      if (authHeader?.startsWith("Bearer ") || apiKey) {
+      if (hasApiCredential) {
         // Let auth middleware handle it (API key or Bearer token)
         next();
         return;
@@ -1190,7 +1236,7 @@ export function x402Middleware(toolName: string) {
     const verifyResult = await verifyPayment(paymentHeader, toolName, paymentRequirements);
     if (!verifyResult.isValid) {
       // Clean up nonce on verification failure so agent can retry
-      if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+      if (nonce) await releaseStoredNonce(nonce);
       res.status(402).json({
         ok: false,
         error: "payment_invalid",
@@ -1209,7 +1255,7 @@ export function x402Middleware(toolName: string) {
     const settled = !!settleResult && settleResult.success === true;
     if (!settled) {
       // Free the nonce so the agent can retry the payment
-      if (nonce && redis) await redis.del(`x402:nonce:${nonce}`).catch(() => {});
+      if (nonce) await releaseStoredNonce(nonce);
       try {
         await prisma.x402Payment.create({
           data: {
