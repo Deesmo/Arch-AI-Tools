@@ -167,6 +167,67 @@ router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise
 });
 
 // GET /v1/admin/agents — list all agents with usage stats
+// ─── GET /v1/admin/traffic — real-vs-self go/no-go instrument ────────────────
+// The audit's #1 discipline gap: 6 months live with no way to tell REAL external
+// demand from our own testing/seeding. This separates them so investment decisions
+// key off external signal, not self-traffic. Heuristic but honest, and labeled.
+const SELF_EMAIL_PATTERNS = [
+  /(^|[.+_-])cc\d/i,        // cc4… test accounts
+  /verify[-.]/i,            // verify-… / verify.… throwaways
+  /^test/i, /\+test/i,
+  /@example\.(com|org)$/i,
+  ...String(process.env.SELF_EMAIL_PATTERNS ?? "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => new RegExp(s, "i")),
+];
+const isSelfEmail = (email: string | null | undefined): boolean =>
+  !!email && SELF_EMAIL_PATTERNS.some((re) => re.test(email));
+// Caller fingerprints that indicate a REAL agent/client (vs a curl/script/unknown
+// self-test). ApiRequest.callerName is set by the caller-detection middleware.
+const REAL_CLIENT_NAMES = new Set(["claude-desktop", "claude", "cursor", "openai-sdk", "langchain", "windsurf", "cline", "vscode", "continue"]);
+
+router.get("/traffic", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const [agents, requests, purchases, x402] = await Promise.all([
+      prisma.agent.findMany({ select: { email: true, createdAt: true } }),
+      prisma.apiRequest.findMany({ select: { callerType: true, callerName: true, agentId: true, createdAt: true, status: true } }),
+      prisma.purchase.findMany({ where: { status: "completed" }, select: { amountCents: true, createdAt: true } }),
+      prisma.x402Payment.findMany({ where: { status: "settled" }, select: { amountUsdc: true, createdAt: true } }),
+    ]);
+
+    const externalAgents = agents.filter((a) => !isSelfEmail(a.email));
+
+    // Tool calls: a call is "real" if the caller fingerprint names a known client
+    // OR callerType is a genuine agent/sdk; script/unknown/null = likely self-test.
+    const realCall = (r: { callerType: string | null; callerName: string | null }) =>
+      (r.callerName != null && REAL_CLIENT_NAMES.has(r.callerName.toLowerCase())) ||
+      (r.callerType != null && ["ai-agent", "sdk"].includes(r.callerType.toLowerCase()));
+    const realCalls = requests.filter(realCall);
+
+    const stripeRevenueUsd = purchases.reduce((s, p) => s + p.amountCents, 0) / 100;
+    const x402TotalUsdc = x402.reduce((s, p) => s + (parseFloat(p.amountUsdc) || 0), 0);
+
+    // Top real-client fingerprints (what's actually calling us)
+    const byClient: Record<string, number> = {};
+    for (const r of requests) { const k = r.callerName || r.callerType || "unknown"; byClient[k] = (byClient[k] || 0) + 1; }
+    const topClients = Object.entries(byClient).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count }));
+
+    const externalDemand = externalAgents.length > 0 || purchases.length > 0 || realCalls.length > 0;
+
+    res.json({
+      ok: true,
+      generated_at: new Date().toISOString(),
+      note: "Heuristic separation of external demand from self-testing/seeding. Self = email matches a test pattern; real tool calls = a known client fingerprint or agent/sdk caller type. x402 payments do not store a payer address, so treat x402 counts as self-seeded until a non-self signup or paid conversion appears.",
+      verdict: { external_demand: externalDemand, meaning: externalDemand ? "At least one non-self signup, paid conversion, or real-client tool call exists." : "No external demand detected yet — all traffic looks self-generated." },
+      signups: { total: agents.length, external: externalAgents.length, self: agents.length - externalAgents.length },
+      tool_calls: { total: requests.length, real_client: realCalls.length, self_or_unknown: requests.length - realCalls.length },
+      stripe: { completed_purchases: purchases.length, revenue_usd: Number(stripeRevenueUsd.toFixed(2)) },
+      x402: { settled_payments: x402.length, total_usdc: Number(x402TotalUsdc.toFixed(4)), note: "payer not stored; currently self-seeded" },
+      top_caller_fingerprints: topClients,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "traffic_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
 router.get("/agents", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 500);
