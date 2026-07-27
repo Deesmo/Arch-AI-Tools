@@ -79,7 +79,7 @@ async function main(): Promise<void> {
     const endpoint = `/v1/tools/${tool.name}`;
     await prisma.tool.upsert({
       where: { name: tool.name },
-      update: { description: tool.description, category: tool.category, credits: tool.credits },
+      update: { description: tool.description, category: tool.category, credits: tool.credits, method: "POST" },
       // @ts-ignore — endpoint/method/active exist in prod schema; local client may be stale
       create: { ...tool, endpoint, method: "POST", active: true },
     });
