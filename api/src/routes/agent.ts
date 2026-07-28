@@ -9,7 +9,8 @@ import { stripe } from "../lib/stripe.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity } from "../lib/verification.js";
+import { VERIFY_TOKEN_RE, renderVerifyConfirmPage, renderVerifyActivationPage, renderVerifyErrorPage } from "../assets/verifyEmailHtml.js";
 import { REFERRAL_REWARD } from "../lib/referralReward.js";
 
 const router = Router();
@@ -236,16 +237,48 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// GET /v1/agent/verify-email?token=... — activates pending credits
+// GET /v1/agent/verify-email?token=... — renders a confirm page WITHOUT
+// consuming the token. Email-security scanners prefetch GET links from
+// inboxes; consuming on GET burned tokens before the human ever clicked.
+// The page's Confirm button POSTs the token back (below) to consume it.
 router.get("/verify-email", async (req: Request, res: Response): Promise<void> => {
   const token = String(req.query.token ?? "");
   try {
-    const result = await verifyEmailToken(token);
-    if (!result) {
-      res.status(400).send(`<!doctype html><html><body style="font-family:sans-serif;background:#07061a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Link invalid or expired</h1><p>Please request a new verification email from your <a href="https://archtools.dev/dashboard" style="color:#9d8cff">dashboard</a>.</p></div></body></html>`);
+    // Hex-only format gate: rejects garbage early AND guarantees the token is
+    // safe to embed in the confirm form (no HTML/attribute injection possible).
+    if (!VERIFY_TOKEN_RE.test(token)) {
+      res.status(400).send(renderVerifyErrorPage());
       return;
     }
-    res.send(`<!doctype html><html><body style="font-family:sans-serif;background:#07061a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>✅ Email verified!</h1><p>${result.creditsActivated} credits are now active on your account.</p><p><a href="https://archtools.dev/dashboard" style="color:#9d8cff">Go to dashboard →</a></p></div></body></html>`);
+    const peek = await peekEmailVerifyToken(token);
+    if (!peek) {
+      res.status(400).send(renderVerifyErrorPage());
+      return;
+    }
+    res.send(renderVerifyConfirmPage(token, peek.pendingCredits));
+  } catch (e) {
+    console.error("verify-email error:", e);
+    res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
+  }
+});
+
+// POST /v1/agent/verify-email — consumes the token (atomic single-use) and
+// activates pending credits, then renders the credential-free activation
+// launchpad. Token accepted from the form body (confirm page) or query string
+// (programmatic verifiers).
+router.post("/verify-email", async (req: Request, res: Response): Promise<void> => {
+  const token = String((req.body?.token ?? req.query.token) ?? "");
+  try {
+    if (!VERIFY_TOKEN_RE.test(token)) {
+      res.status(400).send(renderVerifyErrorPage());
+      return;
+    }
+    const result = await verifyEmailToken(token);
+    if (!result) {
+      res.status(400).send(renderVerifyErrorPage());
+      return;
+    }
+    res.send(renderVerifyActivationPage(result.creditsActivated));
   } catch (e) {
     console.error("verify-email error:", e);
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
