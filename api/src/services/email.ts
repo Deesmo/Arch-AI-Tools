@@ -437,11 +437,14 @@ export async function sendEmail80PctAlert(to: string, creditsRemaining: number, 
   await sendEmail(to, subject, html);
 }
 
-// ─── Credits Depleted (0 remaining) Alert ────────────────────────────────────
-export async function sendCreditsDepletedAlert(to: string, agentId: string): Promise<void> {
-  const subject = `🚨 Your Arch Tools credits are depleted — upgrade to continue`;
+// ─── Credits Depleted Alert ──────────────────────────────────────────────────
+// Sent at the credit-exhaustion moment (a call was refused, or the balance hit
+// 0 mid-run). Deduped to once per depletion cycle in utils/credits.ts —
+// resets when credits are granted.
+export async function sendCreditsDepletedAlert(to: string, agentId: string, creditsRemaining = 0): Promise<void> {
+  const subject = `Your Arch Tools credits ran out — how to top up`;
   const html = layout(subject, `
-    <div class="alert-warn"><strong>🚨 Credits depleted:</strong> Your credit balance has hit <strong>0</strong>. API calls will return <code>402 Payment Required</code>.</div>
+    <div class="alert-warn"><strong>Credits exhausted:</strong> Your balance (<strong>${creditsRemaining} credits</strong>) can no longer cover tool calls. Calls that cost more than your balance return <code>402 Payment Required</code>.</div>
     <p>Two ways to keep building:</p>
     <div class="stats">
       <div class="stat"><span>Option 1</span>Buy credits at archtools.dev/pricing</div>
