@@ -545,7 +545,7 @@ async function init() {
   try {
     const res = await fetch(BASE + '/api/v1/x402/playground/tools');
     const data = await res.json();
-    if (data.ok) { allTools = data.tools; demoRegistryLoaded = true; }
+    if (data.ok && Array.isArray(data.tools) && data.tools.length) { allTools = data.tools; demoRegistryLoaded = true; }
   } catch {}
 
   if (!allTools.length) {
