@@ -27,6 +27,13 @@
     .legal-body strong{color:var(--text);}
     .legal-body a{color:var(--amber);text-decoration:none;}
     .legal-body a:hover{text-decoration:underline;}
+    .legal-body code{font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:1px 5px;}
+    .tldr{background:rgba(255,144,16,0.07);border:1px solid rgba(255,144,16,0.30);border-radius:10px;padding:14px 18px;margin:0 0 24px;font-size:14px;line-height:1.6;color:rgba(255,255,255,0.80);}
+    .tldr strong{color:var(--amber);}
+    .table-wrap{overflow-x:auto;margin:12px 0 20px;}
+    .legal-table{width:100%;border-collapse:collapse;font-size:14px;}
+    .legal-table th,.legal-table td{border:1px solid var(--border);padding:8px 10px;text-align:left;color:rgba(255,255,255,0.75);vertical-align:top;line-height:1.5;}
+    .legal-table th{color:var(--text);font-weight:600;background:rgba(255,255,255,0.04);font-family:'Syne',sans-serif;}
     .back{display:inline-flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;font-size:14px;margin-bottom:40px;}
     .back:hover{opacity:0.8;}
     .at-footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-size:12px;color:var(--muted);}
@@ -57,133 +64,130 @@
     <div class="legal-body">
       <a class="back" href="/">← Back to Arch Tools</a>
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated: March 17, 2026</p>
+      <p class="updated">Effective date: July 28, 2026</p>
 
-      <p>This Privacy Policy applies to Arch Tools, operated by <strong>MCMetaverse LLC</strong>, a South Carolina limited liability company.</p>
+      <div class="tldr"><strong>In plain language:</strong> we store your email, a one-way hash of your API key, and usage metadata (which tool, when, how many credits). We never store card numbers — Stripe holds those. Tool inputs are processed transiently and sent only to the upstream provider that powers the tool; we don't store request or response content, and we don't sell your data. You can delete your account and its data yourself, instantly, via <code>DELETE /v1/agent</code>. Anonymized payment records are kept only because tax law requires it.</div>
+
+      <p>This Privacy Policy applies to Arch Tools (archtools.dev), operated by <strong>MCMetaverse LLC</strong>, a South Carolina limited liability company — the data controller for the personal data described here.</p>
 
       <h2>1. What We Collect</h2>
       <p>We collect only what's necessary to operate the Service:</p>
       <ul>
-        <li><strong>Email address</strong> — required for registration and account communication</li>
-        <li><strong>API usage data</strong> — request counts, tool usage, credit consumption (no request payloads stored)</li>
-        <li><strong>IP address</strong> — logged for rate limiting and security purposes</li>
-        <li><strong>Session context</strong> — if you use the Session API (session-create, session-message), conversation context is stored in-memory for the duration of the session. Session data is <strong>not persisted to disk</strong> and is cleared when the session expires or the server restarts.</li>
-        <li><strong>Newsletter email</strong> — if you sign up for our newsletter, we collect your email address for marketing communications. You may unsubscribe at any time.</li>
+        <li><strong>Email address</strong> — required for registration, verification, and account communication</li>
+        <li><strong>API key (hashed)</strong> — your key is stored <strong>only as a bcrypt hash</strong>; we cannot read the key itself. Optional account fields (name, description, password) are stored as you provide them (passwords hashed).</li>
+        <li><strong>Usage metadata</strong> — per-request logs of tool name, timestamp, response status, and credit cost. <strong>Request and response payloads are not stored.</strong></li>
+        <li><strong>IP address</strong> — processed for rate limiting, signup abuse prevention, and security</li>
+        <li><strong>Session context</strong> — if you use the Session API (<code>session-create</code>, <code>session-message</code>), conversation context is held in-memory only, automatically deleted no later than 4 hours after the session is created, and never persisted to disk (server restarts also clear it)</li>
+        <li><strong>Newsletter email</strong> — if you opt in to marketing email; you may unsubscribe at any time</li>
       </ul>
 
-      <h2>1a. x402 Payment Data</h2>
-      <p>If you pay for API access using x402 crypto micropayments, we process the following:</p>
-      <ul>
-        <li><strong>Wallet addresses</strong> — your sending wallet address is recorded with each transaction for credit attribution and fraud prevention</li>
-        <li><strong>Transaction hashes</strong> — on-chain transaction identifiers are stored to verify payment and resolve disputes</li>
-        <li><strong>Payment amounts</strong> — USDC amounts paid per request are logged for billing records</li>
-        <li><strong>Chain identifiers</strong> — which blockchain network was used for each payment</li>
-      </ul>
-      <p><strong>Important:</strong> Blockchain transactions are inherently public. Transaction hashes, wallet addresses, and amounts are visible on-chain to anyone. We do not control or have the ability to delete on-chain data. Our privacy obligations apply only to data stored in our own systems.</p>
+      <h2>1a. Tool Inputs &amp; Upstream Providers</h2>
+      <p>To fulfill an API call, the input you send is forwarded to the upstream provider that powers that tool (for example Anthropic or OpenAI for AI generation, ElevenLabs for text-to-speech, Resend for email delivery). Inputs are processed transiently: we do not store them, and we do not use your inputs or outputs to train models. Upstream providers process the data under their own terms; our current provider list is published at <a href="/subprocessors">/subprocessors</a>. If you use BYOK (your own provider keys), your key is used only for that request and never stored.</p>
 
-      <h2>1b. Agent Identity (KYA) Data</h2>
-      <p>If you register for Arch Tools' Agent Identity system (Know Your Agent), we collect:</p>
-      <ul>
-        <li><strong>Wallet addresses</strong> — associated with your agent identity</li>
-        <li><strong>Reputation scores</strong> — computed from your usage history, payment reliability, and service quality</li>
-        <li><strong>Usage history</strong> — aggregated statistics about your API consumption patterns (not request content)</li>
-        <li><strong>Agent metadata</strong> — name, description, capabilities, and contact information you provide</li>
-      </ul>
-      <p>Reputation scores are derived algorithmically from objective metrics. You may request an explanation of your score or dispute it by contacting <a href="mailto:support@archtools.dev">support@archtools.dev</a>.</p>
+      <h2>1b. PII-Handling Tools</h2>
+      <p>Some tools (e.g. <code>pii-detect</code>) exist to analyze text that may contain personal data. These tools process input transiently and store nothing; responses include a notice and transparency headers — <code>X-PII-Detected: true</code> when personal data is found and <code>X-Data-Retention: not-stored</code> confirming nothing was retained. <strong>You are responsible for having a lawful basis (or the person's consent) to process any real personal data you submit through the API.</strong></p>
 
-      <h2>1c. Service Directory Data</h2>
-      <p>If you submit a service listing to the Arch Tools Service Directory, we collect:</p>
-      <ul>
-        <li><strong>Service information</strong> — name, description, category, pricing, and endpoint URLs</li>
-        <li><strong>Contact information</strong> — email address and optional website URL</li>
-        <li><strong>Payment configuration</strong> — supported chains, wallet addresses, and pricing tiers</li>
-      </ul>
-      <p>Directory listings are public by design. Information you submit to the directory will be visible to all users. You may request removal of your listing at any time.</p>
+      <h2>1c. x402 Payment Data</h2>
+      <p>If you pay via x402 crypto micropayments, we record your sending wallet address, on-chain transaction hash, USDC amount, and network for credit attribution, billing, and fraud prevention. <strong>Blockchain transactions are inherently public:</strong> hashes, wallet addresses, and amounts are visible on-chain to anyone, and we cannot delete on-chain data. Our privacy obligations apply to data stored in our own systems.</p>
+
+      <h2>1d. Agent Identity (KYA) Data</h2>
+      <p>If you register an agent identity we collect wallet addresses, algorithmically computed reputation scores, aggregated usage statistics (not request content), and the agent metadata you provide (name, description, capabilities, contact). You may request an explanation of your score or dispute it via <a href="mailto:support@archtools.dev">support@archtools.dev</a>.</p>
+
+      <h2>1e. Service Directory Data</h2>
+      <p>Directory listings (service info, contact details, payment configuration) are <strong>public by design</strong>. You may request removal of your listing at any time.</p>
 
       <h2>2. What We Do Not Collect</h2>
       <ul>
-        <li>We do not store the content of your API requests or responses (except in-memory Session API context as described above)</li>
-        <li>We do not collect payment card details (handled by Stripe)</li>
+        <li>We do not store the content of your API requests or responses (in-memory Session API context excepted, as described above)</li>
+        <li>We do not collect or store payment card numbers or billing addresses — <strong>Stripe</strong> handles card payments and holds those details</li>
         <li>We do not store private keys or seed phrases — only public wallet addresses</li>
-        <li>We do not track you across other websites</li>
-        <li>We do not use advertising cookies</li>
+        <li>We do not track you across other websites and do not use advertising cookies</li>
       </ul>
 
-      <h2>3. How We Use Your Data</h2>
-      <ul>
-        <li>To operate and maintain your account</li>
-        <li>To process x402 crypto payments and attribute credits</li>
-        <li>To compute and maintain agent reputation scores</li>
-        <li>To display service directory listings</li>
-        <li>To send transactional emails (API key delivery, credit alerts)</li>
-        <li>To monitor platform health and prevent abuse</li>
-        <li>To generate aggregate analytics (displayed on our analytics dashboard in anonymized form)</li>
-        <li>To improve the Service</li>
-      </ul>
+      <h2>3. How We Use Your Data — Lawful Basis</h2>
+      <div class="tldr"><strong>In short:</strong> we process your data to run the API you signed up for, keep the platform secure, meet tax obligations, and — only if you opt in — send you marketing email.</div>
+      <div class="table-wrap">
+        <table class="legal-table">
+          <tr><th>What we do</th><th>Data used</th><th>Lawful basis (GDPR)</th></tr>
+          <tr><td>Operate your account, authenticate API calls, meter and bill credits, send transactional email (key delivery, verification, credit alerts, renewal reminders)</td><td>Email, hashed API key, usage metadata, credit balance</td><td><strong>Contract performance</strong> (Art. 6(1)(b)) — providing the Service you signed up for</td></tr>
+          <tr><td>Rate limiting, abuse and fraud prevention, signup-farming protection, security logging, prompt-moderation logging</td><td>IP address, usage metadata, wallet addresses, moderation events</td><td><strong>Legitimate interest</strong> (Art. 6(1)(f)) — keeping the platform secure and available</td></tr>
+          <tr><td>Retaining anonymized purchase and payment records after account deletion</td><td>Anonymized transaction rows (no personal data)</td><td><strong>Legal obligation</strong> (Art. 6(1)(c)) — tax and accounting law</td></tr>
+          <tr><td>Newsletter / marketing email</td><td>Email (if you opt in)</td><td><strong>Consent</strong> (Art. 6(1)(a)) — withdrawable any time via unsubscribe</td></tr>
+          <tr><td>Aggregate, anonymized analytics (e.g. the public stats dashboard)</td><td>Aggregated usage counts — no personal identifiers</td><td><strong>Legitimate interest</strong> (Art. 6(1)(f)) — improving the Service</td></tr>
+        </table>
+      </div>
 
       <h2>4. Data Sharing</h2>
-      <p>We do not sell your data. We share data only with:</p>
+      <p>We do not sell your data. We share data only with the processors needed to run the Service — the live list with roles is published at <a href="/subprocessors">/subprocessors</a>. Principal categories:</p>
       <ul>
-        <li><strong>Stripe</strong> — for fiat payment processing</li>
-        <li><strong>Blockchain networks</strong> — x402 payment transactions are broadcast to the relevant blockchain (Base, Ethereum, Arbitrum, Optimism, Polygon, etc.). On-chain data is public and immutable.</li>
-        <li><strong>Resend</strong> — for transactional email delivery</li>
-        <li><strong>Render</strong> — for hosting (subject to their privacy policy)</li>
-        <li><strong>Cloudflare</strong> — for CDN, edge caching, and Brotli compression. All requests to Arch Tools are processed through Cloudflare's network.</li>
-        <li><strong>Sentry</strong> — for frontend error monitoring. The Sentry SDK collects Web Vitals performance metrics and JavaScript errors to help us improve service reliability. No API request payloads are sent to Sentry.</li>
-        <li><strong>Analytics providers</strong> — we may use visitor intelligence services such as Apollo to understand aggregate traffic patterns. No personally identifiable data is shared without your consent.</li>
+        <li><strong>Stripe</strong> — fiat payment processing (card and billing details live only with Stripe)</li>
+        <li><strong>Upstream AI/tool providers</strong> (Anthropic, OpenAI, xAI, Google, ElevenLabs, Runway, search providers, etc.) — receive the tool inputs needed to fulfill your call, transiently</li>
+        <li><strong>Resend</strong> — transactional email delivery</li>
+        <li><strong>Render</strong> — application hosting; <strong>Cloudflare</strong> — CDN and edge network in front of all requests</li>
+        <li><strong>Blockchain networks</strong> — x402 transactions are broadcast to the relevant public chain; on-chain data is public and immutable</li>
+        <li><strong>Error/performance monitoring</strong> — frontend error monitoring may collect JavaScript errors and performance metrics; API request payloads are not sent to monitoring services</li>
       </ul>
+      <p>We may also disclose data if required by law, court order, or to protect the rights, safety, or property of MCMetaverse LLC or others.</p>
 
       <h2>5. Data Retention</h2>
+      <div class="tldr"><strong>In short:</strong> your data lives as long as your account does. Delete your account and everything personal is erased immediately — the only thing kept is anonymized payment records (required by tax law) and public blockchain data (which nobody can delete).</div>
       <ul>
-        <li><strong>Account data</strong> — retained while your account is active</li>
-        <li><strong>API request logs</strong> — retained for 90 days</li>
-        <li><strong>x402 transaction records</strong> — retained for 3 years for accounting and dispute resolution purposes</li>
-        <li><strong>Agent identity data</strong> — retained while your agent identity is active; deleted within 30 days of account deletion request</li>
+        <li><strong>Account data and usage logs</strong> — retained while your account is active (used for billing, your usage dashboard, and abuse prevention); <strong>permanently erased when you delete your account</strong></li>
+        <li><strong>Financial records</strong> (Stripe purchases, x402 payment rows) — retained in anonymized form for as long as tax and accounting law requires; these rows contain no personal data (see Section 8)</li>
+        <li><strong>Session data</strong> — in-memory only, deleted no later than 4 hours after session creation</li>
         <li><strong>Directory listings</strong> — retained until you request removal or your account is terminated</li>
-        <li><strong>On-chain data</strong> — permanent and outside our control</li>
+        <li><strong>On-chain data</strong> — permanent and outside anyone's control</li>
       </ul>
-      <p>You may request deletion of your account and associated off-chain data at any time.</p>
+      <p>Details: <a href="/retention">Data Retention Policy</a>.</p>
 
       <h2>6. Cookies &amp; Analytics</h2>
-      <p>We use browser localStorage solely to remember your API key for convenience on the dashboard. We do not use advertising cookies or cross-site tracking pixels. We may use basic analytics to understand aggregate traffic patterns (page views, referral sources). No personally identifiable information is included in analytics data.</p>
+      <p>We use browser localStorage solely to remember your API key for convenience on the dashboard. We do not use advertising cookies or cross-site tracking pixels. We may use basic analytics to understand aggregate traffic patterns (page views, referral sources) without personally identifying you.</p>
 
       <h2>7. Security</h2>
-      <p>We use industry-standard encryption in transit (HTTPS/TLS). API keys are hashed before storage. We follow responsible disclosure practices for security vulnerabilities. See our <a href="/security">Security Policy</a> for details.</p>
+      <p>All traffic is encrypted in transit (HTTPS/TLS). API keys and passwords are stored only as one-way hashes. Authentication endpoints are rate-limited against brute force. We follow responsible disclosure practices — see our <a href="/security">Security Policy</a>.</p>
 
-      <h2>8. Your Rights</h2>
-      <p>You have the right to:</p>
+      <h2>8. Deleting Your Account (Right to Erasure)</h2>
+      <p>You can delete your account and personal data yourself, without waiting on support:</p>
       <ul>
-        <li>Access the data we hold about you</li>
-        <li>Request correction of inaccurate data</li>
-        <li>Request deletion of your account and off-chain data</li>
-        <li>Request an explanation of your agent reputation score</li>
-        <li>Request removal of your directory listing</li>
-        <li>Opt out of non-transactional communications</li>
-        <li>Export your data in a portable format</li>
+        <li><strong>Self-service API:</strong> call <code>DELETE /v1/agent</code> authenticated with your API key and the confirmation body <code>{"confirm":"DELETE"}</code>. The deletion is immediate and permanent: your usage history, OAuth grants and codes, and signup identity records are erased, and every personal field on your profile (email, name, key hashes, wallet address, tokens) is wiped.</li>
+        <li><strong>By email:</strong> send a request to <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a> from your account email.</li>
       </ul>
+      <p><strong>What is retained, and why:</strong> anonymized purchase and payment records ({credits, amount, transaction id, network} — no name, no email, no address) are kept as required by tax and accounting law, under the GDPR Art. 17(3)(b) legal-obligation exemption. Card and billing details were never in our systems — deletion requests for those go to Stripe, which is a separate controller/processor with its own deletion process. On-chain transaction data cannot be deleted by anyone.</p>
 
-      <h2>8a. GDPR — European Users</h2>
-      <p>If you are in the European Economic Area (EEA), you have rights under the General Data Protection Regulation (GDPR): access, rectification, erasure, restriction of processing, and data portability. Our lawful basis for processing is contractual necessity (providing the Service you signed up for) and legitimate interest (fraud prevention, platform security). To exercise any right, contact <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a>.</p>
-      <p><strong>Note on blockchain data:</strong> GDPR erasure rights apply to data stored in our systems. On-chain transaction data is immutable and decentralized — we cannot modify or delete it. By using x402 payments, you acknowledge this limitation.</p>
+      <h2>9. Your Rights</h2>
+      <p>You have the right to: access the data we hold about you; correct inaccurate data; delete your account and off-chain data (Section 8); export your data in a portable format; request an explanation of your agent reputation score; request removal of your directory listing; and opt out of non-transactional communications.</p>
 
-      <h2>8b. CCPA — California Residents</h2>
-      <p>California residents have the right to know what personal data we collect, request deletion, and opt out of the sale of personal data. We do not sell personal data. To make a request, email <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a>.</p>
+      <h2>9a. GDPR / UK GDPR — European Users</h2>
+      <p>If you are in the EEA or UK, you additionally have the rights of restriction of processing and objection, and the right to lodge a complaint with your local supervisory authority. Our lawful bases are listed in the table in Section 3. Where we rely on legitimate interest, you may object based on your particular situation. To exercise any right, contact <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a>.</p>
+      <p><strong>Note on blockchain data:</strong> GDPR erasure applies to data stored in our systems. On-chain transaction data is immutable and decentralized — we cannot modify or delete it. By using x402 payments, you acknowledge this limitation.</p>
+      <p><strong>International transfers:</strong> we are a US company and process data in the United States. If you use the Service from outside the US, your data is transferred to the US.</p>
 
-      <h2>9. Changes to This Policy</h2>
-      <p>We may update this policy as the Service evolves. We will notify registered users of material changes via email.</p>
+      <h2>9b. CCPA/CPRA — California Residents</h2>
+      <p>California residents have the right to know what personal data we collect (Sections 1–2), request deletion (Section 8), correct inaccurate data, and opt out of the sale or sharing of personal data. <strong>We do not sell or share personal data</strong> as defined by the CCPA, and we do not use sensitive personal information beyond what is necessary to provide the Service. We will not discriminate against you for exercising your rights. To make a request, email <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a>.</p>
 
-      <h2>10. Contact</h2>
+      <h2>10. Children</h2>
+      <p>The Service is for users 18 and older. We do not knowingly collect personal data from anyone under 18; if we learn that we have, we will delete it.</p>
+
+      <h2>11. Changes to This Policy</h2>
+      <p>We may update this policy as the Service evolves. We will update the effective date above and notify registered users of material changes via email.</p>
+
+      <h2>12. Contact</h2>
       <p>Privacy questions or data requests: <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a></p>
-      <p>General support: <a href="mailto:bradvaldes@gmail.com">bradvaldes@gmail.com</a></p>
+      <p>General support: <a href="mailto:support@archtools.dev">support@archtools.dev</a></p>
+      <!-- NEEDS-BRAD: registered business/postal address to add here once confirmed. -->
     </div>
   </main>
 
   <footer class="at-footer">
     <span>© 2026 Arch Tools · MCMetaverse LLC</span>
     <span>
-      <a href="/legal/privacy">Privacy</a>
-      <a href="/legal/terms">Terms</a>
-      <a href="/docs">Docs</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/refund">Refunds</a>
+      <a href="/aup">AUP</a>
+      <a href="/retention">Retention</a>
+      <a href="/subprocessors">Subprocessors</a>
+      <a href="/security">Security</a>
       <a href="mailto:privacy@archtools.dev">Contact</a>
     </span>
   </footer>

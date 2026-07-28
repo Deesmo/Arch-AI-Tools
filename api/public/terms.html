@@ -27,6 +27,9 @@
     .legal-body strong{color:var(--text);}
     .legal-body a{color:var(--amber);text-decoration:none;}
     .legal-body a:hover{text-decoration:underline;}
+    .legal-body code{font-family:'JetBrains Mono',monospace;font-size:13px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:1px 5px;}
+    .tldr{background:rgba(255,144,16,0.07);border:1px solid rgba(255,144,16,0.30);border-radius:10px;padding:14px 18px;margin:0 0 24px;font-size:14px;line-height:1.6;color:rgba(255,255,255,0.80);}
+    .tldr strong{color:var(--amber);}
     .back{display:inline-flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;font-size:14px;margin-bottom:40px;}
     .back:hover{opacity:0.8;}
     .at-footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-size:12px;color:var(--muted);}
@@ -57,110 +60,92 @@
     <div class="legal-body">
       <a class="back" href="/">← Back to Arch Tools</a>
       <h1>Terms of Service</h1>
-      <p class="updated">Last updated: March 17, 2026</p>
+      <p class="updated">Effective date: July 28, 2026</p>
+
+      <div class="tldr"><strong>In plain language:</strong> Arch Tools is a prepaid, pay-per-use API. You buy credits (card via Stripe, or USDC via x402), each tool call costs the credits advertised in the live catalog, and credits are generally non-refundable — crypto payments are always final. Don't abuse the tools, don't spam, don't generate abusive content. You must be 18+. You can delete your account and its data yourself at any time. Full details below.</div>
 
       <h2>1. Acceptance of Terms</h2>
-      <p>By accessing or using Arch Tools ("the Service"), operated by MCMetaverse LLC, a South Carolina limited liability company, you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+      <p>By accessing or using Arch Tools ("the Service"), operated by MCMetaverse LLC, a South Carolina limited liability company ("we", "us"), you agree to be bound by these Terms of Service, our <a href="/privacy">Privacy Policy</a>, <a href="/refund">Refund Policy</a>, and <a href="/aup">Acceptable Use Policy</a>. If you do not agree, do not use the Service.</p>
+      <p><strong>Age requirement:</strong> You must be at least 18 years old (or the age of majority in your jurisdiction, if higher) to create an account or use the Service. The Service is intended for developers and businesses, not for children.</p>
 
       <h2>2. Description of Service</h2>
-<p>Arch Tools provides a pay-per-use API platform offering 64 developer tools and AI agent utilities including web scraping, AI text generation, image generation, audio transcription, text-to-speech, email delivery, crypto data, AI reasoning, conversational sessions, and more. Access is granted via API key upon registration. Credits are consumed per API call. Arch Tools also offers monthly and annual subscription plans that refresh credits on a recurring basis.</p>
-      <p>Current subscription plans: <strong>Starter</strong> ($19/month), <strong>Pro</strong> ($49/month), <strong>Growth</strong> ($99/month), <strong>Business</strong> ($199/month), and <strong>Enterprise</strong> (custom pricing — <a href="mailto:support@archtools.dev">contact us</a>). One-time credit packs are also available: $9 for 3,000 credits, $49 for 25,000 credits, and $199 for 125,000 credits.</p>
-      <p><strong>Bring Your Own Key (BYOK):</strong> Users may optionally provide their own API keys for supported third-party providers (Anthropic, OpenAI, xAI, Google, Brave Search, Tavily, and Exa) to route requests through their own accounts. BYOK usage is subject to the same acceptable use policies and does not exempt users from these Terms.</p>
-      <p><strong>Service Directory:</strong> Arch Tools maintains a curated directory of AI-powered services. Directory listings are provided for informational purposes. Inclusion in the directory does not constitute an endorsement by MCMetaverse LLC.</p>
+      <p>Arch Tools provides a pay-per-use API platform offering <strong>63 developer tools and AI-agent utilities</strong> — web scraping and search, AI text generation, image and video generation, audio transcription, text-to-speech, email delivery, crypto data, AI reasoning, conversational sessions, and more. The authoritative, always-current tool catalog and per-tool credit prices are published at <a href="/tools">/tools</a> and in the machine-readable <a href="/openapi.json">OpenAPI spec</a>. Access is granted via API key upon registration; credits are consumed per API call. An MCP connector is available at <code>archtools.dev/mcp</code>.</p>
+      <p><strong>Bring Your Own Key (BYOK):</strong> You may optionally supply your own API keys for supported third-party providers (currently Anthropic, OpenAI, xAI, Google, Firecrawl, Brave Search, Tavily, Exa, ElevenLabs, Remove.bg, and Runway) via per-request headers. Calls made with your own provider key are charged <strong>20% of the listed credit cost</strong> (minimum 1 credit) to cover platform overhead. BYOK keys are used only to fulfill that request and are not stored. BYOK usage remains fully subject to these Terms and the AUP.</p>
+      <p><strong>Service Directory:</strong> Arch Tools maintains a curated directory of AI-powered services. Directory listings are informational; inclusion does not constitute an endorsement by MCMetaverse LLC.</p>
 
       <h2>3. Account Registration</h2>
-      <p>You must provide a valid email address to register. You are responsible for keeping your API key confidential. Do not share your API key or allow unauthorized access to your account.</p>
+      <p>You must provide a valid email address to register. Disposable/temporary email domains are rejected. You are responsible for keeping your API key confidential; your key is stored by us only as a one-way hash, so we cannot recover it for you — only rotate it. Do not share your API key or allow unauthorized access to your account.</p>
 
       <h2>4. Acceptable Use</h2>
-      <p>You agree not to:</p>
+      <div class="tldr"><strong>In short:</strong> lawful use only. No spam, no malware, no deepfakes or sexual content involving real people or minors, no reselling keys or credits. Generation prompts are automatically screened, and violating requests are refused and logged.</div>
+      <p>Your use of the Service is governed by our full <a href="/aup">Acceptable Use Policy</a>, which is incorporated into these Terms. In summary, you agree not to:</p>
       <ul>
-        <li>Use the Service for any unlawful purpose</li>
-        <li>Reverse engineer, scrape, copy, resell, or sublicense the Service or its tool outputs</li>
-        <li>Resell, transfer, or redistribute your API key or credits to any third party</li>
-        <li>Attempt to exceed rate limits, bypass authentication, or abuse the platform</li>
-        <li>Use the Service to generate spam, malware, or harmful content</li>
-        <li>Use automated scraping to systematically extract tool definitions, schemas, or pricing data</li>
-        <li>Violate any third-party rights or applicable laws</li>
-        <li><strong>Email tool:</strong> You may not use the email-send tool to send unsolicited commercial email (spam), in violation of the CAN-SPAM Act, GDPR, or any applicable anti-spam law. You are solely responsible for compliance with email regulations including obtaining proper consent from recipients.</li>
-        <li><strong>Image generation:</strong> You may not use the design-create tool to generate illegal, defamatory, sexually explicit, or harmful imagery, or to create non-consensual likenesses of real individuals (deepfakes). Content must comply with OpenAI's usage policies.</li>
-        <li><strong>Text-to-speech:</strong> You may not use the text-to-speech tool to clone voices without consent, produce fraudulent audio impersonations, or create content intended to deceive listeners about the source of the audio.</li>
-        <li><strong>AI-generated content:</strong> You are responsible for reviewing and validating all AI-generated outputs before use. Arch Tools makes no warranty as to the accuracy, completeness, or fitness of AI-generated content.</li>
-        <li><strong>AI Oracle:</strong> The AI Oracle endpoint (25 credits per call) provides premium reasoning with structured analysis. You may not use Oracle responses as authoritative legal, medical, or financial advice. All Oracle outputs carry confidence levels and must be independently verified before consequential use.</li>
-        <li><strong>Session API:</strong> The session-create and session-message endpoints maintain conversation context in-memory for the duration of a session. You may not use Session API to store, persist, or relay harmful, illegal, or abusive content. Sessions are ephemeral and not persisted to disk.</li>
+        <li>Use the Service for any unlawful purpose, or violate any third-party rights or applicable laws</li>
+        <li>Reverse engineer, scrape, copy, resell, or sublicense the Service; or resell, transfer, or redistribute your API key or credits</li>
+        <li>Attempt to exceed rate limits, bypass authentication or billing, or abuse the platform</li>
+        <li>Use the Service to generate spam, malware, phishing, or harmful content</li>
+        <li><strong>Email tools:</strong> send unsolicited commercial email (spam) or otherwise violate the CAN-SPAM Act, GDPR, or applicable anti-spam law. You are solely responsible for having consent from your recipients. To limit abuse, the email tools enforce an automatic <strong>per-recipient daily send cap</strong> (currently 10 messages per recipient per day across the platform); capped requests are rejected.</li>
+        <li><strong>Image &amp; video generation:</strong> generate illegal, exploitative, or non-consensual imagery. Prompts to the generation tools are <strong>automatically screened before processing</strong>; requests indicating child sexual content, deepfakes/face-swaps, or sexual imagery of real, identifiable people are refused with a <code>content_policy</code> error and logged. See <a href="/aup">AUP §4d</a>.</li>
+        <li><strong>Text-to-speech:</strong> clone voices without consent or create audio intended to deceive listeners about its source.</li>
+        <li><strong>AI-generated content:</strong> you are responsible for reviewing and validating all AI outputs before use. AI outputs are not legal, medical, or financial advice.</li>
+        <li><strong>Session API:</strong> conversation context is held in-memory only and is automatically deleted no later than 4 hours after session creation (and on server restarts); it is never written to disk. Do not use sessions to store or relay harmful or illegal content.</li>
       </ul>
 
       <h2>5. Credits and Billing</h2>
-      <p>Free accounts receive <strong>100 credits</strong> — 10 upon registration, 90 upon email verification. Additional credits may be purchased via Stripe, one-time credit packs, or paid automatically via x402 USDC micropayments (supported on 9 blockchain networks). Subscription plans include monthly credit allocations that refresh each billing cycle. Overage beyond subscription credits is billed at one-time pack rates.</p>
+      <div class="tldr"><strong>In short:</strong> credits are prepaid and non-refundable except where the law requires otherwise. The price charged is always the price advertised in the live catalog at the time of the call. Model-selectable AI tools apply a published per-model multiplier. Crypto (x402/USDC) payments are final. If a Stripe charge is refunded or disputed, the credits it bought are removed from the account.</div>
+      <p><strong>Free signup grant:</strong> new accounts receive a one-time grant of 100 free credits — a starter portion (currently 25) usable immediately, with the remainder unlocked when you verify your email address. One grant per person: duplicate identities receive no grant, and signup volume per IP is limited.</p>
+      <p><strong>Purchasing credits:</strong> credits may be purchased via Stripe using one-time credit packs — currently <strong>$9 for 3,000</strong>, <strong>$49 for 25,000</strong>, and <strong>$199 for 125,000</strong> credits — or via monthly subscription plans: <strong>Starter</strong> ($19/mo, 10,000 credits), <strong>Pro</strong> ($49/mo, 30,000 credits), <strong>Growth</strong> ($99/mo, 75,000 credits), and <strong>Business</strong> ($199/mo, 175,000 credits). Individual calls may also be paid per-request in USDC via the x402 protocol (Section 5b). Current pricing is always available at <a href="/pricing">/pricing</a> and <code>GET /v1/billing/plans</code>.</p>
+      <p><strong>Per-model pricing:</strong> for AI tools that let you choose the model (e.g. <code>ai-generate</code>, <code>ai-oracle</code>), the listed credit cost is anchored to the standard model tier and a published per-model multiplier applies — premium models (e.g. Opus-class) cost more credits per call and economy models cost fewer, exactly as shown in the live catalog. Unknown or unlisted models are charged at the standard (1.0×) rate.</p>
       <ul>
-        <li><strong>Non-refundable:</strong> Credits and subscription payments are non-refundable except where required by applicable law.</li>
-        <li><strong>Non-transferable:</strong> Credits are tied to a single API key and account. They may not be transferred, sold, gifted, or assigned to any other account or party.</li>
-        <li><strong>Non-expiring (one-time packs):</strong> Credits purchased via one-time packs do not expire as long as your account remains in good standing.</li>
-        <li><strong>Subscription credits:</strong> Credits granted via monthly or annual subscription plans are refreshed at the start of each billing cycle. Unused subscription credits do not roll over to the next cycle and expire at cycle end.</li>
-        <li><strong>Subscription cancellation:</strong> You may cancel a subscription at any time via your account dashboard or by emailing support@archtools.dev. Cancellation takes effect at the end of the current billing period. You retain access to subscription credits until the period ends. No partial refunds are issued for unused time.</li>
-        <li><strong>Auto-renewal:</strong> Subscription plans renew automatically at the end of each billing cycle using your payment method on file. You will receive a reminder email before renewal. To avoid being charged, cancel before the renewal date.</li>
-        <li><strong>No resale:</strong> Purchasing credits or subscriptions for the purpose of reselling access to the Service is strictly prohibited.</li>
-        <li><strong>Account suspension:</strong> Violation of these billing terms may result in immediate account suspension without refund.</li>
+        <li><strong>Prepaid, non-refundable:</strong> credits are prepaid and non-refundable except where required by applicable law. See the <a href="/refund">Refund Policy</a>.</li>
+        <li><strong>Non-transferable:</strong> credits are tied to a single account and may not be transferred, sold, gifted, or assigned.</li>
+        <li><strong>One-time packs don't expire</strong> while your account remains in good standing.</li>
+        <li><strong>Subscription credits</strong> refresh each billing cycle; unused subscription credits do not roll over and expire at cycle end.</li>
+        <li><strong>Cancellation:</strong> cancel any time via your dashboard or <a href="mailto:support@archtools.dev">support@archtools.dev</a>; cancellation takes effect at the end of the current billing period, with no partial refunds for unused time.</li>
+        <li><strong>Auto-renewal:</strong> subscriptions renew automatically each cycle on your payment method on file until cancelled.</li>
+        <li><strong>Refunds, disputes &amp; clawback:</strong> if a Stripe charge is refunded or a chargeback/dispute is filed, the credits originally granted for that purchase are automatically deducted from your balance (never below zero). Filing fraudulent disputes may result in account suspension.</li>
+        <li><strong>No resale:</strong> purchasing credits or subscriptions to resell access to the Service is prohibited.</li>
+        <li><strong>Suspension:</strong> violation of these billing terms may result in account suspension without refund.</li>
       </ul>
 
+      <h2>5a. Rate Limits</h2>
+      <p>To keep the platform stable for everyone, requests are rate-limited. A platform-wide limit (currently 300 requests per minute per IP) applies to all traffic, with stricter limits on authentication and registration endpoints. When you exceed a limit the API returns HTTP 429 with standard rate-limit headers. Limits may change with reasonable notice, and sustained abuse may result in throttling or suspension.</p>
+
       <h2>5b. x402 Cryptocurrency Payments</h2>
-      <p>Arch Tools supports x402 protocol payments in USDC stablecoin across 9 blockchain networks. By using x402 payments, you agree to the following:</p>
+      <p>Arch Tools supports per-request x402 protocol payments in USDC stablecoin. The networks we accept are published live in our x402 discovery document at <a href="/.well-known/x402">/.well-known/x402</a> and on the <a href="/fund">Fund page</a>. By using x402 payments, you agree that:</p>
       <ul>
-        <li><strong>No refunds:</strong> Cryptocurrency payments are final once confirmed on-chain. Due to the nature of blockchain transactions, we cannot reverse, cancel, or refund x402 payments. This applies regardless of whether you used the credited API calls.</li>
-        <li><strong>Blockchain finality:</strong> Payment is considered complete upon on-chain confirmation. Network congestion, failed transactions, or insufficient gas fees are your responsibility. We are not liable for transactions that fail to confirm.</li>
-        <li><strong>Wallet responsibility:</strong> You are solely responsible for the security of your wallet, private keys, and seed phrases. We will never ask for your private keys. Lost wallet access does not entitle you to credit recovery.</li>
-        <li><strong>Supported networks:</strong> We support payments on Base, Ethereum, Arbitrum, Optimism, Polygon, and other networks as listed on our Fund page. Network availability may change with notice.</li>
-        <li><strong>Exchange rate:</strong> x402 payments are denominated in USDC. We are not responsible for any value fluctuations in other cryptocurrencies you may convert from.</li>
+        <li><strong>Payments are final:</strong> cryptocurrency settlements are final and irreversible once confirmed on-chain. We cannot reverse, cancel, or refund an x402 payment, regardless of whether you used the credited API call.</li>
+        <li><strong>Blockchain finality:</strong> payment is complete upon on-chain confirmation. Network congestion, failed transactions, or insufficient gas fees are your responsibility; we are not liable for transactions that fail to confirm.</li>
+        <li><strong>Wallet responsibility:</strong> you are solely responsible for the security of your wallet, private keys, and seed phrases. We never ask for private keys. Lost wallet access does not entitle you to credit recovery.</li>
+        <li><strong>Denomination:</strong> x402 payments are denominated in USDC; we are not responsible for value fluctuations in assets you convert from.</li>
       </ul>
 
       <h2>5c. Facilitator-as-a-Service</h2>
       <p>Arch Tools offers facilitator services for x402 payment processing on behalf of third-party API providers. If you use our Facilitator-as-a-Service:</p>
       <ul>
-        <li><strong>Service fees:</strong> Facilitator fees are disclosed at the time of transaction and deducted from the payment amount before settlement to the service provider.</li>
-        <li><strong>Settlement timing:</strong> Settlements to service providers are processed according to the terms agreed between Arch Tools and the provider. End users interact only with the x402 payment flow.</li>
-        <li><strong>Liability:</strong> MCMetaverse LLC acts as a payment facilitator only. We are not responsible for the quality, availability, or performance of third-party services accessed through our facilitator. Disputes about service quality should be directed to the service provider.</li>
-        <li><strong>Compliance:</strong> By using our facilitator services, you represent that your use complies with all applicable laws, including money transmission regulations in your jurisdiction.</li>
+        <li><strong>Service fees:</strong> facilitator fees are disclosed at the time of transaction and deducted from the payment amount before settlement to the service provider.</li>
+        <li><strong>Settlement timing:</strong> settlements to service providers are processed according to the terms agreed between Arch Tools and the provider.</li>
+        <li><strong>Liability:</strong> MCMetaverse LLC acts as a payment facilitator only. We are not responsible for the quality, availability, or performance of third-party services accessed through our facilitator; direct service-quality disputes to the provider.</li>
+        <li><strong>Compliance:</strong> you represent that your use complies with all applicable laws, including money transmission regulations in your jurisdiction.</li>
       </ul>
-
-      <h2>5a. Rate Limits</h2>
-      <p>Rate limits are applied per API key per tier to ensure fair access for all users:</p>
-      <ul>
-        <li><strong>Free tier:</strong> 60 requests/minute, 500 requests/day</li>
-        <li><strong>Starter ($19/mo):</strong> 300 requests/minute, 20,000 requests/day</li>
-        <li><strong>Pro ($49/mo):</strong> 300 requests/minute, 20,000 requests/day</li>
-        <li><strong>Business ($199/mo):</strong> 1,000 requests/minute, 100,000 requests/day</li>
-      </ul>
-      <p>Burst allowances may apply. Sustained abuse of burst capacity may result in throttling or suspension. Rate limits are subject to change with reasonable notice.</p>
 
       <h2>5d. Agent Identity (Know Your Agent)</h2>
-      <p>Arch Tools provides an Agent Identity system that assigns reputation scores and verifiable identities to AI agents. By using Agent Identity:</p>
-      <ul>
-        <li><strong>Reputation scoring:</strong> Scores are computed algorithmically based on objective metrics including payment history, API usage patterns, error rates, and account age. Scores are not manually adjusted.</li>
-        <li><strong>Score visibility:</strong> Your reputation score may be visible to other users and service providers in the Arch Tools ecosystem to facilitate trust-based interactions.</li>
-        <li><strong>Dispute process:</strong> If you believe your reputation score is inaccurate, you may request a review by emailing <a href="mailto:support@archtools.dev">support@archtools.dev</a> with specific details. We will investigate and respond within 14 business days.</li>
-        <li><strong>No guarantees:</strong> A high reputation score does not guarantee access to any particular service or preferential treatment. Service providers set their own trust thresholds.</li>
-        <li><strong>Account linkage:</strong> Agent identities are linked to your API key and wallet address. Creating multiple identities to circumvent reputation penalties is prohibited and may result in account termination.</li>
-      </ul>
+      <p>Arch Tools provides an Agent Identity system that assigns reputation scores and verifiable identities to AI agents. Scores are computed algorithmically from objective metrics (payment history, usage patterns, error rates, account age) and are not manually adjusted. Your score may be visible to other users and providers in the ecosystem. To dispute a score, email <a href="mailto:support@archtools.dev">support@archtools.dev</a>; we respond within 14 business days. Creating multiple identities to circumvent reputation penalties is prohibited.</p>
 
       <h2>5e. Service Directory</h2>
-      <p>The Arch Tools Service Directory lists AI-powered services and tools. If you submit a listing:</p>
-      <ul>
-        <li><strong>Accuracy:</strong> You represent that all information in your listing is accurate, current, and not misleading. You must update your listing promptly if any information changes.</li>
-        <li><strong>Removal:</strong> We reserve the right to remove any listing at our sole discretion, including for inaccuracy, inactivity, policy violations, or user complaints. You may request removal of your own listing at any time.</li>
-        <li><strong>No endorsement:</strong> Inclusion in the directory does not constitute endorsement, partnership, or certification by MCMetaverse LLC.</li>
-        <li><strong>Intellectual property:</strong> By submitting a listing, you grant MCMetaverse LLC a non-exclusive, royalty-free license to display your service name, logo, and description in the directory and related marketing materials.</li>
-      </ul>
+      <p>If you submit a listing to the Service Directory: you represent your listing is accurate and current; we may remove any listing at our discretion (inaccuracy, inactivity, policy violations, complaints); you may request removal of your own listing at any time; and you grant MCMetaverse LLC a non-exclusive, royalty-free license to display your service name, logo, and description in the directory and related materials. Inclusion is not an endorsement.</p>
 
       <h2>6. Service Availability</h2>
-      <p>We aim for high availability but do not guarantee uninterrupted access. We reserve the right to modify, suspend, or discontinue the Service at any time with reasonable notice.</p>
+      <p>We aim for high availability but do not guarantee uninterrupted access. We may modify, suspend, or discontinue the Service (or any tool in the catalog) at any time with reasonable notice. Live status: <a href="/status">/status</a>.</p>
 
       <h2>7. Intellectual Property</h2>
-      <p>All content, code, and branding associated with Arch Tools is proprietary. Your data and outputs generated through the Service remain yours.</p>
+      <p>All content, code, and branding associated with Arch Tools is proprietary to MCMetaverse LLC or its licensors. Your inputs, and outputs generated for you through the Service, remain yours to the extent permitted by the upstream provider's terms.</p>
 
-      <h2>8. Privacy</h2>
-      <p>We collect only your email address and API usage data. We do not sell your data. See our <a href="/legal/privacy">Privacy Policy</a> for details.</p>
+      <h2>8. Privacy &amp; Data Deletion</h2>
+      <p>Our <a href="/privacy">Privacy Policy</a> describes exactly what we collect and how it's used. Highlights: we store your email and a one-way hash of your API key — never card numbers (Stripe holds payment details). You can <strong>delete your account and data yourself</strong> at any time via <code>DELETE /v1/agent</code> (with confirmation) — this permanently erases your profile, keys, OAuth grants, and usage history; anonymized payment records are retained only as required by tax and accounting law.</p>
 
       <h2>9. Changes to Terms</h2>
-      <p>We may update these terms at any time. Continued use of the Service after changes constitutes acceptance of the updated terms.</p>
+      <p>We may update these terms as the Service evolves. We will update the effective date above, and for material changes we will notify registered users by email. Continued use of the Service after changes constitutes acceptance.</p>
 
       <h2>10. Disclaimer of Warranties</h2>
       <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MCMETAVERSE LLC EXPRESSLY DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.</p>
@@ -173,25 +158,31 @@
       <p>SOME JURISDICTIONS DO NOT ALLOW EXCLUSION OF IMPLIED WARRANTIES OR LIMITATION OF LIABILITY FOR CERTAIN TYPES OF DAMAGES. IN SUCH JURISDICTIONS, OUR LIABILITY IS LIMITED TO THE MAXIMUM EXTENT PERMITTED BY LAW.</p>
 
       <h2>12. Indemnification</h2>
-      <p>You agree to indemnify, defend, and hold harmless MCMetaverse LLC, its members, officers, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising from or related to: (a) your use of or access to the Service; (b) your violation of these Terms; (c) your violation of any third-party rights, including intellectual property rights or privacy rights; (d) any content you transmit through the Service; or (e) any AI-generated output you use or distribute based on use of the Service.</p>
+      <p>You agree to indemnify, defend, and hold harmless MCMetaverse LLC, its members, officers, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising from or related to: (a) your use of or access to the Service; (b) your violation of these Terms or the AUP; (c) your violation of any third-party rights, including intellectual property or privacy rights; (d) any content you transmit through the Service; or (e) any AI-generated output you use or distribute.</p>
 
       <h2>13. Governing Law &amp; Dispute Resolution</h2>
-      <p>These Terms are governed by the laws of the State of South Carolina, United States, without regard to conflict of law principles. Any disputes shall be resolved exclusively in the state or federal courts located in South Carolina. You waive any objection to jurisdiction or venue in such courts.</p>
+      <!-- NEEDS-BRAD: confirm governing-law state. Kept South Carolina to match the live page and the MCMetaverse LLC (SC) entity line; task default suggested Florida. -->
+      <p>These Terms are governed by the laws of the State of South Carolina, United States, without regard to conflict of law principles. Any disputes shall be resolved exclusively in the state or federal courts located in South Carolina. You waive any objection to jurisdiction or venue in such courts. Nothing in this section deprives you of mandatory consumer protections of the country or state where you reside.</p>
 
-      <h2>14. GDPR / International Users</h2>
-      <p>If you are located in the European Economic Area (EEA), our lawful basis for processing your personal data is the performance of a contract (providing the Service you signed up for). You have the right to access, correct, or delete your data at any time by emailing <a href="mailto:support@archtools.dev">support@archtools.dev</a>.</p>
+      <h2>14. International Users (GDPR / UK GDPR)</h2>
+      <p>If you are located in the European Economic Area or the United Kingdom, our lawful bases for processing your personal data, and your rights (including access, correction, deletion, and portability), are set out in the <a href="/privacy">Privacy Policy</a>, including a plain-language lawful-basis table. You can exercise deletion yourself via <code>DELETE /v1/agent</code> or by emailing <a href="mailto:privacy@archtools.dev">privacy@archtools.dev</a>.</p>
 
       <h2>15. Contact</h2>
-      <p>Questions? Email <a href="mailto:support@archtools.dev">support@archtools.dev</a></p>
+      <p>MCMetaverse LLC — questions about these Terms: <a href="mailto:support@archtools.dev">support@archtools.dev</a>. Abuse reports: <a href="mailto:abuse@archtools.dev">abuse@archtools.dev</a>.</p>
+      <!-- NEEDS-BRAD: registered business/postal address to add here once confirmed. -->
     </div>
   </main>
 
   <footer class="at-footer">
     <span>© 2026 Arch Tools · MCMetaverse LLC</span>
     <span>
-      <a href="/legal/privacy">Privacy</a>
-      <a href="/legal/terms">Terms</a>
-      <a href="/docs">Docs</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/refund">Refunds</a>
+      <a href="/aup">AUP</a>
+      <a href="/retention">Retention</a>
+      <a href="/subprocessors">Subprocessors</a>
+      <a href="/security">Security</a>
       <a href="mailto:support@archtools.dev">Contact</a>
     </span>
   </footer>
