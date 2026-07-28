@@ -127,6 +127,20 @@ model Purchase {
   @@index([paymentIntentId])
 }
 
+// GDPR deletion audit trail (hardening 2026-07-28). One row per successful
+// DELETE /v1/agent, written inside the deletion transaction. Contains NO direct
+// identifiers: the agent id is stored only as a SHA-256 hash; requester
+// evidence holds the auth method + truncated hashes (key prefix, source IP).
+model DataDeletionAudit {
+  id                String   @id @default(cuid())
+  agentIdHash       String   @map("agent_id_hash")       // sha256(agent.id), hex
+  erasedSummary     String   @map("erased_summary")      // JSON counts of erased records
+  requesterEvidence String   @map("requester_evidence")  // JSON: {method, keyPrefixHash, ipHash, confirm}
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([agentIdHash])
+}
+
 // Idempotency guard for credit clawbacks. One row per Stripe reversal event
 // object id (refund / dispute / failed-invoice id). The UNIQUE constraint makes
 // "have we already processed this reversal?" a DB-level decision (no TOCTOU) —

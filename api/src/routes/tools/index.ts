@@ -10,6 +10,11 @@ import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
 import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
+import {
+  VIDEO_HOURLY_CAP, videoHourlyGate,
+  firecrawlFallbackKey,
+  EXTRACT_PDF_MAX_BYTES, EXTRACT_PDF_MAX_PAGES, estimatePdfPageCount,
+} from "../../lib/toolLimits.js";
 import crypto from "crypto";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import Anthropic from "@anthropic-ai/sdk";
@@ -528,16 +533,25 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
     $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http")) links.push({ text: $(el).text().trim().slice(0, 100), href: h }); });
     res.json({ ok: true, url, title: $("title").text(), text: content.slice(0, 8000), content: content.slice(0, 8000), word_count: content.split(/\s+/).length, links: links.slice(0, 30), status_code: resp.status, request_id: reqId() });
   } catch (_axiosErr) {
-    // Fallback: Firecrawl (handles JS-heavy / bot-protected sites)
-    // BYOK: check for user-provided Firecrawl key first, fall back to platform key
-    const fcKey = (req.headers["x-firecrawl-key"] as string | undefined) || process.env.FIRECRAWL_API_KEY;
-    if (fcKey) {
-      const byokFc = !!(req.headers["x-firecrawl-key"] as string | undefined);
+    // Fallback: Firecrawl (handles JS-heavy / bot-protected sites).
+    // GATED (audit 2026-07-27): the platform Firecrawl key costs real vendor
+    // money per scrape, while the 5-credit price was set for the cheap local
+    // path. The managed fallback therefore only fires for callers who either
+    // bring their own key (BYOK, x-firecrawl-key) or paid the higher x402
+    // per-request price ($0.015 — covers vendor cost per PR #73 pricing).
+    // Credit-paid callers keep the local scrape and get a clear upgrade hint.
+    const fallback = firecrawlFallbackKey({
+      byokKey: req.headers["x-firecrawl-key"] as string | undefined,
+      x402Paid: isX402Paid(req),
+      platformKey: process.env.FIRECRAWL_API_KEY,
+    });
+    if (fallback) {
+      const byokFc = fallback.byok;
       if (byokFc) console.log(`[BYOK] web-scrape using user-provided firecrawl key`);
       try {
         const fc = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${fcKey}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${fallback.key}` },
           body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
         });
         if (fc.ok) {
@@ -548,7 +562,7 @@ router.post("/web-scrape", ...toolMiddleware("web-scrape"), async (req: AuthedRe
       } catch (_) { /* fall through to error */ }
     }
     const status = axios.isAxiosError(_axiosErr) ? (_axiosErr.response?.status ?? 502) : 500;
-    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), hint: "For JS-heavy sites, provide your Firecrawl key via x-firecrawl-key header (BYOK).", request_id: reqId() });
+    res.status(status).json({ ok: false, error: "scrape_error", message: safeErr(_axiosErr), hint: "For JS-heavy or bot-protected sites, provide your own Firecrawl key via the x-firecrawl-key header (BYOK), or pay per-request via x402 — the x402 price includes the managed Firecrawl fallback.", request_id: reqId() });
   }
 });
 
@@ -1432,17 +1446,31 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
   const pdf_url = (req.body.pdf_url ?? req.body.url) as string | undefined; // accept documented alias `url`
   if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url (or url) or pdf_base64 is required", request_id: reqId() }); return; }
   try {
-    let base64Data = pdf_base64;
+    // Size caps (audit 2026-07-27): the whole document goes to Anthropic as
+    // billed input tokens (~1,500–3,000 per page), so bound BOTH input paths —
+    // the base64 path previously had no size check at all, letting a 1,000-page
+    // PDF consume unbounded inference at a flat 6-credit price. Env-tunable via
+    // EXTRACT_PDF_MAX_BYTES / EXTRACT_PDF_MAX_PAGES; limits are advertised in
+    // the tool description + openapi.json (advertised=charged includes limits).
+    let buffer: Buffer;
     if (pdf_url && !pdf_base64) {
       try { await validateUrl(pdf_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
       const resp = await safeAxiosGet(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
-      const buffer = Buffer.from(resp.data as ArrayBuffer);
-      if (buffer.length > 5 * 1024 * 1024) {
-        res.status(400).json({ ok: false, error: "file_too_large", message: "PDF must be under 5MB", request_id: reqId() });
-        return;
-      }
-      base64Data = buffer.toString("base64");
+      buffer = Buffer.from(resp.data as ArrayBuffer);
+    } else {
+      buffer = Buffer.from(pdf_base64!, "base64");
     }
+    const maxMb = Math.round(EXTRACT_PDF_MAX_BYTES / (1024 * 1024));
+    if (buffer.length > EXTRACT_PDF_MAX_BYTES) {
+      res.status(400).json({ ok: false, error: "file_too_large", message: `PDF must be under ${maxMb}MB (applies to both pdf_url and pdf_base64 input)`, request_id: reqId() });
+      return;
+    }
+    const estPages = estimatePdfPageCount(buffer);
+    if (estPages > EXTRACT_PDF_MAX_PAGES) {
+      res.status(400).json({ ok: false, error: "pdf_too_large", message: `This PDF appears to have ~${estPages} pages — extract-pdf accepts at most ${EXTRACT_PDF_MAX_PAGES} pages per call at its flat price. Split the document and extract it in parts.`, request_id: reqId() });
+      return;
+    }
+    const base64Data = buffer.toString("base64");
     try {
       // Use messages.create with betas header for PDF document type support
       const msg = await getAnthropic()!.messages.create({
@@ -3080,6 +3108,22 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   // 1400 credits = $1.60, keeping a safe margin over the top-tier COGS (audit 2026-07-27).
   const videoCost = Math.max(700, duration * 140);
   const paid = isX402Paid(req);
+  // Hourly per-identity cap (audit 2026-07-27): Runway bills real money per
+  // generation, so bound the burst blast radius for ALL payment rails — agent
+  // id for credit callers, settled payer wallet for x402 callers. Follows the
+  // EMAIL_RECIPIENT_DAILY_CAP in-memory pattern (PR #76); env-tunable via
+  // VIDEO_HOURLY_CAP (default 5/hour).
+  const videoIdentity = req.agent?.id
+    ?? `x402:${(req as AuthedRequest & { x402Payer?: string }).x402Payer ?? "unknown"}`;
+  if (!videoHourlyGate(videoIdentity)) {
+    res.status(429).json({
+      ok: false,
+      error: "video_rate_limited",
+      message: `Video generation is limited to ${VIDEO_HOURLY_CAP} requests per hour per account — a cost-abuse guard on the underlying Runway generation spend. Try again next hour.`,
+      request_id: reqId(),
+    });
+    return;
+  }
   if (!paid) {
     const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
     if (!withinLimit) return;

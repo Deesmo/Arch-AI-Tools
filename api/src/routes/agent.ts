@@ -457,17 +457,37 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
           emailVerified: false, isPublic: false,
         },
       });
-      return { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count, stripeSubscriptions: canceledSubscriptions };
+      const counts = { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count, stripeSubscriptions: canceledSubscriptions };
+
+      // Durable deletion audit trail (GDPR Art.5(2) accountability). Written
+      // INSIDE the transaction so a deletion can never commit without its audit
+      // row (and vice versa). Contains NO direct identifiers: the agent id is
+      // stored only as a SHA-256 hash, and requester evidence carries the auth
+      // method plus truncated hashes of the presented key prefix and source IP.
+      const audit = await tx.dataDeletionAudit.create({
+        data: {
+          agentIdHash: crypto.createHash("sha256").update(agent.id).digest("hex"),
+          erasedSummary: JSON.stringify({ ...counts, agentRowAnonymized: true }),
+          requesterEvidence: JSON.stringify({
+            method: "api_key", // requireApiKeyAuth: only the full API key can trigger deletion
+            keyPrefixHash: crypto.createHash("sha256").update(agent.apiKey.slice(0, 12)).digest("hex").slice(0, 16),
+            ipHash: req.ip ? crypto.createHash("sha256").update(req.ip).digest("hex").slice(0, 16) : null,
+            confirm: "DELETE",
+          }),
+        },
+      });
+
+      return { counts, auditId: audit.id };
     });
 
-    // Audit log (no PII — id + counts only). Serves as the deletion record until a
-    // dedicated DataDeletionAudit table is added.
-    logger.info(`[gdpr] account deleted agent=${agent.id} erased=${JSON.stringify(result)} at=${new Date().toISOString()}`);
+    // Structured log mirrors the DataDeletionAudit row (no PII — counts + audit id).
+    logger.info(`[gdpr] account deleted agent=${agent.id} erased=${JSON.stringify(result.counts)} audit=${result.auditId} at=${new Date().toISOString()}`);
 
     res.json({
       ok: true,
       message: "Account deleted. Your profile, API keys, OAuth grants, active Stripe subscriptions, and usage history have been erased. Anonymized financial records are retained as required by tax law. This cannot be undone.",
-      erased: result,
+      erased: result.counts,
+      deletion_audit_id: result.auditId,
       retained: "anonymized purchase/payment records (tax/accounting compliance — no personal data)",
       request_id: reqId(),
     });
