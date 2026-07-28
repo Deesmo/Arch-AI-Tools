@@ -167,10 +167,12 @@ export async function deductCredits(
     // x402 PAYMENT-REQUIRED shape are separate surfaces and stay untouched.
     // NOTE: one-time packs go to /v1/billing/checkout — /v1/billing/subscribe
     // rejects bare pack ids by design (anti-accidental-subscription guard).
-    // recommended_pack = smallest pack covering credits_needed; buy_now and
-    // X-Upgrade-URL carry the pre-selected pricing URL (?pack= only
-    // highlights on the pricing page — purchase requires an explicit click).
-    const rec = recommendPack(cost);
+    // recommended_pack = smallest pack covering the SHORTFALL (cost minus the
+    // remaining balance — not the full cost, which would oversize the pack for
+    // agents that still hold credits); buy_now and X-Upgrade-URL carry the
+    // pre-selected pricing URL (?pack= only highlights on the pricing page —
+    // purchase requires an explicit click).
+    const rec = recommendPack(cost - agent.credits);
     res.setHeader("X-Upgrade-URL", packUrl(rec.id));
     res.status(402).json({
       ok: false,
