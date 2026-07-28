@@ -690,45 +690,45 @@ Tools cost credits per call. Credits never expire. Non-transferable.
 
 ### AI (Claude-powered)
 POST /v1/tools/ai-generate          (20+ credits, scales w/ max_tokens) — Text generation via Claude Sonnet
-POST /v1/tools/ocr-extract          (10 credits) — Extract text from images (URL or base64)
+POST /v1/tools/ocr-extract          (12 credits) — Extract text from images (URL or base64)
 POST /v1/tools/sentiment-analysis   (8 credits)  — Sentiment + 6 emotions (joy, anger, sadness…)
 POST /v1/tools/summarize            (10 credits) — paragraph, bullets, tldr, headline, executive styles
 POST /v1/tools/extract-entities     (8 credits)  — NER: people, orgs, locations, dates, money
 POST /v1/tools/language-detect      (3 credits)  — 100+ languages with confidence score
 POST /v1/tools/regex-generate       (8 credits)  — Natural language → validated regex with tests
 POST /v1/tools/pii-detect           (10 credits) — Detect and optionally redact PII
-POST /v1/tools/image-generate       (15 credits) — Generate SVG images from text prompts
+POST /v1/tools/image-generate       (30 credits) — Generate SVG images from text prompts
 POST /v1/tools/workflow-agent       (25 credits) — Multi-step autonomous AI agent pipeline
 POST /v1/tools/ai-oracle            (25 credits) — Premium reasoning with structured analysis and confidence levels
 POST /v1/tools/session-message      (20 credits) — Send a message in an existing conversation session
 POST /v1/tools/research-report      (40 credits) — Generate a structured research report on any topic
-POST /v1/tools/fact-check           (10 credits) — Verify claims against real-time web sources
+POST /v1/tools/fact-check           (14 credits) — Verify claims against real-time web sources
 POST /v1/tools/semantic-search      (8 credits)  — Neural/semantic web search via Exa AI
 
 ### Media & Audio
 POST /v1/tools/text-to-speech       (25+ credits, metered by length) — Convert text to natural-sounding audio via ElevenLabs
 POST /v1/tools/transcribe-audio     (25 credits) — Transcribe audio files to text via OpenAI Whisper
 POST /v1/tools/video-generate       (700+ credits, scales w/ duration) — AI video generation from text prompts via Runway Gen-3
-POST /v1/tools/design-create        (30 credits) — Generate images from text prompts via DALL-E 3
+POST /v1/tools/design-create        (50 credits) — Generate images from text prompts via DALL-E 3
 POST /v1/tools/image-remove-bg      (350 credits) — Remove background from any image via RemoveBG
 
 ### Social & Communication
 POST /v1/tools/email-send           (3 credits)  — Send transactional emails via Resend
-POST /v1/tools/email-find           (5 credits)  — Find email address for a person at a company via Hunter.io
+POST /v1/tools/email-find           (110 credits)  — Find email address for a person at a company via Hunter.io
 
 ### Web
 POST /v1/tools/web-scrape           (5 credits)  — Scrape any public URL with optional CSS selector
 POST /v1/tools/search-web           (5 credits)  — Search results (DuckDuckGo)
-POST /v1/tools/web-search           (10 credits) — Real-time search with AI-synthesized answer
+POST /v1/tools/web-search           (14 credits) — Real-time search with AI-synthesized answer
 POST /v1/tools/extract-page         (5 credits)  — Clean text, links, and metadata from any webpage
 POST /v1/tools/extract-pdf          (6 credits)  — Extract text from a PDF (URL or base64; max 5MB / 50 pages)
 POST /v1/tools/browser-task         (10 credits) — Headless browser automation via Playwright
 POST /v1/tools/rss-parse            (4 credits)  — Parse RSS or Atom feeds into structured JSON
 POST /v1/tools/screenshot-capture   (10 credits) — Screenshot any URL
-POST /v1/tools/html-to-markdown     (2 credits)  — Convert HTML to clean Markdown
+POST /v1/tools/html-to-markdown     (3 credits)  — Convert HTML to clean Markdown
 POST /v1/tools/url-shorten          (1 credit)   — Shorten any URL
 POST /v1/tools/webhook-send         (2 credits)  — Send HTTP webhooks with payload
-POST /v1/tools/news-search          (3 credits)  — Search real-time news articles by keyword
+POST /v1/tools/news-search          (12 credits)  — Search real-time news articles by keyword
 
 ### Crypto (read-only, no key required — uses CoinGecko + Alternative.me)
 POST /v1/tools/crypto-price         (1 credit)   — Real-time price, 24h change, market cap, volume
@@ -801,10 +801,77 @@ const OPENAPI_STUB = {
   components: { securitySchemes: { apiKeyAuth: { type: "apiKey", in: "header", name: "x-api-key" } } },
 };
 
+// Fallback per-tool credit prices, served only when the DB is unreachable.
+// MUST mirror the deductCredits charges in routes/tools/index.ts (metered tools
+// list their base/minimum) — enforced in CI by scripts/check-price-drift.mjs,
+// which also fails if any TOOL_DESCRIPTIONS key is missing here.
+const FALLBACK_CREDITS: Record<string, number> = {
+  "validate-data": 1,
+  "generate-hash": 1,
+  "qr-code": 2,
+  "convert-format": 2,
+  "transform-text": 3,
+  "extract-metadata": 3,
+  "web-scrape": 5,
+  "extract-page": 5,
+  "search-web": 5,
+  "web-search": 14,
+  "rss-parse": 4,
+  "ip-lookup": 2,
+  "whois-lookup": 3,
+  "email-verify": 3,
+  "phone-validate": 2,
+  "currency-convert": 2,
+  "timezone-convert": 1,
+  "generate-uuid": 1,
+  "diff-text": 2,
+  "readability-score": 2,
+  "language-detect": 3,
+  "sentiment-analysis": 8,
+  "summarize": 10,
+  "extract-entities": 8,
+  "regex-generate": 8,
+  "pii-detect": 10,
+  "ai-generate": 20,
+  "ocr-extract": 12,
+  "browser-task": 10,
+  "screenshot-capture": 10,
+  "html-to-markdown": 3,
+  "url-shorten": 1,
+  "webhook-send": 2,
+  "jsonpath-query": 1,
+  "barcode-generate": 2,
+  "image-generate": 30,
+  "workflow-agent": 25,
+  "crypto-price": 1,
+  "crypto-ohlcv": 2,
+  "crypto-market-cap": 1,
+  "crypto-fear-greed": 1,
+  "crypto-sentiment": 2,
+  "crypto-news": 2,
+  "token-lookup": 1,
+  "text-to-speech": 25,
+  "transcribe-audio": 25,
+  "email-send": 3,
+  "design-create": 50,
+  "domain-check": 2,
+  "extract-pdf": 6,
+  "ai-oracle": 25,
+  "session-create": 5,
+  "session-message": 20,
+  "news-search": 12,
+  "research-report": 40,
+  "fact-check": 14,
+  "video-generate": 700,
+  "image-remove-bg": 350,
+  "email-find": 110,
+  "semantic-search": 8,
+};
+
 const FALLBACK_TOOLS = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
   name,
   description,
-  credits: Object.entries({ "ai-generate": 20, "ocr-extract": 10, "sentiment-analysis": 8, "summarize": 10, "extract-entities": 8, "regex-generate": 8, "pii-detect": 10, "web-search": 10, "web-scrape": 5, "search-web": 5, "extract-page": 5, "browser-task": 10, "extract-pdf": 6, "rss-parse": 4, "currency-convert": 2, "email-verify": 3, "phone-validate": 2, "ip-lookup": 2, "whois-lookup": 3, "language-detect": 3, "transform-text": 3, "extract-metadata": 3, "diff-text": 2, "readability-score": 2, "convert-format": 2, "qr-code": 2, "generate-uuid": 1, "timezone-convert": 1, "validate-data": 1, "generate-hash": 1, "text-to-speech": 25, "transcribe-audio": 25, "email-send": 3, "design-create": 30, "domain-check": 2, "ai-oracle": 25, "session-create": 5, "session-message": 20, "news-search": 3, "research-report": 40, "fact-check": 10, "video-generate": 700, "image-remove-bg": 350, "email-find": 5, "semantic-search": 8 }).find(([k]) => k === name)?.[1] ?? 5,
+  credits: FALLBACK_CREDITS[name] ?? 5,
   category: ["ai-generate","ocr-extract","sentiment-analysis","summarize","extract-entities","regex-generate","pii-detect","web-search","language-detect","ai-oracle","session-create","session-message","research-report","fact-check","semantic-search","workflow-agent"].includes(name) ? "ai" : ["web-scrape","search-web","extract-page","browser-task","rss-parse","news-search"].includes(name) ? "web" : ["video-generate","design-create","image-remove-bg","text-to-speech","transcribe-audio","image-generate","generate-image"].includes(name) ? "media" : ["email-send","email-find"].includes(name) ? "communication" : ["crypto-price","crypto-market-cap","crypto-ohlcv","crypto-sentiment","crypto-news","crypto-fear-greed","token-lookup"].includes(name) ? "crypto" : "utility",
   active: true,
   endpoint: `/v1/tools/${name}`,
