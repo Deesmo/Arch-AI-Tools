@@ -37,7 +37,7 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { getCuratedSellCopy, sanitizeSellCopy, registerToolSellCopy, SELL_COPY_MAX_CHARS } from "../lib/toolSellCopy.js";
+import { getRegisteredSellCopy, registerToolSellCopy, SELL_COPY_MAX_CHARS } from "../lib/toolSellCopy.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -219,16 +219,13 @@ function buildExampleObject(schema: JsonSchema, depth = 0): Record<string, unkno
 }
 
 /**
- * Per-tool sell copy for the Bazaar catalog (Play #6): curated override first,
- * else the tool's OpenAPI summary/description SANITIZED (internals stripped,
- * ASCII-transliterated) — always suffix-capped at SELL_COPY_MAX_CHARS (200).
+ * Per-tool sell copy for the Bazaar catalog (Play #6): the shared sell-copy
+ * registry (curated -> DB -> spec, sanitized at the insert boundary — the
+ * same source order resource/accepts descriptions use) — always
+ * suffix-capped at SELL_COPY_MAX_CHARS (200).
  */
-function buildDescription(toolName: string, summary: unknown, description: unknown): string {
-  const raw = [summary, description]
-    .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-    .map((s) => s.trim())
-    .join(" - ");
-  let base = getCuratedSellCopy(toolName) ?? sanitizeSellCopy(raw) ?? `Arch Tools ${toolName} API`;
+function buildDescription(toolName: string): string {
+  let base = getRegisteredSellCopy(toolName) ?? `Arch Tools ${toolName} API`;
   if (base.length > MAX_BASE_DESCRIPTION_CHARS) {
     base = base.slice(0, MAX_BASE_DESCRIPTION_CHARS - 3).replace(/[\s,;:-]+$/, "") + "...";
   }
@@ -249,7 +246,7 @@ function buildBlock(toolName: string, post: JsonSchema, components: JsonSchema |
   if (bodySchema.type === undefined) bodySchema.type = "object";
 
   const exampleBody = buildExampleObject(bodySchema);
-  const description = buildDescription(toolName, post.summary, post.description);
+  const description = buildDescription(toolName);
 
   return {
     description,
@@ -316,6 +313,20 @@ try {
 } catch (err) {
   // Whole-file fail-soft: discovery disabled, 402s emitted exactly as before.
   console.warn(`[bazaar] Could not load openapi spec — Bazaar discovery disabled: ${err instanceof Error ? err.message : String(err)}`);
+}
+
+/**
+ * Recompute every precomputed block's top-level `description` from the live
+ * sell-copy registry. Called after the async DB Tool.description preload
+ * (x402.ts) so the Bazaar catalog string honors the same curated -> DB ->
+ * spec source order as resource/accepts descriptions (Play #6). Mutates the
+ * stored blocks in place so getBazaarExtension() keeps returning the same
+ * shared objects.
+ */
+export function refreshBazaarDescriptions(): void {
+  for (const [toolName, block] of BAZAAR_BLOCKS) {
+    block.description = buildDescription(toolName);
+  }
 }
 
 /**

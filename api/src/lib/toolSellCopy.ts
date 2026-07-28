@@ -148,9 +148,13 @@ export function registerToolSellCopy(toolName: string, rawDescription: unknown, 
   return true;
 }
 
-/** Curated override only (used by bazaarDiscovery, which has its own spec text). */
-export function getCuratedSellCopy(toolName: string): string | null {
-  return CURATED_SELL_COPY[toolName] ?? null;
+/**
+ * Registered sell copy only — curated -> DB (sanitized) -> spec (sanitized) —
+ * with NO neutral fallback (used by bazaarDiscovery, which has its own).
+ */
+export function getRegisteredSellCopy(toolName: string): string | null {
+  const copy = CURATED_SELL_COPY[toolName] ?? dbCopy.get(toolName) ?? specCopy.get(toolName);
+  return copy !== undefined ? capLength(copy, SELL_COPY_MAX_CHARS) : null;
 }
 
 /**
@@ -159,9 +163,7 @@ export function getCuratedSellCopy(toolName: string): string | null {
  */
 export function getToolSellCopy(toolName: string): string {
   const copy =
-    CURATED_SELL_COPY[toolName] ??
-    dbCopy.get(toolName) ??
-    specCopy.get(toolName) ??
+    getRegisteredSellCopy(toolName) ??
     `Arch Tools ${toolName} API. Pay per call with USDC (x402) or credits.`;
   return capLength(copy, SELL_COPY_MAX_CHARS);
 }

@@ -21,7 +21,7 @@ import axios from "axios";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../config.js";
 import { redis } from "../lib/redis.js";
-import { getBazaarExtension } from "./bazaarDiscovery.js";
+import { getBazaarExtension, refreshBazaarDescriptions } from "./bazaarDiscovery.js";
 import { classifyStatus } from "../utils/statusClass.js";
 import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
 import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
@@ -39,6 +39,10 @@ if (process.env.DATABASE_URL) {
       const tools = await prisma.tool.findMany({ where: { active: true }, select: { name: true, description: true } });
       let registered = 0;
       for (const t of tools) if (registerToolSellCopy(t.name, t.description, "db")) registered++;
+      // Re-derive the precomputed Bazaar catalog descriptions now that DB copy
+      // is registered, so the top-level 402 `description` (and the v2 wire
+      // resource.description built from it) honors curated -> DB -> spec too.
+      refreshBazaarDescriptions();
       console.log(`[x402] Sell-copy descriptions registered for ${registered}/${tools.length} tools`);
     } catch (err) {
       console.warn(`[x402] Sell-copy DB preload skipped (fail-soft): ${err instanceof Error ? err.message : String(err)}`);
