@@ -7,7 +7,7 @@
  *   accounts created (by week)
  *     → email verified
  *     → made ≥1 successful call
- *     → made ≥5 calls
+ *     → made ≥5 successful calls
  *     → hit an insufficient-credits refusal
  *     → visited a checkout            (NOT instrumented — see below)
  *     → paid                          (Purchase rows + x402 settlements)
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
   // ── Stage 1: email verified ────────────────────────────────────────────────
   const verified = agents.filter((a) => a.emailVerified).length;
 
-  // ── Stages 2–3: made ≥1 successful call / made ≥5 calls ───────────────────
+  // ── Stages 2–3: made ≥1 successful call / made ≥5 successful calls ────────
   // Primary source = ApiRequest rows (90-day retention window). The persisted
   // Agent.totalCalls counter is reported alongside as the all-time signal.
   const successByAgent = await prisma.apiRequest.groupBy({
@@ -112,8 +112,11 @@ async function main(): Promise<void> {
   });
   const agentsWithSuccess = successByAgent.length;
 
+  // SUCCESS-only, like stage 2, so the funnel stays monotonic: an agent whose
+  // calls all failed must not appear "activated" while missing stage 2.
   const callsByAgent = await prisma.apiRequest.groupBy({
     by: ["agentId"],
+    where: { status: "SUCCESS" },
     _count: { _all: true },
   });
   const agentsWith5Calls = callsByAgent.filter((r) => r._count._all >= 5).length;
@@ -152,8 +155,11 @@ async function main(): Promise<void> {
   const paidTierAgents = agents.filter((a) => a.tier !== "free").length;
 
   // ── Time-to-first-call distribution ───────────────────────────────────────
+  // First SUCCESSFUL call, matching stage 2 — a logged failure is not "the
+  // agent got the product working".
   const firstCallByAgent = await prisma.apiRequest.groupBy({
     by: ["agentId"],
+    where: { status: "SUCCESS" },
     _min: { createdAt: true },
   });
   const createdAtById = new Map(agents.map((a) => [a.id, a.createdAt]));
@@ -193,7 +199,7 @@ async function main(): Promise<void> {
     else recency[">30d"] += 1;
   }
 
-  // ── Top tools: activated agents (≥5 calls) vs everyone ────────────────────
+  // ── Top tools: activated agents (≥5 successful calls) vs everyone ─────────
   const activatedIds = callsByAgent.filter((r) => r._count._all >= 5).map((r) => r.agentId);
   const topToolsEveryone = await prisma.apiRequest.groupBy({
     by: ["toolName"],
@@ -240,7 +246,7 @@ async function main(): Promise<void> {
         pct_of_created: pct(agentsWithSuccess, totalAgents),
         all_time_via_totalCalls_ge_1: agentsTotalCalls1,
       },
-      made_5_calls: {
+      made_5_successful_calls: {
         count: agentsWith5Calls,
         pct_of_created: pct(agentsWith5Calls, totalAgents),
         all_time_via_totalCalls_ge_5: agentsTotalCalls5,
@@ -266,7 +272,7 @@ async function main(): Promise<void> {
       },
     },
     time_to_first_call: {
-      agents_with_any_call: firstCallByAgent.length,
+      agents_with_any_successful_call: firstCallByAgent.length,
       median_minutes: ttfcMedian,
       buckets: ttfcBuckets.map((b) => ({ label: b.label, count: b.count })),
     },
