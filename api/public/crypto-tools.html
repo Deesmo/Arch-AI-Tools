@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="dark">
+  <style>html,body{background:#07061A!important;}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
+  <meta name="theme-color" content="#07061A">
+  <title>Crypto Price & Market Data API for AI Agents — Arch Tools</title>
+  <meta name="description" content="Crypto API built for AI agents: real-time prices, OHLCV candles, market cap rankings, sentiment, fear & greed index, crypto news, token lookup. From 1 credit or $0.01 in USDC per call via x402.">
+  <link rel="canonical" href="https://archtools.dev/crypto-tools">
+  <meta property="og:title" content="Crypto Price & Market Data API for AI Agents — Arch Tools">
+  <meta property="og:description" content="Crypto API built for AI agents: real-time prices, OHLCV candles, market cap rankings, sentiment, fear & greed index, crypto news, token lookup. From 1 credit or $0.01 in USDC per call via x402.">
+  <meta property="og:url" content="https://archtools.dev/crypto-tools">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://archtools.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Crypto Price & Market Data API for AI Agents — Arch Tools">
+  <meta name="twitter:description" content="Crypto API built for AI agents: real-time prices, OHLCV candles, market cap rankings, sentiment, fear & greed index, crypto news, token lookup. From 1 credit or $0.01 in USDC per call via x402.">
+  <meta name="twitter:image" content="https://archtools.dev/og-image.png">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebAPI",
+  "name": "Crypto Price & Market Data API for AI Agents",
+  "description": "Crypto API built for AI agents: real-time prices, OHLCV candles, market cap rankings, sentiment, fear & greed index, crypto news, token lookup. From 1 credit or $0.01 in USDC per call via x402.",
+  "url": "https://archtools.dev/crypto-tools",
+  "documentation": "https://archtools.dev/docs",
+  "provider": {
+    "@type": "Organization",
+    "name": "Arch Tools",
+    "url": "https://archtools.dev"
+  }
+}
+  </script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#07061A;color:#f0f0f6;line-height:1.6}
+    a{color:#00e5b0;text-decoration:none}
+    a:hover{text-decoration:underline}
+    code{background:rgba(0,229,176,.08);border:1px solid rgba(0,229,176,.15);border-radius:6px;padding:1px 6px;font-size:.88em;color:#7ff5d4}
+    .container{max-width:1100px;margin:0 auto;padding:0 24px}
+    nav{padding:20px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    nav .container{display:flex;align-items:center;justify-content:space-between}
+    .logo{font-size:20px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px}
+    .logo img{height:28px}
+    .nav-links{display:flex;gap:24px;font-size:14px}
+    .nav-links a{color:#8b8ba6}
+    .nav-links a:hover{color:#00e5b0;text-decoration:none}
+    .hero{text-align:center;padding:72px 0 40px}
+    .hero h1{font-size:2.6rem;font-weight:800;margin-bottom:16px;background:linear-gradient(135deg,#fff 0%,#00e5b0 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{font-size:1.15rem;color:#8b8ba6;max-width:680px;margin:0 auto}
+    .hero .cta-row{margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+    .section{padding:40px 0}
+    .section h2{font-size:1.8rem;font-weight:700;margin-bottom:8px;color:#fff}
+    .section h3{font-size:1.2rem;font-weight:700;margin:24px 0 8px;color:#fff}
+    .section .subtitle{color:#8b8ba6;margin-bottom:24px;font-size:1rem}
+    .section p{color:#c8c8d8;margin-bottom:12px}
+    .section ul{margin:0 0 16px 22px;color:#c8c8d8}
+    .section ul li{padding:3px 0}
+    .btn{display:inline-block;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;text-align:center;transition:all .2s}
+    .btn-primary{background:#00e5b0;color:#07061A}
+    .btn-primary:hover{background:#00c89a;text-decoration:none}
+    .btn-outline{border:1px solid rgba(255,255,255,.15);color:#fff}
+    .btn-outline:hover{border-color:#00e5b0;color:#00e5b0;text-decoration:none}
+    .fee-table{width:100%;border-collapse:collapse;margin:24px 0}
+    .fee-table th,.fee-table td{padding:12px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+    .fee-table th{color:#8b8ba6;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+    .fee-table td{font-size:.92rem;color:#c8c8d8}
+    .fee-table td.num{text-align:right;white-space:nowrap;color:#00e5b0;font-weight:600}
+    .fee-table th.num{text-align:right}
+    .fee-table tr:hover td{background:rgba(0,229,176,.03)}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin:24px 0}
+    .card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px}
+    .card h3{margin:0 0 8px;font-size:1.05rem;color:#fff}
+    .card p{color:#8b8ba6;font-size:.9rem;margin:0}
+    .code-block{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px 20px;margin:16px 0;overflow-x:auto}
+    .code-block pre{font-family:'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;color:#c8c8d8;white-space:pre;line-height:1.5}
+    footer{border-top:1px solid rgba(255,255,255,.06);padding:32px 0;text-align:center;color:#55556a;font-size:.85rem;margin-top:40px}
+    footer a{color:#8b8ba6}
+    footer a:hover{color:#00e5b0}
+    @media(max-width:640px){.hero h1{font-size:1.9rem}.nav-links{display:none}}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="/" class="logo"><img src="/arch-icon.svg?v=2" alt="Arch Tools">Arch Tools</a>
+      <div class="nav-links">
+        <a href="/docs">Docs</a>
+        <a href="/directory">Directory</a>
+        <a href="/mcp-server">MCP</a>
+        <a href="/x402">x402</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="hero">
+      <h1>Crypto Market Data For Your Agent</h1>
+      <p>8 crypto and currency tools starting at 1 credit per call — real-time prices, candlesticks, market rankings, social sentiment, and news. Fittingly, your agent can pay for them in USDC via x402.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/signup">Get a free API key — 25 instant credits</a>
+        <a class="btn btn-outline" href="https://archtools.dev/mcp">Connector: archtools.dev/mcp</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>All 8 crypto &amp; currency tools with live pricing</h2>
+      <p class="subtitle">Credits are charged per call; x402 is the per-call USDC price for keyless agent payments. Advertised price = charged price, always.</p>
+      <table class="fee-table">
+        <thead><tr><th>Tool</th><th>What it does</th><th class="num">Credits</th><th class="num">x402 (USDC)</th></tr></thead>
+        <tbody>
+        <tr><td><code>crypto-price</code></td><td>Real-time price, 24h change, market cap, and volume for any cryptocurrency</td><td class="num">1</td><td class="num">$0.010</td></tr>
+        <tr><td><code>crypto-ohlcv</code></td><td>OHLCV candlestick data for any crypto over 1-90 days</td><td class="num">2</td><td class="num">$0.010</td></tr>
+        <tr><td><code>crypto-market-cap</code></td><td>Top N cryptocurrencies by market cap with price, volume, and 24h change</td><td class="num">1</td><td class="num">$0.010</td></tr>
+        <tr><td><code>crypto-fear-greed</code></td><td>Crypto Fear &amp; Greed Index with historical data</td><td class="num">1</td><td class="num">$0.010</td></tr>
+        <tr><td><code>crypto-sentiment</code></td><td>Community sentiment, social stats, and price momentum for any cryptocurrency</td><td class="num">2</td><td class="num">$0.010</td></tr>
+        <tr><td><code>crypto-news</code></td><td>Latest crypto news headlines. Filter by token symbol</td><td class="num">2</td><td class="num">$0.015</td></tr>
+        <tr><td><code>token-lookup</code></td><td>Search for any token by name or ticker, returns CoinGecko IDs</td><td class="num">1</td><td class="num">$0.010</td></tr>
+        <tr><td><code>currency-convert</code></td><td>Convert between currencies using real-time exchange rates (170+ currencies)</td><td class="num">2</td><td class="num">$0.010</td></tr>
+        </tbody>
+      </table>
+      <p>Call any tool: <code>POST https://archtools.dev/v1/tools/&lt;tool&gt;</code> with a Bearer key — or with no key at all via <a href="/x402">x402 USDC payments</a>. Schemas for every tool: <a href="/openapi.json">openapi.json</a> · <a href="/llms-full.txt">llms-full.txt</a>.</p>
+    </div>
+    <div class="section">
+      <h2>The natural x402 pairing</h2>
+      <p>Crypto-native agents already hold USDC — so they can pay for crypto data the same way, per call, on 9 chains, with no signup. A trading agent monitoring one pair pays $0.01 per price check and nothing else. See <a href="/x402">how x402 works</a>.</p>
+    </div>
+    <div class="section">
+      <h2>Two ways to pay</h2>
+      <div class="card-grid">
+        <div class="card"><h3>Credits (Stripe)</h3><p>Sign up free — 100 credits, 25 usable instantly, no card required. Top up with one-time packs: 3,000 for $9, 25,000 for $49, 125,000 for $199. Credits never expire.</p></div>
+        <div class="card"><h3>x402 (USDC)</h3><p>No signup at all. Your agent gets a 402 Payment Required with exact payment instructions, pays in USDC, and retries. Works on 9 chains including Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad, and Solana.</p></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2>More categories</h2>
+      <p><a href="/web-data-tools">Web &amp; Data</a> · <a href="/crypto-tools">Crypto</a> · <a href="/ai-media-tools">AI &amp; Media</a> · <a href="/utility-tools">Utilities</a> — or see <a href="/ai-agent-tools">the full 63-tool overview</a> and the <a href="/mcp-server">MCP server</a>.</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 Arch Tools · MCMetaverse LLC · Prices in USD, x402 payments in USDC.</p>
+      <p style="margin-top:8px">
+        <a href="/mcp-server">MCP Server</a> · <a href="/mcp-tools-for-claude">MCP for Claude</a> ·
+        <a href="/x402">x402 API</a> · <a href="/ai-agent-tools">AI Agent Tools</a> ·
+        <a href="/web-data-tools">Web &amp; Data</a> · <a href="/crypto-tools">Crypto</a> ·
+        <a href="/ai-media-tools">AI &amp; Media</a> · <a href="/utility-tools">Utilities</a>
+      </p>
+      <p style="margin-top:8px"><a href="/docs">Docs</a> · <a href="/pricing">Pricing</a> · <a href="/llms.txt">llms.txt</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
+    </div>
+  </footer>
+</body>
+</html>
