@@ -631,7 +631,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   "email-send": "Send transactional emails via Resend — plain text or HTML",
   "design-create": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
   "domain-check": "Check if a domain is available or registered via RDAP (no key needed)",
-  "extract-pdf": "Extract text from a PDF (URL or base64)",
+  "extract-pdf": "Extract text from a PDF (URL or base64; max 5MB / 50 pages per call)",
   "ai-oracle": "Premium reasoning with structured analysis and confidence levels",
   "session-create": "Create a managed conversation session",
   "session-message": "Send a message in an existing conversation session",
@@ -706,7 +706,7 @@ POST /v1/tools/web-scrape           (5 credits)  — Scrape any public URL with 
 POST /v1/tools/search-web           (5 credits)  — Search results (DuckDuckGo)
 POST /v1/tools/web-search           (10 credits) — Real-time search with AI-synthesized answer
 POST /v1/tools/extract-page         (5 credits)  — Clean text, links, and metadata from any webpage
-POST /v1/tools/extract-pdf          (6 credits)  — Extract text from a PDF (URL or base64)
+POST /v1/tools/extract-pdf          (6 credits)  — Extract text from a PDF (URL or base64; max 5MB / 50 pages)
 POST /v1/tools/browser-task         (10 credits) — Headless browser automation via Playwright
 POST /v1/tools/rss-parse            (4 credits)  — Parse RSS or Atom feeds into structured JSON
 POST /v1/tools/screenshot-capture   (10 credits) — Screenshot any URL

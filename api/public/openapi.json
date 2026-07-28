@@ -1219,7 +1219,7 @@
     "/v1/tools/extract-pdf": {
       "post": {
         "operationId": "extractPdf",
-        "summary": "Extract text from a PDF (URL or base64)",
+        "summary": "Extract text from a PDF (URL or base64; max 5MB / 50 pages per call)",
         "tags": [
           "AI"
         ],
@@ -1232,11 +1232,11 @@
                 "properties": {
                   "pdf_url": {
                     "type": "string",
-                    "description": "Public URL of the PDF"
+                    "description": "Public URL of the PDF (max 5MB / 50 pages per call — split larger documents into parts)"
                   },
                   "pdf_base64": {
                     "type": "string",
-                    "description": "Base64-encoded PDF (alternative to pdf_url)"
+                    "description": "Base64-encoded PDF (alternative to pdf_url; same 5MB / 50-page limit applies)"
                   }
                 }
               }

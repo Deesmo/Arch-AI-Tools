@@ -214,7 +214,9 @@ async function main() {
   await test("platform-only provider tools charge full cost (no BYOK discount)", () => {
     assert.ok(toolsSrc.includes("const ttsCost = 25 + 8 * Math.ceil(text.length / 100)"));
     assert.ok(toolsSrc.includes('deductCredits(req, res, "transcribe-audio", 25)'));
-    assert.ok(toolsSrc.includes("const videoCost = Math.max(500, duration * 125)"));
+    // Pin updated 2026-07-28: PR #73 (pricing authority) raised video to
+    // 140 credits/second with a 700 floor; the old 500/125 pin was stale.
+    assert.ok(toolsSrc.includes("const videoCost = Math.max(700, duration * 140)"));
     assert.ok(toolsSrc.includes('deductCredits(req, res, "image-remove-bg", 350)'));
   });
   await test("research-report BYOK discount is scoped to its usable providers", () =>
