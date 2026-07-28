@@ -232,6 +232,7 @@
       <a href="#quickstart">Quickstart</a>
       <a href="#x402">x402 Crypto Payments</a>
       <a href="#credits">Credits &amp; Limits</a>
+      <a href="#referrals">Referral Program</a>
       <a href="#errors">Error Codes</a>
       <a href="#mcp">MCP Setup</a>
       <a href="#quickstart-lang">Quick Start by Language</a>
@@ -415,6 +416,30 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
       <tr><td>Enterprise</td><td><a href="mailto:support@archtools.dev">Contact Us</a></td><td>Custom</td><td>Custom</td><td>Custom</td></tr>
     </table>
     <p>Top-up packs: <strong>$9</strong> / 3K · <strong>$49</strong> / 25K · <strong>$199</strong> / 125K. Check usage: <span class="inline-code">GET /v1/agent/usage</span></p>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- REFERRALS -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2 id="referrals">Referral Program — Earn Free Credits</h2>
+    <p>Every account gets a shareable referral code at signup (<span class="inline-code">ARCH-xxxxxxxx</span>). When someone you refer <strong>signs up, verifies their email, and applies your code</strong>, you <strong>both receive 500 bonus credits</strong>. One referral bonus per new account; up to 10 rewarded referrals per referrer per day. Share page: <a href="/refer">archtools.dev/refer</a>.</p>
+    <table class="params-table" style="margin-bottom:16px">
+      <tr><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+      <tr><td><span class="inline-code">GET /v1/referral/code</span></td><td>API key</td><td>Get (or create) your referral code and share link</td></tr>
+      <tr><td><span class="inline-code">POST /v1/referral/apply</span></td><td>API key (verified email)</td><td>Apply a code you were given — credits both accounts</td></tr>
+      <tr><td><span class="inline-code">GET /v1/referral/stats</span></td><td>API key</td><td>Your completed referrals and credits earned</td></tr>
+      <tr><td><span class="inline-code">GET /v1/referral/leaderboard</span></td><td>None</td><td>Top referrers (public)</td></tr>
+    </table>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code class="language-bash"># Get your code + share link (also returned by GET /v1/agent/me)
+curl https://archtools.dev/v1/referral/code -H "x-api-key: arch_YOUR_KEY"
+
+# Were you referred? Apply the code after verifying your email:
+curl -X POST https://archtools.dev/v1/referral/apply \
+  -H "x-api-key: arch_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"ARCH-xxxxxxxx"}'</code></pre>
+    </div>
 
     <!-- ═══════════════════════════════════════════════ -->
     <!-- ERRORS -->

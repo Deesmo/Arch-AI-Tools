@@ -198,6 +198,25 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   -d &#39;{"text":"hello world","algorithm":"sha256"}&#39;</pre>
       </div>
 
+      <!-- REFERRAL PROGRAM -->
+      <div class="card" id="referral-card">
+        <div class="card-label">Referral Program</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Share your link. When a friend signs up, verifies their email, and applies your code, <strong style="color:rgba(255,255,255,0.92)">you both get bonus credits</strong>. <a href="/refer" style="color:var(--accent);text-decoration:none">How it works &#8594;</a></p>
+        <div style="display:flex;gap:10px;margin-bottom:8px;">
+          <input id="ref-link" readonly value="Loading&#8230;" style="flex:1;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#22d3ee;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;" />
+          <button id="ref-copy" style="height:42px;padding:0 18px;border-radius:10px;border:0;background:rgba(34,211,238,0.15);border:1px solid rgba(34,211,238,0.3);color:#22d3ee;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap;">Copy</button>
+        </div>
+        <div id="ref-stats" style="font-size:12px;color:var(--muted);min-height:16px;"></div>
+        <div id="apply-ref-box" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:10px">&#127873; You were referred — apply the code to claim the bonus (your email must be verified first):</p>
+          <div style="display:flex;gap:10px;margin-bottom:8px;">
+            <input id="apply-ref-code" placeholder="ARCH-xxxxxxxx" style="flex:1;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.92);padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;" />
+            <button onclick="applyReferral()" style="height:42px;padding:0 18px;border-radius:10px;border:0;background:linear-gradient(135deg,#FFB030,#FF1888 42%,#5522FF);color:#fff;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap;">Apply</button>
+          </div>
+          <div id="apply-ref-status" style="font-size:12px;min-height:16px;"></div>
+        </div>
+      </div>
+
       <!-- SET PASSWORD -->
       <div class="card" id="set-password-card" style="display:none;">
         <div class="card-label">Set Login Password</div>
@@ -317,6 +336,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         var BSNL = String.fromCharCode(92, 10) + '  ';
         qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash' + BSNL + '-H "x-api-key: ' + displayKey + '"' + BSNL + '-H "Content-Type: application/json"' + BSNL + '-d ' + SQ + '{"text":"hello world","algorithm":"sha256"}' + SQ;
 
+        // Referral card (non-blocking)
+        loadReferral(token);
+
         // Hide the key entry card entirely after successful load
         document.getElementById("key-entry-card").style.display = "none";
         document.getElementById("loading-card").style.display = "none";
@@ -336,6 +358,66 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     function showKeyEntryFallback() {
       document.getElementById("loading-card").style.display = "none";
       document.getElementById("key-entry-card").style.display = "block";
+    }
+
+    function loadReferral(token) {
+      fetch("/v1/affiliate/link", { headers: { Authorization: "Bearer " + token } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d || !d.ok) return;
+          document.getElementById("ref-link").value = d.affiliate_link || "";
+          var s = d.stats || {};
+          var reward = d.reward_per_referral || 500;
+          document.getElementById("ref-stats").textContent =
+            (s.conversions || 0) + " referrals · " + (s.total_earned || 0).toLocaleString() +
+            " credits earned · " + reward + " credits per referral (both sides)";
+        }).catch(function() {});
+      // If this account arrived via a referral link, offer one-click apply.
+      var pending = "";
+      try { pending = localStorage.getItem("arch_ref_code") || ""; } catch(_) {}
+      if (/^[A-Za-z0-9_-]{4,40}$/.test(pending)) {
+        document.getElementById("apply-ref-code").value = pending;
+        document.getElementById("apply-ref-box").style.display = "block";
+      }
+    }
+
+    document.getElementById("ref-copy").addEventListener("click", function() {
+      var btn = this;
+      var link = document.getElementById("ref-link").value || "";
+      if (!link || link.indexOf("http") !== 0) return;
+      navigator.clipboard.writeText(link).then(function() {
+        btn.textContent = "✓ Copied!";
+        setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+      });
+    });
+
+    async function applyReferral() {
+      var code = (document.getElementById("apply-ref-code").value || "").trim();
+      var statusEl = document.getElementById("apply-ref-status");
+      if (!code) { statusEl.style.color = "#f87171"; statusEl.textContent = "Enter a referral code."; return; }
+      if (!fullKey) { statusEl.style.color = "#f87171"; statusEl.textContent = "Load your API key first."; return; }
+      statusEl.style.color = "var(--muted)"; statusEl.textContent = "Applying…";
+      try {
+        var r = await fetch("/v1/referral/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + fullKey },
+          body: JSON.stringify({ code: code })
+        });
+        var d = await r.json();
+        if (d.ok) {
+          statusEl.style.color = "var(--green)";
+          statusEl.textContent = "✓ " + (d.message || "Referral applied!");
+          try { localStorage.removeItem("arch_ref_code"); } catch(_) {}
+        } else {
+          statusEl.style.color = "#f87171";
+          statusEl.textContent = d.message || "Could not apply that code.";
+          if (d.error === "already_referred") {
+            try { localStorage.removeItem("arch_ref_code"); } catch(_) {}
+          }
+        }
+      } catch(_) {
+        statusEl.style.color = "#f87171"; statusEl.textContent = "Connection error. Try again.";
+      }
     }
 
     // Auto-load: session-first, no manual key entry for logged-in users

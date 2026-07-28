@@ -18,6 +18,7 @@ import { redis } from "../lib/redis.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
+import { REFERRAL_REWARD } from "../lib/referralReward.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -34,7 +35,6 @@ const trackLimiter = rateLimit({
 });
 
 const SITE_URL = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\/$/, "");
-const REFERRAL_REWARD = parseInt(process.env.REFERRAL_REWARD_CREDITS ?? "500", 10);
 
 // In-memory click tracking fallback (when Redis is unavailable)
 const clickStore = new Map<string, { clicks: number; lastClick: string; ips: Set<string> }>();
@@ -114,12 +114,13 @@ router.post("/track", trackLimiter, async (req: Request, res: Response): Promise
     return;
   }
 
-  const normalizedCode = code.toUpperCase().trim();
-
   try {
-    // Verify the code exists
+    // Verify the code exists. Case-insensitive: codes are generated with
+    // lowercase hex, but links/emails may uppercase them in transit. The old
+    // exact-match on an UPPERCASED input never matched a real code, so no
+    // click was ever recorded.
     const referral = await prisma.referral.findFirst({
-      where: { code: normalizedCode, referredId: null },
+      where: { code: { equals: code.trim(), mode: "insensitive" }, referredId: null },
     });
 
     if (!referral) {
@@ -127,6 +128,10 @@ router.post("/track", trackLimiter, async (req: Request, res: Response): Promise
       res.json({ ok: true, tracked: false, request_id: reqId() });
       return;
     }
+
+    // Key metrics by the CANONICAL stored code — /link and /stats read
+    // `aff:*:${referral.code}`, so writes must use the same casing.
+    const normalizedCode = referral.code;
 
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
 

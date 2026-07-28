@@ -4,11 +4,10 @@ import { requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { requireAccountAuth } from "../middleware/requireAccountAuth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
+import { applyReferralCode, REFERRAL_REWARD } from "../lib/referralReward.js";
 import crypto from "crypto";
 
 const router = Router();
-
-const REFERRAL_REWARD = parseInt(process.env.REFERRAL_REWARD_CREDITS ?? "500", 10);
 
 // Generate a unique referral code for the user
 function generateReferralCode(): string {
@@ -69,78 +68,20 @@ router.post("/apply", requireAuth, requireAccountAuth, async (req: AuthedRequest
   }
 
   try {
-    // Find the referral code
-    const referral = await prisma.referral.findUnique({ where: { code: code.toUpperCase().trim() } });
-    if (!referral) {
-      res.status(404).json({ ok: false, error: "invalid_code", message: "Invalid referral code.", request_id: reqId() });
+    // All validation + reward-granting lives in lib/referralReward.ts (tested
+    // in api/tests/referral-reward.test.mjs).
+    const result = await applyReferralCode(agent.id, code);
+    if (!result.ok) {
+      res.status(result.status).json({ ok: false, error: result.error, message: result.message, request_id: reqId() });
       return;
     }
 
-    // Can't refer yourself
-    if (referral.referrerId === agent.id) {
-      res.status(400).json({ ok: false, error: "self_referral", message: "You cannot use your own referral code.", request_id: reqId() });
-      return;
-    }
-
-    // Anti-farming: the referred account must have a verified email before any
-    // credits are granted. Unverified accounts hold 0 credits anyway.
-    const referredAgent = await prisma.agent.findUnique({
-      where: { id: agent.id },
-      select: { emailVerified: true },
-    });
-    if (!referredAgent?.emailVerified) {
-      res.status(403).json({ ok: false, error: "email_not_verified", message: "Verify your email before applying a referral code.", request_id: reqId() });
-      return;
-    }
-
-    // Check if this user has already used a referral code
-    const alreadyReferred = await prisma.referral.findFirst({
-      where: { referredId: agent.id, status: "completed" },
-    });
-    if (alreadyReferred) {
-      res.status(400).json({ ok: false, error: "already_referred", message: "You have already used a referral code.", request_id: reqId() });
-      return;
-    }
-
-    // Atomic single-use guard: the completion record's `code` is deterministic on
-    // the referred user id (`referred-<id>`). `Referral.code` is unique, so two
-    // concurrent /apply calls cannot both insert — the loser hits P2002 and is
-    // treated as already_referred. Crediting happens in the same transaction.
-    try {
-      await prisma.$transaction([
-        prisma.referral.create({
-          data: {
-            referrerId: referral.referrerId,
-            referredId: agent.id,
-            code: `referred-${agent.id}`,
-            status: "completed",
-            rewardCredits: REFERRAL_REWARD,
-            completedAt: new Date(),
-          },
-        }),
-        prisma.agent.update({
-          where: { id: referral.referrerId },
-          data: { credits: { increment: REFERRAL_REWARD } },
-        }),
-        prisma.agent.update({
-          where: { id: agent.id },
-          data: { credits: { increment: REFERRAL_REWARD } },
-        }),
-      ]);
-    } catch (txErr) {
-      if (txErr && typeof txErr === "object" && (txErr as { code?: string }).code === "P2002") {
-        res.status(400).json({ ok: false, error: "already_referred", message: "You have already used a referral code.", request_id: reqId() });
-        return;
-      }
-      throw txErr;
-    }
-
-    logger.info({ referrerId: referral.referrerId, referredId: agent.id, reward: REFERRAL_REWARD }, "Referral completed");
+    logger.info({ referrerId: result.referrerId, referredId: agent.id, reward: result.reward }, "Referral completed");
 
     res.json({
       ok: true,
-      message: `Referral applied! Both you and the referrer received ${REFERRAL_REWARD} bonus credits.`,
-      credits_earned: REFERRAL_REWARD,
+      message: `Referral applied! Both you and the referrer received ${result.reward} bonus credits.`,
+      credits_earned: result.reward,
       request_id: reqId(),
     });
   } catch (e) {

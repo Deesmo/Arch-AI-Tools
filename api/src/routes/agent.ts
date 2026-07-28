@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity } from "../lib/verification.js";
+import { REFERRAL_REWARD } from "../lib/referralReward.js";
 
 const router = Router();
 
@@ -212,7 +213,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
           referrerId: agent.id,
           code,
           status: "pending",
-          rewardCredits: 500,
+          rewardCredits: REFERRAL_REWARD,
         },
       });
       referralCode = code;
@@ -325,6 +326,18 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res: Response): Promis
       select: { id: true, email: true, name: true, credits: true, pendingCredits: true, emailVerified: true, tier: true, totalCalls: true, createdAt: true },
     });
     if (!fresh) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
+
+    // Referral surface: the account's shareable code (created at signup). If
+    // it's missing (legacy accounts / a failed non-blocking create), both
+    // fields are null — clients can call GET /v1/referral/code, which creates
+    // one on demand.
+    const siteUrl = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\/$/, "");
+    const myReferral = await prisma.referral.findFirst({
+      where: { referrerId: agent.id, referredId: null },
+      orderBy: { createdAt: "desc" },
+      select: { code: true },
+    }).catch(() => null);
+
     res.json({
       ok: true,
       agent_id: fresh.id,
@@ -336,6 +349,9 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res: Response): Promis
       tier: fresh.tier,
       total_calls: fresh.totalCalls,
       created_at: fresh.createdAt,
+      referral_code: myReferral?.code ?? null,
+      referral_url: myReferral ? `${siteUrl}/signup?ref=${myReferral.code}` : null,
+      referral_reward_credits: REFERRAL_REWARD,
       ...(fresh.emailVerified ? {} : { verify_hint: `Verify your email to activate ${fresh.pendingCredits} pending credits.` }),
       buy_credits: "https://archtools.dev/pricing",
       request_id: reqId(),
