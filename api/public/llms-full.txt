@@ -69,7 +69,7 @@ Multi-step autonomous AI agent pipeline
 ### POST /v1/tools/session-create — 5 credits · x402 $0.010 USDC
 Create a persistent AI conversation session
 
-### POST /v1/tools/session-message — 20 credits · x402 $0.020 USDC
+### POST /v1/tools/session-message — 20 base credits × session-model multiplier (Sonnet 1×, Opus 2×, Haiku 0.4×) · x402 $0.020 USDC (served Sonnet-tier)
 Send a message in an existing AI session
 
 ### POST /v1/tools/summarize — 10 credits · x402 $0.010 USDC

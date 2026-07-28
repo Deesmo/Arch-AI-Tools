@@ -828,6 +828,7 @@
       "post": {
         "operationId": "sessionMessage",
         "summary": "Send a message in an existing conversation session",
+        "description": "Credits scale with the session model: 20 base x model multiplier (Sonnet 1x, Opus 2x, Haiku 0.4x). x402-paid calls are served the standard Sonnet-tier model at the flat x402 price.",
         "tags": [
           "AI"
         ],

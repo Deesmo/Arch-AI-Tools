@@ -42,6 +42,15 @@ test("applyModelCost: Opus doubles the base, Sonnet unchanged", () => {
   assert.strictEqual(applyModelCost(25, "claude-sonnet-4-6"), 25); // ai-oracle standard
 });
 
+test("session-message charge scales with the session model (base 20)", () => {
+  // Every model session-create allows must price correctly at message time.
+  assert.strictEqual(applyModelCost(20, "claude-sonnet-4-6"), 20);        // default: unchanged
+  assert.strictEqual(applyModelCost(20, "claude-opus-4-6"), 40);          // premium: 2x, no longer flat 20
+  assert.strictEqual(applyModelCost(20, "claude-haiku-4-5-20251001"), 8); // cheap tier
+  assert.strictEqual(applyModelCost(20, "gpt-4o"), 16);
+  assert.strictEqual(applyModelCost(20, "gpt-4o-mini"), 6);
+});
+
 test("applyModelCost: Haiku reduces but stays >= 1 credit", () => {
   assert.strictEqual(applyModelCost(20, "claude-haiku-4-5-20251001"), 8);
   assert.strictEqual(applyModelCost(1, "claude-haiku-4-5-20251001"), 1);

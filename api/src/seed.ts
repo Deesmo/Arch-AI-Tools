@@ -63,7 +63,7 @@ const TOOLS = [
   // AI premium tools
   { name: "ai-oracle", description: "Premium reasoning with structured analysis and confidence levels", category: "ai", credits: 25 },
   { name: "session-create", description: "Create a managed conversation session with optional system prompt", category: "ai", credits: 5 },
-  { name: "session-message", description: "Send a message in an existing conversation session", category: "ai", credits: 20 },
+  { name: "session-message", description: "Send a message in an existing conversation session (base price; scales with the session model)", category: "ai", credits: 20 },
   { name: "semantic-search", description: "Neural/semantic web search via Exa AI", category: "ai", credits: 8 },
   // Research & analysis tools
   { name: "news-search", description: "Search real-time news articles by keyword via Brave/Tavily/Serper", category: "web", credits: 12 },
