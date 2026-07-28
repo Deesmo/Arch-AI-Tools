@@ -5,11 +5,54 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { sendWelcomeEmail, sendAdminAlert } from "../services/email.js";
 import { logger } from "../lib/logger.js";
 import { config } from "../config.js";
+import { stripe } from "../lib/stripe.js";
+import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity } from "../lib/verification.js";
 
 const router = Router();
+
+const BILLABLE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
+
+function stripeSearchLiteral(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+async function cancelStripeSubscriptionsForDeletedAgent(agentId: string, email: string): Promise<number> {
+  if (!stripe) return 0;
+
+  const stripeClient = stripe;
+  const seen = new Set<string>();
+  let canceled = 0;
+
+  const cancelIfBillable = async (subscription: Stripe.Subscription): Promise<void> => {
+    if (!subscription.id || seen.has(subscription.id) || !BILLABLE_SUBSCRIPTION_STATUSES.has(subscription.status)) return;
+    seen.add(subscription.id);
+    await stripeClient.subscriptions.cancel(subscription.id, { invoice_now: false, prorate: false });
+    canceled++;
+  };
+
+  for await (const subscription of stripeClient.subscriptions.search({
+    query: `metadata['agent_id']:'${stripeSearchLiteral(agentId)}'`,
+    limit: 100,
+  })) {
+    await cancelIfBillable(subscription);
+  }
+
+  // Stripe search is eventually consistent; a just-created Checkout subscription
+  // may not be indexed yet. Fall back to the Checkout customer_email path, but
+  // still require matching agent metadata before canceling anything.
+  if (email) {
+    for await (const customer of stripeClient.customers.list({ email, limit: 100 })) {
+      for await (const subscription of stripeClient.subscriptions.list({ customer: customer.id, status: "all", limit: 100 })) {
+        if (subscription.metadata?.agent_id === agentId) await cancelIfBillable(subscription);
+      }
+    }
+  }
+
+  return canceled;
+}
 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
@@ -391,6 +434,7 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
 
   try {
     const email = agent.email ?? "";
+    const canceledSubscriptions = await cancelStripeSubscriptionsForDeletedAgent(agent.id, email);
     const result = await prisma.$transaction(async (tx) => {
       const reqs = await tx.apiRequest.deleteMany({ where: { agentId: agent.id } });
       const toks = await tx.oAuthToken.deleteMany({ where: { agentId: agent.id } });
@@ -413,7 +457,7 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
           emailVerified: false, isPublic: false,
         },
       });
-      return { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count };
+      return { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count, stripeSubscriptions: canceledSubscriptions };
     });
 
     // Audit log (no PII — id + counts only). Serves as the deletion record until a
@@ -422,7 +466,7 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
 
     res.json({
       ok: true,
-      message: "Account deleted. Your profile, API keys, OAuth grants, and usage history have been erased. Anonymized financial records are retained as required by tax law. This cannot be undone.",
+      message: "Account deleted. Your profile, API keys, OAuth grants, active Stripe subscriptions, and usage history have been erased. Anonymized financial records are retained as required by tax law. This cannot be undone.",
       erased: result,
       retained: "anonymized purchase/payment records (tax/accounting compliance — no personal data)",
       request_id: reqId(),

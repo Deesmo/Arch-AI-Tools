@@ -52,6 +52,16 @@ test("account deletion erases SignupIdentity using the shared normalized email i
   );
 });
 
+test("account deletion cancels Stripe subscriptions before local anonymization", () => {
+  assert.ok(agentSrc.includes("cancelStripeSubscriptionsForDeletedAgent"), "deletion route has a Stripe cancellation guard");
+  const cancelIndex = agentSrc.indexOf("cancelStripeSubscriptionsForDeletedAgent(agent.id, email)");
+  const transactionIndex = agentSrc.indexOf("prisma.$transaction(async (tx)");
+  assert.ok(cancelIndex > 0, "DELETE /v1/agent invokes Stripe subscription cancellation");
+  assert.ok(transactionIndex > 0, "DELETE /v1/agent still anonymizes in a transaction");
+  assert.ok(cancelIndex < transactionIndex, "Stripe subscriptions are canceled before the local account is anonymized");
+  assert.match(agentSrc, /BILLABLE_SUBSCRIPTION_STATUSES[\s\S]*active[\s\S]*trialing[\s\S]*past_due[\s\S]*unpaid/);
+});
+
 test("seed catalog advertises the audited default/base prices actually charged", () => {
   assert.strictEqual(seedCredits("web-search"), 14);
   assert.strictEqual(seedCredits("ocr-extract"), 12);
