@@ -357,9 +357,9 @@ router.post("/email/broadcast", requireAdmin, async (req: Request, res: Response
   }
 
   try {
-    // Get all agents with valid emails
+    // Get all agents with valid emails who haven't opted out of marketing email
     const agents = await prisma.agent.findMany({
-      where: { email: { not: "" } },
+      where: { email: { not: "" }, emailOptOut: false },
       select: { id: true, email: true },
     });
 

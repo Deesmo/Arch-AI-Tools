@@ -298,12 +298,25 @@ async function main(): Promise<void> {
   }
 
   // ─── REAL SEND ───
-  let sent = 0, failed = 0, toppedUpCount = 0;
+  let sent = 0, failed = 0, skipped = 0, toppedUpCount = 0;
   for (const agent of recipients) {
+    // Re-check opt-out LIVE: the recipient list is a snapshot taken at start,
+    // and a full run takes minutes — anyone who unsubscribes mid-run (one-click
+    // /unsubscribe) must be excluded, not emailed from the stale snapshot.
+    const fresh = await prisma.agent.findUnique({
+      where: { id: agent.id },
+      select: { credits: true, emailOptOut: true },
+    });
+    if (!fresh || fresh.emailOptOut) {
+      skipped++;
+      console.log(JSON.stringify({ at: new Date().toISOString(), agentId: agent.id, email: maskEmail(agent.email), skipped: "opted_out" }));
+      continue;
+    }
     // Top up BEFORE sending so the copy is true when the email lands.
     // updateMany + credits<min guard = atomic, never lowers a balance.
+    const preCredits = fresh.credits;
     let toppedUp = false;
-    if (TOPUP_MIN > 0 && agent.credits < TOPUP_MIN) {
+    if (TOPUP_MIN > 0 && preCredits < TOPUP_MIN) {
       const r = await prisma.agent.updateMany({
         where: { id: agent.id, credits: { lt: TOPUP_MIN } },
         data: { credits: TOPUP_MIN },
@@ -313,7 +326,7 @@ async function main(): Promise<void> {
     }
     // After the guarded updateMany above, the live balance is >= TOPUP_MIN
     // whenever top-up is enabled (we raised it, or it was already there).
-    const balance = TOPUP_MIN > 0 ? Math.max(agent.credits, TOPUP_MIN) : agent.credits;
+    const balance = TOPUP_MIN > 0 ? Math.max(preCredits, TOPUP_MIN) : preCredits;
     const unsubUrl = `${SITE}/unsubscribe?token=${encodeURIComponent(signUnsubscribeToken(agent.id))}`;
     const ok = await sendMarketingEmail(
       agent.email,
@@ -325,13 +338,30 @@ async function main(): Promise<void> {
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       }
     );
-    if (ok) sent++; else failed++;
+    if (ok) {
+      sent++;
+    } else {
+      failed++;
+      // Roll back the top-up when the send failed — the email claiming the
+      // top-up never went out. Guarded on credits === TOPUP_MIN so we never
+      // clobber a balance the user has changed in the meantime.
+      if (toppedUp) {
+        const rb = await prisma.agent.updateMany({
+          where: { id: agent.id, credits: TOPUP_MIN },
+          data: { credits: preCredits },
+        });
+        if (rb.count > 0) {
+          toppedUp = false;
+          toppedUpCount--;
+        }
+      }
+    }
     // Log EVERY send (job log = the audit trail).
     console.log(JSON.stringify({ at: new Date().toISOString(), agentId: agent.id, email: maskEmail(agent.email), toppedUp, balance, sent: ok }));
     await sleep(SEND_DELAY_MS);
   }
 
-  console.log(JSON.stringify({ done: true, sent, failed, toppedUp: toppedUpCount, total: recipients.length }));
+  console.log(JSON.stringify({ done: true, sent, failed, skipped, toppedUp: toppedUpCount, total: recipients.length }));
   if (failed > 0) process.exitCode = 1;
 }
 

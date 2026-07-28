@@ -21,11 +21,11 @@ export async function runEmailDrip(): Promise<void> {
   try {
     const [day3Agents, day7Agents] = await Promise.all([
       prisma.agent.findMany({
-        where: { createdAt: { gte: day3Start, lte: day3End }, email: { not: "" } },
+        where: { createdAt: { gte: day3Start, lte: day3End }, email: { not: "" }, emailOptOut: false },
         select: { id: true, email: true, credits: true }
       }),
       prisma.agent.findMany({
-        where: { createdAt: { gte: day7Start, lte: day7End }, email: { not: "" } },
+        where: { createdAt: { gte: day7Start, lte: day7End }, email: { not: "" }, emailOptOut: false },
         select: { id: true, email: true, credits: true }
       }),
     ]);
