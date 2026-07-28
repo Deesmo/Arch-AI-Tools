@@ -118,7 +118,8 @@ curl -X POST https://archtools.dev/v1/tools/crypto-price \
 #    amount (e.g. $0.010 USDC), asset contract, pay-to address, network
 
 # 3. Agent pays USDC on-chain (Base is ~$0.01 gas), retries the call
-#    with the X-PAYMENT header — and gets the result. No signup ever.</pre></div>
+#    with the PAYMENT-SIGNATURE header (x402 v2; legacy v1 X-PAYMENT
+#    payloads still accepted) — and gets the result. No signup ever.</pre></div>
       <p>Machine-readable discovery of every priced endpoint lives at <a href="/.well-known/x402">/.well-known/x402</a>. Protocol spec: <a href="https://x402.org" rel="noopener">x402.org</a>.</p>
     </div>
 

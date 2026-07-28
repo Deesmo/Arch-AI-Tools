@@ -216,17 +216,20 @@ print(result["output"])</code></pre>
 
     <h2 id="x402">6. x402 Payment Integration</h2>
     <p>When credits run out, your LangChain agent can automatically pay per-call with USDC via the x402 protocol. The agent receives a <code>402</code> response with payment details and can construct a USDC payment to continue:</p>
-    <pre><code># When you get a 402, the response includes payment details:
+    <pre><code># When you get a 402, the response includes payment details (x402 v2 —
+# also base64-encoded in the PAYMENT-REQUIRED response header):
 # {
-#   "x402Version": 1,
-#   "accepts": [{"scheme": "exact", "network": "eip155:8453", ...}],
-#   "error": "PAYMENT-REQUIRED"
+#   "x402Version": 2,
+#   "error": "PAYMENT-SIGNATURE header is required",
+#   "resource": {"url": "https://archtools.dev/v1/tools/...", "mimeType": "application/json"},
+#   "accepts": [{"scheme": "exact", "network": "eip155:8453", "amount": "10000", ...}]
 # }
 #
 # Your agent can use a crypto wallet SDK to sign and pay:
 # 1. Parse the 402 response
 # 2. Sign a USDC transfer matching the amount
-# 3. Retry with X-Payment header containing the signed payment
+# 3. Retry with the PAYMENT-SIGNATURE header containing the signed payment
+#    (legacy v1 X-Payment payloads are still accepted)
 #
 # See: https://archtools.dev/x402-guide for full details</code></pre>
 

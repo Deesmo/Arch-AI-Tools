@@ -209,14 +209,15 @@ export default function FundPage() {
           <div style={{ color: 'rgba(110,231,183,0.45)' }}>{'// 2. Server responds with 402 + payment details'}</div>
           <div><span style={{ color: 'rgba(167,139,250,0.9)' }}>← 402 Payment Required</span></div>
           <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'{'}</div>
-          <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'  "x402Version": 1,'}</div>
-          <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'  "accepts": [{ "network": "eip155:8453", "maxAmountRequired": "10000", '}<span style={{ color: 'rgba(103,232,249,0.85)' }}>// $0.01 USDC</span></div>
+          <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'  "x402Version": 2,'}</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'  "resource": { "url": "https://archtools.dev/v1/tools/screenshot-capture" },'}</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'  "accepts": [{ "network": "eip155:8453", "amount": "10000", '}<span style={{ color: 'rgba(103,232,249,0.85)' }}>// $0.01 USDC</span></div>
           <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'              "payTo": "0x...", "asset": "0x833589fC..." }]'}</div>
           <div style={{ color: 'rgba(255,255,255,0.4)' }}>{'}'}</div>
           <div className="my-2" />
-          <div style={{ color: 'rgba(110,231,183,0.45)' }}>{'// 3. Agent signs USDC payment and retries with X-Payment header'}</div>
+          <div style={{ color: 'rgba(110,231,183,0.45)' }}>{'// 3. Agent signs USDC payment and retries with PAYMENT-SIGNATURE header'}</div>
           <div><span style={{ color: 'rgba(103,232,249,0.85)' }}>POST </span><span style={{ color: 'rgba(255,255,255,0.6)' }}>https://archtools.dev/v1/tools/screenshot-capture</span></div>
-          <div style={{ color: 'rgba(255,255,255,0.3)' }}>X-Payment: eyJwYXlsb2FkIjp7Li4ufSxi...</div>
+          <div style={{ color: 'rgba(255,255,255,0.3)' }}>PAYMENT-SIGNATURE: eyJ4NDAyVmVyc2lvbiI6Miwi...</div>
           <div className="my-2" />
           <div style={{ color: 'rgba(110,231,183,0.45)' }}>{'// 4. Server verifies payment, executes tool, returns result'}</div>
           <div><span style={{ color: 'rgba(167,139,250,0.9)' }}>← 200 OK</span></div>

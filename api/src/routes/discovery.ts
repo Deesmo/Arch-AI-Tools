@@ -193,17 +193,18 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     }
   }
 
-  // USDC on Solana
+  // USDC on Solana (canonical CAIP-2 genesis-hash form per x402 v2 spec §11.1 —
+  // the "solana:mainnet" alias is non-canonical and only warn-passes validators)
   if (solanaWallet) {
     accepts.push({
       scheme: "exact",
-      network: "solana:mainnet",
+      network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
       asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       payTo: solanaWallet,
       token: "USDC",
       description: "USDC on Solana (fast, cheap)",
     });
-    activeNetworks.push("solana:mainnet");
+    activeNetworks.push("solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp");
   }
 
   // USDC on Noble/Cosmos
@@ -331,7 +332,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   // Native SOL
   if (solNativeWallet) {
-    accepts.push({ scheme: "exact", network: "solana:mainnet", asset: "native", payTo: solNativeWallet, token: "SOL", description: "Native SOL on Solana" });
+    accepts.push({ scheme: "exact", network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", asset: "native", payTo: solNativeWallet, token: "SOL", description: "Native SOL on Solana" });
   }
 
   // TAO (Bittensor)
@@ -357,7 +358,10 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     description: "The first API platform built for autonomous agent payments. 63 production tools, USDC on 9 chains via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
-    version: "1",
+    // x402 protocol version served on our 402 challenges (spec-correct v2 —
+    // CAIP-2 networks, `amount` fields, PAYMENT-REQUIRED header transport).
+    version: "2",
+    x402Version: 2,
     accepts,
     endpoints,
     payment: {

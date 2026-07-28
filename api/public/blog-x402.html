@@ -119,19 +119,19 @@ curl https://archtools.dev/.well-known/x402
 
 <span class="comment"># Returns (9 networks supported — shows relevant options for your agent's wallet):</span>
 <span class="out">{
+  "version": "2",
   "accepts": [
-    { "scheme": "exact", "network": "base-mainnet",     "asset": "USDC", "maxAmountRequired": "1000" },
-    { "scheme": "exact", "network": "ethereum-mainnet", "asset": "ETH",  "maxAmountRequired": "400000000000000" },
-    { "scheme": "exact", "network": "solana-mainnet",   "asset": "SOL",  "maxAmountRequired": "9000000" },
-    { "scheme": "exact", "network": "bsc-mainnet",      "asset": "BNB",  "maxAmountRequired": "2000000000000000" },
-    { "scheme": "exact", "network": "near-mainnet",     "asset": "NEAR", "maxAmountRequired": "10000000000000000000000" }
+    { "scheme": "exact", "network": "eip155:8453", "asset": "0x833589fC...", "token": "USDC" },
+    { "scheme": "exact", "network": "eip155:1",    "asset": "0xA0b86991...", "token": "USDC" },
+    { "scheme": "exact", "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "asset": "EPjFWdd5...", "token": "USDC" },
+    { "scheme": "exact", "network": "eip155:137",  "asset": "0x3c499c54...", "token": "USDC" }
   ],
-  "note": "9 networks total: Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Solana, Unichain, Monad + USDT on major EVM chains"
+  "note": "9 networks total (CAIP-2 identifiers): Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Solana, Unichain, Monad + USDT on major EVM chains. Each tool's 402 carries the exact `amount` (x402 v2)."
 }</span>
 
-<span class="comment"># Step 2: Agent constructs payment header and calls tool</span>
+<span class="comment"># Step 2: Agent constructs payment header (x402 v2) and calls tool</span>
 curl https://archtools.dev/v1/tools/web-scrape \
-  <span class="key">-H</span> <span class="str">"X-PAYMENT: $USDC_PAYMENT_HEADER"</span> \
+  <span class="key">-H</span> <span class="str">"PAYMENT-SIGNATURE: $USDC_PAYMENT_HEADER"</span> \
   <span class="key">-d</span> <span class="str">'{"url":"https://example.com"}'</span>
 
 <span class="comment"># Returns tool result + payment receipt:</span>
