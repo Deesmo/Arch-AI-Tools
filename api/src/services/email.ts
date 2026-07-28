@@ -188,17 +188,32 @@ function layout(title: string, body: string, accentColor = "#FF9010"): string {
 }
 
 // ─── 1. Email Verification (magic link) ───
-export async function sendVerificationEmail(args: { to: string; verifyUrl: string }): Promise<void> {
-  const { to, verifyUrl } = args;
+// Exported for render tests. Transactional relationship content only — factual,
+// no marketing adjectives, and NEVER an API key (the link lands in inboxes and
+// gets prefetched by scanners).
+export function renderVerificationEmail(verifyUrl: string, pendingCredits?: number): { subject: string; html: string; text: string } {
   const subject = "Verify your email for Arch Tools";
-  const text = `Verify your email to activate your Arch Tools account.\n\nClick this link (valid for 30 minutes):\n${verifyUrl}\n\nIf you did not request this, you can ignore this email.`;
+  const creditsHtml = pendingCredits && pendingCredits > 0
+    ? `your remaining <strong>${pendingCredits.toLocaleString()} credits</strong> unlock on verification · `
+    : "";
+  const creditsText = pendingCredits && pendingCredits > 0
+    ? `your remaining ${pendingCredits.toLocaleString()} credits unlock on verification · `
+    : "";
+  const text = `Verify your email to activate your Arch Tools account.\n\nClick this link (valid for 30 minutes):\n${verifyUrl}\n\nWhat you get: ${creditsText}63 API tools · a one-click connector for Claude & ChatGPT (https://archtools.dev/mcp).\n\nIf you did not request this, you can ignore this email.`;
   const html = layout(subject, `
-    <p>One quick step to activate your API key — click the button below to verify your email.</p>
+    <p>One quick step to finish setting up your account — click the button below to verify your email.</p>
     <div class="btn-wrap"><a class="btn" href="${verifyUrl}">Verify my email →</a></div>
+    <p style="font-size:13px;color:#8A85B0;margin:0 0 16px;">What you get: ${creditsHtml}<strong style="color:#F0EEFF;">63 API tools</strong> · a one-click connector for <strong style="color:#F0EEFF;">Claude &amp; ChatGPT</strong> (archtools.dev/mcp).</p>
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;margin:0;">This link expires in <strong style="color:#F0EEFF;">30 minutes</strong>. If you didn't sign up, you can safely ignore this email.</p>
     <p style="font-size:12px;color:#4A4570;margin-top:12px;word-break:break-all;">Or copy this link:<br>${verifyUrl}</p>
   `);
+  return { subject, html, text };
+}
+
+export async function sendVerificationEmail(args: { to: string; verifyUrl: string; pendingCredits?: number }): Promise<void> {
+  const { to, verifyUrl, pendingCredits } = args;
+  const { subject, html, text } = renderVerificationEmail(verifyUrl, pendingCredits);
   await sendEmail(to, subject, html, text);
   logger.info({ to }, "Verification email sent");
 }
