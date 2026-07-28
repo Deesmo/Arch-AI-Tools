@@ -255,7 +255,9 @@ router.get("/verify-email", async (req: Request, res: Response): Promise<void> =
       res.status(400).send(renderVerifyErrorPage());
       return;
     }
-    res.send(renderVerifyConfirmPage(token, peek.pendingCredits));
+    // The confirm page embeds the still-valid token — it must never be cached
+    // by a shared/misconfigured intermediary (matches /signup and /login).
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").send(renderVerifyConfirmPage(token, peek.pendingCredits));
   } catch (e) {
     console.error("verify-email error:", e);
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });

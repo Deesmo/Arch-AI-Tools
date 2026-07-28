@@ -269,8 +269,25 @@ app.use("/v1/tools", seoRouter);  // Free endpoint proxies
 
 // Agent registration — tight limit to prevent credit farming
 app.use("/v1/agent/register", registerLimiter);
+// Verify-email needs headroom beyond the strict authLimiter: mail-security
+// scanners prefetch the GET link (each hit counts against the IP), the human
+// flow needs a GET + POST, and corporate NATs share IPs — 20/15min would 429
+// the confirm POST while the token is still valid. Tokens are 256-bit random
+// single-use values, not a credential-guessing surface, so a generous cap is
+// safe (same reasoning as oauthMachineLimiter below).
+const verifyEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many verification attempts. Try again shortly." },
+});
 // Agent usage & other agent routes — auth brute force protection
-app.use("/v1/agent", authLimiter, agentRouter);
+app.use("/v1/agent", (req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/verify-email") return verifyEmailLimiter(req, res, next);
+  return authLimiter(req, res, next);
+}, agentRouter);
 
 // Aliases — /v1/account and /v1/credits point to the same agent router
 app.use("/v1/account", authLimiter, agentRouter);
