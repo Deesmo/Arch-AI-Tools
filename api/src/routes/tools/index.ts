@@ -7,6 +7,7 @@ import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
 import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
+import { trimSessionContext } from "../../lib/sessionContext.js";
 import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
@@ -2940,8 +2941,9 @@ setInterval(() => {
 
 router.post("/session-create", ...toolMiddleware("session-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
+  const sessionCreateCost = paid ? 0 : 5;
   if (!paid) {
-    const ok = await deductCredits(req, res, "session-create", 5);
+    const ok = await deductCredits(req, res, "session-create", sessionCreateCost);
     if (!ok) return;
   }
   const { namespace, model } = req.body as { namespace?: string; model?: string };
@@ -2957,11 +2959,21 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     deep: "claude-opus-4-6",
   };
   const SESSION_MODEL_ALIASES: Record<string, string> = { "claude": "claude-sonnet-4-6", "gpt": "gpt-4o", "gpt4": "gpt-4o", "gpt-4": "gpt-4o" };
-  const resolvedModel = model ? (SESSION_MODEL_ALIASES[model.toLowerCase()] ?? model) : "claude-sonnet-4-6";
+  let resolvedModel = model ? (SESSION_MODEL_ALIASES[model.toLowerCase()] ?? model) : "claude-sonnet-4-6";
   const ALLOWED = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001", "gpt-4o", "gpt-4o-mini"];
   if (!ALLOWED.includes(resolvedModel)) {
     res.status(400).json({ ok: false, error: "invalid_model", message: `model must be one of: claude, gpt4, ${ALLOWED.join(", ")}`, request_id: reqId() });
     return;
+  }
+  // x402 flat pricing gap (mirrors ai-generate's x402 pin, council finding
+  // 2026-07-27): the flat x402 session-message price covers the Sonnet-tier
+  // cost, so an x402-created session must not store a premium model (Opus ≈ 2×
+  // COGS) it could never be served at that price. Sessions have no BYOK path —
+  // every upstream call runs on platform keys — so the pin has no BYOK
+  // exemption. Premium models require the credits path, which prices per-model
+  // in session-message. session-message re-checks at serve time as a backstop.
+  if (paid && modelCostMultiplier(resolvedModel) > 1.0) {
+    resolvedModel = "claude-sonnet-4-6";
   }
   const ownerKey = getSessionOwnerKey(req);
   if (!ownerKey) {
@@ -2990,7 +3002,7 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     namespace: session.namespace,
     model: resolvedModel,
     created_at,
-    credits_used: 5,
+    credits_used: sessionCreateCost,
     request_id: reqId(),
   });
 });
@@ -3026,8 +3038,23 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
   }
 
   const paid = isX402Paid(req);
+  // x402 flat pricing gap (mirrors ai-generate's x402 pin, council finding
+  // 2026-07-27): the flat x402 price for this tool covers the Sonnet-tier cost,
+  // but the session may carry a premium model (Opus ≈ 2× COGS). Sessions have
+  // no BYOK path — every upstream call runs on platform keys — so x402-paid
+  // messages are pinned to the default model with no BYOK exemption. Premium
+  // models require the credits path, which prices per-model below. This is the
+  // serve-time backstop to the same pin in session-create.
+  const servedModel = paid && modelCostMultiplier(session.model) > 1.0
+    ? "claude-sonnet-4-6"
+    : session.model;
+  // Price per-model like ai-generate: the 20-credit base is Sonnet-tuned, but
+  // this route charged a flat 20 for every model — Opus (≈2× COGS) at the flat
+  // base was a guaranteed loss on each call. applyModelCost scales the base by
+  // the served model's real cost tier (Opus 2×, Haiku 0.4×).
+  const sessionMsgCost = paid ? 0 : applyModelCost(20, servedModel);
   if (!paid) {
-    const ok = await deductCredits(req, res, "session-message", 20);
+    const ok = await deductCredits(req, res, "session-message", sessionMsgCost);
     if (!ok) return;
   }
 
@@ -3039,7 +3066,16 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     session.messages = session.messages.slice(-50);
   }
 
-  const model = session.model;
+  // Cap the context sent upstream (cost control): 50 stored messages × 10k
+  // chars = up to 500k chars per call at a fixed credit price, exploitable in
+  // a loop. Trim oldest-first to SESSION_CONTEXT_MAX_CHARS (env-tunable,
+  // default 40000); the newest message is always sent. Stored history is
+  // unchanged — only the window sent upstream is trimmed.
+  const SESSION_CONTEXT_MAX_CHARS = parseInt(process.env.SESSION_CONTEXT_MAX_CHARS ?? "40000", 10);
+  const { window: upstreamMessages, truncated: contextTruncated } =
+    trimSessionContext(session.messages, SESSION_CONTEXT_MAX_CHARS);
+
+  const model = servedModel;
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
   const GPT_MODELS = ["gpt-4o", "gpt-4o-mini"];
 
@@ -3055,7 +3091,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
         model,
         max_tokens: 2048,
         ...(session.system_prompt ? { system: session.system_prompt } : {}),
-        messages: session.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: upstreamMessages.map((m) => ({ role: m.role, content: m.content })),
       });
       responseText = msg.content.find((b) => b.type === "text")?.text ?? "";
     } else if (GPT_MODELS.includes(model)) {
@@ -3066,7 +3102,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
       }
       const messages: Array<{ role: string; content: string }> = [];
       if (session.system_prompt) messages.push({ role: "system", content: session.system_prompt });
-      messages.push(...session.messages.map((m) => ({ role: m.role, content: m.content })));
+      messages.push(...upstreamMessages.map((m) => ({ role: m.role, content: m.content })));
 
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -3086,7 +3122,12 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
       session_id,
       message_count: session.messages.length,
       model_used: model,
-      credits_used: 20,
+      ...(contextTruncated ? {
+        context_truncated: true,
+        context_messages_sent: upstreamMessages.length,
+        context_note: `Conversation history sent to the model was trimmed oldest-first to fit the ${SESSION_CONTEXT_MAX_CHARS}-char context budget. Stored session history is unchanged.`,
+      } : {}),
+      credits_used: sessionMsgCost,
       request_id: reqId(),
     });
   } catch (e) {

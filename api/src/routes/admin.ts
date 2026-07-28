@@ -263,7 +263,7 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
     // New tools (2026-03-18)
     { name: "ai-oracle",          description: "AI reasoning engine with standard and deep analysis modes",       category: "ai",      credits: 25 },
     { name: "session-create",     description: "Create a persistent AI conversation session",                     category: "ai",      credits: 5  },
-    { name: "session-message",    description: "Send a message in an existing AI session",                        category: "ai",      credits: 10 },
+    { name: "session-message",    description: "Send a message in an existing AI session (base price; scales with the session model)", category: "ai",      credits: 20 },
     { name: "design-create",      description: "Generate designs and images via DALL-E 3",                        category: "media",   credits: 20 },
     { name: "image-remove-bg",    description: "Remove background from any image",                                category: "media",   credits: 350 },
     { name: "video-generate",     description: "Generate short video clips from text prompts",                    category: "media",   credits: 700 },

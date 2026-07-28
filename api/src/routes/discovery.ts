@@ -700,7 +700,7 @@ POST /v1/tools/pii-detect           (10 credits) — Detect and optionally redac
 POST /v1/tools/image-generate       (15 credits) — Generate SVG images from text prompts
 POST /v1/tools/workflow-agent       (25 credits) — Multi-step autonomous AI agent pipeline
 POST /v1/tools/ai-oracle            (25 credits) — Premium reasoning with structured analysis and confidence levels
-POST /v1/tools/session-message      (20 credits) — Send a message in an existing conversation session
+POST /v1/tools/session-message      (20+ credits, scales w/ session model) — Send a message in an existing conversation session
 POST /v1/tools/research-report      (40 credits) — Generate a structured research report on any topic
 POST /v1/tools/fact-check           (10 credits) — Verify claims against real-time web sources
 POST /v1/tools/semantic-search      (8 credits)  — Neural/semantic web search via Exa AI

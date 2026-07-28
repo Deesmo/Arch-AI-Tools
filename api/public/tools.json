@@ -1760,7 +1760,7 @@
     },
     {
       "name": "session-message",
-      "description": "Send a message in an existing conversation session",
+      "description": "Send a message in an existing conversation session (20 base credits, scales with the session model)",
       "endpoint": "https://archtools.dev/v1/tools/session-message",
       "method": "POST",
       "credits": 20,
