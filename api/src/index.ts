@@ -60,7 +60,7 @@ import analyticsRouter from "./routes/analytics.js";
 import statsRouter from "./routes/stats.js";
 
 import { reqId } from "./utils/credits.js";
-import { isSafeOAuthNext } from "./utils/oauthNext.js";
+import { isSafeSignupNext } from "./utils/oauthNext.js";
 
 const app = express();
 const corsOrigins = config.corsOrigin
@@ -378,10 +378,12 @@ app.use("/api/chat", chatRouter);
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (req: Request, res: Response) => {
   // Open-redirect guard: ?next= is only honored for the same-origin OAuth
-  // authorize path (consent-page "create account" round-trip). Anything else
+  // authorize path (consent-page "create account" round-trip) or an exact
+  // allowlisted page path (/pricing, /dashboard, /docs, /playground — intent
+  // preservation, e.g. pricing → signup → back to pricing). Anything else
   // is stripped server-side before the page's client JS can read it; the
   // signup page JS re-validates with the same rule (defense in depth).
-  if (req.query.next !== undefined && !isSafeOAuthNext(req.query.next)) {
+  if (req.query.next !== undefined && !isSafeSignupNext(req.query.next)) {
     const cleaned = new URLSearchParams();
     for (const [k, v] of Object.entries(req.query)) {
       if (k !== "next" && typeof v === "string") cleaned.set(k, v);

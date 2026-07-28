@@ -36,6 +36,34 @@ export function isSafeOAuthNext(next: unknown): next is string {
 }
 
 /**
+ * Signup ?next= page allowlist — EXACT paths only (no query string, no
+ * trailing slash), each mapped to the label used in the post-signup
+ * "Continue to <label>" button. Exact string equality against these literals
+ * means traversal, lookalike paths, external URLs, schemes, and HTML-breakout
+ * characters are rejected by construction. Every path here must be a real
+ * same-origin route (all four are registered in index.ts).
+ */
+export const SIGNUP_NEXT_LABELS: ReadonlyMap<string, string> = new Map([
+  ["/pricing", "pricing"],
+  ["/dashboard", "dashboard"],
+  ["/docs", "docs"],
+  ["/playground", "playground"],
+]);
+
+/**
+ * True iff `next` is safe for the /signup round-trip: either a same-origin
+ * OAuth authorize path (isSafeOAuthNext — the consent-page resume flow) or
+ * one of the exact allowlisted page paths above (purchase/product intent
+ * preservation, e.g. pricing.html sends logged-out buyers through
+ * /signup?next=%2Fpricing). isSafeOAuthNext itself stays oauth-only — the
+ * consent-resume surfaces keep their tighter rule.
+ */
+export function isSafeSignupNext(next: unknown): next is string {
+  if (isSafeOAuthNext(next)) return true;
+  return typeof next === "string" && SIGNUP_NEXT_LABELS.has(next);
+}
+
+/**
  * Rebuild the /oauth/authorize URL (same-origin, path + query only) from the
  * validated params the consent page already holds, preserving the OAuth
  * transaction (client_id, redirect_uri, state, PKCE challenge, scope) so

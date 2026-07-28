@@ -6,6 +6,7 @@ import { sendLowCreditAlert, sendCreditsDepletedAlert, LOW_CREDIT_THRESHOLD } fr
 import { recordAgentCall, updateAgentReputation } from "../services/reputation.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
 import { classifyStatus } from "./statusClass.js";
+import { recommendPack, packUrl } from "../lib/creditPacks.js";
 
 // ─── No-charge (empty-result) waiver ─────────────────────────────────────────
 // A tool handler that legitimately found nothing (e.g. a search with zero
@@ -166,15 +167,24 @@ export async function deductCredits(
     // x402 PAYMENT-REQUIRED shape are separate surfaces and stay untouched.
     // NOTE: one-time packs go to /v1/billing/checkout — /v1/billing/subscribe
     // rejects bare pack ids by design (anti-accidental-subscription guard).
+    // recommended_pack = smallest pack covering the SHORTFALL (cost minus the
+    // remaining balance — not the full cost, which would oversize the pack for
+    // agents that still hold credits); buy_now and X-Upgrade-URL carry the
+    // pre-selected pricing URL (?pack= only highlights on the pricing page —
+    // purchase requires an explicit click).
+    const rec = recommendPack(cost - agent.credits);
+    res.setHeader("X-Upgrade-URL", packUrl(rec.id));
     res.status(402).json({
       ok: false,
       error: "insufficient_credits",
       message: `Insufficient credits. You have ${agent.credits} credits but this tool costs ${cost}. Top up at https://archtools.dev/pricing — or earn 500 bonus credits by referring a friend (see /v1/referral/code).`,
       credits_remaining: agent.credits,
       credits_needed: cost,
+      recommended_pack: { id: rec.id, credits: rec.credits, price_usd: rec.priceUsd },
       upgrade_url: "https://archtools.dev/pricing",
       referral_url: "https://archtools.dev/v1/referral/code",
       links: {
+        buy_now: packUrl(rec.id),
         buy_credits: "https://archtools.dev/pricing",
         checkout_api: 'POST /v1/billing/checkout {"pack":"starter|pro|business"}',
         subscribe_api: 'POST /v1/billing/subscribe {"plan":"starter-monthly|pro-monthly|growth-monthly|business-monthly"}',
@@ -191,7 +201,9 @@ export async function deductCredits(
   res.setHeader("X-Credits-Remaining", agent.credits.toString());
   res.setHeader("X-Credits-Used", cost.toString());
   if (agent.credits < 20) {
-    res.setHeader("X-Upgrade-URL", "https://archtools.dev/pricing");
+    // Pre-selected pack URL: smallest pack covering this call's cost (the
+    // page only highlights that pack — buying stays an explicit click).
+    res.setHeader("X-Upgrade-URL", packUrl(recommendPack(cost).id));
   }
 
   let finalized = false;

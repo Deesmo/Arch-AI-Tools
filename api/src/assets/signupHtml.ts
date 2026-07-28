@@ -162,12 +162,22 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     const statusEl = document.getElementById('status');
     const btn = document.getElementById('btn');
 
-    // OAuth consent round-trip: the consent page's "create a free account"
-    // link arrives as /signup?next=/oauth/authorize?... Only a same-origin
-    // /oauth/authorize path free of breakout chars is honored (the server
-    // strips anything else too — this is defense in depth). Validated value
-    // is safe to embed in a double-quoted href.
+    // ?next= round-trips (server strips anything else too — this is defense
+    // in depth; validated values are safe to embed in a double-quoted href):
+    //  - OAuth consent: /signup?next=/oauth/authorize?... resume-consent CTA.
+    //  - Page intent: an EXACT allowlisted path (keys of PAGE_NEXT_LABELS,
+    //    mirroring utils/oauthNext.ts SIGNUP_NEXT_LABELS) renders a
+    //    "Continue to <label>" button on success — e.g. pricing.html sends
+    //    logged-out buyers here with next=%2Fpricing so purchase intent
+    //    survives signup.
     var oauthNext = '';
+    var pageNext = '';
+    var PAGE_NEXT_LABELS = {
+      '/pricing': 'pricing',
+      '/dashboard': 'dashboard',
+      '/docs': 'docs',
+      '/playground': 'playground'
+    };
 
     // Email of the account created in THIS page session (set on successful
     // register) — powers the verify-note resend link. Empty on the OAuth
@@ -180,9 +190,12 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
       const preCredits = parseInt(params.get('credits') || '250', 10);
 
       var rawNext = params.get('next') || '';
-      if ((rawNext === '/oauth/authorize' || rawNext.indexOf('/oauth/authorize?') === 0) &&
-          rawNext.length <= 2048 && !/[\\s\\\\<>"'\`]/.test(rawNext)) {
-        oauthNext = rawNext;
+      if (rawNext.length <= 2048 && !/[\\s\\\\<>"'\`]/.test(rawNext)) {
+        if (rawNext === '/oauth/authorize' || rawNext.indexOf('/oauth/authorize?') === 0) {
+          oauthNext = rawNext;
+        } else if (Object.prototype.hasOwnProperty.call(PAGE_NEXT_LABELS, rawNext)) {
+          pageNext = rawNext;
+        }
       }
 
       // Referral attribution: remember ?ref= so the new user can apply it from
@@ -242,6 +255,12 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
       if (oauthNext) {
         resumeCta = '<a href="' + oauthNext + '" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#8844FF;color:#fff;font-weight:700;text-decoration:none;font-size:14px;margin-bottom:10px">&#8594; Continue connecting your account</a>' +
           '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">On the next screen, enter your email and the API key above to finish authorization.</div>';
+      } else if (pageNext) {
+        // Page-intent continuation: pageNext is one of the PAGE_NEXT_LABELS
+        // literals (validated at load), so both the href and the label are
+        // safe by construction. Navigation only — nothing is purchased or
+        // spent by this link.
+        resumeCta = '<a href="' + pageNext + '" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#8844FF;color:#fff;font-weight:700;text-decoration:none;font-size:14px;margin-bottom:10px">&#8594; Continue to ' + PAGE_NEXT_LABELS[pageNext] + '</a>';
       }
       showStatus(
         '<div style="margin-bottom:12px;font-size:17px;font-weight:800;color:#34d399">&#9989; Account created!</div>' +

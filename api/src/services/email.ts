@@ -262,7 +262,7 @@ export async function sendLowCreditAlert(to: string, creditsRemaining: number, a
       <div class="stat"><span>Pro Pack</span>25,000 credits · $49</div>
       <div class="stat"><span>Business Pack</span>125,000 credits · $199</div>
     </div>
-    <div class="btn-wrap"><a class="btn" href="${SITE}/#pricing">Top up credits →</a></div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing?pack=starter">Top up credits →</a></div>
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}…</p>
   `);
@@ -445,7 +445,7 @@ export async function sendEmail80PctAlert(to: string, creditsRemaining: number, 
       <div class="stat"><span>Pro Pack</span>25,000 credits · $49</div>
       <div class="stat"><span>Business Pack</span>125,000 credits · $199</div>
     </div>
-    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing">Upgrade now →</a></div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing?pack=starter">Upgrade now →</a></div>
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}… · Reply "stop" to unsubscribe.</p>
   `);
@@ -466,7 +466,7 @@ export async function sendCreditsDepletedAlert(to: string, agentId: string, cred
       <div class="stat"><span>Option 2</span>Pay per-call with USDC via x402 protocol</div>
     </div>
     <p>Your agents can still make calls — they just need to include an <code>X-Payment</code> header with a signed USDC payment. <a href="${SITE}/x402-guide">Learn about x402 →</a></p>
-    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing">Buy credits →</a></div>
+    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing?pack=starter">Buy credits →</a></div>
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}… · Reply "stop" to unsubscribe.</p>
   `);

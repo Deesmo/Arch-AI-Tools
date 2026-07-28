@@ -41,6 +41,7 @@
     .pricing-card{background:#0c0c16;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:32px;position:relative;transition:border-color .2s}
     .pricing-card:hover{border-color:rgba(0,229,176,.3)}
     .pricing-card.featured{border-color:#00e5b0;box-shadow:0 0 40px rgba(0,229,176,.1)}
+    .pricing-card.preselected{border-color:#00e5b0;box-shadow:0 0 40px rgba(0,229,176,.18)}
     .pricing-card .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#00e5b0;color:#07061A;font-size:12px;font-weight:700;padding:4px 16px;border-radius:20px;text-transform:uppercase}
     .pricing-card h3{font-size:1.3rem;margin-bottom:4px}
     .pricing-card .price{font-size:2.2rem;font-weight:800;color:#00e5b0;margin:16px 0 8px}
@@ -336,6 +337,27 @@ document.addEventListener('click', function(e) {
   var sb = e.target.closest('[data-sub]');
   if (sb) { e.preventDefault(); buySubscription(sb.dataset.sub); }
 });
+
+// Pack preselect: ?pack=starter|pro|business (from 402 buy_now links,
+// X-Upgrade-URL, and credit alert emails) highlights that pack's card and
+// scrolls to it. HIGHLIGHT + SCROLL ONLY — checkout never fires from a GET;
+// purchasing always requires an explicit click on the buy button.
+(function() {
+  var pack = new URLSearchParams(window.location.search).get('pack');
+  if (pack !== 'starter' && pack !== 'pro' && pack !== 'business') return;
+  var btn = document.querySelector('[data-pack="' + pack + '"]');
+  if (!btn) return;
+  var card = btn.closest('.pricing-card');
+  if (!card) return;
+  card.classList.add('preselected');
+  var badge = document.createElement('div');
+  badge.className = 'badge';
+  badge.textContent = 'Selected';
+  card.insertBefore(badge, card.firstChild);
+  btn.classList.remove('btn-outline');
+  btn.classList.add('btn-primary');
+  setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 50);
+})();
 </script>
 </body>
 </html>

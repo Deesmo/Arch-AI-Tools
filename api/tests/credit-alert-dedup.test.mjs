@@ -109,9 +109,9 @@ async function main() {
   console.log("C — X-Credits-Remaining on success:");
   await test("X-Credits-Remaining header set after every successful deduction", () =>
     assert.ok(creditsSrc.includes('res.setHeader("X-Credits-Remaining", agent.credits.toString());')));
-  await test("X-Upgrade-URL still advertised when balance < 20", () => {
+  await test("X-Upgrade-URL still advertised when balance < 20 (pre-selected pack URL)", () => {
     assert.ok(creditsSrc.includes("if (agent.credits < 20)"));
-    assert.ok(creditsSrc.includes('res.setHeader("X-Upgrade-URL", "https://archtools.dev/pricing")'));
+    assert.ok(creditsSrc.includes('res.setHeader("X-Upgrade-URL", packUrl(recommendPack(cost).id))'));
   });
 
   // ── D: alert dedup wiring ───────────────────────────────────────────────

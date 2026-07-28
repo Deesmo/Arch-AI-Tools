@@ -334,7 +334,7 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
 
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const [callsToday, recentActivity] = await Promise.all([
+    const [callsToday, recentActivity, verification] = await Promise.all([
       prisma.apiRequest.count({ where: { agentId: agent.id, createdAt: { gte: new Date(today) } } }),
       prisma.apiRequest.findMany({
         where: { agentId: agent.id },
@@ -342,6 +342,13 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
         take: 10,
         select: { toolName: true, creditsUsed: true, status: true, createdAt: true },
       }),
+      // Verification state for the dashboard's "verify to unlock your pending
+      // credits" banner (req.agent doesn't carry these fields). Fail-soft to
+      // verified/0-pending so a transient read error never nags a verified user.
+      prisma.agent.findUnique({
+        where: { id: agent.id },
+        select: { emailVerified: true, pendingCredits: true },
+      }).catch(() => null),
     ]);
 
     res.json({
@@ -351,6 +358,8 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
       calls_today: callsToday,
       total_calls: agent.totalCalls,
       tier: agent.tier,
+      email_verified: verification?.emailVerified ?? true,
+      pending_credits: verification?.pendingCredits ?? 0,
       recent_activity: recentActivity,
       buy_credits: "https://archtools.dev/pricing",
       purchase_history: await prisma.purchase.findMany({

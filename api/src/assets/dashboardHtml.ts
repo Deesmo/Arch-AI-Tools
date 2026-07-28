@@ -73,6 +73,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     .upgrade-text { font-size:13px; color:rgba(255,255,255,0.7); }
     .upgrade-text strong { color:var(--text); }
     .btn-upgrade { height:38px; padding:0 18px; border-radius:10px; border:0; background:var(--grad); color:#fff; font-weight:700; font-size:13px; font-family:inherit; cursor:pointer; white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center; }
+    .depleted-banner { background:rgba(248,113,113,0.10); border:1px solid rgba(248,113,113,0.35); border-radius:14px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }
+    .depleted-text { font-size:14px; color:rgba(255,255,255,0.85); }
+    .depleted-text strong { color:#f87171; }
+    .verify-banner { background:rgba(34,211,238,0.07); border:1px solid rgba(34,211,238,0.25); border-radius:14px; padding:14px 20px; display:flex; align-items:center; gap:12px; margin-bottom:16px; font-size:13px; color:rgba(255,255,255,0.75); }
+    .verify-banner strong { color:#22d3ee; }
     /* STATUS */
     .status-tag { font-size:12px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
     @media (max-width:600px) {
@@ -176,10 +181,21 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- UPGRADE BANNER (shown when credits low) -->
+      <!-- OUT OF CREDITS (balance = 0) — prominent -->
+      <div id="depleted-banner" class="depleted-banner" style="display:none">
+        <div class="depleted-text"><strong>Out of credits</strong> — tool calls now return 402. Packs from $9, credits never expire.</div>
+        <a href="/pricing?pack=starter" class="btn-upgrade">Buy credits →</a>
+      </div>
+
+      <!-- LOW BALANCE (0 < balance < 50) — soft warning -->
       <div id="upgrade-banner" class="upgrade-banner" style="display:none">
         <div class="upgrade-text">Running low on credits. <strong>Buy more and never get cut off.</strong></div>
-        <a href="/fund" class="btn-upgrade">Add Credits →</a>
+        <a href="/pricing?pack=starter" class="btn-upgrade">Add Credits →</a>
+      </div>
+
+      <!-- UNVERIFIED EMAIL — pending credits waiting -->
+      <div id="verify-banner" class="verify-banner" style="display:none">
+        <div>Your email isn&#39;t verified yet — verify it to unlock your <strong><span id="pending-credits">0</span> pending credits</strong>. Use the verification link we emailed you at signup.</div>
       </div>
 
       <!-- ACTIVITY -->
@@ -309,9 +325,21 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById("calls-today").textContent = data.calls_today ?? 0;
         document.getElementById("calls-total").textContent = (data.total_calls ?? 0).toLocaleString();
 
-        // Upgrade banner if low
+        // Balance states: 0 = prominent out-of-credits banner; under 50 =
+        // soft low-balance warning. Mutually exclusive — never both.
         var cr = data.credits_remaining ?? 0;
-        if (cr < 20) document.getElementById("upgrade-banner").style.display = "flex";
+        document.getElementById("depleted-banner").style.display = (cr === 0) ? "flex" : "none";
+        document.getElementById("upgrade-banner").style.display = (cr > 0 && cr < 50) ? "flex" : "none";
+
+        // Unverified email with pending credits: show exactly what verifying
+        // unlocks (the account's real pending_credits, from /v1/agent/usage).
+        var pending = data.pending_credits ?? 0;
+        if (data.email_verified === false && pending > 0) {
+          document.getElementById("pending-credits").textContent = pending.toLocaleString();
+          document.getElementById("verify-banner").style.display = "flex";
+        } else {
+          document.getElementById("verify-banner").style.display = "none";
+        }
 
         // Activity
         var act = data.recent_activity || [];
