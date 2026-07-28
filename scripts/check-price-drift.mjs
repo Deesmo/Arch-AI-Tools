@@ -109,6 +109,10 @@ const metered = {
   "research-report": anchored("research-report", /const researchReportCost = paid \? 0 : byokAdjustedCost\(req, (\d+)/),
   // const videoCost = Math.max(700, duration * 140) → advertised base = the minimum
   "video-generate": anchored("video-generate", /const videoCost = Math\.max\((\d+), duration \* \d+\)/),
+  // const sessionCreateCost = paid ? 0 : 5 (PR #98 moved sessions off literal deductCredits)
+  "session-create": anchored("session-create", /const sessionCreateCost = paid \? 0 : (\d+)/),
+  // const sessionMsgCost = paid ? 0 : applyModelCost(20, servedModel) — base scales per model
+  "session-message": anchored("session-message", /const sessionMsgCost = paid \? 0 : applyModelCost\((\d+), servedModel\)/),
 };
 for (const [tool, base] of Object.entries(metered)) {
   if (charged[tool] !== undefined) {
