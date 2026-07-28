@@ -36,3 +36,22 @@ jobs:
 
       - name: Run page availability tests
         run: node api/tests/pages.test.js
+
+  price-drift:
+    name: Price Drift Guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Advertised price must equal charged price on every surface
+      # (openapi.json, tools.json, llms.txt, llms-full.txt, discovery.ts,
+      # seed.ts, seed-new.ts, mcp/server.ts). Truth is built from the charging
+      # source: X402_PRICES + deductCredits calls. Zero dependencies, no build.
+      - name: Advertised = charged price check
+        run: node scripts/check-price-drift.mjs

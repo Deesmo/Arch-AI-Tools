@@ -532,7 +532,7 @@
       "description": "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)",
       "endpoint": "https://archtools.dev/v1/tools/design-create",
       "method": "POST",
-      "credits": 15,
+      "credits": 50,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -657,7 +657,7 @@
       "description": "Find email address for a person at a company via Hunter.io",
       "endpoint": "https://archtools.dev/v1/tools/email-find",
       "method": "POST",
-      "credits": 5,
+      "credits": 110,
       "category": "validation",
       "parameters": {
         "type": "object",
@@ -886,7 +886,7 @@
       "description": "Verify claims against real-time web sources",
       "endpoint": "https://archtools.dev/v1/tools/fact-check",
       "method": "POST",
-      "credits": 10,
+      "credits": 14,
       "category": "ai",
       "parameters": {
         "type": "object",
@@ -956,7 +956,7 @@
       "description": "Generate images from text prompts via DALL-E 3 (1024\u00d71024, 1792\u00d71024, 1024\u00d71792).",
       "endpoint": "/v1/tools/generate-image",
       "method": "POST",
-      "credits": 15,
+      "credits": 50,
       "category": "ai",
       "parameters": {
         "prompt": {
@@ -1021,7 +1021,7 @@
       "description": "Convert HTML content to clean Markdown",
       "endpoint": "https://archtools.dev/v1/tools/html-to-markdown",
       "method": "POST",
-      "credits": 2,
+      "credits": 3,
       "category": "web",
       "parameters": {
         "type": "object",
@@ -1053,7 +1053,7 @@
       "description": "Generate images from text prompts",
       "endpoint": "https://archtools.dev/v1/tools/image-generate",
       "method": "POST",
-      "credits": 15,
+      "credits": 30,
       "category": "ai",
       "parameters": {
         "type": "object",
@@ -1223,7 +1223,7 @@
       "description": "Search real-time news articles by keyword",
       "endpoint": "https://archtools.dev/v1/tools/news-search",
       "method": "POST",
-      "credits": 3,
+      "credits": 12,
       "category": "web",
       "parameters": {
         "type": "object",
@@ -1261,7 +1261,7 @@
       "description": "Extract text from images (URL or base64)",
       "endpoint": "https://archtools.dev/v1/tools/ocr-extract",
       "method": "POST",
-      "credits": 10,
+      "credits": 12,
       "category": "media",
       "parameters": {
         "type": "object",
@@ -2166,7 +2166,7 @@
       "description": "Real-time web search with AI-synthesized answer",
       "endpoint": "https://archtools.dev/v1/tools/web-search",
       "method": "POST",
-      "credits": 10,
+      "credits": 14,
       "category": "web",
       "parameters": {
         "type": "object",

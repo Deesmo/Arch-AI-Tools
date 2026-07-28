@@ -38,7 +38,7 @@ const TOOLS = [
   { name: "url-shorten", description: "Shorten any URL via TinyURL", category: "utility", credits: 1 },
   { name: "webhook-send", description: "POST a JSON payload to any webhook URL", category: "utility", credits: 2 },
   { name: "jsonpath-query", description: "Run JSONPath expressions against any JSON payload", category: "data", credits: 1 },
-  { name: "image-generate", description: "Generate SVG images from text prompts via Claude", category: "ai", credits: 15 },
+  { name: "image-generate", description: "Generate SVG images from text prompts via Claude", category: "ai", credits: 30 },
   { name: "barcode-generate", description: "Generate Code128 barcodes as SVG", category: "media", credits: 2 },
   { name: "workflow-agent", description: "Multi-step autonomous AI agent pipeline", category: "ai", credits: 25 },
   // Crypto data tools
@@ -50,7 +50,7 @@ const TOOLS = [
   { name: "crypto-news", description: "Latest crypto news headlines with source and timestamp. Filter by token symbol", category: "crypto", credits: 2 },
   { name: "token-lookup", description: "Search for any token by name or ticker. Returns CoinGecko IDs for use with other crypto tools", category: "crypto", credits: 1 },
   // Audio & speech tools
-  { name: "text-to-speech", description: "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)", category: "media", credits: 65 },
+  { name: "text-to-speech", description: "Convert text to natural-sounding audio via ElevenLabs (returns base64 MP3)", category: "media", credits: 25 },
   { name: "transcribe-audio", description: "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)", category: "media", credits: 25 },
   // Communication tools
   { name: "email-send", description: "Send transactional emails via Resend — plain text or HTML", category: "communication", credits: 3 },
