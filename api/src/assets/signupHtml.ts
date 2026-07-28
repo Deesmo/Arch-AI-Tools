@@ -162,10 +162,23 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     const statusEl = document.getElementById('status');
     const btn = document.getElementById('btn');
 
+    // OAuth consent round-trip: the consent page's "create a free account"
+    // link arrives as /signup?next=/oauth/authorize?... Only a same-origin
+    // /oauth/authorize path free of breakout chars is honored (the server
+    // strips anything else too — this is defense in depth). Validated value
+    // is safe to embed in a double-quoted href.
+    var oauthNext = '';
+
     (function() {
       const params = new URLSearchParams(window.location.search);
       const preKey = params.get('key');
       const preCredits = parseInt(params.get('credits') || '250', 10);
+
+      var rawNext = params.get('next') || '';
+      if ((rawNext === '/oauth/authorize' || rawNext.indexOf('/oauth/authorize?') === 0) &&
+          rawNext.length <= 2048 && !/[\\s\\\\<>"'\`]/.test(rawNext)) {
+        oauthNext = rawNext;
+      }
 
       // Referral attribution: remember ?ref= so the new user can apply it from
       // the dashboard after email verification, and record the link click.
@@ -211,6 +224,14 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           refNote = '<div style="font-size:12px;color:#34d399;margin-bottom:12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 12px">&#127873; Referral code <strong>' + savedRef + '</strong> saved. Verify your email, then apply it from your dashboard — you and your referrer each get bonus credits.</div>';
         }
       } catch(_) {}
+      // OAuth resume: opt-in link back to the preserved /oauth/authorize URL
+      // so consent can finish. oauthNext was validated at load (same-origin
+      // authorize path only, no quote/angle/whitespace chars).
+      var resumeCta = '';
+      if (oauthNext) {
+        resumeCta = '<a href="' + oauthNext + '" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#8844FF;color:#fff;font-weight:700;text-decoration:none;font-size:14px;margin-bottom:10px">&#8594; Continue connecting your account</a>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">On the next screen, enter your email and the API key above to finish authorization.</div>';
+      }
       showStatus(
         '<div style="margin-bottom:12px;font-size:17px;font-weight:800;color:#34d399">&#9989; Account created!</div>' +
         '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
@@ -218,6 +239,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
         '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
         refNote +
+        resumeCta +
         '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:14px 0 0;padding-top:14px">' +
           '<div style="font-size:13px;font-weight:700;margin-bottom:8px">Try it now</div>' +
           '<button id="first-call-btn" class="copy-btn-full" style="background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.4);color:#22d3ee">Run your first call (uses 1 of your ' + credits + ' free credits)</button>' +
