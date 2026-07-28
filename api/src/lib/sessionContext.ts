@@ -38,5 +38,7 @@ export function trimSessionContext<T extends SessionContextMessage>(
   while (window.length > 1 && window[0].role !== "user") {
     window = window.slice(1);
   }
-  return { window, truncated: window.length < messages.length };
+  // `truncated` reports char-budget trimming only; dropping a leading
+  // assistant turn for role-order compliance is not a budget cut.
+  return { window, truncated: start > 0 };
 }
