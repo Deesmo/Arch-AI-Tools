@@ -166,6 +166,19 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
       const params = new URLSearchParams(window.location.search);
       const preKey = params.get('key');
       const preCredits = parseInt(params.get('credits') || '250', 10);
+
+      // Referral attribution: remember ?ref= so the new user can apply it from
+      // the dashboard after email verification, and record the link click.
+      const refCode = (params.get('ref') || '').trim();
+      if (refCode && /^[A-Za-z0-9_-]{4,40}$/.test(refCode)) {
+        try { localStorage.setItem('arch_ref_code', refCode); } catch(_) {}
+        fetch('/v1/affiliate/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: refCode, referrer_url: document.referrer || null })
+        }).catch(function() {});
+      }
+
       if (preKey && preKey.startsWith('arch_')) {
         showSuccess(preKey, preCredits);
         btn.style.display = 'none';
@@ -187,12 +200,22 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
 
     function showSuccess(apiKey, credits) {
       if (apiKey) localStorage.setItem('arch_api_key', apiKey);
+      // Referral note: if this signup arrived via a referral link, tell the
+      // user how to claim the bonus (verify email, then apply on the dashboard).
+      var refNote = '';
+      try {
+        var savedRef = localStorage.getItem('arch_ref_code') || '';
+        if (/^[A-Za-z0-9_-]{4,40}$/.test(savedRef)) {
+          refNote = '<div style="font-size:12px;color:#34d399;margin-bottom:12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 12px">&#127873; Referral code <strong>' + savedRef + '</strong> saved. Verify your email, then apply it from your dashboard — you and your referrer each get bonus credits.</div>';
+        }
+      } catch(_) {}
       showStatus(
         '<div style="margin-bottom:12px;font-size:17px;font-weight:800;color:#34d399">&#9989; Account created!</div>' +
         '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
         '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
         '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
+        refNote +
         '<a href="/dashboard" style="display:block;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#22d3ee;font-weight:700;text-decoration:none;font-size:14px">&#8594; Open Dashboard</a>'
       );
       const copyBtn = document.getElementById('copy-btn');

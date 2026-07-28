@@ -37,7 +37,7 @@
   <div class="card">
     <div class="badge">🎁 Referral Program</div>
     <h1>Share Arch Tools,<br>Earn Credits</h1>
-<p>Every signup through your link earns you 500 credits. Your referral gets 100 free credits to start (10 instant, 90 on email verify). No limits on referrals.</p>
+<p>Share your link. When your friend signs up, verifies their email, and applies your code, <strong style="color:var(--text)">you both get 500 bonus credits</strong> — on top of the 100 free credits every new account gets. Up to 10 rewarded referrals per day.</p>
 
     <div class="link-box">
       <span class="link-text" id="ref-url">Loading...</span>
@@ -52,7 +52,7 @@
       </div>
       <div class="stat">
         <div class="stat-val" id="conv-count">—</div>
-        <div class="stat-label">Signups</div>
+        <div class="stat-label">Rewarded referrals</div>
       </div>
     </div>
 
@@ -60,25 +60,26 @@
       <h2>How it works</h2>
       <div class="step"><div class="step-num">1</div><div class="step-text">Sign in with your API key to get your personal referral link</div></div>
       <div class="step"><div class="step-num">2</div><div class="step-text">Share it anywhere — Discord, Twitter, GitHub, LinkedIn</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">When someone signs up through your link, you get 500 credits added automatically</div></div>
-<div class="step"><div class="step-num">4</div><div class="step-text">They get 100 free credits (10 instant, 90 on email verify) to try all 63 tools with no card required</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Your friend signs up through your link (100 free credits, no card required) and verifies their email</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">They apply your code from their dashboard (or <code style="color:var(--accent)">POST /v1/referral/apply</code>) — you both get 500 bonus credits instantly</div></div>
     </div>
 
     <a href="/login" class="cta">Sign in to get your link →</a>
   </div>
 
   <script>
-    const API = 'https://arch-ai-tools.onrender.com';
+    // Same-origin API — this page is served by the same app that hosts /v1/*.
     const apiKey = localStorage.getItem('arch_api_key');
-    
+
     if (apiKey) {
-      fetch(`${API}/v1/affiliate/link`, { headers: { Authorization: `Bearer ${apiKey}` } })
+      fetch('/v1/affiliate/link', { headers: { Authorization: `Bearer ${apiKey}` } })
         .then(r => r.json())
         .then(d => {
-          if (d.link) {
-            document.getElementById('ref-url').textContent = d.link;
-            document.getElementById('click-count').textContent = d.clicks || 0;
-            document.getElementById('conv-count').textContent = d.conversions || 0;
+          if (d.ok && d.affiliate_link) {
+            document.getElementById('ref-url').textContent = d.affiliate_link;
+            const s = d.stats || {};
+            document.getElementById('click-count').textContent = s.total_clicks || 0;
+            document.getElementById('conv-count').textContent = s.conversions || 0;
           }
         }).catch(() => {});
     } else {
