@@ -43,6 +43,12 @@ model Agent {
   verifyTokenExpiry DateTime?  @map("verify_token_expiry")
   pendingCredits    Int        @default(0) @map("pending_credits")
 
+  // ─── Marketing email opt-out (CAN-SPAM) ─────────────────────────────────────
+  // Set via GET/POST /unsubscribe?token=... (signed HMAC token, no auth).
+  // Transactional email (verification, receipts, resets) is NOT gated by this —
+  // only marketing/campaign sends must filter on it.
+  emailOptOut       Boolean    @default(false) @map("email_opt_out")
+
   // back-references — required for Prisma v5 relations
   apiRequests  ApiRequest[]
   purchases    Purchase[]
