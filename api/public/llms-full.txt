@@ -39,317 +39,338 @@ For agent-to-agent integrations:
 
 ## Credit System
 Tools cost credits per call. Credits never expire. Non-transferable.
-- Free tier: 100 credits (10 instant on registration, 90 on email verification)
+- Free tier: 100 credits (25 instant on registration, 75 on email verification)
 - Starter Pack: 3,000 credits — $9 ($0.0030/credit)
 - Pro Pack: 25,000 credits — $49 ($0.00196/credit)
 - Business Pack: 125,000 credits — $199 ($0.00159/credit)
-
 ## Tool Reference
 
 All tools accept POST requests to /v1/tools/{tool-name} with a JSON body.
 All responses return JSON with { ok: true, ... } on success or { ok: false, error: "...", message: "..." } on failure.
+Prices below are the live registry prices (credits per call) and the x402 per-call
+USDC price for keyless agent payments. Advertised price = charged price.
 
 ---
 
-### POST /v1/tools/ai-generate (20 credits)
-Generate text via Claude Sonnet.
-**Body:** { "prompt": "string", "maxTokens": 1000, "temperature": 0.7 }
-**Response:** { "ok": true, "text": "...", "model": "claude-sonnet-4-20250514", "tokens": 150 }
+### POST /v1/tools/ai-generate — 20 credits · x402 $0.040 USDC
+AI-powered text generation using Claude
+Parameters:
+  - model: string — one of: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001
+  - prompt: string (required) — Generation prompt
+  - system: string — Optional system prompt
+  - max_tokens: integer
 
-### POST /v1/tools/ai-oracle (25 credits)
-Premium reasoning with structured analysis and confidence levels.
-**Body:** { "question": "string", "context": "optional string" }
-**Response:** { "ok": true, "answer": "...", "confidence": 0.95, "reasoning": "...", "sources": [...] }
+### POST /v1/tools/ai-oracle — 25 credits · x402 $0.025 USDC
+AI reasoning engine with standard and deep analysis modes
 
-### POST /v1/tools/summarize (10 credits)
-Summarize text in 5 styles.
-**Body:** { "text": "string", "style": "bullets|tldr|executive|paragraph|headline", "maxWords": 100 }
-**Response:** { "ok": true, "summary": "..." }
+### POST /v1/tools/workflow-agent — 25 credits · x402 $0.025 USDC
+Multi-step autonomous AI agent pipeline
 
-### POST /v1/tools/sentiment-analysis (8 credits)
-Sentiment + emotion detection.
-**Body:** { "text": "string" }
-**Response:** { "ok": true, "sentiment": "positive|negative|neutral", "score": 0.85, "emotions": { "joy": 0.7, "anger": 0.1, ... } }
+### POST /v1/tools/session-create — 5 credits · x402 $0.010 USDC
+Create a persistent AI conversation session
 
-### POST /v1/tools/extract-entities (8 credits)
-Named entity recognition.
-**Body:** { "text": "string" }
-**Response:** { "ok": true, "entities": [{ "text": "...", "type": "person|org|location|date|money", "start": 0, "end": 10 }] }
+### POST /v1/tools/session-message — 20 credits · x402 $0.020 USDC
+Send a message in an existing AI session
 
-### POST /v1/tools/language-detect (3 credits)
-Detect language (100+ supported).
-**Body:** { "text": "string" }
-**Response:** { "ok": true, "language": "en", "confidence": 0.99, "name": "English" }
+### POST /v1/tools/summarize — 10 credits · x402 $0.010 USDC
+Summarize text in multiple styles: paragraph, bullets, tldr, headline, executive
+Parameters:
+  - text: string (required) — Text to summarize
+  - style: string — one of: paragraph, bullets, tldr, headline, executive
+  - max_length: integer
 
-### POST /v1/tools/regex-generate (8 credits)
-Generate regex from plain English.
-**Body:** { "description": "Match email addresses" }
-**Response:** { "ok": true, "regex": "...", "explanation": "...", "tests": [...] }
+### POST /v1/tools/sentiment-analysis — 8 credits · x402 $0.015 USDC
+Analyze text sentiment: positive/negative/neutral with score and emotion detection
+Parameters:
+  - text: string (required) — Text to analyze
 
-### POST /v1/tools/pii-detect (10 credits)
-Detect and optionally redact PII.
-**Body:** { "text": "string", "redact": true }
-**Response:** { "ok": true, "pii_found": [...], "redacted_text": "..." }
+### POST /v1/tools/extract-entities — 8 credits · x402 $0.015 USDC
+Named entity recognition: people, organizations, locations, dates, money, and more
+Parameters:
+  - text: string (required) — Text to extract entities from
+  - types: array — Entity types to extract (default: all)
 
-### POST /v1/tools/research-report (15 credits)
-Structured research report on any topic.
-**Body:** { "topic": "string", "depth": "brief|standard|deep" }
-**Response:** { "ok": true, "report": { "title": "...", "summary": "...", "sections": [...], "sources": [...] } }
+### POST /v1/tools/language-detect — 3 credits · x402 $0.010 USDC
+Detect the language of any text with confidence score and script identification
+Parameters:
+  - text: string (required) — Text to detect language of
 
-### POST /v1/tools/fact-check (10 credits)
-Verify claims against real-time sources.
-**Body:** { "claim": "string" }
-**Response:** { "ok": true, "verdict": "true|false|partially_true|unverifiable", "evidence": [...] }
+### POST /v1/tools/regex-generate — 8 credits · x402 $0.015 USDC
+Generate regular expressions from plain English with explanations and test results
+Parameters:
+  - flags: string — Regex flags (e.g. 'gi')
+  - description: string (required) — Plain English description of what the regex should match
+  - test_strings: array — Optional strings to test against
 
-### POST /v1/tools/semantic-search (8 credits)
-Neural web search via Exa AI.
-**Body:** { "query": "string", "numResults": 10 }
-**Response:** { "ok": true, "results": [{ "title": "...", "url": "...", "text": "...", "score": 0.95 }] }
+### POST /v1/tools/pii-detect — 10 credits · x402 $0.010 USDC
+Detect and optionally redact PII: names, emails, SSNs, credit cards, API keys, and more
+Parameters:
+  - text: string (required) — Text to scan for PII
+  - redact: boolean — Return text with PII replaced
+  - replacement: string — Replacement string when redact is true
 
-### POST /v1/tools/web-scrape (5 credits)
-Scrape any public URL.
-**Body:** { "url": "string", "selector": "optional CSS selector" }
-**Response:** { "ok": true, "content": "...", "title": "...", "links": [...] }
+### POST /v1/tools/search-web — 5 credits · x402 $0.015 USDC
+Search the web and return structured results (Tavily/Serper or DuckDuckGo fallback)
+Parameters:
+  - limit: integer
+  - query: string (required) — Search query
 
-### POST /v1/tools/extract-page (5 credits)
-Clean text extraction from any webpage.
-**Body:** { "url": "string" }
-**Response:** { "ok": true, "text": "...", "title": "...", "links": [...], "metadata": {...} }
+### POST /v1/tools/web-search — 14 credits · x402 $0.025 USDC
+Real-time web search with AI-synthesized answer
+Parameters:
+  - query: string (required) — Search query
+  - max_results: integer
+  - search_depth: string — one of: basic, advanced
+  - include_answer: boolean — Include AI-synthesized answer
 
-### POST /v1/tools/search-web (5 credits)
-Web search via DuckDuckGo.
-**Body:** { "query": "string", "limit": 10 }
-**Response:** { "ok": true, "results": [{ "title": "...", "url": "...", "snippet": "..." }] }
+### POST /v1/tools/semantic-search — 8 credits · x402 $0.015 USDC
+AI-powered semantic search across web content
 
-### POST /v1/tools/web-search (10 credits)
-Real-time search with AI-synthesized answer.
-**Body:** { "query": "string" }
-**Response:** { "ok": true, "answer": "...", "sources": [...] }
+### POST /v1/tools/news-search — 12 credits · x402 $0.015 USDC
+Search for recent news articles on any topic. Returns title, URL, description, source, and publication date from Brave News, Tavily, or Serper.
 
-### POST /v1/tools/browser-task (10 credits)
-Headless browser automation via Playwright.
-**Body:** { "url": "string", "steps": [{ "action": "click|type|extract", "selector": "...", "value": "..." }] }
-**Response:** { "ok": true, "result": "...", "screenshot": "base64" }
+### POST /v1/tools/fact-check — 14 credits · x402 $0.020 USDC
+Verify the accuracy of a claim. Returns verdict (TRUE/FALSE/MIXED/UNVERIFIED/MISLEADING), confidence score, summary, and supporting/contradicting evidence with sources.
 
-### POST /v1/tools/screenshot-capture (10 credits)
-Screenshot any URL as PNG.
-**Body:** { "url": "string", "width": 1280, "height": 720, "fullPage": false }
-**Response:** { "ok": true, "image": "base64 PNG" }
+### POST /v1/tools/research-report — 40 credits · x402 $0.055 USDC
+Generate a structured AI research report on any topic. Searches multiple sources and synthesizes findings into executive summary, key findings, and conclusion with citations.
 
-### POST /v1/tools/html-to-markdown (2 credits)
-Convert HTML to clean Markdown.
-**Body:** { "html": "string" }
-**Response:** { "ok": true, "markdown": "..." }
+### POST /v1/tools/web-scrape — 5 credits · x402 $0.015 USDC
+Scrape and extract content from websites with optional CSS selector
+Parameters:
+  - url: string (required) — URL to scrape
+  - format: string — one of: text, html
+  - selector: string — Optional CSS selector to extract specific content
 
-### POST /v1/tools/rss-parse (4 credits)
-Parse RSS/Atom feeds.
-**Body:** { "url": "string" }
-**Response:** { "ok": true, "feed": { "title": "...", "items": [...] } }
+### POST /v1/tools/extract-page — 5 credits · x402 $0.015 USDC
+Fetch a webpage and return clean text, metadata, and links
+Parameters:
+  - url: string (required) — URL to extract
 
-### POST /v1/tools/extract-pdf (6 credits)
-Extract text from PDF.
-**Body:** { "url": "string" } or { "base64": "..." }
-**Response:** { "ok": true, "text": "...", "pages": 5 }
+### POST /v1/tools/browser-task — 10 credits · x402 $0.010 USDC
+Headless browser automation (click/type/extract) via Playwright — SSRF hardened
+Parameters:
+  - url: string (required) — URL to open
+  - text: string — Text for type action
+  - action: string — one of: extract, click, type, html
+  - selector: string — CSS selector (required for click/type, optional for extract)
 
-### POST /v1/tools/news-search (3 credits)
-Real-time news search.
-**Body:** { "query": "string", "limit": 10 }
-**Response:** { "ok": true, "articles": [{ "title": "...", "url": "...", "source": "...", "publishedAt": "..." }] }
+### POST /v1/tools/screenshot-capture — 10 credits · x402 $0.010 USDC
+Capture page metadata and screenshot URL for any public URL
+Parameters:
+  - url: string (required) — URL to screenshot
+  - width: integer
+  - height: integer
+  - full_page: boolean — Capture full scrollable page
 
-### POST /v1/tools/url-shorten (1 credit)
-Shorten any URL.
-**Body:** { "url": "string" }
-**Response:** { "ok": true, "shortUrl": "..." }
+### POST /v1/tools/html-to-markdown — 3 credits · x402 $0.010 USDC
+Convert HTML or any URL to clean Markdown
+Parameters:
+  - url: string — URL to fetch and convert
+  - html: string — HTML string to convert
 
-### POST /v1/tools/webhook-send (2 credits)
-Send HTTP webhooks.
-**Body:** { "url": "string", "payload": {...}, "headers": {...} }
-**Response:** { "ok": true, "status": 200, "body": "..." }
+### POST /v1/tools/rss-parse — 4 credits · x402 $0.010 USDC
+Fetch and parse RSS or Atom feeds into clean structured JSON
+Parameters:
+  - url: string (required) — URL of the RSS or Atom feed
+  - limit: integer
 
-### POST /v1/tools/crypto-price (1 credit)
-Real-time cryptocurrency price.
-**Body:** { "symbol": "bitcoin" }
-**Response:** { "ok": true, "price": 67500.00, "change_24h": 2.5, "market_cap": 1300000000000, "volume": 25000000000 }
+### POST /v1/tools/extract-pdf — 6 credits · x402 $0.015 USDC
+Extract text and tables from a PDF
+Parameters:
+  - url: string (required) — Public PDF URL
 
-### POST /v1/tools/crypto-ohlcv (2 credits)
-OHLCV candlestick data.
-**Body:** { "symbol": "bitcoin", "days": 30 }
-**Response:** { "ok": true, "candles": [{ "timestamp": "...", "open": ..., "high": ..., "low": ..., "close": ..., "volume": ... }] }
+### POST /v1/tools/extract-metadata — 3 credits · x402 $0.010 USDC
+Extract metadata from text or URLs (word count, OG tags, headers, etc.)
+Parameters:
+  - url: string — URL to fetch and extract metadata from
+  - text: string — Text to analyze
 
-### POST /v1/tools/crypto-market-cap (1 credit)
-Top N coins by market cap.
-**Body:** { "limit": 10 }
-**Response:** { "ok": true, "coins": [{ "name": "...", "symbol": "...", "market_cap": ..., "price": ... }] }
+### POST /v1/tools/url-shorten — 1 credit · x402 $0.010 USDC
+Shorten any URL via TinyURL
+Parameters:
+  - url: string (required) — URL to shorten
 
-### POST /v1/tools/crypto-fear-greed (1 credit)
-Fear & Greed Index.
-**Body:** { "days": 7 }
-**Response:** { "ok": true, "current": { "value": 72, "classification": "Greed" }, "history": [...] }
+### POST /v1/tools/webhook-send — 2 credits · x402 $0.010 USDC
+POST a JSON payload to any webhook URL
+Parameters:
+  - url: string (required) — Webhook endpoint URL
+  - body: any — JSON payload to send
+  - method: string — one of: POST, PUT, PATCH
+  - headers: object — Optional extra headers (safe headers only)
 
-### POST /v1/tools/crypto-sentiment (2 credits)
-Community sentiment + social stats.
-**Body:** { "symbol": "bitcoin" }
-**Response:** { "ok": true, "sentiment": "bullish", "social_score": 85, "mentions": 15000 }
+### POST /v1/tools/crypto-price — 1 credit · x402 $0.010 USDC
+Real-time price, 24h change, market cap, and volume for any cryptocurrency
 
-### POST /v1/tools/crypto-news (2 credits)
-Latest crypto news.
-**Body:** { "symbol": "bitcoin", "limit": 10 }
-**Response:** { "ok": true, "articles": [...] }
+### POST /v1/tools/crypto-ohlcv — 2 credits · x402 $0.010 USDC
+OHLCV candlestick data for any crypto over 1-90 days
 
-### POST /v1/tools/token-lookup (1 credit)
-Search token by name or ticker.
-**Body:** { "query": "solana" }
-**Response:** { "ok": true, "tokens": [{ "id": "solana", "symbol": "SOL", "name": "Solana", "platforms": {...} }] }
+### POST /v1/tools/crypto-market-cap — 1 credit · x402 $0.010 USDC
+Top N cryptocurrencies by market cap with price, volume, and 24h change
 
-### POST /v1/tools/image-generate (15 credits)
-Generate SVG from text prompts.
-**Body:** { "prompt": "string" }
-**Response:** { "ok": true, "svg": "..." }
+### POST /v1/tools/crypto-fear-greed — 1 credit · x402 $0.010 USDC
+Crypto Fear & Greed Index with historical data
 
-### POST /v1/tools/design-create (15 credits)
-DALL-E 3 image generation.
-**Body:** { "prompt": "string", "size": "1024x1024|1792x1024|1024x1792" }
-**Response:** { "ok": true, "image": "base64 PNG", "url": "..." }
+### POST /v1/tools/crypto-sentiment — 2 credits · x402 $0.010 USDC
+Community sentiment, social stats, and price momentum for any cryptocurrency
 
-### POST /v1/tools/video-generate (50 credits)
-Runway Gen-3 video generation.
-**Body:** { "prompt": "string", "duration": 4 }
-**Response:** { "ok": true, "video_url": "..." }
+### POST /v1/tools/crypto-news — 2 credits · x402 $0.015 USDC
+Latest crypto news headlines. Filter by token symbol
 
-### POST /v1/tools/image-remove-bg (10 credits)
-Remove background from image.
-**Body:** { "url": "string" } or { "base64": "..." }
-**Response:** { "ok": true, "image": "base64 PNG" }
+### POST /v1/tools/token-lookup — 1 credit · x402 $0.010 USDC
+Search for any token by name or ticker, returns CoinGecko IDs
 
-### POST /v1/tools/ocr-extract (10 credits)
-Extract text from images.
-**Body:** { "url": "string" } or { "base64": "..." }
-**Response:** { "ok": true, "text": "..." }
+### POST /v1/tools/design-create — 50 credits · x402 $0.055 USDC
+Generate designs and images via DALL-E 3
 
-### POST /v1/tools/text-to-speech (5 credits)
-ElevenLabs TTS.
-**Body:** { "text": "string", "voice": "optional" }
-**Response:** { "ok": true, "audio": "base64 MP3" }
+### POST /v1/tools/generate-image — 50 credits · x402 $0.055 USDC
+Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792).
 
-### POST /v1/tools/transcribe-audio (8 credits)
-Whisper transcription.
-**Body:** { "url": "string" }
-**Response:** { "ok": true, "text": "...", "language": "en" }
+### POST /v1/tools/image-generate — 30 credits · x402 $0.030 USDC
+Generate SVG images from text prompts via Claude
+Parameters:
+  - style: string — one of: vivid, natural
+  - width: integer — one of: 1024, 1792
+  - height: integer — one of: 1024, 1792
+  - prompt: string (required) — Image description / prompt
+  - quality: string — one of: standard, hd
 
-### POST /v1/tools/validate-data (1 credit)
-JSON Schema validation.
-**Body:** { "data": {...}, "schema": {...} }
-**Response:** { "ok": true, "valid": true, "errors": [] }
+### POST /v1/tools/image-remove-bg — 350 credits · x402 $0.350 USDC
+Remove background from any image
 
-### POST /v1/tools/convert-format (2 credits)
-Convert between JSON, YAML, CSV, XML.
-**Body:** { "input": "string", "from": "json", "to": "yaml" }
-**Response:** { "ok": true, "output": "..." }
+### POST /v1/tools/video-generate — 700 credits · x402 $1.100 USDC
+Generate short video clips from text prompts
 
-### POST /v1/tools/jsonpath-query (1 credit)
-JSONPath queries.
-**Body:** { "data": {...}, "query": "$.store.book[*].author" }
-**Response:** { "ok": true, "result": [...] }
+### POST /v1/tools/ocr-extract — 12 credits · x402 $0.015 USDC
+Extract text from images or screenshots using AI vision (base64 or URL input)
+Parameters:
+  - prompt: string — Optional custom extraction instruction
+  - image_url: string — Public URL of the image
+  - media_type: string — one of: image/jpeg, image/png, image/gif, image/webp
+  - image_base64: string — Base64-encoded image data
 
-### POST /v1/tools/extract-metadata (3 credits)
-Extract OG tags + word count.
-**Body:** { "url": "string" } or { "text": "string" }
-**Response:** { "ok": true, "title": "...", "description": "...", "og": {...}, "wordCount": 500, "links": [...] }
+### POST /v1/tools/text-to-speech — 25 credits · x402 $0.100 USDC
+Convert text to natural-sounding audio via ElevenLabs. Returns base64-encoded MP3.
 
-### POST /v1/tools/qr-code (2 credits)
-Generate QR codes.
-**Body:** { "data": "string", "format": "png|svg", "size": 256 }
-**Response:** { "ok": true, "image": "base64 PNG" } or { "ok": true, "svg": "..." }
+### POST /v1/tools/transcribe-audio — 25 credits · x402 $0.030 USDC
+Transcribe audio files to text via OpenAI Whisper. Supports 100+ languages.
 
-### POST /v1/tools/barcode-generate (2 credits)
-Generate Code128 barcodes.
-**Body:** { "data": "string" }
-**Response:** { "ok": true, "svg": "..." }
+### POST /v1/tools/validate-data — 1 credit · x402 $0.010 USDC
+Validate JSON data against a JSON Schema
+Parameters:
+  - data: any (required) — Data to validate
+  - schema: object (required) — JSON Schema to validate against
 
-### POST /v1/tools/transform-text (3 credits)
-Transform text (10 modes).
-**Body:** { "text": "string", "mode": "slug|camel|snake|upper|lower|title|reverse|base64_encode|base64_decode|rot13" }
-**Response:** { "ok": true, "result": "..." }
+### POST /v1/tools/convert-format — 2 credits · x402 $0.010 USDC
+Convert data between JSON, YAML, CSV, and XML formats
+Parameters:
+  - to: string (required) — one of: json, yaml, csv, xml
+  - data: any (required) — Data to convert (string or object)
+  - from: string (required) — one of: json, yaml, csv, xml
 
-### POST /v1/tools/diff-text (2 credits)
-Structured text diff.
-**Body:** { "text1": "string", "text2": "string", "format": "unified|words|chars|json" }
-**Response:** { "ok": true, "diff": "..." }
+### POST /v1/tools/jsonpath-query — 1 credit · x402 $0.010 USDC
+Run JSONPath expressions against any JSON payload
+Parameters:
+  - json: any (required) — JSON object or string to query
+  - path: string (required) — JSONPath expression starting with $
 
-### POST /v1/tools/readability-score (2 credits)
-Flesch-Kincaid readability.
-**Body:** { "text": "string" }
-**Response:** { "ok": true, "score": 65.5, "grade": 8, "level": "8th grade" }
+### POST /v1/tools/diff-text — 2 credits · x402 $0.010 USDC
+Compare two text strings and return differences in unified, word, char, or JSON format
+Parameters:
+  - format: string — one of: unified, words, chars, json
+  - modified: string (required) — Modified text
+  - original: string (required) — Original text
 
-### POST /v1/tools/ip-lookup (2 credits)
-IP geolocation + ISP + VPN detection.
-**Body:** { "ip": "string" }
-**Response:** { "ok": true, "country": "US", "city": "...", "isp": "...", "vpn": false, "proxy": false }
+### POST /v1/tools/transform-text — 3 credits · x402 $0.010 USDC
+Transform text: uppercase, lowercase, trim, reverse, slug, title, camel, snake, base64
+Parameters:
+  - mode: string — one of: uppercase, lowercase, trim, reverse, slug, title, camel, snake, base64_encode, base64_decode
+  - text: string (required) — Text to transform
 
-### POST /v1/tools/whois-lookup (3 credits)
-Domain WHOIS via RDAP.
-**Body:** { "domain": "string" }
-**Response:** { "ok": true, "registrar": "...", "created": "...", "expires": "...", "nameservers": [...] }
+### POST /v1/tools/readability-score — 2 credits · x402 $0.010 USDC
+Compute Flesch-Kincaid readability, grade level, word count, and read time
+Parameters:
+  - text: string (required) — Text to analyze
 
-### POST /v1/tools/email-verify (3 credits)
-Email MX + disposable check.
-**Body:** { "email": "string" }
-**Response:** { "ok": true, "valid": true, "mx": true, "disposable": false }
+### POST /v1/tools/qr-code — 2 credits · x402 $0.010 USDC
+Generate QR codes from text or URLs (PNG data URL or SVG)
+Parameters:
+  - text: string (required) — Text or URL to encode
+  - width: integer
+  - format: string — one of: dataurl, svg
+  - margin: integer
 
-### POST /v1/tools/email-find (5 credits)
-Find email via Hunter.io.
-**Body:** { "firstName": "string", "lastName": "string", "domain": "string" }
-**Response:** { "ok": true, "email": "...", "confidence": 95 }
+### POST /v1/tools/barcode-generate — 2 credits · x402 $0.010 USDC
+Generate Code128 barcodes as SVG
+Parameters:
+  - value: string (required) — Value to encode
+  - width: integer
+  - format: string — one of: code128, code39, ean13, upca
+  - height: integer
+  - include_text: boolean
 
-### POST /v1/tools/phone-validate (2 credits)
-Phone E.164 validation.
-**Body:** { "phone": "string" }
-**Response:** { "ok": true, "valid": true, "e164": "+1...", "type": "mobile", "country": "US" }
+### POST /v1/tools/ip-lookup — 2 credits · x402 $0.010 USDC
+Geolocate any IP address — country, city, timezone, ISP, VPN/proxy detection
+Parameters:
+  - ip: string (required) — IPv4 or IPv6 address to look up
 
-### POST /v1/tools/domain-check (2 credits)
-Domain availability check.
-**Body:** { "domain": "string" }
-**Response:** { "ok": true, "available": false, "registered": true }
+### POST /v1/tools/whois-lookup — 3 credits · x402 $0.010 USDC
+Look up domain registration info: registrar, created/expires dates, nameservers, status
+Parameters:
+  - domain: string (required) — Domain name to look up (e.g. google.com)
 
-### POST /v1/tools/generate-hash (1 credit)
-Cryptographic hashing.
-**Body:** { "text": "string", "algorithm": "sha256|sha512|md5|sha1" }
-**Response:** { "ok": true, "hash": "..." }
+### POST /v1/tools/domain-check — 2 credits · x402 $0.010 USDC
+Check domain availability via RDAP
 
-### POST /v1/tools/generate-uuid (1 credit)
-Generate UUIDs and tokens.
-**Body:** { "type": "v4|v1|token|apikey" }
-**Response:** { "ok": true, "uuid": "..." }
+### POST /v1/tools/check-domain — 2 credits · x402 $0.010 USDC
+Check if a domain is available or registered via RDAP. No API key needed.
 
-### POST /v1/tools/currency-convert (2 credits)
-Currency conversion (170+ currencies).
-**Body:** { "amount": 100, "from": "USD", "to": "EUR" }
-**Response:** { "ok": true, "result": 92.50, "rate": 0.925 }
+### POST /v1/tools/phone-validate — 2 credits · x402 $0.010 USDC
+Parse and validate phone numbers in any format — E.164, carrier type, country
+Parameters:
+  - phone: string (required) — Phone number in any format
+  - country_code: string — ISO 3166-1 alpha-2 country code hint (e.g. US)
 
-### POST /v1/tools/timezone-convert (1 credit)
-Timezone conversion.
-**Body:** { "datetime": "2025-01-01T12:00:00", "from": "America/New_York", "to": "Asia/Tokyo" }
-**Response:** { "ok": true, "result": "2025-01-02T02:00:00", "offset": "+14h" }
+### POST /v1/tools/email-verify — 3 credits · x402 $0.010 USDC
+Deep email validation: syntax, MX record check, disposable domain detection
+Parameters:
+  - email: string (required) — Email address to verify
 
-### POST /v1/tools/email-send (3 credits)
-Send email via Resend.
-**Body:** { "to": "string", "subject": "string", "text": "string", "html": "optional" }
-**Response:** { "ok": true, "messageId": "..." }
+### POST /v1/tools/email-find — 110 credits · x402 $0.120 USDC
+Find email addresses for a person at a company domain
 
-### POST /v1/tools/session-create (5 credits)
-Create conversation session.
-**Body:** { "systemPrompt": "optional" }
-**Response:** { "ok": true, "sessionId": "..." }
+### POST /v1/tools/email-send — 3 credits · x402 $0.010 USDC
+Send transactional emails via Resend
 
-### POST /v1/tools/session-message (20 credits)
-Continue conversation.
-**Body:** { "sessionId": "string", "message": "string" }
-**Response:** { "ok": true, "response": "..." }
+### POST /v1/tools/send-email — 3 credits
+Send transactional emails via Resend — plain text or HTML.
 
-### POST /v1/tools/workflow-agent (25 credits)
-Multi-step AI pipeline.
-**Body:** { "goal": "string", "tools": ["web-scrape", "summarize"], "maxSteps": 5 }
-**Response:** { "ok": true, "result": "...", "steps": [...] }
+### POST /v1/tools/generate-hash — 1 credit · x402 $0.010 USDC
+Generate cryptographic hashes (sha256, sha512, md5, sha1)
+Parameters:
+  - input: string (required) — String to hash
+  - algorithm: string — one of: sha256, sha512, md5, sha1
+
+### POST /v1/tools/generate-uuid — 1 credit · x402 $0.010 USDC
+Generate UUIDs (v1/v4), secure random tokens, and API-key-format strings
+Parameters:
+  - type: string — one of: v1, v4
+  - count: integer
+  - prefix: string — Optional prefix for each UUID
+
+### POST /v1/tools/currency-convert — 2 credits · x402 $0.010 USDC
+Convert between currencies using real-time exchange rates (170+ currencies)
+Parameters:
+  - to: string (required) — Target currency code (e.g. EUR)
+  - from: string (required) — Source currency code (e.g. USD)
+  - amount: number (required) — Amount to convert
+
+### POST /v1/tools/timezone-convert — 1 credit · x402 $0.010 USDC
+Convert a datetime between any two IANA timezones
+Parameters:
+  - to_tz: string (required) — Target IANA timezone (e.g. Asia/Tokyo)
+  - from_tz: string — Source IANA timezone (e.g. America/New_York). Defaults to UTC.
+  - datetime: string — Datetime string to convert (ISO 8601). Defaults to now.
 
 ---
 
