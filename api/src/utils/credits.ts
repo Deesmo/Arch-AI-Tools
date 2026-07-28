@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { AuthedRequest } from "../middleware/auth.js";
 import { Response } from "express";
 import { fingerprintCaller } from "../lib/fingerprint.js";
-import { sendLowCreditAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
+import { sendLowCreditAlert, sendCreditsDepletedAlert, LOW_CREDIT_THRESHOLD } from "../services/email.js";
 import { recordAgentCall, updateAgentReputation } from "../services/reputation.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
 import { classifyStatus } from "./statusClass.js";
@@ -39,6 +39,72 @@ export function isChargeWaived(res: Response): boolean {
   return (res.locals as Record<string, unknown>)[WAIVE_FLAG] === true;
 }
 
+// ─── Credit-alert dedup: once per depletion cycle ────────────────────────────
+// sendLowCreditAlert used to fire on EVERY successful call while the balance
+// sat in (0, LOW_CREDIT_THRESHOLD] — up to ~20 duplicate emails as a balance
+// drained — and the depleted (0-credit) email was never wired at all (its only
+// caller was the never-imported cron/lowCredits.ts). Dedup mirrors the
+// demoTopoff AuditLog pattern: each send is recorded as an AuditLog row
+// (action below, meta.credits = balance remaining at send time). A new alert
+// cycle starts only when the pre-call balance EXCEEDS the recorded one: spends
+// only lower the balance and refunds can only restore credits deducted AFTER
+// the alert, so a higher pre-call balance proves credits were granted
+// (purchase / referral / monthly refresh / verify) since the last alert —
+// no instrumentation of the grant paths needed.
+export const LOW_ALERT_ACTION = "low_credit_alert";
+export const DEPLETED_ALERT_ACTION = "credits_depleted_alert";
+
+/**
+ * Pure cycle test: alert again only when the balance seen before this call is
+ * strictly ABOVE the balance recorded on the last alert (i.e. a grant landed
+ * in between). No prior alert (or unreadable meta) always starts a cycle.
+ */
+export function isNewAlertCycle(preCallCredits: number, lastRecordedCredits: number | null): boolean {
+  if (lastRecordedCredits === null || !Number.isFinite(lastRecordedCredits)) return true;
+  return preCallCredits > lastRecordedCredits;
+}
+
+async function maybeSendCreditAlert(opts: {
+  agentId: string;
+  action: string;
+  /** Balance before this call's deduction (or the refused balance). */
+  preCallCredits: number;
+  /** Balance remaining now — recorded for the next cycle check + shown in the email. */
+  creditsRemaining: number;
+  toolName: string;
+  send: (email: string) => Promise<void>;
+}): Promise<void> {
+  try {
+    const last = await prisma.auditLog.findFirst({
+      where: { agentId: opts.agentId, action: opts.action },
+      orderBy: { createdAt: "desc" },
+      select: { meta: true },
+    });
+    const lastRecorded = last
+      ? Number((last.meta as { credits?: unknown } | null)?.credits)
+      : null;
+    if (!isNewAlertCycle(opts.preCallCredits, lastRecorded)) return;
+
+    // Record BEFORE sending so a concurrent burst collapses to (at worst) the
+    // handful of in-flight requests that raced past the check — never one
+    // email per call.
+    await prisma.auditLog.create({
+      data: {
+        agentId: opts.agentId,
+        action: opts.action,
+        resource: opts.toolName,
+        status: "success",
+        meta: { credits: opts.creditsRemaining, pre_call_credits: opts.preCallCredits },
+      },
+    });
+
+    const a = await prisma.agent.findUnique({ where: { id: opts.agentId }, select: { email: true } });
+    if (a?.email) await opts.send(a.email);
+  } catch {
+    // Alerts must never block or fail the request path
+  }
+}
+
 export async function deductCredits(
   req: AuthedRequest,
   res: Response,
@@ -64,6 +130,25 @@ export async function deductCredits(
   });
 
   if (deduction.count === 0) {
+    // Depleted email at the actual refusal moment — the highest-intent instant
+    // to show the purchase path. Once per depletion cycle (maybeSendCreditAlert)
+    // and gated to genuinely-low balances so an agent merely under-funded for
+    // one expensive tool isn't told its credits "ran out".
+    if (agent.credits <= LOW_CREDIT_THRESHOLD) {
+      void maybeSendCreditAlert({
+        agentId: agent.id,
+        action: DEPLETED_ALERT_ACTION,
+        preCallCredits: agent.credits,
+        creditsRemaining: Math.max(agent.credits, 0),
+        toolName,
+        send: (email) => sendCreditsDepletedAlert(email, agent.id, Math.max(agent.credits, 0)),
+      });
+    }
+
+    // Application-level error body only — OAuth/Bearer auth errors and the
+    // x402 PAYMENT-REQUIRED shape are separate surfaces and stay untouched.
+    // NOTE: one-time packs go to /v1/billing/checkout — /v1/billing/subscribe
+    // rejects bare pack ids by design (anti-accidental-subscription guard).
     res.status(402).json({
       ok: false,
       error: "insufficient_credits",
@@ -72,6 +157,12 @@ export async function deductCredits(
       credits_needed: cost,
       upgrade_url: "https://archtools.dev/pricing",
       referral_url: "https://archtools.dev/v1/referral/code",
+      links: {
+        buy_credits: "https://archtools.dev/pricing",
+        checkout_api: 'POST /v1/billing/checkout {"pack":"starter|pro|business"}',
+        subscribe_api: 'POST /v1/billing/subscribe {"plan":"starter-monthly|pro-monthly|growth-monthly|business-monthly"}',
+        docs: "https://archtools.dev/docs",
+      },
       request_id: crypto.randomUUID(),
     });
     return false;
@@ -152,10 +243,16 @@ export async function deductCredits(
   res.once("close", () => { void finalizeCharge(res.writableEnded); });
 
   if (agent.credits <= LOW_CREDIT_THRESHOLD && agent.credits > 0) {
-    prisma.agent.findUnique({ where: { id: agent.id }, select: { email: true } })
-      .then(a => { if (a?.email) sendLowCreditAlert(a.email, agent.credits, agent.id).catch(() => {}); })
-      .catch(() => {});
+    void maybeSendCreditAlert({
+      agentId: agent.id,
+      action: LOW_ALERT_ACTION,
+      preCallCredits: agent.credits + cost,
+      creditsRemaining: agent.credits,
+      toolName,
+      send: (email) => sendLowCreditAlert(email, agent.credits, agent.id),
+    });
 
+    // Webhook consumers dedupe machine-side — event behavior unchanged.
     fireWebhookEvent("credits.low", agent.id, {
       credits_remaining: agent.credits,
       tool_name: toolName,
@@ -164,6 +261,15 @@ export async function deductCredits(
   }
 
   if (agent.credits <= 0) {
+    void maybeSendCreditAlert({
+      agentId: agent.id,
+      action: DEPLETED_ALERT_ACTION,
+      preCallCredits: agent.credits + cost,
+      creditsRemaining: Math.max(agent.credits, 0),
+      toolName,
+      send: (email) => sendCreditsDepletedAlert(email, agent.id, Math.max(agent.credits, 0)),
+    });
+
     fireWebhookEvent("credits.depleted", agent.id, {
       credits_remaining: 0,
       tool_name: toolName,
