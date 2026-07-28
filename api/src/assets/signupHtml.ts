@@ -179,7 +179,9 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         }).catch(function() {});
       }
 
-      if (preKey && preKey.startsWith('arch_')) {
+      // Strict format check (arch_ + hex) — this value comes from the URL and
+      // is rendered into the page, so never accept anything key-shaped-but-not.
+      if (preKey && /^arch_[A-Za-z0-9]{16,96}$/.test(preKey)) {
         showSuccess(preKey, preCredits);
         btn.style.display = 'none';
         document.getElementById('email').style.display = 'none';
@@ -216,6 +218,18 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
         '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
         refNote +
+        '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:14px 0 0;padding-top:14px">' +
+          '<div style="font-size:13px;font-weight:700;margin-bottom:8px">Try it now</div>' +
+          '<button id="first-call-btn" class="copy-btn-full" style="background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.4);color:#22d3ee">Run your first call (uses 1 of your ' + credits + ' free credits)</button>' +
+          '<div id="first-call-result" style="display:none;margin-bottom:12px"></div>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px">Or from your terminal:</div>' +
+          '<pre id="first-call-curl" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);padding:10px 14px;border-radius:10px;font-size:11px;overflow-x:auto;white-space:pre;margin:0 0 12px;user-select:all"></pre>' +
+        '</div>' +
+        '<div style="margin:0 0 14px">' +
+          '<div style="font-size:13px;font-weight:700;margin-bottom:6px">Connect via MCP</div>' +
+          '<div class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);padding:8px 12px;border-radius:10px;font-size:12px;user-select:all;margin-bottom:6px">https://archtools.dev/mcp</div>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6">Claude: Settings &#8594; Connectors &#8594; Add custom connector &#8594; paste the URL above.<br>ChatGPT: Settings &#8594; Connectors &#8594; Create &#8594; paste the URL above.</div>' +
+        '</div>' +
         '<a href="/dashboard" style="display:block;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#22d3ee;font-weight:700;text-decoration:none;font-size:14px">&#8594; Open Dashboard</a>'
       );
       const copyBtn = document.getElementById('copy-btn');
@@ -227,6 +241,82 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           });
         });
       }
+      // Curl example with the fresh key prefilled. Set via textContent (never
+      // string-built HTML) so the key can never be interpreted as markup.
+      var curlEl = document.getElementById('first-call-curl');
+      if (curlEl) {
+        var keyForCurl = /^arch_[A-Za-z0-9]{16,96}$/.test(apiKey) ? apiKey : 'YOUR_API_KEY';
+        curlEl.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-uuid -H "Authorization: Bearer ' + keyForCurl + '" -H "Content-Type: application/json" -d ' + "'{}'";
+      }
+      // Opt-in only: the call fires exclusively from this click handler —
+      // nothing on this page ever auto-spends a credit.
+      var fcBtn = document.getElementById('first-call-btn');
+      if (fcBtn) {
+        fcBtn.addEventListener('click', function() { runFirstCall(apiKey, fcBtn); });
+      }
+    }
+
+    function runFirstCall(apiKey, fcBtn) {
+      var out = document.getElementById('first-call-result');
+      if (!out) return;
+      var originalLabel = fcBtn.textContent;
+      fcBtn.disabled = true;
+      fcBtn.textContent = 'Calling generate-uuid...';
+      // Hard 2s budget: first impression must never be a hanging spinner.
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 2000) : null;
+      var clearTimer = function() { if (timer) { clearTimeout(timer); timer = null; } };
+      fetch('/v1/tools/generate-uuid', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+          'X-Arch-Source': 'onboarding'
+        },
+        body: '{}',
+        signal: ctrl ? ctrl.signal : undefined
+      }).then(function(res) {
+        clearTimer();
+        var remaining = res.headers.get('X-Credits-Remaining');
+        return res.json().then(function(data) {
+          if (!res.ok) { showFirstCallFallback(out, fcBtn, originalLabel); return; }
+          showFirstCallResult(out, data, remaining);
+          fcBtn.textContent = '✓ First call complete';
+        });
+      }).catch(function() {
+        clearTimer();
+        showFirstCallFallback(out, fcBtn, originalLabel);
+      });
+    }
+
+    function showFirstCallResult(out, data, remaining) {
+      out.innerHTML = '';
+      out.style.display = 'block';
+      var pre = document.createElement('pre');
+      pre.className = 'mono';
+      pre.style.cssText = 'background:rgba(0,0,0,0.4);border:1px solid rgba(52,211,153,0.35);padding:10px 14px;border-radius:10px;font-size:11px;overflow-x:auto;white-space:pre;margin:0 0 6px';
+      var rendered;
+      try { rendered = JSON.stringify(data, null, 2); } catch(_) { rendered = String(data); }
+      // Escaped by construction: textContent, never innerHTML, for API output.
+      pre.textContent = rendered;
+      out.appendChild(pre);
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:6px';
+      note.textContent = (remaining !== null && remaining !== '')
+        ? 'Credits remaining: ' + remaining
+        : 'Your balance is on the X-Credits-Remaining response header.';
+      out.appendChild(note);
+    }
+
+    function showFirstCallFallback(out, fcBtn, originalLabel) {
+      out.innerHTML = '';
+      out.style.display = 'block';
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.65);background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px';
+      note.textContent = 'The live call did not complete in time. Run it from your terminal instead — the curl command below has your key prefilled.';
+      out.appendChild(note);
+      fcBtn.disabled = false;
+      fcBtn.textContent = originalLabel;
     }
 
     async function sendLink() {
