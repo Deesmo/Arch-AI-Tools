@@ -803,9 +803,9 @@
         </div>
         <!-- TRUST BAR - desktop only -->
         <div class="hero-trust-bar">
-          <div class="trust-item"><div class="trust-val g-am">64</div><div class="trust-lbl">Tools</div></div>
+          <div class="trust-item"><div class="trust-val g-am">63</div><div class="trust-lbl">Tools</div></div>
           <div class="trust-item"><div class="trust-val g-cy">&lt;200ms</div><div class="trust-lbl">Response</div></div>
-          <div class="trust-item"><div class="trust-val g-bl">15</div><div class="trust-lbl">Chains</div></div>
+          <div class="trust-item"><div class="trust-val g-bl">9</div><div class="trust-lbl">Chains</div></div>
           <div class="trust-item"><div class="trust-val g-am">FREE</div><div class="trust-lbl">To Start</div></div>
         </div>
       </div>
@@ -813,9 +813,9 @@
       <!-- STAT CARDS (preview-d hero right) -->
       <div class="hero-right">
         <div class="sg">
-          <div class="sc sa"><div class="sn g-am">64</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
+          <div class="sc sa"><div class="sn g-am">63</div><div class="sl">Ready-to-use Tools</div><div class="ss">1 POST each</div></div>
           <div class="sc sc2"><div class="sn g-cy" style="font-size:28px">&lt;200ms</div><div class="sl">Avg Response</div><div class="ss">p95 &lt;500ms</div></div>
-          <div class="sc"><div class="sn g-bl">15</div><div class="sl">Blockchains</div><div class="ss">USDC · USDT · ETH</div></div>
+          <div class="sc"><div class="sn g-bl">9</div><div class="sl">Blockchains</div><div class="ss">USDC · USDT</div></div>
           <div class="sc"><div class="sn g-am" style="font-size:28px">FREE</div><div class="sl">To Start</div><div class="ss">100 credits included</div><div class="sc-live"><span class="dot"></span>all systems ok</div></div>
         </div>
       </div>
@@ -930,7 +930,7 @@
     <div class="stats-inner">
       <div class="stat-item">
         <div class="stat-label-top">API_TOOLS</div>
-        <div class="stat-val g-am">64</div>
+        <div class="stat-val g-am">63</div>
       </div>
       <div class="stat-item">
         <div class="stat-label-top">AI_MODELS</div>
@@ -957,26 +957,29 @@
   <div class="wrap">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center;">
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statServices" class="counter" data-target="63">63</span></div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statTools" class="counter" data-target="63">63</span></div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Tools in Directory</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-bl"><span id="statEndpoints" class="counter" data-target="14">14</span></div>
-        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Categories</div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-bl"><span id="statCalls" class="counter" data-target="1427">1,427</span></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">API Calls Served</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-cy"><span id="statChains" class="counter" data-target="15">15</span>+</div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-cy"><span id="statX402" class="counter" data-target="196">196</span></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">x402 Payments Settled</div>
+      </div>
+      <div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statChains" class="counter" data-target="9">9</span></div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Chains Supported</div>
-      </div>
-      <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statTools" class="counter" data-target="63">63</span></div>
-        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">AI Tools</div>
       </div>
     </div>
   </div>
 </section>
 <script>
-// Animated counter - triggers when section scrolls into view
+// Animated counter - triggers when section scrolls into view.
+// Counters hydrate LIVE from /api/v1/stats (same source as /stats) so the
+// numbers on this page are real, not hardcoded; the data-target values in the
+// markup are a real snapshot used only as a fallback if the fetch fails.
 (function(){
   var counted=false;
   function animateCounters(){
@@ -998,6 +1001,20 @@
       requestAnimationFrame(tick);
     });
   }
+  // Live hydration (client-side pattern shared with stats.html)
+  fetch('/api/v1/stats').then(function(r){return r.json();}).then(function(data){
+    if(!data || !data.ok || !data.stats) return;
+    var s=data.stats;
+    var map={statTools:s.total_tools,statCalls:s.total_api_calls,statX402:s.total_x402_payments,statChains:s.chains_supported};
+    Object.keys(map).forEach(function(id){
+      var v=map[id];
+      if(typeof v!=='number'||!isFinite(v)||v<0) return;
+      var el=document.getElementById(id);
+      if(!el) return;
+      el.dataset.target=String(Math.round(v));
+      if(counted) el.textContent=Math.round(v).toLocaleString();
+    });
+  }).catch(function(){/* fallback: static snapshot targets stay */});
   var obs=new IntersectionObserver(function(entries){
     entries.forEach(function(e){if(e.isIntersecting)animateCounters();});
   },{threshold:0.3});
@@ -2535,7 +2552,7 @@ function showLangTab(lang) {
           Which blockchain networks are supported for payment?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">9 networks: <strong style="color:var(--text);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad</strong> (EVM/USDC), plus <strong style="color:var(--text);">Solana</strong>. USDT is accepted on 6 EVM chains. If your agent holds any of these, it can pay. No bridging, no wrapping - send natively.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">9 networks: <strong style="color:var(--text);">Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad</strong> (EVM/USDC), plus <strong style="color:var(--text);">Solana</strong>. USDT is accepted on Base and Polygon. If your agent holds any of these, it can pay. No bridging, no wrapping - send natively.</p>
       </details>
 
       <details style="border-bottom:1px solid var(--border);padding:20px 0;">

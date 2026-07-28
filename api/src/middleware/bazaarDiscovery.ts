@@ -37,15 +37,19 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getCuratedSellCopy, sanitizeSellCopy, registerToolSellCopy, SELL_COPY_MAX_CHARS } from "../lib/toolSellCopy.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // HARD LIMIT: the CDP facilitator REJECTS verify/settle requests whose
-// description exceeds 500 characters. Never exceed it.
-const MAX_DESCRIPTION_CHARS = 500;
-const DESCRIPTION_SUFFIX = " Pay per call with USDC (x402) or credits — archtools.dev";
-// Base text budget: ≤450 per spec guidance AND suffix-safe against the 500 cap.
-const MAX_BASE_DESCRIPTION_CHARS = Math.min(450, MAX_DESCRIPTION_CHARS - DESCRIPTION_SUFFIX.length);
+// description exceeds 500 characters. Play #6 tightens our own budget further:
+// every 402 description is ≤200 chars, ASCII-safe, and free of internals
+// (SELL_COPY_MAX_CHARS — enforced by tests/x402-sell-copy.test.mjs).
+const MAX_DESCRIPTION_CHARS = SELL_COPY_MAX_CHARS; // 200 < CDP's 500 hard cap
+const DESCRIPTION_SUFFIX = " Pay per call with USDC (x402) or credits - archtools.dev";
+// Base text budget: whatever the suffix leaves under the cap (minus one char
+// reserved for the sentence-closing period buildDescription may append).
+const MAX_BASE_DESCRIPTION_CHARS = MAX_DESCRIPTION_CHARS - DESCRIPTION_SUFFIX.length - 1;
 
 export interface BazaarDiscoveryBlock {
   description: string;
@@ -214,18 +218,23 @@ function buildExampleObject(schema: JsonSchema, depth = 0): Record<string, unkno
   return out;
 }
 
-/** Trim the tool's summary/description into the ≤500-char budget with suffix. */
-function buildDescription(summary: unknown, description: unknown): string {
-  const parts = [summary, description]
+/**
+ * Per-tool sell copy for the Bazaar catalog (Play #6): curated override first,
+ * else the tool's OpenAPI summary/description SANITIZED (internals stripped,
+ * ASCII-transliterated) — always suffix-capped at SELL_COPY_MAX_CHARS (200).
+ */
+function buildDescription(toolName: string, summary: unknown, description: unknown): string {
+  const raw = [summary, description]
     .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-    .map((s) => s.trim());
-  let base = parts.join(" — ");
+    .map((s) => s.trim())
+    .join(" - ");
+  let base = getCuratedSellCopy(toolName) ?? sanitizeSellCopy(raw) ?? `Arch Tools ${toolName} API`;
   if (base.length > MAX_BASE_DESCRIPTION_CHARS) {
-    base = base.slice(0, MAX_BASE_DESCRIPTION_CHARS - 1).trimEnd() + "…";
+    base = base.slice(0, MAX_BASE_DESCRIPTION_CHARS - 3).replace(/[\s,;:-]+$/, "") + "...";
   }
-  if (base.length > 0 && !/[.!?…]$/.test(base)) base += ".";
+  if (base.length > 0 && !/[.!?]$/.test(base)) base += ".";
   const full = base + DESCRIPTION_SUFFIX;
-  // Belt and braces — the CDP facilitator hard-rejects >500.
+  // Belt and braces — our cap (200) sits far under the CDP 500 hard-reject.
   return full.length > MAX_DESCRIPTION_CHARS ? full.slice(0, MAX_DESCRIPTION_CHARS) : full;
 }
 
@@ -240,7 +249,7 @@ function buildBlock(toolName: string, post: JsonSchema, components: JsonSchema |
   if (bodySchema.type === undefined) bodySchema.type = "object";
 
   const exampleBody = buildExampleObject(bodySchema);
-  const description = buildDescription(post.summary, post.description);
+  const description = buildDescription(toolName, post.summary, post.description);
 
   return {
     description,
@@ -292,6 +301,10 @@ try {
     const post = (entry as JsonSchema)?.post;
     if (!post || typeof post !== "object") continue;
     try {
+      // Seed the sell-copy registry with the spec summary (sanitized at the
+      // insert boundary) so non-curated tools get real copy in accepts[]
+      // descriptions even before/without the DB preload.
+      registerToolSellCopy(toolName, [post.summary, post.description].filter((s) => typeof s === "string").join(" - "), "spec");
       const block = buildBlock(toolName, post, spec.components);
       if (block) BAZAAR_BLOCKS.set(toolName, block);
     } catch (err) {

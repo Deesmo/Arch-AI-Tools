@@ -26,6 +26,25 @@ import { classifyStatus } from "../utils/statusClass.js";
 import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
 import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
 import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual, paymentPayloadVersion } from "../lib/x402V2.js";
+import { getToolSellCopy, railDescription, registerToolSellCopy } from "../lib/toolSellCopy.js";
+
+// Per-tool sell copy: load DB Tool.description rows into the sell-copy registry
+// at startup (Play #6). Sanitization + length-capping happens INSIDE
+// registerToolSellCopy at the insert boundary (council mod: nothing DB-sourced
+// enters payment metadata unsanitized). Fail-soft by design: no DB (tests,
+// build checks) → curated overrides + openapi-spec fallbacks still apply.
+if (process.env.DATABASE_URL) {
+  void (async () => {
+    try {
+      const tools = await prisma.tool.findMany({ where: { active: true }, select: { name: true, description: true } });
+      let registered = 0;
+      for (const t of tools) if (registerToolSellCopy(t.name, t.description, "db")) registered++;
+      console.log(`[x402] Sell-copy descriptions registered for ${registered}/${tools.length} tools`);
+    } catch (err) {
+      console.warn(`[x402] Sell-copy DB preload skipped (fail-soft): ${err instanceof Error ? err.message : String(err)}`);
+    }
+  })();
+}
 
 // x402scan output schema map — generated from openapi.json
 // Required by x402scan for resource registration ("Missing input schema" fix)
@@ -203,7 +222,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Base)`,
+      description: railDescription(toolName, "USDC on Base"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -220,7 +239,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Ethereum)`,
+      description: railDescription(toolName, "USDC on Ethereum"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -237,7 +256,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Arbitrum)`,
+      description: railDescription(toolName, "USDC on Arbitrum"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -254,7 +273,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Polygon)`,
+      description: railDescription(toolName, "USDC on Polygon"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -271,7 +290,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Optimism)`,
+      description: railDescription(toolName, "USDC on Optimism"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -288,7 +307,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Avalanche)`,
+      description: railDescription(toolName, "USDC on Avalanche"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -310,7 +329,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Solana)`,
+      description: railDescription(toolName, "USDC on Solana"),
       mimeType: "application/json",
       payTo: solanaWallet,
       maxTimeoutSeconds: 60,
@@ -328,7 +347,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Noble/Cosmos)`,
+      description: railDescription(toolName, "USDC on Noble/Cosmos"),
       mimeType: "application/json",
       payTo: nobleWallet,
       maxTimeoutSeconds: 60,
@@ -346,7 +365,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Algorand)`,
+      description: railDescription(toolName, "USDC on Algorand"),
       mimeType: "application/json",
       payTo: algorandWallet,
       maxTimeoutSeconds: 60,
@@ -365,7 +384,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Stellar)`,
+      description: railDescription(toolName, "USDC on Stellar"),
       mimeType: "application/json",
       payTo: stellarWallet,
       maxTimeoutSeconds: 60,
@@ -383,7 +402,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Sui)`,
+      description: railDescription(toolName, "USDC on Sui"),
       mimeType: "application/json",
       payTo: suiWallet,
       maxTimeoutSeconds: 60,
@@ -400,7 +419,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Unichain)`,
+      description: railDescription(toolName, "USDC on Unichain"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -417,7 +436,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Monad)`,
+      description: railDescription(toolName, "USDC on Monad"),
       mimeType: "application/json",
       payTo: evmWallet,
       maxTimeoutSeconds: 60,
@@ -435,7 +454,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Polkadot)`,
+      description: railDescription(toolName, "USDC on Polkadot"),
       mimeType: "application/json",
       payTo: polkadotWallet,
       maxTimeoutSeconds: 120,
@@ -453,7 +472,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: amountAtomic,
       maxAmountRequired: amountAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (USDC on Aptos)`,
+      description: railDescription(toolName, "USDC on Aptos"),
       mimeType: "application/json",
       payTo: aptosWallet,
       maxTimeoutSeconds: 60,
@@ -481,7 +500,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: ethWei,
       maxAmountRequired: ethWei,
       resource,
-      description: `Arch Tools — ${toolName} (native ETH on Ethereum)`,
+      description: railDescription(toolName, "native ETH on Ethereum"),
       mimeType: "application/json",
       payTo: ethWallet,
       maxTimeoutSeconds: 300,
@@ -495,7 +514,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: ethWei,
       maxAmountRequired: ethWei,
       resource,
-      description: `Arch Tools — ${toolName} (native ETH on Base)`,
+      description: railDescription(toolName, "native ETH on Base"),
       mimeType: "application/json",
       payTo: ethWallet,
       maxTimeoutSeconds: 60,
@@ -521,7 +540,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: bnbWei,
       maxAmountRequired: bnbWei,
       resource,
-      description: `Arch Tools — ${toolName} (native BNB on BNB Chain)`,
+      description: railDescription(toolName, "native BNB on BNB Chain"),
       mimeType: "application/json",
       payTo: bnbWallet,
       maxTimeoutSeconds: 60,
@@ -547,7 +566,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: yoctoNear,
       maxAmountRequired: yoctoNear,
       resource,
-      description: `Arch Tools — ${toolName} (NEAR token)`,
+      description: railDescription(toolName, "NEAR token"),
       mimeType: "application/json",
       payTo: nearWallet,
       maxTimeoutSeconds: 120,
@@ -573,7 +592,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: lamports,
       maxAmountRequired: lamports,
       resource,
-      description: `Arch Tools — ${toolName} (native SOL)`,
+      description: railDescription(toolName, "native SOL"),
       mimeType: "application/json",
       payTo: solNativeWallet,
       maxTimeoutSeconds: 60,
@@ -599,7 +618,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: solAtomic,
       maxAmountRequired: solAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (SOL on Base)`,
+      description: railDescription(toolName, "SOL on Base"),
       mimeType: "application/json",
       payTo: solBaseWallet,
       maxTimeoutSeconds: 60,
@@ -625,7 +644,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: taoRao,
       maxAmountRequired: taoRao,
       resource,
-      description: `Arch Tools — ${toolName} (TAO on Bittensor)`,
+      description: railDescription(toolName, "TAO on Bittensor"),
       mimeType: "application/json",
       payTo: taoWallet,
       maxTimeoutSeconds: 120,
@@ -651,7 +670,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
       amount: uniAtomic,
       maxAmountRequired: uniAtomic,
       resource,
-      description: `Arch Tools — ${toolName} (UNI on Ethereum)`,
+      description: railDescription(toolName, "UNI on Ethereum"),
       mimeType: "application/json",
       payTo: uniWallet,
       maxTimeoutSeconds: 60,
@@ -677,7 +696,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
           amount: amountAtomic,
       maxAmountRequired: amountAtomic,
           resource,
-          description: `Arch Tools — ${toolName} (USDT on ${chain.charAt(0).toUpperCase() + chain.slice(1)})`,
+          description: railDescription(toolName, `USDT on ${chain.charAt(0).toUpperCase() + chain.slice(1)}`),
           mimeType: "application/json",
           payTo: usdtWallet,
           maxTimeoutSeconds: 60,
@@ -747,7 +766,8 @@ export function buildPaymentRequired(toolName: string, price: string): object {
     x402Version: 1,
     resource: {
       url: resource,
-      description: `Arch Tools — ${toolName}`,
+      // Per-tool sell copy (Play #6): curated -> DB (sanitized) -> spec -> fallback.
+      description: getToolSellCopy(toolName),
       mimeType: "application/json",
     },
     accepts: filteredAccepts,
