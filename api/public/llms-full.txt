@@ -223,7 +223,7 @@ Search for any token by name or ticker, returns CoinGecko IDs
 ### POST /v1/tools/design-create — 50 credits · x402 $0.055 USDC
 Generate designs and images via DALL-E 3
 
-### POST /v1/tools/generate-image — 30 credits
+### POST /v1/tools/generate-image — 50 credits · x402 $0.055 USDC
 Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792).
 
 ### POST /v1/tools/image-generate — 30 credits · x402 $0.030 USDC
@@ -322,7 +322,7 @@ Parameters:
 ### POST /v1/tools/domain-check — 2 credits · x402 $0.010 USDC
 Check domain availability via RDAP
 
-### POST /v1/tools/check-domain — 2 credits
+### POST /v1/tools/check-domain — 2 credits · x402 $0.010 USDC
 Check if a domain is available or registered via RDAP. No API key needed.
 
 ### POST /v1/tools/phone-validate — 2 credits · x402 $0.010 USDC

@@ -72,7 +72,7 @@ Protocol: https://x402.org
 
 ### Media & Design
 - [Design Create](https://archtools.dev/v1/tools/design-create): Generate designs and images via DALL-E 3 (50 credits)
-- [Generate Image](https://archtools.dev/v1/tools/generate-image): Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792). (30 credits)
+- [Generate Image](https://archtools.dev/v1/tools/generate-image): Generate images from text prompts via DALL-E 3 (1024×1024, 1792×1024, 1024×1792). (50 credits)
 - [Image Generate](https://archtools.dev/v1/tools/image-generate): Generate SVG images from text prompts via Claude (30 credits)
 - [Image Remove BG](https://archtools.dev/v1/tools/image-remove-bg): Remove background from any image (350 credits)
 - [Video Generate](https://archtools.dev/v1/tools/video-generate): Generate short video clips from text prompts (700 credits)
