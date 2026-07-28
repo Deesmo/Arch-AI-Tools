@@ -7,11 +7,11 @@
     "url": "https://github.com/Deesmo/Arch-AI-Tools",
     "source": "github"
   },
-  "version": "2.0.0",
+  "version": "2.0.1",
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://arch-tools-mcp.onrender.com/mcp"
+      "url": "https://archtools.dev/mcp"
     },
     {
       "type": "sse",
