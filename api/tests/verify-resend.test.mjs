@@ -88,10 +88,22 @@ app.use("/v1/agent", agentRouter);
 const server = app.listen(0);
 const BASE = `http://127.0.0.1:${server.address().port}`;
 
-// prisma stubs
-let agentRow = null;          // what findUnique returns
+// prisma stubs — reissueEmailVerification resolves the account via a
+// normalized-identity $queryRaw (Gmail dot/plus/googlemail alias forms must
+// match the stored row), so the raw query is the stub point. Rows come back
+// with the raw snake_case column names.
+let agentRow = null;          // what the normalized-identity lookup returns
 let updates = [];             // captured update() calls
-prisma.agent.findUnique = async () => agentRow;
+let lookupParams = [];        // captured $queryRaw bind values
+const rawRow = () => ({
+  id: agentRow.id,
+  email: agentRow.email ?? "stored@example.com",
+  email_verified: agentRow.emailVerified,
+  pending_credits: agentRow.pendingCredits,
+  verify_token_expiry: agentRow.verifyTokenExpiry,
+});
+const stubLookup = async (_strings, ...values) => { lookupParams = values; return agentRow ? [rawRow()] : []; };
+prisma.$queryRaw = stubLookup;
 prisma.agent.update = async (args) => { updates.push(args); return {}; };
 
 async function postResend(email, headers = {}) {
@@ -182,10 +194,26 @@ await atest("no-token unverified account (failed signup setup) → recoverable",
   assert.strictEqual(updates.length, 1, "token issued even when none existed");
 });
 
+await atest("gmail alias submitted → stored dotted account still found, token rotated", async () => {
+  updates = [];
+  agentRow = {
+    id: "agent-alias",
+    email: "j.doe.stored@gmail.com", // signup stored the dotted form
+    emailVerified: false,
+    pendingCredits: 75,
+    verifyTokenExpiry: new Date(Date.now() - 60_000), // expired
+  };
+  const { res, text } = await postResend("jdoestored+recover@googlemail.com");
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(neutralShape(text), happyBody);
+  assert.ok(lookupParams.includes("jdoestored@gmail.com"), "lookup queries the NORMALIZED identity");
+  assert.strictEqual(updates.length, 1, "stored account's token rotated despite the alias mismatch");
+});
+
 await atest("rate limit: 4th request for the same email+IP within the hour → 429 (pre-DB)", async () => {
   agentRow = null;
   let dbReads = 0;
-  prisma.agent.findUnique = async () => { dbReads++; return null; };
+  prisma.$queryRaw = async () => { dbReads++; return []; };
   const email = "ratelimit-me@example.com";
   for (let i = 0; i < 3; i++) {
     const { res } = await postResend(email);
@@ -200,7 +228,7 @@ await atest("rate limit: 4th request for the same email+IP within the hour → 4
   // a DIFFERENT email from the same IP is not collateral damage
   const other = await postResend("someone-else@example.com");
   assert.strictEqual(other.res.status, 200, "per-email key, not a blanket IP ban");
-  prisma.agent.findUnique = async () => agentRow;
+  prisma.$queryRaw = stubLookup;
 });
 
 await atest("gmail dot/plus aliases share one rate-limit budget (no farming around it)", async () => {
@@ -244,11 +272,11 @@ await atest("missing/garbage email → 400 invalid_request (never a 500)", async
 });
 
 await atest("internal DB error → still the neutral 200 (no availability oracle)", async () => {
-  prisma.agent.findUnique = async () => { throw new Error("db down"); };
+  prisma.$queryRaw = async () => { throw new Error("db down"); };
   const { res, text } = await postResend("dbdown@example.com");
   assert.strictEqual(res.status, 200);
   assert.strictEqual(neutralShape(text), happyBody);
-  prisma.agent.findUnique = async () => agentRow;
+  prisma.$queryRaw = stubLookup;
 });
 
 server.close();

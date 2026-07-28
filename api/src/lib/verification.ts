@@ -301,11 +301,33 @@ export const VERIFY_RESEND_COOLDOWN_MS = parseInt(
  * branch their response on the return value (anti-enumeration).
  */
 export async function reissueEmailVerification(email: string): Promise<boolean> {
-  const agent = await prisma.agent.findUnique({
-    where: { email },
-    select: { id: true, emailVerified: true, pendingCredits: true, verifyTokenExpiry: true },
-  });
-  if (!agent || agent.emailVerified) return false;
+  // Resolve by NORMALIZED identity (same SQL as enforceSignupLimits), not an
+  // exact match: signup stores the raw lowercased input, so the stored address
+  // may be a Gmail dot/plus/googlemail alias of what the user types here.
+  // Prefer an exact match, then the oldest account, for determinism; the mail
+  // goes to the STORED Agent.email, never the submitted string.
+  const lowered = email.toLowerCase().trim();
+  const normalized = normalizeEmailIdentity(email);
+  const rows = await prisma.$queryRaw<
+    { id: string; email: string; email_verified: boolean; pending_credits: number; verify_token_expiry: Date | null }[]
+  >`
+    SELECT "id", "email", "email_verified", "pending_credits", "verify_token_expiry" FROM "Agent"
+    WHERE (
+      CASE WHEN lower(split_part(email, '@', 2)) IN ('gmail.com', 'googlemail.com')
+        THEN replace(split_part(split_part(lower(email), '@', 1), '+', 1), '.', '') || '@gmail.com'
+        ELSE lower(split_part(email, '@', 1)) || '@' || lower(split_part(email, '@', 2))
+      END
+    ) = ${normalized}
+    ORDER BY (lower(email) = ${lowered}) DESC, "createdAt" ASC
+    LIMIT 1`;
+  const row = rows[0];
+  if (!row || row.email_verified) return false;
+  const agent = {
+    id: row.id,
+    email: row.email,
+    pendingCredits: row.pending_credits,
+    verifyTokenExpiry: row.verify_token_expiry,
+  };
   if (agent.verifyTokenExpiry) {
     // Tokens live VERIFY_TOKEN_TTL_MS, so issue time = expiry − TTL. An
     // EXPIRED token was minted ≥30 min ago and always passes this gate.
@@ -321,7 +343,7 @@ export async function reissueEmailVerification(email: string): Promise<boolean> 
     },
   });
   const verifyUrl = `https://archtools.dev/v1/agent/verify-email?token=${token}`;
-  sendVerificationEmail({ to: email, verifyUrl, pendingCredits: agent.pendingCredits }).catch((e) => {
+  sendVerificationEmail({ to: agent.email, verifyUrl, pendingCredits: agent.pendingCredits }).catch((e) => {
     logger.warn({ agentId: agent.id, error: String(e) }, "Verification resend email failed");
   });
   logger.info({ agentId: agent.id }, "Verification token re-issued");
