@@ -169,6 +169,11 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     // is safe to embed in a double-quoted href.
     var oauthNext = '';
 
+    // Email of the account created in THIS page session (set on successful
+    // register) — powers the verify-note resend link. Empty on the OAuth
+    // ?key= arrival path, where the email isn't known, so no link renders.
+    var signupEmail = '';
+
     (function() {
       const params = new URLSearchParams(window.location.search);
       const preKey = params.get('key');
@@ -224,6 +229,12 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           refNote = '<div style="font-size:12px;color:#34d399;margin-bottom:12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 12px">&#127873; Referral code <strong>' + savedRef + '</strong> saved. Verify your email, then apply it from your dashboard — you and your referrer each get bonus credits.</div>';
         }
       } catch(_) {}
+      // Verify note + resend recovery (only when we know the email that was
+      // just registered — not on the OAuth ?key= arrival path).
+      var verifyNote = '';
+      if (signupEmail) {
+        verifyNote = '<div id="verify-note" style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">Next: verify your email from the link we just sent to unlock your remaining pending credits. Didn&#39;t get the email? <a href="#" id="resend-verify-link" style="color:#22d3ee">Resend it</a>.</div>';
+      }
       // OAuth resume: opt-in link back to the preserved /oauth/authorize URL
       // so consent can finish. oauthNext was validated at load (same-origin
       // authorize path only, no quote/angle/whitespace chars).
@@ -238,6 +249,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
         '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
+        verifyNote +
         refNote +
         resumeCta +
         '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:14px 0 0;padding-top:14px">' +
@@ -260,6 +272,29 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           navigator.clipboard.writeText(apiKey).then(function() {
             copyBtn.textContent = '✓ Copied!';
             setTimeout(function() { copyBtn.textContent = 'Copy API Key'; }, 2000);
+          });
+        });
+      }
+      // Resend wiring: fires ONLY from an explicit click (never auto), posts
+      // the email as JSON, and mirrors the server's neutral message via
+      // textContent so nothing from the response is interpreted as markup.
+      var resendLink = document.getElementById('resend-verify-link');
+      if (resendLink) {
+        resendLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          resendLink.textContent = 'Sending...';
+          fetch('/v1/agent/verify-email/resend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: signupEmail })
+          }).then(function(r) {
+            return r.json().catch(function() { return {}; });
+          }).then(function(d) {
+            var note = document.getElementById('verify-note');
+            if (note) note.textContent = (d && d.message) ? String(d.message) : 'Requested — check your inbox and spam folder.';
+          }).catch(function() {
+            var note = document.getElementById('verify-note');
+            if (note) note.textContent = 'Could not reach the server — please try again in a minute.';
           });
         });
       }
@@ -361,6 +396,8 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         let data;
         try { data = await res.json(); } catch(_) { data = {}; }
         if (res.ok && data.api_key) {
+          // Remember the email for the verify-note resend link.
+          signupEmail = email;
           // If password provided, set it and log in via session cookie
           const pw = (document.getElementById('password').value || '').trim();
           if (pw && pw.length >= 8) {

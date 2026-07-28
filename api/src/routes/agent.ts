@@ -9,8 +9,8 @@ import { stripe } from "../lib/stripe.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity } from "../lib/verification.js";
-import { VERIFY_TOKEN_RE, renderVerifyConfirmPage, renderVerifyActivationPage, renderVerifyErrorPage } from "../assets/verifyEmailHtml.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity, allowVerificationResend, reissueEmailVerification } from "../lib/verification.js";
+import { VERIFY_TOKEN_RE, renderVerifyConfirmPage, renderVerifyActivationPage, renderVerifyErrorPage, renderVerifyResendSentPage } from "../assets/verifyEmailHtml.js";
 import { REFERRAL_REWARD } from "../lib/referralReward.js";
 
 const router = Router();
@@ -186,8 +186,9 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       gatedCredits = grant.pending;
     } catch (e) {
       // Fail closed: do NOT grant credits if the verification gate could not be
-      // set up. The user can re-trigger via the resend endpoint.
-      console.error("Verification setup failed (credits remain 0, user can resend):", e);
+      // set up. Recovery: POST /v1/agent/verify-email/resend (below) re-issues
+      // the token for any unverified account.
+      console.error("Verification setup failed (credits remain 0, user can resend via /v1/agent/verify-email/resend):", e);
     }
 
     res.status(201).json({
@@ -283,6 +284,47 @@ router.post("/verify-email", async (req: Request, res: Response): Promise<void> 
     console.error("verify-email error:", e);
     res.status(500).json({ ok: false, error: "internal_error", message: safeErr(e), request_id: reqId() });
   }
+});
+
+// POST /v1/agent/verify-email/resend — recovery for expired/lost verification
+// links: re-issues the token for an existing UNVERIFIED account and re-sends
+// the email. ANTI-ENUMERATION: the response is ALWAYS the same neutral 200
+// (JSON for API clients, a script-free HTML page for browser form posts)
+// whether the account exists, is already verified, or is inside the resend
+// cooldown — nothing about account state is ever revealed. The only non-200s
+// are 400 (no usable email supplied) and 429 (rate limit, counted on the
+// SUBMITTED email+IP BEFORE any DB read, so it can't leak existence either).
+router.post("/verify-email/resend", async (req: Request, res: Response): Promise<void> => {
+  const email = String((req.body?.email ?? "")).toLowerCase().trim();
+  // Browser form posts (Accept: text/html) get a page; fetch/API clients
+  // (Accept: */* or application/json) get JSON — json listed first wins */*.
+  const wantsHtml = req.accepts(["json", "html"]) === "html";
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "A valid email is required.", request_id: reqId() });
+    return;
+  }
+  if (!allowVerificationResend(email, req.ip)) {
+    res.status(429).json({ ok: false, error: "rate_limited", message: "Too many resend requests for this email. Try again in an hour.", request_id: reqId() });
+    return;
+  }
+  try {
+    // Return value intentionally ignored — the response below is identical
+    // for every internal outcome (see anti-enumeration note above).
+    await reissueEmailVerification(email);
+  } catch (e) {
+    // Still neutral: an internal failure must not become an enumeration or
+    // availability oracle.
+    console.error("verify-email resend error:", e);
+  }
+  if (wantsHtml) {
+    res.send(renderVerifyResendSentPage());
+    return;
+  }
+  res.json({
+    ok: true,
+    message: "If an unverified account exists for that email, a new verification link has been sent. Check your inbox and spam folder.",
+    request_id: reqId(),
+  });
 });
 
 // GET /v1/agent/usage
