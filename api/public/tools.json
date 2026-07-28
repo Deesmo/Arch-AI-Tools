@@ -2092,7 +2092,7 @@
       "description": "AI video generation from text prompts via Runway Gen-3",
       "endpoint": "https://archtools.dev/v1/tools/video-generate",
       "method": "POST",
-      "credits": 500,
+      "credits": 700,
       "category": "media",
       "parameters": {
         "type": "object",

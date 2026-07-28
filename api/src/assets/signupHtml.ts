@@ -4,7 +4,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arch Tools — Get your API key</title>
-  <meta name="description" content="Create your Arch Tools account. Get your API key and 10 free credits instantly. Verify your email to unlock all 100." />
+  <meta name="description" content="Create your Arch Tools account. Get your API key and 25 free credits instantly. Verify your email to unlock all 100." />
   <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,7 +139,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     <div class="wrap">
       <div class="card">
         <div class="card-title">Get your API key</div>
-        <p class="card-sub">Enter your email — your key and 10 free credits are issued instantly. Verify your email to unlock the remaining 90 (100 total). No credit card required.</p>
+        <p class="card-sub">Enter your email — your key and 25 free credits are issued instantly. Verify your email to unlock the remaining 75 (100 total). No credit card required.</p>
 
         <div class="input-row">
           <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
