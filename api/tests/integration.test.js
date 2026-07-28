@@ -132,12 +132,30 @@ async function run() {
     assert(Array.isArray(body.tools) || Array.isArray(body), 'no tools array in response');
   });
 
-  await test('POST /v1/tools/search-web (no auth) → 402 with x402Version', async () => {
+  await test('POST /v1/tools/search-web (no auth) → 402 x402 challenge (v2 spec shape)', async () => {
     const { res, body } = await fetchJSON('/v1/tools/search-web', { method: 'POST' });
     assert(res.status === 402, `expected 402, got ${res.status}`);
-    assert(body.x402Version === 1, `x402Version missing or wrong: ${body.x402Version}`);
-    assert(body.error === 'PAYMENT-REQUIRED', `error field: ${body.error}`);
-    assert(Array.isArray(body.accepts), 'accepts array missing');
+    // Runs against live prod. x402Version 1 is tolerated ONLY because prod still
+    // serves v1 402s until the v2 seller migration (PR #87) deploys; the strict v2
+    // shape checks below run only when the live 402 is already v2 — they do NOT yet
+    // pin the wire format against a v1 regression.
+    // FOLLOW-UP (tracked in PR #87 hardening notes): once the v2 deploy is verified
+    // live, delete the `=== 1` tolerance so CI pins `body.x402Version === 2`.
+    assert(body.x402Version === 2 || body.x402Version === 1, `x402Version missing or wrong: ${body.x402Version}`);
+    assert(Array.isArray(body.accepts) && body.accepts.length > 0, 'accepts array missing/empty');
+    if (body.x402Version === 2) {
+      // Spec §5.1 (coinbase/x402 specs/x402-specification-v2.md): required
+      // resource object + CAIP-2 networks + `amount` on every accepts entry.
+      assert(typeof body.resource === 'object' && typeof body.resource.url === 'string' && body.resource.url.includes('/v1/tools/search-web'),
+        `v2 resource object missing/wrong: ${JSON.stringify(body.resource)}`);
+      for (const a of body.accepts) {
+        assert(typeof a.network === 'string' && a.network.includes(':'), `accepts network not CAIP-2: ${a.network}`);
+        assert(typeof a.amount === 'string' && a.amount.length > 0, `accepts amount missing: ${JSON.stringify(a)}`);
+        assert(a.maxAmountRequired === undefined, 'v1 maxAmountRequired leaked into v2 accepts entry');
+        assert(typeof a.payTo === 'string' && typeof a.asset === 'string', 'accepts payTo/asset missing');
+      }
+      assert(body.accepts.some((a) => a.network === 'eip155:8453'), 'Base mainnet (eip155:8453) missing from accepts');
+    }
   });
 
   // ── SEO / Discovery Files ──

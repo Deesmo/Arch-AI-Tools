@@ -305,18 +305,18 @@ app.get(<span class="str">'/.well-known/x402'</span>, (req, res) => {
     <span class="key">accepts</span>: [
       {
         <span class="key">scheme</span>: <span class="str">'exact'</span>,
-        <span class="key">network</span>: <span class="str">'base-mainnet'</span>,
-        <span class="key">asset</span>: <span class="str">'USDC'</span>,
-        <span class="key">maxAmountRequired</span>: <span class="str">'1000'</span>,    <span class="comment">// in smallest unit (0.001 USDC)</span>
-        <span class="key">payeeAddress</span>: <span class="str">'0xYourWalletAddress'</span>,
+        <span class="key">network</span>: <span class="str">'eip155:8453'</span>,   <span class="comment">// CAIP-2 network id (x402 v2) — Base mainnet</span>
+        <span class="key">asset</span>: <span class="str">'0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'</span>, <span class="comment">// USDC on Base</span>
+        <span class="key">amount</span>: <span class="str">'1000'</span>,    <span class="comment">// in smallest unit (0.001 USDC)</span>
+        <span class="key">payTo</span>: <span class="str">'0xYourWalletAddress'</span>,
       },
       <span class="comment">// Add more networks/tokens as needed</span>
       {
         <span class="key">scheme</span>: <span class="str">'exact'</span>,
-        <span class="key">network</span>: <span class="str">'ethereum-mainnet'</span>,
-        <span class="key">asset</span>: <span class="str">'USDC'</span>,
-        <span class="key">maxAmountRequired</span>: <span class="str">'1000'</span>,
-        <span class="key">payeeAddress</span>: <span class="str">'0xYourWalletAddress'</span>,
+        <span class="key">network</span>: <span class="str">'eip155:1'</span>,      <span class="comment">// Ethereum mainnet</span>
+        <span class="key">asset</span>: <span class="str">'0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'</span>, <span class="comment">// USDC on Ethereum</span>
+        <span class="key">amount</span>: <span class="str">'1000'</span>,
+        <span class="key">payTo</span>: <span class="str">'0xYourWalletAddress'</span>,
       },
     ],
     <span class="key">facilitatorUrl</span>: <span class="str">'https://x402.org/facilitator'</span>,

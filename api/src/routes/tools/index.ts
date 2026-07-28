@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth.js";
-import { x402Middleware, X402_PRICES, isX402AnonymousTool, buildPaymentRequired } from "../../middleware/x402.js";
+import { x402Middleware, X402_PRICES, isX402AnonymousTool, buildPaymentRequiredV2 } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr, waiveCharge } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
@@ -4498,7 +4498,7 @@ router.get("/:toolName", (req: Request, res: Response): void => {
     return;
   }
 
-  const paymentRequired = buildPaymentRequired(toolName, price);
+  const paymentRequired = buildPaymentRequiredV2(toolName, price);
   const paymentRequiredB64 = Buffer.from(JSON.stringify(paymentRequired)).toString("base64");
   res.status(402)
     .header("Content-Type", "application/json")

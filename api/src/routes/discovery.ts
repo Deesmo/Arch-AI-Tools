@@ -193,17 +193,18 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     }
   }
 
-  // USDC on Solana
+  // USDC on Solana (canonical CAIP-2 genesis-hash form per x402 v2 spec §11.1 —
+  // the "solana:mainnet" alias is non-canonical and only warn-passes validators)
   if (solanaWallet) {
     accepts.push({
       scheme: "exact",
-      network: "solana:mainnet",
+      network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
       asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       payTo: solanaWallet,
       token: "USDC",
       description: "USDC on Solana (fast, cheap)",
     });
-    activeNetworks.push("solana:mainnet");
+    activeNetworks.push("solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp");
   }
 
   // USDC on Noble/Cosmos
@@ -331,7 +332,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   // Native SOL
   if (solNativeWallet) {
-    accepts.push({ scheme: "exact", network: "solana:mainnet", asset: "native", payTo: solNativeWallet, token: "SOL", description: "Native SOL on Solana" });
+    accepts.push({ scheme: "exact", network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", asset: "native", payTo: solNativeWallet, token: "SOL", description: "Native SOL on Solana" });
   }
 
   // TAO (Bittensor)
@@ -357,8 +358,22 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     description: "The first API platform built for autonomous agent payments. 63 production tools, USDC on 9 chains via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
-    version: "1",
-    accepts,
+    // x402 protocol version served on our 402 challenges (spec-correct v2 —
+    // CAIP-2 networks, `amount` fields, PAYMENT-REQUIRED header transport).
+    version: "2",
+    x402Version: 2,
+    // Chain/asset/wallet summary — NOT a spec §5.1.2 PaymentRequirements array
+    // (entries here have no per-tool `amount`/`maxTimeoutSeconds`), so it lives
+    // under `supportedRails` rather than `accepts` to keep strict v2 consumers
+    // from parsing it as PaymentRequirements the version-2 stamp invites them to
+    // trust. The authoritative, spec-shaped accepts[] ride on every tool's 402
+    // challenge. Safe to reshape: /.well-known/x402 is not spec-governed (no
+    // mention in coinbase/x402 specs/) and x402scan's discovery parser dropped it
+    // (@agentcash/discovery 1.7.5 SPECIFICATION.md: "Legacy /.well-known/x402 ...
+    // no longer parsed" — it discovers via /openapi.json).
+    supportedRails: accepts,
+    rails_note:
+      "supportedRails is a chain/asset/wallet summary for humans and crawlers. Spec-shaped x402 v2 PaymentRequirements (CAIP-2 network, amount, maxTimeoutSeconds) are served in the accepts[] of each tool's 402 challenge.",
     endpoints,
     payment: {
       stripe: { url: `${BASE_URL}/pricing` },

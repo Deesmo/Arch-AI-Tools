@@ -622,16 +622,20 @@ function selectBrowseTool(name) {
 
   const amountAtomic = Math.round(parseFloat(tool.price_usdc) * 1000000);
   const response402 = {
-    x402Version: 1,
+    x402Version: 2,
+    error: "PAYMENT-SIGNATURE header is required",
+    resource: {
+      url: BASE + '/v1/tools/' + name,
+      description: "Arch Tools — " + name,
+      mimeType: "application/json"
+    },
     accepts: [{
       scheme: "exact",
       network: "eip155:8453",
-      maxAmountRequired: String(amountAtomic),
-      resource: BASE + '/v1/tools/' + name,
-      description: "Arch Tools — " + name,
+      amount: String(amountAtomic),
+      asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       payTo: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
       maxTimeoutSeconds: 60,
-      asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       extra: { name: "USD Coin", version: "2" }
     }]
   };
