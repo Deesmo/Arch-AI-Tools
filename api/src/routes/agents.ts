@@ -336,7 +336,9 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       starterCredits = grant.starter;
       gatedCredits = grant.pending;
     } catch (e) {
-      console.error("Verification setup failed (credits remain 0, user can resend):", e);
+      // Recovery: POST /v1/agent/verify-email/resend re-issues the token for
+      // any unverified account.
+      console.error("Verification setup failed (credits remain 0, user can resend via /v1/agent/verify-email/resend):", e);
     }
 
     res.status(201).json({

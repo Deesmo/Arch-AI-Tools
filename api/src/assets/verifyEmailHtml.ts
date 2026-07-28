@@ -167,13 +167,42 @@ export function renderVerifyActivationPage(creditsActivated: number): string {
   `);
 }
 
-/** Invalid / expired / already-used token. */
+/**
+ * Invalid / expired / already-used token — with a script-free recovery form
+ * that POSTs to /v1/agent/verify-email/resend (plain HTML form: these pages
+ * are reachable from an emailed link, so zero JavaScript by design).
+ */
 export function renderVerifyErrorPage(): string {
   return pageShell("Link invalid or expired", `
     <h1 class="card-title">Link invalid or expired</h1>
     <p class="card-sub">This verification link is invalid, expired, or was already used.
     If you clicked it before, your email may already be verified — sign in to your
     <a href="${SITE}/dashboard" style="color:#22d3ee;text-decoration:none;">dashboard</a> to check your status and credit balance.</p>
+    <a class="btn-primary" href="${SITE}/dashboard">Open dashboard →</a>
+    <div class="cta" style="margin-top:22px;">
+      <h3>Didn't get the email — or did the link expire?</h3>
+      <p>Enter your account email and we'll send a fresh verification link (valid for 30 minutes).</p>
+      <form method="POST" action="/v1/agent/verify-email/resend">
+        <input type="email" name="email" required maxlength="254" placeholder="you@company.com" autocomplete="email"
+          style="width:100%;height:44px;border-radius:10px;border:1px solid var(--border);background:rgba(0,0,0,0.3);color:var(--text);padding:0 14px;font-family:inherit;font-size:13px;outline:none;margin-bottom:10px;">
+        <button type="submit" class="btn-primary" style="height:44px;line-height:44px;">Resend verification email</button>
+      </form>
+    </div>
+  `);
+}
+
+/**
+ * Neutral resend confirmation (anti-enumeration) — rendered for browser form
+ * posts to /v1/agent/verify-email/resend. IDENTICAL for every input: it never
+ * confirms whether an account exists, is verified, or was inside the resend
+ * cooldown. Script-free like every page reachable from an emailed link.
+ */
+export function renderVerifyResendSentPage(): string {
+  return pageShell("Check your inbox", `
+    <h1 class="card-title">Check your inbox</h1>
+    <p class="card-sub">If an unverified account exists for that email, a new verification
+    link is on its way (valid for 30 minutes). Don't see it after a couple of minutes?
+    Check your spam folder.</p>
     <a class="btn-primary" href="${SITE}/dashboard">Open dashboard →</a>
   `);
 }

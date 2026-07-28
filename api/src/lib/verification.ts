@@ -203,7 +203,8 @@ export function recordSignupIp(ip: string | undefined): void {
  * Set up the verification gate for a freshly-created agent: activates a small
  * starter allowance immediately (SIGNUP_STARTER_CREDITS), moves the remainder
  * of the grant into pendingCredits, issues a token, sends the email.
- * Non-fatal on email failure (token can be re-issued via /v1/verify-email/resend).
+ * Non-fatal on email failure (token can be re-issued via
+ * POST /v1/agent/verify-email/resend → reissueEmailVerification below).
  *
  * The whole grant (starter + pending) is gated by an ATOMIC claim on the
  * normalized email identity (SignupIdentity unique insert). If the identity
@@ -245,6 +246,108 @@ export async function issueEmailVerification(
     logger.warn({ agentId, error: String(e) }, "Verification email send failed");
   });
   return { starter, pending };
+}
+
+// ─── Verification resend (recovery for expired/lost tokens) ──────────────
+
+/**
+ * Resend rate limit: N requests per calendar hour per (normalized email + IP)
+ * key. Same in-process Map pattern as the per-IP signup counter above —
+ * conservative, resets on deploy, counts EVERY attempt (before any DB read)
+ * so the limiter itself can never become an account-enumeration oracle.
+ */
+const VERIFY_RESEND_MAX_PER_HOUR = parseInt(process.env.VERIFY_RESEND_MAX_PER_HOUR ?? "3", 10);
+const resendCounts = new Map<string, { hour: string; count: number }>();
+
+export function allowVerificationResend(email: string, ip: string | undefined): boolean {
+  const hour = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
+  const key = `${normalizeEmailIdentity(email)}|${ip ?? "unknown"}`;
+  const entry = resendCounts.get(key);
+  const count = entry && entry.hour === hour ? entry.count : 0;
+  if (count >= VERIFY_RESEND_MAX_PER_HOUR) return false;
+  resendCounts.set(key, { hour, count: count + 1 });
+  // Opportunistic cleanup to bound memory (mirrors ipSignupCounts)
+  if (resendCounts.size > 10000) {
+    for (const [k, v] of resendCounts) {
+      if (v.hour !== hour) resendCounts.delete(k);
+    }
+  }
+  return true;
+}
+
+/**
+ * Cooldown between token issues: if the CURRENT token was minted within this
+ * window, a resend is silently skipped — the email is already on its way, and
+ * re-minting on every click would let the endpoint be used as a mail cannon
+ * inside the hourly rate window.
+ */
+export const VERIFY_RESEND_COOLDOWN_MS = parseInt(
+  process.env.VERIFY_RESEND_COOLDOWN_MS ?? String(2 * 60 * 1000),
+  10
+);
+
+/**
+ * Re-issue a verification token for an existing UNVERIFIED account (recovery
+ * path for expired/lost tokens: POST /v1/agent/verify-email/resend).
+ *
+ * ⚠️ Deliberately NOT issueEmailVerification(): that function is the SIGNUP
+ * grant-splitter — on a non-fresh agent the identity claim has already been
+ * consumed, so it would compute pending=0 and SET pendingCredits to 0, wiping
+ * the user's gated grant. This function rotates ONLY verifyToken +
+ * verifyTokenExpiry and never touches any credit field.
+ *
+ * Silent no-op (returns false) when the account doesn't exist, is already
+ * verified, or a live token is inside the resend cooldown — callers must NOT
+ * branch their response on the return value (anti-enumeration).
+ */
+export async function reissueEmailVerification(email: string): Promise<boolean> {
+  // Resolve by NORMALIZED identity (same SQL as enforceSignupLimits), not an
+  // exact match: signup stores the raw lowercased input, so the stored address
+  // may be a Gmail dot/plus/googlemail alias of what the user types here.
+  // Prefer an exact match, then the oldest account, for determinism; the mail
+  // goes to the STORED Agent.email, never the submitted string.
+  const lowered = email.toLowerCase().trim();
+  const normalized = normalizeEmailIdentity(email);
+  const rows = await prisma.$queryRaw<
+    { id: string; email: string; email_verified: boolean; pending_credits: number; verify_token_expiry: Date | null }[]
+  >`
+    SELECT "id", "email", "email_verified", "pending_credits", "verify_token_expiry" FROM "Agent"
+    WHERE (
+      CASE WHEN lower(split_part(email, '@', 2)) IN ('gmail.com', 'googlemail.com')
+        THEN replace(split_part(split_part(lower(email), '@', 1), '+', 1), '.', '') || '@gmail.com'
+        ELSE lower(split_part(email, '@', 1)) || '@' || lower(split_part(email, '@', 2))
+      END
+    ) = ${normalized}
+    ORDER BY (lower(email) = ${lowered}) DESC, "createdAt" ASC
+    LIMIT 1`;
+  const row = rows[0];
+  if (!row || row.email_verified) return false;
+  const agent = {
+    id: row.id,
+    email: row.email,
+    pendingCredits: row.pending_credits,
+    verifyTokenExpiry: row.verify_token_expiry,
+  };
+  if (agent.verifyTokenExpiry) {
+    // Tokens live VERIFY_TOKEN_TTL_MS, so issue time = expiry − TTL. An
+    // EXPIRED token was minted ≥30 min ago and always passes this gate.
+    const issuedAt = agent.verifyTokenExpiry.getTime() - VERIFY_TOKEN_TTL_MS;
+    if (Date.now() - issuedAt < VERIFY_RESEND_COOLDOWN_MS) return false;
+  }
+  const token = crypto.randomBytes(32).toString("hex");
+  await prisma.agent.update({
+    where: { id: agent.id },
+    data: {
+      verifyToken: token,
+      verifyTokenExpiry: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
+    },
+  });
+  const verifyUrl = `https://archtools.dev/v1/agent/verify-email?token=${token}`;
+  sendVerificationEmail({ to: agent.email, verifyUrl, pendingCredits: agent.pendingCredits }).catch((e) => {
+    logger.warn({ agentId: agent.id, error: String(e) }, "Verification resend email failed");
+  });
+  logger.info({ agentId: agent.id }, "Verification token re-issued");
+  return true;
 }
 
 /**
