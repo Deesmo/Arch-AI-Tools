@@ -103,6 +103,7 @@ async function maybeSendCreditAlert(opts: {
   } catch {
     // Alerts must never block or fail the request path
   }
+}
 
 // ─── Activation-source attribution ───────────────────────────────────────────
 // The signup success page's opt-in "Run your first call" button tags its

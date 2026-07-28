@@ -279,7 +279,11 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         clearTimer();
         var remaining = res.headers.get('X-Credits-Remaining');
         return res.json().then(function(data) {
-          if (!res.ok) { showFirstCallFallback(out, fcBtn, originalLabel); return; }
+          if (!res.ok) {
+            var errDetail = (data && (data.message || data.error)) ? String(data.message || data.error) : ('HTTP ' + res.status);
+            showFirstCallFallback(out, fcBtn, originalLabel, 'The live call failed: ' + errDetail + '. You can also run it from your terminal — the curl command below has your key prefilled.');
+            return;
+          }
           showFirstCallResult(out, data, remaining);
           fcBtn.textContent = '✓ First call complete';
         });
@@ -308,12 +312,14 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
       out.appendChild(note);
     }
 
-    function showFirstCallFallback(out, fcBtn, originalLabel) {
+    function showFirstCallFallback(out, fcBtn, originalLabel, message) {
       out.innerHTML = '';
       out.style.display = 'block';
       var note = document.createElement('div');
       note.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.65);background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px';
-      note.textContent = 'The live call did not complete in time. Run it from your terminal instead — the curl command below has your key prefilled.';
+      // Escaped by construction: textContent, so server-supplied error strings
+      // can never be interpreted as markup.
+      note.textContent = message || 'The live call did not complete in time. Run it from your terminal instead — the curl command below has your key prefilled.';
       out.appendChild(note);
       fcBtn.disabled = false;
       fcBtn.textContent = originalLabel;
