@@ -23,6 +23,7 @@ import { config } from "../config.js";
 import { redis } from "../lib/redis.js";
 import { getBazaarExtension } from "./bazaarDiscovery.js";
 import { classifyStatus } from "../utils/statusClass.js";
+import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
 import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
 import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual, paymentPayloadVersion } from "../lib/x402V2.js";
 
@@ -1270,8 +1271,10 @@ export function x402Middleware(toolName: string) {
       }
 
       // Return 402 Payment Required per the x402 v2 HTTP transport: the spec §5.1
-      // PaymentRequired rides in the base64 PAYMENT-REQUIRED header; the SAME JSON is
-      // served as the body (bodies are a server implementation concern —
+      // PaymentRequired rides in the base64 PAYMENT-REQUIRED header (built from the
+      // unmodified spec object — byte-identical to before); the JSON body carries the
+      // same PaymentRequired plus a namespaced `links` object with free-signup
+      // discovery hints (bodies are a server implementation concern —
       // specs/transports-v2/http.md).
       const price = X402_PRICES[toolName] ?? "0.010";
       const paymentRequired = buildPaymentRequiredV2(toolName, price);
@@ -1280,7 +1283,7 @@ export function x402Middleware(toolName: string) {
         .header("Content-Type", "application/json")
         .header("PAYMENT-REQUIRED", paymentRequiredB64)
         .header("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, Payment-Required, PAYMENT-SIGNATURE, Payment-Signature, PAYMENT-RESPONSE, Payment-Response, X-Payment, X-Payment-Response")
-        .json(paymentRequired);
+        .json({ ...paymentRequired, links: DISCOVERY_LINKS });
       return;
     }
 

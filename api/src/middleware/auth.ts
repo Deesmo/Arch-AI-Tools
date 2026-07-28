@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma.js";
 import { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
+import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
 
 export interface AuthedRequest extends Request {
   agent?: {
@@ -37,6 +38,9 @@ export async function requireAuth(
       error: "unauthorized",
       message: "Missing Authorization: Bearer <api_key> header or x-api-key header",
       request_id: req.headers["x-request-id"] ?? crypto.randomUUID(),
+      // Namespaced discovery hints for agents with no credential yet —
+      // additive body field only (no auth-relevant header/shape changes).
+      links: DISCOVERY_LINKS,
     });
     return;
   }
