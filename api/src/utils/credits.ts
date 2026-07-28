@@ -105,6 +105,23 @@ async function maybeSendCreditAlert(opts: {
   }
 }
 
+// ─── Activation-source attribution ───────────────────────────────────────────
+// The signup success page's opt-in "Run your first call" button tags its
+// request with `X-Arch-Source: onboarding` so activation metrics can tell
+// guided first calls from organic ones. When a known source is present it is
+// recorded as the apiRequest row's callerName (indexed, queryable via the
+// existing analytics groupBy) — strictly allowlisted, so arbitrary header
+// values can never pollute the fingerprint dataset.
+// Map (not a plain object) so lookups like "__proto__" can never resolve.
+const ARCH_SOURCE_CALLER = new Map<string, string>([
+  ["onboarding", "web-onboarding"],
+]);
+
+export function callerNameFromArchSource(headerValue: unknown): string | null {
+  if (typeof headerValue !== "string") return null;
+  return ARCH_SOURCE_CALLER.get(headerValue.trim().toLowerCase()) ?? null;
+}
+
 export async function deductCredits(
   req: AuthedRequest,
   res: Response,
@@ -199,6 +216,7 @@ export async function deductCredits(
         }
 
         const fp = fingerprintCaller(req.headers["user-agent"]);
+        const sourceCaller = callerNameFromArchSource(req.headers["x-arch-source"]);
         await prisma.apiRequest.create({
           data: {
             agentId: agent.id,
@@ -208,7 +226,7 @@ export async function deductCredits(
             statusCode: res.statusCode,
             responseMs: Date.now() - requestStartMs,
             callerType: fp.callerType,
-            callerName: fp.callerName,
+            callerName: sourceCaller ?? fp.callerName,
             callerVersion: fp.callerVersion ?? null,
           },
         });
