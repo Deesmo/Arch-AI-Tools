@@ -535,6 +535,9 @@
 let allTools = [];
 let selectedBrowseTool = null;
 let activeSnippetLang = 'curl';
+// True only when the tool list came from the keyless demo registry
+// (/api/v1/x402/playground/tools) — the allowlist for auto-running demos.
+let demoRegistryLoaded = false;
 const BASE = window.location.origin;
 
 // ─── INIT ───────────────────────────────────────────────────────────────────
@@ -542,7 +545,7 @@ async function init() {
   try {
     const res = await fetch(BASE + '/api/v1/x402/playground/tools');
     const data = await res.json();
-    if (data.ok) allTools = data.tools;
+    if (data.ok) { allTools = data.tools; demoRegistryLoaded = true; }
   } catch {}
 
   if (!allTools.length) {
@@ -573,9 +576,41 @@ async function init() {
   onToolChange();
   onDemoToolChange();
   onSnippetToolChange();
+  applyDeepLink();
 }
 
 function getTool(name) { return allTools.find(t => t.name === name); }
+
+// ─── DEEP LINK (?tool=<name>) ───────────────────────────────────────────────
+// /playground?tool=web-scrape preselects that tool in every mode. If the tool
+// list was loaded from the keyless demo registry (the auto-run allowlist), we
+// also switch to Demo Mode and run the simulated flow — it's a free GET to
+// /api/v1/x402/playground/demo: no key, no wallet, no payment, no purchase.
+// The raw query value is never injected into the DOM — it is only matched
+// against known tool names from the server registry.
+function applyDeepLink() {
+  let requested = '';
+  try {
+    requested = (new URLSearchParams(window.location.search).get('tool') || '').trim().toLowerCase();
+  } catch {}
+  if (!requested) return;
+  const tool = getTool(requested);
+  if (!tool) return; // unknown tool — keep the default view
+
+  ['toolSelect','demoToolSelect','snippetToolSelect'].forEach(id => {
+    document.getElementById(id).value = tool.name;
+  });
+  onToolChange();
+  onDemoToolChange();
+  onSnippetToolChange();
+  selectedBrowseTool = tool.name;
+  renderBrowseGrid(allTools);
+
+  if (demoRegistryLoaded) {
+    switchMode('demo');
+    runDemo();
+  }
+}
 
 // ─── BROWSE MODE ────────────────────────────────────────────────────────────
 function renderBrowseGrid(tools) {
