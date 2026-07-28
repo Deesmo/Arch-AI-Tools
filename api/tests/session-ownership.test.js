@@ -34,7 +34,14 @@ async function createVerifiedAgent(label, suffix) {
   const agent = await prisma.agent.findUnique({ where: { email } });
   assert.ok(agent?.verifyToken, `${label} verify token missing`);
 
-  const verify = await fetchJSON(`/v1/agent/verify-email?token=${encodeURIComponent(agent.verifyToken)}`);
+  // GET renders the scanner-safe confirm page (does NOT consume the token)…
+  const confirm = await fetchJSON(`/v1/agent/verify-email?token=${encodeURIComponent(agent.verifyToken)}`);
+  assert.strictEqual(confirm.res.status, 200, `${label} verify confirm-page status ${confirm.res.status}`);
+  // …and the POST consumes it (what the page's Confirm button does).
+  const verify = await fetchJSON(`/v1/agent/verify-email`, {
+    method: "POST",
+    body: JSON.stringify({ token: agent.verifyToken }),
+  });
   assert.strictEqual(verify.res.status, 200, `${label} verify status ${verify.res.status}: ${JSON.stringify(verify.body)}`);
 
   return { email, apiKey: body.api_key, agentId: body.agent_id };

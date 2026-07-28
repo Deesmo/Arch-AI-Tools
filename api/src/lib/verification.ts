@@ -2,8 +2,10 @@
  * Email verification gate (2026-06-10 pricing update; 2026-07-26 starter split).
  *
  * New signups get SIGNUP_STARTER_CREDITS usable immediately; the rest of the
- * grant sits in `pendingCredits` until they verify their email via
- * GET /v1/verify-email?token=...
+ * grant sits in `pendingCredits` until they verify their email.
+ * GET /v1/agent/verify-email?token=... renders a confirm page (scanner-safe —
+ * it does NOT consume the token); the page's button POSTs the token to the
+ * same path, which consumes it via verifyEmailToken().
  * Existing accounts were backfilled as verified — no clawback.
  */
 import crypto from "crypto";
@@ -239,10 +241,27 @@ export async function issueEmailVerification(
     },
   });
   const verifyUrl = `https://archtools.dev/v1/agent/verify-email?token=${token}`;
-  sendVerificationEmail({ to: email, verifyUrl }).catch((e) => {
+  sendVerificationEmail({ to: email, verifyUrl, pendingCredits: pending }).catch((e) => {
     logger.warn({ agentId, error: String(e) }, "Verification email send failed");
   });
   return { starter, pending };
+}
+
+/**
+ * Non-consuming validity check for a verify token (used by the GET confirm
+ * page). Returns the pending credits the token would activate, or null if the
+ * token is unknown/expired/already used. Performs NO writes — email-security
+ * scanners prefetching the GET link cannot burn the token through this path.
+ */
+export async function peekEmailVerifyToken(token: string): Promise<{ pendingCredits: number } | null> {
+  if (!token || token.length < 32) return null;
+  const agent = await prisma.agent.findFirst({
+    where: { verifyToken: token },
+    select: { pendingCredits: true, verifyTokenExpiry: true },
+  });
+  if (!agent) return null;
+  if (agent.verifyTokenExpiry && agent.verifyTokenExpiry < new Date()) return null;
+  return { pendingCredits: agent.pendingCredits };
 }
 
 /**
