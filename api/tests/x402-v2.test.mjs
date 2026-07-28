@@ -207,22 +207,37 @@ test("toV2FacilitatorArgs builds server-authoritative v2 requirements (CAIP-2 + 
   assert.deepStrictEqual(args.paymentPayload.payload, V2_PAYLOAD.payload);
 });
 
-test("server bazaar extension overrides the client echo; other client extensions preserved", () => {
+test("ONLY the server's extensions are forwarded — client extension keys are dropped", () => {
   const args = toV2FacilitatorArgs(V2_PAYLOAD, V1_ACCEPT_BASE, BAZAAR_EXTENSIONS);
-  assert.deepStrictEqual(args.paymentPayload.extensions.bazaar, BAZAAR_EXTENSIONS.bazaar);
-  assert.deepStrictEqual(args.paymentPayload.extensions.other, V2_PAYLOAD.extensions.other);
+  // Server bazaar block wins over the client echo AND no foreign client keys ride along.
+  assert.deepStrictEqual(args.paymentPayload.extensions, BAZAAR_EXTENSIONS);
+  assert.strictEqual(args.paymentPayload.extensions.other, undefined);
+  // No server extensions → no extensions key at all (client echo never forwarded).
+  const bare = toV2FacilitatorArgs(V2_PAYLOAD, V1_ACCEPT_BASE, null);
+  assert.strictEqual(bare.paymentPayload.extensions, undefined);
 });
 
-test("client-echoed resource is forwarded; derived from requirements when absent", () => {
-  const withEcho = toV2FacilitatorArgs(V2_PAYLOAD, V1_ACCEPT_BASE, null);
-  assert.deepStrictEqual(withEcho.paymentPayload.resource, V2_PAYLOAD.resource);
-  const { resource: _omit, ...noResource } = V2_PAYLOAD;
-  const derived = toV2FacilitatorArgs(noResource, V1_ACCEPT_BASE, null);
-  assert.deepStrictEqual(derived.paymentPayload.resource, {
+test("resource is ALWAYS server-derived from the matched requirements entry (client echo ignored)", () => {
+  const serverResource = {
     url: V1_ACCEPT_BASE.resource,
     description: V1_ACCEPT_BASE.description,
     mimeType: V1_ACCEPT_BASE.mimeType,
-  });
+  };
+  const withEcho = toV2FacilitatorArgs(V2_PAYLOAD, V1_ACCEPT_BASE, null);
+  assert.deepStrictEqual(withEcho.paymentPayload.resource, serverResource);
+  const { resource: _omit, ...noResource } = V2_PAYLOAD;
+  const derived = toV2FacilitatorArgs(noResource, V1_ACCEPT_BASE, null);
+  assert.deepStrictEqual(derived.paymentPayload.resource, serverResource);
+});
+
+test("Bazaar catalog-poisoning regression: attacker-chosen resource.url never reaches the facilitator", () => {
+  const poisoned = {
+    ...V2_PAYLOAD,
+    resource: { url: "https://evil.example/steal-listing", description: "poison", mimeType: "text/html" },
+  };
+  const args = toV2FacilitatorArgs(poisoned, V1_ACCEPT_BASE, BAZAAR_EXTENSIONS);
+  assert.strictEqual(args.paymentPayload.resource.url, V1_ACCEPT_BASE.resource);
+  assert.strictEqual(JSON.stringify(args.paymentPayload).includes("evil.example"), false);
 });
 
 test("fails closed on a payload without an inner `payload` object", () => {

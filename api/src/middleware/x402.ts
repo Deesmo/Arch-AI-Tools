@@ -24,7 +24,7 @@ import { redis } from "../lib/redis.js";
 import { getBazaarExtension } from "./bazaarDiscovery.js";
 import { classifyStatus } from "../utils/statusClass.js";
 import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
-import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual } from "../lib/x402V2.js";
+import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual, paymentPayloadVersion } from "../lib/x402V2.js";
 
 // x402scan output schema map — generated from openapi.json
 // Required by x402scan for resource registration ("Missing input schema" fix)
@@ -872,7 +872,16 @@ function extractPaymentNetwork(paymentHeader: string): { network?: string; asset
     const decoded = JSON.parse(Buffer.from(paymentHeader, "base64").toString("utf-8"));
     // v1 payloads carry top-level network/asset; v2 payloads (spec §5.2) carry the
     // chosen rail inside `accepted` (a PaymentRequirements object with CAIP-2 network).
-    const network = decoded.network ?? decoded.chainId ?? decoded.accepted?.network ?? decoded.payload?.network;
+    // A bare numeric chainId (number or digit string) is an EVM chain id — normalize
+    // to CAIP-2 (eip155:<id>) so it can actually match instead of falling through.
+    const chainIdRaw = decoded.chainId;
+    const chainId =
+      typeof chainIdRaw === "number" && Number.isInteger(chainIdRaw) && chainIdRaw > 0
+        ? `eip155:${chainIdRaw}`
+        : typeof chainIdRaw === "string" && /^[0-9]+$/.test(chainIdRaw)
+          ? `eip155:${chainIdRaw}`
+          : chainIdRaw;
+    const network = decoded.network ?? chainId ?? decoded.accepted?.network ?? decoded.payload?.network;
     const asset = decoded.asset ?? decoded.token ?? decoded.accepted?.asset ?? decoded.payload?.asset;
     return { network, asset };
   } catch {
@@ -1018,10 +1027,25 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       // Native v2 payloads (PAYMENT-SIGNATURE clients) and Solana payments (CDP requires
       // the v2 shape for Solana regardless of the client's claimed version).
       // Server-authoritative: requirements/accepted rebuilt from OUR matched accepts entry
-      // (CAIP-2 network + `amount`); the server's Bazaar extension overrides any
-      // client-echoed `bazaar` key so native-v2 payments catalog exactly like translated
-      // v1 ones (spec: x402 specs/extensions/bazaar.md — the facilitator catalogs from
-      // paymentPayload.extensions.bazaar on first SETTLED payment).
+      // (CAIP-2 network + `amount`); resource is derived from that entry and the ONLY
+      // extensions forwarded are the server's own Bazaar block — client-echoed
+      // resource/extensions are dropped so native-v2 payments catalog exactly like
+      // translated v1 ones (spec: x402 specs/extensions/bazaar.md — the facilitator
+      // catalogs from paymentPayload.extensions.bazaar + resource URL on first SETTLE).
+      const args = toV2FacilitatorArgs(paymentPayload, paymentRequirements, getBazaarExtension(toolName)?.extensions ?? null);
+      if (!args) {
+        console.warn(`[x402] Malformed v2 payment payload for ${toolName} — failing closed`);
+        return { isValid: false };
+      }
+      finalPayload = args.paymentPayload;
+      finalPaymentReqs = args.paymentRequirements;
+      verifyAsV2 = true;
+    } else if (paymentPayloadVersion(paymentPayload) === 2) {
+      // Non-CDP facilitator (x402.org testnet / CDP keys unset), v2 client payload.
+      // Our 402s are v2 now, so compliant clients send v2 payloads on this rail too;
+      // hardcoding x402Version:1 shipped a v2 payload mislabeled as v1 (shape mismatch
+      // → facilitator reject). Build the same server-authoritative v2 envelope as the
+      // CDP path (base-sepolia maps to eip155:84532 in V1_TO_CAIP2).
       const args = toV2FacilitatorArgs(paymentPayload, paymentRequirements, getBazaarExtension(toolName)?.extensions ?? null);
       if (!args) {
         console.warn(`[x402] Malformed v2 payment payload for ${toolName} — failing closed`);
@@ -1031,11 +1055,12 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
       finalPaymentReqs = args.paymentRequirements;
       verifyAsV2 = true;
     } else {
+      // Non-CDP facilitator, v1 (or unversioned) payload: proven v1 pass-through.
       finalPaymentReqs = paymentRequirements;
       finalPayload = paymentPayload;
     }
 
-    const payloadFormat = isSolana ? "solana-v2" : (isCdp ? (v1Payload ? (verifyAsV2 ? "evm-v1-to-v2-bazaar" : "evm-v1-passthrough") : "evm-v2-native") : "v1");
+    const payloadFormat = isSolana ? "solana-v2" : (isCdp ? (v1Payload ? (verifyAsV2 ? "evm-v1-to-v2-bazaar" : "evm-v1-passthrough") : "evm-v2-native") : (verifyAsV2 ? "v2-native" : "v1"));
     console.log(`[x402] Verify → ${facilitatorUrl}/verify (tool: ${toolName}, format: ${payloadFormat}, network: ${(paymentRequirements as any).network})`);
     const res = await axios.post(
       `${facilitatorUrl}/verify`,
@@ -1125,8 +1150,20 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
     } else if (isCdpSettle) {
       // Native v2 payloads + Solana (any claimed version — CDP requires v2 for Solana).
       // Same server-authoritative construction as verifyPayment: OUR matched requirements
-      // entry as accepted/requirements (CAIP-2 + amount), server Bazaar extension merged
-      // over the client echo so native-v2 settles catalog exactly like translated v1 ones.
+      // entry as accepted/requirements (CAIP-2 + amount), server-derived resource, and
+      // ONLY the server's Bazaar extension forwarded (client echoes dropped) so native-v2
+      // settles catalog exactly like translated v1 ones.
+      const args = toV2FacilitatorArgs(paymentPayload, paymentRequirements, getBazaarExtension(toolName)?.extensions ?? null);
+      if (!args) {
+        console.warn(`[x402] Malformed v2 payment payload for ${toolName} at settle — failing closed`);
+        return null;
+      }
+      finalPayloadSettle = args.paymentPayload;
+      finalPaymentReqsSettle = args.paymentRequirements;
+      settleAsV2 = true;
+    } else if (paymentPayloadVersion(paymentPayload) === 2) {
+      // Non-CDP facilitator, v2 client payload — same server-authoritative v2 envelope
+      // as verifyPayment (a v2 payload must never ship labeled/shaped as v1).
       const args = toV2FacilitatorArgs(paymentPayload, paymentRequirements, getBazaarExtension(toolName)?.extensions ?? null);
       if (!args) {
         console.warn(`[x402] Malformed v2 payment payload for ${toolName} at settle — failing closed`);
@@ -1136,11 +1173,12 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
       finalPaymentReqsSettle = args.paymentRequirements;
       settleAsV2 = true;
     } else {
+      // Non-CDP facilitator, v1 (or unversioned) payload: proven v1 pass-through.
       finalPaymentReqsSettle = paymentRequirements;
       finalPayloadSettle = paymentPayload;
     }
 
-    const settleFormat = isSolanaSettle ? "solana-v2" : (isCdpSettle ? (v1PayloadSettle ? (settleAsV2 ? "evm-v1-to-v2-bazaar" : "evm-v1-passthrough") : "evm-v2-native") : "v1");
+    const settleFormat = isSolanaSettle ? "solana-v2" : (isCdpSettle ? (v1PayloadSettle ? (settleAsV2 ? "evm-v1-to-v2-bazaar" : "evm-v1-passthrough") : "evm-v2-native") : (settleAsV2 ? "v2-native" : "v1"));
     console.log(`[x402] Settle → ${facilitatorUrl}/settle (tool: ${toolName}, format: ${settleFormat})`);
     const res = await axios.post(
       `${facilitatorUrl}/settle`,
@@ -1287,8 +1325,12 @@ export function x402Middleware(toolName: string) {
 
     // Find matching accepts[] entry — network match normalizes v1 named networks and
     // CAIP-2 to the same chain (a v2 payload's accepted.network is CAIP-2 while the
-    // internal entries use v1 names); asset match is case-insensitive. Fallback: first.
-    let paymentRequirements: object = fullPaymentDetails.accepts[0]; // fallback
+    // internal entries use v1 names); asset match is case-insensitive.
+    // accepts[0] (Base USDC) is used ONLY when the payload declares no rail at all;
+    // a payload that declares a network/asset we cannot match is rejected fail-closed
+    // (402 payment_invalid) instead of being silently validated against the Base
+    // fallback — fail-closed beats fail-to-default and doesn't mask client/rail bugs.
+    let paymentRequirements: object = fullPaymentDetails.accepts[0]; // default when no rail is declared
     if (paymentNetwork || paymentAsset) {
       const match = fullPaymentDetails.accepts.find((a: any) => {
         const networkMatch = !paymentNetwork || networksEqual(a.network, paymentNetwork);
@@ -1299,7 +1341,16 @@ export function x402Middleware(toolName: string) {
         paymentRequirements = match;
         console.log(`[x402] Matched payment to: ${(match as any).network} / ${(match as any).asset}`);
       } else {
-        console.warn(`[x402] No accepts[] match for network=${paymentNetwork} asset=${paymentAsset} - using first entry`);
+        const netStr = String(paymentNetwork ?? "-").slice(0, 64);
+        const assetStr = String(paymentAsset ?? "-").slice(0, 128);
+        console.warn(`[x402] No accepts[] match for network=${netStr} asset=${assetStr} — rejecting (fail closed)`);
+        if (nonce) await releaseStoredNonce(nonce);
+        res.status(402).json({
+          ok: false,
+          error: "payment_invalid",
+          message: `x402 payment declares a network/asset this tool does not accept (network=${netStr}, asset=${assetStr}). Request a fresh 402 challenge and pay on one of its accepts[] rails.`,
+        });
+        return;
       }
     }
 
@@ -1370,12 +1421,17 @@ export function x402Middleware(toolName: string) {
       (req as Request & { x402Payer?: string }).x402Payer = payer;
     }
 
-    // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 v2 spec §5.3
-    // (network must be CAIP-2 — normalize the internal v1-named fallback).
+    // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 v2 spec §5.3.2
+    // ("network: Blockchain network identifier in CAIP-2 format") — normalize the
+    // facilitator-returned network too: the v1-passthrough settle branch gets a
+    // v1-shaped CDP response with a NAMED network (e.g. "base"), not just our
+    // internal fallbacks. toCaip2 passes CAIP-2 through unchanged and returns null
+    // for unmappable ids, so unknown values still fall through verbatim.
     const settleResponse = {
       success: true,
       transaction: settleResult?.transaction ?? "",
       network:
+        toCaip2(settleResult?.network) ??
         settleResult?.network ??
         toCaip2((paymentRequirements as any).network) ??
         toCaip2(config.x402.network) ??

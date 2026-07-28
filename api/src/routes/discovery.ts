@@ -362,7 +362,18 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     // CAIP-2 networks, `amount` fields, PAYMENT-REQUIRED header transport).
     version: "2",
     x402Version: 2,
-    accepts,
+    // Chain/asset/wallet summary — NOT a spec §5.1.2 PaymentRequirements array
+    // (entries here have no per-tool `amount`/`maxTimeoutSeconds`), so it lives
+    // under `supportedRails` rather than `accepts` to keep strict v2 consumers
+    // from parsing it as PaymentRequirements the version-2 stamp invites them to
+    // trust. The authoritative, spec-shaped accepts[] ride on every tool's 402
+    // challenge. Safe to reshape: /.well-known/x402 is not spec-governed (no
+    // mention in coinbase/x402 specs/) and x402scan's discovery parser dropped it
+    // (@agentcash/discovery 1.7.5 SPECIFICATION.md: "Legacy /.well-known/x402 ...
+    // no longer parsed" — it discovers via /openapi.json).
+    supportedRails: accepts,
+    rails_note:
+      "supportedRails is a chain/asset/wallet summary for humans and crawlers. Spec-shaped x402 v2 PaymentRequirements (CAIP-2 network, amount, maxTimeoutSeconds) are served in the accepts[] of each tool's 402 challenge.",
     endpoints,
     payment: {
       stripe: { url: `${BASE_URL}/pricing` },

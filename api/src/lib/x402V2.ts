@@ -108,14 +108,19 @@ export function paymentPayloadVersion(p: any): 1 | 2 | null {
  * native v2 payloads (PAYMENT-SIGNATURE clients) and Solana payments (CDP requires the
  * v2 shape for Solana regardless of the client's claimed version).
  *
- * Server-authoritative by construction:
+ * Server-authoritative by construction — exact parity with the proven v1→v2
+ * translated path (lib/x402V1.ts toV2Payload):
  *  - `accepted`/paymentRequirements are rebuilt from OUR matched requirements entry
  *    (CAIP-2 network + `amount`), never trusted from the client
- *  - the server's Bazaar extension overrides any client-echoed `bazaar` key (other
- *    client-echoed extensions are preserved) — native-v2 settles carry the discovery
- *    block exactly the way v1→v2-translated ones do (spec: specs/extensions/bazaar.md;
- *    the facilitator catalogs from paymentPayload.extensions.bazaar on first settle)
- *  - `resource` = client echo when present, else derived from the requirements entry
+ *  - `resource` is ALWAYS derived from the matched requirements entry; the client
+ *    echo is ignored. Spec basis: payload `resource` is Optional (v2 spec §5.2.2) and
+ *    the facilitator catalogs discovery info under the payload's resource URL
+ *    (specs/extensions/bazaar.md "Extract the discovery information (resource URL,
+ *    ...)"), so forwarding a client-echoed resource would let a payer for tool A
+ *    submit our server bazaar block under an arbitrary attacker-chosen URL
+ *  - `extensions` forwarded to the facilitator are the SERVER'S ONLY (the bazaar
+ *    block) — client-echoed extension keys are dropped, exactly like toV2Payload,
+ *    so nothing client-controlled rides to CDP under our JWT
  *
  * Returns null when the client payload has no inner `payload` object or the matched
  * requirements can't be expressed in v2 (caller must fail closed).
@@ -129,16 +134,17 @@ export function toV2FacilitatorArgs(
   const paymentRequirements = toV2Accept(reqs);
   if (!paymentRequirements) return null;
 
-  const clientExtensions =
-    clientPayload.extensions && typeof clientPayload.extensions === "object" ? clientPayload.extensions : {};
-  const extensions = { ...clientExtensions, ...(serverExtensions ?? {}) };
+  // Whitelist: forward only the server's own extension blocks (never client echoes).
+  const extensions =
+    serverExtensions && typeof serverExtensions === "object" && Object.keys(serverExtensions).length > 0
+      ? serverExtensions
+      : undefined;
 
+  // Server-derived resource only (client echo intentionally ignored — see docstring).
   const resource =
-    clientPayload.resource !== undefined
-      ? clientPayload.resource
-      : typeof reqs?.resource === "string" && reqs.resource.length > 0
-        ? { url: reqs.resource, description: reqs.description, mimeType: reqs.mimeType }
-        : undefined;
+    typeof reqs?.resource === "string" && reqs.resource.length > 0
+      ? { url: reqs.resource, description: reqs.description, mimeType: reqs.mimeType }
+      : undefined;
 
   return {
     paymentPayload: {
@@ -146,7 +152,7 @@ export function toV2FacilitatorArgs(
       ...(resource !== undefined ? { resource } : {}),
       accepted: paymentRequirements,
       payload: clientPayload.payload,
-      ...(Object.keys(extensions).length > 0 ? { extensions } : {}),
+      ...(extensions !== undefined ? { extensions } : {}),
     },
     paymentRequirements,
   };

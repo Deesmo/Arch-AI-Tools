@@ -135,8 +135,12 @@ async function run() {
   await test('POST /v1/tools/search-web (no auth) → 402 x402 challenge (v2 spec shape)', async () => {
     const { res, body } = await fetchJSON('/v1/tools/search-web', { method: 'POST' });
     assert(res.status === 402, `expected 402, got ${res.status}`);
-    // Runs against live prod: tolerate x402Version 1 only until the v2 seller
-    // migration deploys, then the strict v2 shape checks below apply forever.
+    // Runs against live prod. x402Version 1 is tolerated ONLY because prod still
+    // serves v1 402s until the v2 seller migration (PR #87) deploys; the strict v2
+    // shape checks below run only when the live 402 is already v2 — they do NOT yet
+    // pin the wire format against a v1 regression.
+    // FOLLOW-UP (tracked in PR #87 hardening notes): once the v2 deploy is verified
+    // live, delete the `=== 1` tolerance so CI pins `body.x402Version === 2`.
     assert(body.x402Version === 2 || body.x402Version === 1, `x402Version missing or wrong: ${body.x402Version}`);
     assert(Array.isArray(body.accepts) && body.accepts.length > 0, 'accepts array missing/empty');
     if (body.x402Version === 2) {
