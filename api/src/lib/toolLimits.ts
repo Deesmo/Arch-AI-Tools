@@ -13,7 +13,10 @@
 // In-memory + per-instance (resets hourly / on restart) — the same deliberate
 // first-control tradeoff as EMAIL_RECIPIENT_DAILY_CAP (PR #76); a shared
 // Redis-backed counter can replace it later.
-export const VIDEO_HOURLY_CAP = Number(process.env.VIDEO_HOURLY_CAP || 5);
+export const VIDEO_HOURLY_CAP = Number.isFinite(Number(process.env.VIDEO_HOURLY_CAP))
+  && Number(process.env.VIDEO_HOURLY_CAP) > 0
+  ? Number(process.env.VIDEO_HOURLY_CAP)
+  : 5;
 
 const _videoCounts = new Map<string, number>();
 let _videoHour = "";
@@ -29,6 +32,18 @@ export function videoHourlyGate(identity: string, now: Date = new Date()): boole
   if (used >= VIDEO_HOURLY_CAP) return false;
   _videoCounts.set(identity, used + 1);
   return true;
+}
+
+/**
+ * Returns a slot taken by videoHourlyGate for the current window. Called when
+ * a gated request fails before any Runway spend can occur (daily limit, credit
+ * shortfall), so rejected attempts don't burn the hourly quota.
+ */
+export function releaseVideoHourlySlot(identity: string, now: Date = new Date()): void {
+  const hour = now.toISOString().slice(0, 13);
+  if (hour !== _videoHour) return;
+  const used = _videoCounts.get(identity) || 0;
+  if (used > 0) _videoCounts.set(identity, used - 1);
 }
 
 /** Test hook — clears the in-memory hourly window. */
@@ -66,7 +81,10 @@ export const EXTRACT_PDF_MAX_BYTES = Number.isFinite(Number(process.env.EXTRACT_
   && Number(process.env.EXTRACT_PDF_MAX_BYTES) > 0
   ? Number(process.env.EXTRACT_PDF_MAX_BYTES)
   : 5 * 1024 * 1024;
-export const EXTRACT_PDF_MAX_PAGES = Number(process.env.EXTRACT_PDF_MAX_PAGES || 50);
+export const EXTRACT_PDF_MAX_PAGES = Number.isFinite(Number(process.env.EXTRACT_PDF_MAX_PAGES))
+  && Number(process.env.EXTRACT_PDF_MAX_PAGES) > 0
+  ? Number(process.env.EXTRACT_PDF_MAX_PAGES)
+  : 50;
 
 /**
  * Dependency-free PDF page-count estimate.

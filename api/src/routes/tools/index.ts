@@ -11,7 +11,7 @@ import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
 import {
-  VIDEO_HOURLY_CAP, videoHourlyGate,
+  VIDEO_HOURLY_CAP, videoHourlyGate, releaseVideoHourlySlot,
   firecrawlFallbackKey,
   EXTRACT_PDF_MAX_BYTES, EXTRACT_PDF_MAX_PAGES, estimatePdfPageCount,
 } from "../../lib/toolLimits.js";
@@ -3108,28 +3108,8 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   // 1400 credits = $1.60, keeping a safe margin over the top-tier COGS (audit 2026-07-27).
   const videoCost = Math.max(700, duration * 140);
   const paid = isX402Paid(req);
-  // Hourly per-identity cap (audit 2026-07-27): Runway bills real money per
-  // generation, so bound the burst blast radius for ALL payment rails — agent
-  // id for credit callers, settled payer wallet for x402 callers. Follows the
-  // EMAIL_RECIPIENT_DAILY_CAP in-memory pattern (PR #76); env-tunable via
-  // VIDEO_HOURLY_CAP (default 5/hour).
-  const videoIdentity = req.agent?.id
-    ?? `x402:${(req as AuthedRequest & { x402Payer?: string }).x402Payer ?? "unknown"}`;
-  if (!videoHourlyGate(videoIdentity)) {
-    res.status(429).json({
-      ok: false,
-      error: "video_rate_limited",
-      message: `Video generation is limited to ${VIDEO_HOURLY_CAP} requests per hour per account — a cost-abuse guard on the underlying Runway generation spend. Try again next hour.`,
-      request_id: reqId(),
-    });
-    return;
-  }
-  if (!paid) {
-    const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
-    if (!withinLimit) return;
-    const ok = await deductCredits(req, res, "video-generate", videoCost);
-    if (!ok) return;
-  }
+  // Input/config validation runs BEFORE the hourly gate so invalid or
+  // unservable requests never burn a quota slot.
   const ratioAliases: Record<string, string> = {
     "16:9": "1280:720",
     "9:16": "720:1280",
@@ -3144,6 +3124,31 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   }
   const runwayKey = process.env.RUNWAY_API_KEY;
   if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
+  // Hourly per-identity cap (audit 2026-07-27): Runway bills real money per
+  // generation, so bound the burst blast radius for ALL payment rails — agent
+  // id for credit callers, settled payer wallet for x402 callers (falling back
+  // to the caller IP when payer metadata is unresolved, so unrelated callers
+  // never share one bucket). Follows the EMAIL_RECIPIENT_DAILY_CAP in-memory
+  // pattern (PR #76); env-tunable via VIDEO_HOURLY_CAP (default 5/hour).
+  const videoIdentity = req.agent?.id
+    ?? `x402:${(req as AuthedRequest & { x402Payer?: string }).x402Payer?.trim().toLowerCase() ?? `ip:${req.ip ?? "unknown"}`}`;
+  if (!videoHourlyGate(videoIdentity)) {
+    res.status(429).json({
+      ok: false,
+      error: "video_rate_limited",
+      message: `Video generation is limited to ${VIDEO_HOURLY_CAP} requests per hour per account — a cost-abuse guard on the underlying Runway generation spend. Try again next hour.`,
+      request_id: reqId(),
+    });
+    return;
+  }
+  if (!paid) {
+    // Release the slot when the request dies before any Runway spend — a
+    // caller at their daily limit or out of credits must not lose hourly quota.
+    const withinLimit = await enforceDailyToolLimit(req, res, "video-generate");
+    if (!withinLimit) { releaseVideoHourlySlot(videoIdentity); return; }
+    const ok = await deductCredits(req, res, "video-generate", videoCost);
+    if (!ok) { releaseVideoHourlySlot(videoIdentity); return; }
+  }
   try {
     const candidateModels = [process.env.RUNWAY_VIDEO_MODEL, "gen4.5"].filter((value, index, self): value is string => !!value && self.indexOf(value) === index);
     let startResp: import("axios").AxiosResponse<{ id?: string }> | null = null;
