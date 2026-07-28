@@ -57,7 +57,7 @@ prisma.referral.create = async (args) => {
 };
 prisma.agent.findUnique = async (args) => agents[args.where.id] ?? null;
 prisma.agent.update = async (args) => { agentUpdates.push(args); return {}; };
-prisma.$transaction = async (ops) => Promise.all(ops);
+prisma.$transaction = async (arg) => (typeof arg === "function" ? arg(prisma) : Promise.all(arg));
 
 console.log(`REFERRAL_REWARD = ${REFERRAL_REWARD}, REFERRAL_DAILY_CAP = ${REFERRAL_DAILY_CAP}`);
 assert(REFERRAL_REWARD > 0, "reward is enabled by default");

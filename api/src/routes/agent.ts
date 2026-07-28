@@ -328,8 +328,9 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res: Response): Promis
     if (!fresh) { res.status(404).json({ ok: false, error: "not_found", request_id: reqId() }); return; }
 
     // Referral surface: the account's shareable code (created at signup). If
-    // it's missing (legacy accounts / a failed non-blocking create), fall back
-    // to GET /v1/referral/code, which creates one on demand.
+    // it's missing (legacy accounts / a failed non-blocking create), both
+    // fields are null — clients can call GET /v1/referral/code, which creates
+    // one on demand.
     const siteUrl = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\/$/, "");
     const myReferral = await prisma.referral.findFirst({
       where: { referrerId: agent.id, referredId: null },
@@ -349,7 +350,7 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res: Response): Promis
       total_calls: fresh.totalCalls,
       created_at: fresh.createdAt,
       referral_code: myReferral?.code ?? null,
-      referral_url: myReferral ? `${siteUrl}/signup?ref=${myReferral.code}` : `${siteUrl}/v1/referral/code`,
+      referral_url: myReferral ? `${siteUrl}/signup?ref=${myReferral.code}` : null,
       referral_reward_credits: REFERRAL_REWARD,
       ...(fresh.emailVerified ? {} : { verify_hint: `Verify your email to activate ${fresh.pendingCredits} pending credits.` }),
       buy_credits: "https://archtools.dev/pricing",

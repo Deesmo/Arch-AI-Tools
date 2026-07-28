@@ -24,7 +24,9 @@
  *   - referral_daily_cap  at most REFERRAL_DAILY_CAP rewarded referrals per
  *                         referrer per rolling 24h. Counted from the existing
  *                         Referral table (persisted — survives restarts, no
- *                         schema migration needed).
+ *                         schema migration needed). Re-checked inside the
+ *                         reward transaction under the referrer's row lock so
+ *                         concurrent applies cannot race past the cap.
  */
 import { prisma } from "./prisma.js";
 import { normalizeEmailIdentity } from "./verification.js";
@@ -45,6 +47,17 @@ export type ApplyReferralError =
 export type ApplyReferralResult =
   | { ok: true; reward: number; referrerId: string }
   | { ok: false; status: number; error: ApplyReferralError; message: string };
+
+const DAILY_CAP_RESULT: ApplyReferralResult = {
+  ok: false,
+  status: 429,
+  error: "referral_daily_cap",
+  message: "This referral code has reached its daily reward limit. Try again tomorrow.",
+};
+
+// Internal sentinel: thrown inside the reward transaction to roll it back when
+// the in-transaction cap re-check fails under concurrency.
+class DailyCapExceeded extends Error {}
 
 export async function applyReferralCode(agentId: string, rawCode: string): Promise<ApplyReferralResult> {
   const code = rawCode.trim();
@@ -87,13 +100,14 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
     return { ok: false, status: 400, error: "already_referred", message: "You have already used a referral code." };
   }
 
-  // Per-referrer rolling-24h reward cap.
+  // Per-referrer rolling-24h reward cap. This pre-check fails fast without
+  // taking locks; the authoritative re-check runs inside the transaction below.
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const rewardedToday = await prisma.referral.count({
     where: { referrerId: referral.referrerId, status: "completed", completedAt: { gte: windowStart } },
   });
   if (rewardedToday >= REFERRAL_DAILY_CAP) {
-    return { ok: false, status: 429, error: "referral_daily_cap", message: "This referral code has reached its daily reward limit. Try again tomorrow." };
+    return DAILY_CAP_RESULT;
   }
 
   // Atomic single-use guard: the completion record's `code` is deterministic on
@@ -101,8 +115,22 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
   // concurrent applies cannot both insert — the loser hits P2002 and is treated
   // as already_referred. Crediting happens in the same transaction.
   try {
-    await prisma.$transaction([
-      prisma.referral.create({
+    await prisma.$transaction(async (tx) => {
+      // Cap re-check under the referrer's row lock: crediting the referrer
+      // first locks their Agent row, serializing concurrent applies for the
+      // same referrer, so this count always sees prior committed rewards —
+      // the lock-free pre-check alone could race past REFERRAL_DAILY_CAP.
+      await tx.agent.update({
+        where: { id: referral.referrerId },
+        data: { credits: { increment: REFERRAL_REWARD } },
+      });
+      const rewardedInWindow = await tx.referral.count({
+        where: { referrerId: referral.referrerId, status: "completed", completedAt: { gte: windowStart } },
+      });
+      if (rewardedInWindow >= REFERRAL_DAILY_CAP) {
+        throw new DailyCapExceeded();
+      }
+      await tx.referral.create({
         data: {
           referrerId: referral.referrerId,
           referredId: agentId,
@@ -111,17 +139,16 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
           rewardCredits: REFERRAL_REWARD,
           completedAt: new Date(),
         },
-      }),
-      prisma.agent.update({
-        where: { id: referral.referrerId },
-        data: { credits: { increment: REFERRAL_REWARD } },
-      }),
-      prisma.agent.update({
+      });
+      await tx.agent.update({
         where: { id: agentId },
         data: { credits: { increment: REFERRAL_REWARD } },
-      }),
-    ]);
+      });
+    });
   } catch (txErr) {
+    if (txErr instanceof DailyCapExceeded) {
+      return DAILY_CAP_RESULT;
+    }
     if (txErr && typeof txErr === "object" && (txErr as { code?: string }).code === "P2002") {
       return { ok: false, status: 400, error: "already_referred", message: "You have already used a referral code." };
     }
