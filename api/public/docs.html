@@ -405,7 +405,7 @@ curl -X POST https://archtools.dev/v1/tools/ai-generate \
     <!-- CREDITS -->
     <!-- ═══════════════════════════════════════════════ -->
     <h2 id="credits">Credits &amp; Rate Limits</h2>
-    <p>Every new account gets <strong>100 free credits</strong> — 10 usable instantly on signup, 90 more on email verification. Tools cost 1–30 credits per call depending on complexity.</p>
+    <p>Every new account gets <strong>100 free credits</strong> — 25 usable instantly on signup, 75 more on email verification. Tools cost 1–30 credits per call depending on complexity.</p>
     <table class="params-table" style="margin-bottom:16px">
       <tr><th>Tier</th><th>Price</th><th>Credits</th><th>Rate Limit</th><th>Daily Limit</th></tr>
       <tr><td>Free</td><td>$0</td><td>100 on signup</td><td>60 req/min</td><td>500 req/day</td></tr>
@@ -1218,7 +1218,7 @@ print(res.json())</code></pre>
       <div class="tool-doc-header">
         <span class="tool-doc-name">POST /v1/tools/video-generate</span>
         <span class="badge badge-post">POST</span>
-        <span class="badge badge-price">$0.100</span>
+        <span class="badge badge-price">$1.100</span>
       </div>
       <div class="tool-doc-desc">AI video generation from text prompts via Runway Gen-3. 4 or 10 second clips.</div>
       <table class="params-table"><tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
@@ -2081,7 +2081,7 @@ var prices = {
   "token-lookup":"0.001","ai-oracle":"0.025","session-create":"0.005","session-message":"0.020",
   "text-to-speech":"0.100","transcribe-audio":"0.025","email-send":"0.003","design-create":"0.030",
   "domain-check":"0.002","news-search":"0.003","research-report":"0.040","fact-check":"0.010",
-  "video-generate":"0.750","image-remove-bg":"0.350","email-find":"0.005","semantic-search":"0.008"
+  "video-generate":"1.100","image-remove-bg":"0.350","email-find":"0.005","semantic-search":"0.008"
 };
 
 var sorted = Object.entries(prices).sort(function(a,b) { return parseFloat(a[1]) - parseFloat(b[1]); });

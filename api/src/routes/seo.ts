@@ -26,7 +26,7 @@ const NAV = `<nav style="background:#0f172a;padding:12px 24px;display:flex;align
 
 const CTA = `<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;margin-top:32px;text-align:center">
   <h3 style="color:#fff;margin:0 0 8px">Want this via API?</h3>
-  <p style="color:#94a3b8;margin:0 0 16px;font-size:14px">Access all 63 tools programmatically. Get 100 free credits — 10 instant, 90 on email verify; no credit card required.</p>
+  <p style="color:#94a3b8;margin:0 0 16px;font-size:14px">Access all 63 tools programmatically. Get 100 free credits — 25 instant, 75 on email verify; no credit card required.</p>
   <a href="https://archtools.dev/signup" style="background:#6366f1;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Get Free API Key →</a>
 </div>`;
 

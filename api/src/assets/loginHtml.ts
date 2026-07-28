@@ -159,7 +159,7 @@ export const LOGIN_HTML = `<!DOCTYPE html>
 
     <div class="divider"><span>Don't have an account?</span></div>
     <div class="alt-links">
-      <a href="/signup">Create free account</a> — includes 100 free credits (10 instant, 90 on email verify)
+      <a href="/signup">Create free account</a> — includes 100 free credits (25 instant, 75 on email verify)
     </div>
   </div>
 </div>

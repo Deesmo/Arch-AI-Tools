@@ -266,7 +266,7 @@ router.post("/seed-tools", requireAdmin, async (_req: Request, res: Response): P
     { name: "session-message",    description: "Send a message in an existing AI session",                        category: "ai",      credits: 10 },
     { name: "design-create",      description: "Generate designs and images via DALL-E 3",                        category: "media",   credits: 20 },
     { name: "image-remove-bg",    description: "Remove background from any image",                                category: "media",   credits: 350 },
-    { name: "video-generate",     description: "Generate short video clips from text prompts",                    category: "media",   credits: 500 },
+    { name: "video-generate",     description: "Generate short video clips from text prompts",                    category: "media",   credits: 700 },
     { name: "email-find",         description: "Find email addresses for a person at a company domain",           category: "utility", credits: 5  },
     { name: "email-send",         description: "Send transactional emails via Resend",                            category: "utility", credits: 3  },
     { name: "domain-check",       description: "Check domain availability via RDAP",                              category: "network", credits: 2  },
