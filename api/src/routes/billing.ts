@@ -8,7 +8,7 @@ import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
 import { safeErr } from "../utils/credits.js";
 import { tierFromSubscriptionPlanId } from "../lib/tiers.js";
-import { clawbackAmount } from "../lib/clawback.js";
+import { clawbackDelta, proratedClawbackTarget } from "../lib/clawback.js";
 
 const router = Router();
 
@@ -107,6 +107,30 @@ const SUBSCRIPTION_PLANS = [
 // key) — an attacker cannot inject an arbitrary credit number.
 const ALLOWED_ONETIME_CREDITS = new Set(CREDIT_PACKS.map((p) => p.credits));
 const ALLOWED_SUB_CREDITS = new Set(SUBSCRIPTION_PLANS.map((p) => p.credits_per_month));
+
+function stripeObjectId(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
+export async function paymentIntentIdFromCheckoutSession(session: {
+  payment_intent?: unknown;
+  invoice?: unknown;
+}, retrieveInvoice: (invoiceId: string) => Promise<{ payment_intent?: unknown }> = async (invoiceId) => {
+  if (!stripe) return {};
+  return stripe.invoices.retrieve(invoiceId);
+}): Promise<string | null> {
+  const directPaymentIntentId = stripeObjectId(session.payment_intent);
+  if (directPaymentIntentId) return directPaymentIntentId;
+  const invoiceId = stripeObjectId(session.invoice);
+  if (!invoiceId) return null;
+  const invoice = await retrieveInvoice(invoiceId);
+  return stripeObjectId(invoice.payment_intent);
+}
 
 // GET /v1/billing/plans — returns all plans (one-time + subscription)
 router.get("/plans", (_req: Request, res: Response): void => {
@@ -288,15 +312,14 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
     const session = event.data.object;
     const agentId = session.metadata?.agent_id;
     const stripeId = session.id;
-    // Store the PaymentIntent id so a later refund/dispute (which references the
-    // charge's payment_intent, not this session id) can find this purchase.
-    const paymentIntentId = typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id ?? null;
-
     if (!agentId) { res.json({ received: true }); return; }
 
     try {
+      // Store the PaymentIntent id so a later refund/dispute (which references
+      // the charge's payment_intent, not this session id) can find this purchase.
+      // Subscription Checkout sessions carry it on the first invoice, not on the
+      // session itself.
+      const paymentIntentId = await paymentIntentIdFromCheckoutSession(session);
       const existing = await prisma.purchase.findUnique({ where: { stripeId } });
       if (existing) { res.json({ received: true }); return; }
 
@@ -456,9 +479,9 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
   // A customer must not be able to buy a pack, spend the credits, then refund or
   // charge back and keep the value. Both events carry a Charge whose
   // payment_intent links to the Purchase we stored at grant time. Amounts are
-  // server-derived from that Purchase (never the event's client-influenced
-  // fields), floored at 0, and idempotent on the reversal event id via the
-  // Clawback guard table so a redelivered event cannot double-decrement.
+  // server-derived from that Purchase and Stripe-signed refund totals, floored
+  // at 0, and idempotent on the reversal event id via the Clawback guard table
+  // so a redelivered event cannot double-decrement.
   if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
     const isDispute = event.type === "charge.dispute.created";
     // charge.refunded → object is a Charge (payment_intent on it directly).
@@ -467,8 +490,12 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       id?: string;
       payment_intent?: string | { id?: string } | null;
       charge?: string | { id?: string; payment_intent?: string | { id?: string } | null } | null;
+      amount_refunded?: number;
     };
-    const eventObjectId = obj.id ?? event.id; // refund/dispute id — the idempotency key
+    // `charge.refunded` carries the same Charge id for each partial refund, so
+    // key refund idempotency on Stripe's Event id. Disputes carry a unique
+    // dispute object id, but event.id is still a safe fallback.
+    const eventObjectId = isDispute ? (obj.id ?? event.id) : event.id;
     // Resolve the payment_intent for either shape.
     let paymentIntentId: string | null = null;
     if (typeof obj.payment_intent === "string") paymentIntentId = obj.payment_intent;
@@ -505,11 +532,24 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
           ON CONFLICT ("event_id") DO NOTHING`;
         if (inserted === 0) return { clawed: 0, already: true };
 
-        // Server-derived amount: what we granted for THIS purchase, floored to
-        // the agent's current balance so the balance can never go negative.
+        // Server-derived amount: disputes target the whole purchase. Refunds
+        // use Stripe's cumulative amount_refunded, then subtract prior credits
+        // already clawed for this purchase so partial refunds only remove the
+        // new delta.
         const agentRow = await tx.agent.findUnique({ where: { id: purchase.agentId }, select: { credits: true } });
         const currentBalance = agentRow?.credits ?? 0;
-        const toClaw = clawbackAmount(purchase.credits, currentBalance);
+        const priorClawbacks = await tx.clawback.aggregate({
+          where: {
+            purchaseStripeId: purchase.stripeId,
+            kind: { in: ["refund", "dispute"] },
+          },
+          _sum: { credits: true },
+        });
+        const alreadyClawed = priorClawbacks._sum.credits ?? 0;
+        const targetCredits = isDispute
+          ? purchase.credits
+          : proratedClawbackTarget(purchase.credits, purchase.amountCents, obj.amount_refunded ?? purchase.amountCents);
+        const toClaw = clawbackDelta(targetCredits, alreadyClawed, currentBalance);
 
         if (toClaw > 0) {
           await tx.agent.update({ where: { id: purchase.agentId }, data: { credits: { decrement: toClaw } } });
