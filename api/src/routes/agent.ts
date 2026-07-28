@@ -7,7 +7,7 @@ import { logger } from "../lib/logger.js";
 import { config } from "../config.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits, recordSignupIp } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity } from "../lib/verification.js";
 
 const router = Router();
 
@@ -397,7 +397,7 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
       const codes = await tx.oAuthAuthCode.deleteMany({ where: { agentId: agent.id } });
       // Erase the email suppression record so no plaintext email remains (GDPR erasure
       // wins over the bounded free-signup-again risk).
-      const ident = email ? await tx.signupIdentity.deleteMany({ where: { normalizedEmail: email.toLowerCase().trim() } }) : { count: 0 };
+      const ident = email ? await tx.signupIdentity.deleteMany({ where: { normalizedEmail: normalizeEmailIdentity(email) } }) : { count: 0 };
       // Anonymize the Agent row in place — keeps Purchase/X402Payment FK integrity for
       // financial retention while removing every PII field.
       await tx.agent.update({

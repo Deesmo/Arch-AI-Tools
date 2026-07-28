@@ -2663,7 +2663,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
       const results = ((r.data as { results?: Array<{ title: string; url: string; description?: string; age?: string; source?: { name?: string } }> }).results ?? []).slice(0, limit).map(a => ({
         title: a.title, url: a.url, description: a.description ?? "", published: a.age ?? null, source: a.source?.name ?? null
       }));
-      return void res.json({ ok: true, query, results, source: "brave", credits_used: 3, ...(byokBraveKeyNews ? { byok: true, byok_provider: "brave" } : {}), request_id: reqId() });
+      return void res.json({ ok: true, query, results, source: "brave", credits_used: 12, ...(byokBraveKeyNews ? { byok: true, byok_provider: "brave" } : {}), request_id: reqId() });
     } catch (_) { /* fall through to Tavily */ }
   }
 
@@ -2676,7 +2676,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
       const results = ((r.data as { results?: Array<{ title: string; url: string; content?: string; published_date?: string; source?: string }> }).results ?? []).slice(0, limit).map(a => ({
         title: a.title, url: a.url, description: a.content ?? "", published: a.published_date ?? null, source: a.source ?? null
       }));
-      return void res.json({ ok: true, query, results, source: "tavily", credits_used: 3, ...(byokTavilyKeyNews ? { byok: true, byok_provider: "tavily" } : {}), request_id: reqId() });
+      return void res.json({ ok: true, query, results, source: "tavily", credits_used: 12, ...(byokTavilyKeyNews ? { byok: true, byok_provider: "tavily" } : {}), request_id: reqId() });
     } catch (_) { /* fall through to Serper */ }
   }
 
@@ -2688,7 +2688,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
       const results = ((r.data as { news?: Array<{ title: string; link: string; snippet?: string; date?: string; source?: string }> }).news ?? []).slice(0, limit).map(a => ({
         title: a.title, url: a.link, description: a.snippet ?? "", published: a.date ?? null, source: a.source ?? null
       }));
-      return void res.json({ ok: true, query, results, source: "serper", credits_used: 3, request_id: reqId() });
+      return void res.json({ ok: true, query, results, source: "serper", credits_used: 12, request_id: reqId() });
     } catch (e) {
       return void res.status(502).json({ ok: false, error: "search_failed", message: safeErr(e), request_id: reqId() });
     }
@@ -2827,7 +2827,7 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
   }
 
   if (!anthropicKey) {
-    return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 10, ...(fcHasByok ? { byok: true, byok_provider: fcSearchProvider || "unknown" } : {}), request_id: reqId() });
+    return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 14, ...(fcHasByok ? { byok: true, byok_provider: fcSearchProvider || "unknown" } : {}), request_id: reqId() });
   }
 
   // Step 2: Analyze with Claude
@@ -2867,7 +2867,7 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
       contradicting_evidence: analysis.contradicting_evidence ?? [],
       caveats: analysis.caveats ?? null,
       sources: evidence,
-      credits_used: 10, ...(fcHasByok ? { byok: true, byok_provider: byokAnthropicKeyFC ? "anthropic" : fcSearchProvider } : {}), request_id: reqId()
+      credits_used: 14, ...(fcHasByok ? { byok: true, byok_provider: byokAnthropicKeyFC ? "anthropic" : fcSearchProvider } : {}), request_id: reqId()
     });
   } catch (e) {
     return void res.status(502).json({ ok: false, error: "analysis_failed", message: safeErr(e), request_id: reqId() });
@@ -3204,7 +3204,7 @@ router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req
     const data = await resp.json() as { data?: { result_b64?: string; foreground_top?: number; foreground_left?: number; foreground_width?: number; foreground_height?: number } };
     const imageBase64 = data.data?.result_b64 ?? "";
     if (!imageBase64) { res.status(503).json({ ok: false, error: "removebg_error", message: "No result image returned", request_id: reqId() }); return; }
-    res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 10, request_id: reqId() });
+    res.json({ ok: true, image_base64: imageBase64, format: "png", size, credits_used: 350, request_id: reqId() });
   } catch (e) {
     console.error("[image-remove-bg]", e);
     const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
@@ -3249,7 +3249,7 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
         res.json({ ok: true, email: null, results: [], count: 0, match_type: "person", message: "No email address found for the given name and domain.", credits_used: 0, request_id: reqId() });
         return;
       }
-      res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, match_type: "person", credits_used: 5, request_id: reqId() });
+      res.json({ ok: true, email: result.email, confidence: result.confidence ?? 0, sources: result.sources?.length ?? 0, first_name: result.first_name ?? first_name ?? null, last_name: result.last_name ?? last_name ?? null, position: result.position ?? null, company: result.company ?? null, match_type: "person", credits_used: 110, request_id: reqId() });
       return;
     }
     const data = await resp.json() as { data?: { emails?: Array<{ value?: string; confidence?: number; first_name?: string; last_name?: string; position?: string; department?: string }> ; organization?: string } };
@@ -3261,7 +3261,7 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
       res.json({ ok: true, domain, company: data.data?.organization ?? null, results: [], count: 0, match_type: "domain", message: "No email addresses found for this domain.", credits_used: 0, request_id: reqId() });
       return;
     }
-    res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 5, request_id: reqId() });
+    res.json({ ok: true, domain, company: data.data?.organization ?? null, results: emails.slice(0, 10).map((r) => ({ email: r.value ?? null, confidence: r.confidence ?? 0, first_name: r.first_name ?? null, last_name: r.last_name ?? null, position: r.position ?? null, department: r.department ?? null })), count: emails.length, match_type: "domain", credits_used: 110, request_id: reqId() });
   } catch (e) {
     console.error("[email-find]", e);
     const isTimeout = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");

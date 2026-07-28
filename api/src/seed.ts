@@ -12,7 +12,7 @@ const TOOLS = [
   { name: "web-scrape", description: "Scrape any public URL with optional CSS selector", category: "web", credits: 5 },
   { name: "extract-page", description: "Clean text, links, and metadata from any webpage", category: "web", credits: 5 },
   { name: "search-web", description: "Web search with structured results (DuckDuckGo)", category: "web", credits: 5 },
-  { name: "web-search", description: "Real-time web search with AI-synthesized answer", category: "ai", credits: 10 },
+  { name: "web-search", description: "Real-time web search with AI-synthesized answer", category: "ai", credits: 14 },
   { name: "rss-parse", description: "Parse RSS/Atom feeds into structured JSON", category: "web", credits: 4 },
   { name: "ip-lookup", description: "Geo, ISP, VPN/proxy detection", category: "network", credits: 2 },
   { name: "whois-lookup", description: "Domain registration, expiry, nameservers via RDAP", category: "network", credits: 3 },
@@ -30,7 +30,7 @@ const TOOLS = [
   { name: "regex-generate", description: "Generate regex from plain English with explanations", category: "ai", credits: 8 },
   { name: "pii-detect", description: "Detect and optionally redact PII", category: "security", credits: 10 },
   { name: "ai-generate", description: "AI text generation via Claude (claude-sonnet-4-6)", category: "ai", credits: 20 },
-  { name: "ocr-extract", description: "Extract text from images (URL or base64)", category: "ai", credits: 10 },
+  { name: "ocr-extract", description: "Extract text from images (URL or base64)", category: "ai", credits: 12 },
   { name: "browser-task", description: "Headless browser automation (click/type/extract) via Playwright", category: "web", credits: 10 },
   { name: "extract-pdf", description: "Extract text from a PDF (URL or base64)", category: "ai", credits: 6 },
   { name: "screenshot-capture", description: "Capture page metadata and screenshot URL for any public URL", category: "web", credits: 10 },
@@ -54,9 +54,9 @@ const TOOLS = [
   { name: "transcribe-audio", description: "Transcribe audio files to text via OpenAI Whisper (URL input, 100+ languages)", category: "media", credits: 25 },
   // Communication tools
   { name: "email-send", description: "Send transactional emails via Resend — plain text or HTML", category: "communication", credits: 3 },
-  { name: "email-find", description: "Find email address for a person at a company via Hunter.io", category: "communication", credits: 5 },
+  { name: "email-find", description: "Find email address for a person at a company via Hunter.io", category: "communication", credits: 110 },
   // Image & design tools
-  { name: "design-create", description: "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)", category: "media", credits: 30 },
+  { name: "design-create", description: "Generate images from text prompts via DALL-E 3 (1024x1024, 1792x1024, 1024x1792)", category: "media", credits: 50 },
   { name: "image-remove-bg", description: "Remove background from any image via RemoveBG", category: "media", credits: 350 },
   // Domain & network tools
   { name: "domain-check", description: "Check if a domain is available or registered via RDAP (no key needed)", category: "network", credits: 2 },
@@ -66,11 +66,11 @@ const TOOLS = [
   { name: "session-message", description: "Send a message in an existing conversation session", category: "ai", credits: 20 },
   { name: "semantic-search", description: "Neural/semantic web search via Exa AI", category: "ai", credits: 8 },
   // Research & analysis tools
-  { name: "news-search", description: "Search real-time news articles by keyword via Brave/Tavily/Serper", category: "web", credits: 3 },
+  { name: "news-search", description: "Search real-time news articles by keyword via Brave/Tavily/Serper", category: "web", credits: 12 },
   { name: "research-report", description: "Generate a structured research report on any topic with citations", category: "ai", credits: 40 },
-  { name: "fact-check", description: "Verify claims against real-time web sources with verdict and confidence", category: "ai", credits: 10 },
+  { name: "fact-check", description: "Verify claims against real-time web sources with verdict and confidence", category: "ai", credits: 14 },
   // Video generation
-  { name: "video-generate", description: "AI video generation from text prompts via Runway Gen-3", category: "media", credits: 500 },
+  { name: "video-generate", description: "AI video generation from text prompts via Runway Gen-3", category: "media", credits: 700 },
 ];
 
 async function main(): Promise<void> {
