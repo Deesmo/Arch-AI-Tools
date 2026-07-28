@@ -93,7 +93,14 @@ test("asV1Payload rejects null / non-object inner payload", () => {
 
 test("asV1Payload fails closed on scheme/network desync with matched requirements", () => {
   assert.strictEqual(asV1Payload({ ...V1_PAYLOAD, network: "polygon" }, REQS), null);
+  assert.strictEqual(asV1Payload({ ...V1_PAYLOAD, network: "eip155:137" }, REQS), null);
   assert.strictEqual(asV1Payload(V1_PAYLOAD, { ...REQS, scheme: "upto" }), null);
+});
+
+test("asV1Payload accepts a CAIP-2 network echoed from the v2 402 (same chain as the v1 entry)", () => {
+  const out = asV1Payload({ ...V1_PAYLOAD, network: "eip155:8453" }, REQS);
+  assert.ok(out);
+  assert.strictEqual(out.network, "base"); // requirements' network — consistent with toV1Requirements
 });
 
 test("asV1Payload rejects v2 payloads", () => {

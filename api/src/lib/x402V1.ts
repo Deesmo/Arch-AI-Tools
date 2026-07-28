@@ -31,19 +31,30 @@ export function toV1Requirements(r: any): object {
   };
 }
 
+/** Normalize a v1 network name or CAIP-2 id for chain equality (EVM-only path). */
+function networkKey(n: string): string {
+  return n.includes(":") ? n : (V1_TO_CAIP2[n] ?? n);
+}
+
 /**
  * Validate + sanitize a V1 client payment payload for facilitator pass-through.
  * Returns a clean `{x402Version, scheme, network, payload}` (the V1 spec shape and
  * nothing client-controlled beyond it — no extensions injection), or null when the
  * payload is not a well-formed V1 payment or its signed rail doesn't match the
- * requirements entry we matched (fail closed on scheme/network desync).
+ * requirements entry we matched (fail closed on scheme/network desync). The network
+ * check normalizes v1 names and CAIP-2 ids to the same chain — our 402s advertise
+ * CAIP-2 (`eip155:8453`) while the matched internal entry keeps the v1 name (`base`),
+ * and a v1 payer may echo either. The sanitized payload carries the requirements'
+ * network so it stays consistent with toV1Requirements for the facilitator.
  */
 export function asV1Payload(p: any, reqs: any): object | null {
   if (Number(p?.x402Version) !== 1) return null;
   if (typeof p.scheme !== "string" || typeof p.network !== "string") return null;
   if (p.payload === null || typeof p.payload !== "object") return null;
-  if (p.scheme !== (reqs as any)?.scheme || p.network !== (reqs as any)?.network) return null;
-  return { x402Version: 1, scheme: p.scheme, network: p.network, payload: p.payload };
+  if (p.scheme !== (reqs as any)?.scheme) return null;
+  const reqNetwork = (reqs as any)?.network;
+  if (typeof reqNetwork !== "string" || networkKey(p.network) !== networkKey(reqNetwork)) return null;
+  return { x402Version: 1, scheme: p.scheme, network: reqNetwork, payload: p.payload };
 }
 
 /** True when the client payload CLAIMS x402 v1 (numeric or string version). */
