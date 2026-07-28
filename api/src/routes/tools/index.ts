@@ -2700,7 +2700,10 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
 router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "research-report", byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"])); if (!ok) return; }
+  // Report exactly what was deducted (0 for x402-paid, BYOK-discounted otherwise) —
+  // the flat 15 this used to advertise predates the 2026-07-27 pricing audit (40 base).
+  const researchReportCost = paid ? 0 : byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"]);
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", researchReportCost); if (!ok) return; }
   const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
@@ -2754,7 +2757,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
 
   // Step 2: Synthesize with Claude
   if (!anthropicKey) {
-    return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 15, ...(rrHasByok ? { byok: true, byok_provider: rrSearchProvider || "unknown" } : {}), request_id: reqId() });
+    return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: researchReportCost, ...(rrHasByok ? { byok: true, byok_provider: rrSearchProvider || "unknown" } : {}), request_id: reqId() });
   }
 
   const sourcesText = searchResults.map((s, i) => `[${i+1}] ${s.title}\n${s.url}\n${s.description}`).join("\n\n");
@@ -2771,7 +2774,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
       timeout: 30000
     });
     const report = ((claude.data as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "").trim();
-    return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: 15, ...(rrHasByok ? { byok: true, byok_provider: byokAnthropicKeyRR ? "anthropic" : rrSearchProvider } : {}), request_id: reqId() });
+    return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: researchReportCost, ...(rrHasByok ? { byok: true, byok_provider: byokAnthropicKeyRR ? "anthropic" : rrSearchProvider } : {}), request_id: reqId() });
   } catch (e) {
     return void res.status(502).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
   }

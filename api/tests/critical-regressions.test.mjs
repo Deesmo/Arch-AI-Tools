@@ -80,5 +80,18 @@ test("successful result bodies report the same fixed price the route deducts", (
   assert.deepStrictEqual(responseCredits("image-remove-bg"), new Set([350]));
 });
 
+test("research-report reports the deducted cost variable, not the stale flat 15", () => {
+  const start = toolsSrc.indexOf('router.post("/research-report"');
+  assert.ok(start >= 0, "missing research-report route");
+  const end = toolsSrc.indexOf("router.post(", start + 1);
+  const route = toolsSrc.slice(start, end > start ? end : undefined);
+  assert.ok(!/credits_used:\s*15\b/.test(route), "stale flat credits_used: 15 must be gone");
+  assert.match(route, /deductCredits\(req, res, "research-report", researchReportCost\)/);
+  assert.match(route, /researchReportCost = paid \? 0 : byokAdjustedCost\(req, 40,/);
+  const payloads = [...route.matchAll(/credits_used:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
+  assert.ok(payloads.length >= 2, "research-report has both success payloads");
+  assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
