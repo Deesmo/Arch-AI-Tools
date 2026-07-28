@@ -60,6 +60,7 @@ import analyticsRouter from "./routes/analytics.js";
 import statsRouter from "./routes/stats.js";
 
 import { reqId } from "./utils/credits.js";
+import { isSafeOAuthNext } from "./utils/oauthNext.js";
 
 const app = express();
 const corsOrigins = config.corsOrigin
@@ -375,7 +376,21 @@ app.use("/unsubscribe", unsubscribeRouter);
 app.use("/api/chat", chatRouter);
 
 // ─── Frontend pages ───────────────────────────────────────────────────────────
-app.get("/signup", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML));
+app.get("/signup", (req: Request, res: Response) => {
+  // Open-redirect guard: ?next= is only honored for the same-origin OAuth
+  // authorize path (consent-page "create account" round-trip). Anything else
+  // is stripped server-side before the page's client JS can read it; the
+  // signup page JS re-validates with the same rule (defense in depth).
+  if (req.query.next !== undefined && !isSafeOAuthNext(req.query.next)) {
+    const cleaned = new URLSearchParams();
+    for (const [k, v] of Object.entries(req.query)) {
+      if (k !== "next" && typeof v === "string") cleaned.set(k, v);
+    }
+    const qs = cleaned.toString();
+    return res.redirect(302, qs ? `/signup?${qs}` : "/signup");
+  }
+  return res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(SIGNUP_HTML);
+});
 app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 app.get("/login", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(LOGIN_HTML));
 app.get("/dashboard", (req: Request, res: Response) => {

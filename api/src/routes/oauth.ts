@@ -7,6 +7,7 @@ import { isOAuthRefreshTokenExpired, oauthAccessExpiresAt, OAUTH_ACCESS_TOKEN_TT
 const OAUTH_ACCESS_TOKEN_TTL_SECONDS = Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000);
 import crypto, { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
+import { buildOAuthAuthorizeNext } from "../utils/oauthNext.js";
 
 const router = Router();
 
@@ -23,10 +24,16 @@ export function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
 }
 
-const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, codeChallenge: string, codeChallengeMethod: string, error?: string) => {
+// Exported for tests (tests/oauth-signup-cta.test.mjs renders it directly).
+export const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, codeChallenge: string, codeChallengeMethod: string, error?: string) => {
 const safeClient = esc(clientName), safeScope = esc(scope), safeClientId = esc(clientId), safeRedirect = esc(redirectUri), safeState = esc(state);
 const safeCodeChallenge = esc(codeChallenge), safeCodeChallengeMethod = esc(codeChallengeMethod);
 const safeError = error != null ? esc(error) : "";
+// New-user path: round-trip the FULL authorize request through /signup?next=…
+// so consent resumes after signup. No signup logic lives in this route —
+// the link only redirects to the existing signup page. encodeURIComponent
+// output contains no HTML-significant chars; esc() is defense in depth.
+const signupCtaHref = esc(`/signup?next=${encodeURIComponent(buildOAuthAuthorizeNext({ clientId, redirectUri, scope, state, codeChallenge, codeChallengeMethod }))}`);
 return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,6 +66,10 @@ return `<!DOCTYPE html>
     .error{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:12px;color:#f87171;font-size:13px;margin-bottom:16px;text-align:center;}
     .footer-note{text-align:center;font-size:12px;color:#6B6A8A;margin-top:20px;}
     .footer-note a{color:#8844FF;text-decoration:none;}
+    .signup-cta{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;font-size:13px;color:#8B8AA8;}
+    .signup-cta a{color:#8844FF;text-decoration:none;font-weight:600;}
+    .signup-cta a:hover{text-decoration:underline;}
+    .signup-cta-note{font-size:11px;color:#6B6A8A;margin-top:6px;}
   </style>
 </head>
 <body>
@@ -94,6 +105,10 @@ return `<!DOCTYPE html>
       <input type="hidden" name="state" value="${safeState}">
       <button type="submit" class="btn-deny">Cancel</button>
     </form>
+    <div class="signup-cta">
+      New here? <a href="${signupCtaHref}">Create a free account — 25 instant credits</a>
+      <p class="signup-cta-note">After signup you&#39;ll return here to finish connecting ${safeClient}.</p>
+    </div>
     <p class="footer-note">By authorizing, you agree to Arch Tools <a href="/terms.html">Terms of Service</a>.</p>
   </div>
 </body>
