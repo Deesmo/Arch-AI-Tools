@@ -15,7 +15,7 @@
     "demo-topoff": "node dist/cron/demoTopoff.js",
     "db:cleanup": "node dist/cron/dbCleanup.js",
     "npm:audit": "npm audit --json > /tmp/audit.json && echo \"Audit complete\"",
-    "test": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm tests/wallet-provisioning.test.js && node --loader ts-node/esm tests/ssrf.test.js && node tests/integration.test.js && node tests/pages.test.js && node tests/x402-v1-passthrough.test.mjs && node tests/model-cost.test.mjs && node tests/prompt-moderation.test.mjs && node tests/critical-regressions.test.mjs",
+    "test": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm tests/wallet-provisioning.test.js && node --loader ts-node/esm tests/ssrf.test.js && node tests/integration.test.js && node tests/pages.test.js && node tests/x402-v1-passthrough.test.mjs && node tests/model-cost.test.mjs && node tests/prompt-moderation.test.mjs && node tests/critical-regressions.test.mjs && node tests/unsubscribe.test.mjs && node tests/reactivation-render.test.mjs",
     "test:integration": "node tests/integration.test.js",
     "test:oauth-refresh-race": "node tests/oauth-refresh-race.test.js",
     "test:pages": "node tests/pages.test.js",

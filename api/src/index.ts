@@ -46,6 +46,7 @@ import referralRouter from "./routes/referral.js";
 import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 import mcpRouter from "./routes/mcp.js";
+import unsubscribeRouter from "./routes/unsubscribe.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus, warmX402Sdk } from "./middleware/x402-sdk.js";
@@ -366,6 +367,9 @@ app.use("/v1/workflows", workflowsRouter);
 // Legal
 app.use("/legal", legalRouter);
 app.use("/auth", authRouter);
+
+// Marketing unsubscribe (CAN-SPAM one-click, signed token, no auth)
+app.use("/unsubscribe", unsubscribeRouter);
 
 // Chat widget (public, rate-limited server-side proxy)
 app.use("/api/chat", chatRouter);

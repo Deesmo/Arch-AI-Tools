@@ -19,7 +19,11 @@ const SITE = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\
 export const LOW_CREDIT_THRESHOLD = Number(process.env.LOW_CREDIT_THRESHOLD || 20);
 
 // ─── Core send helper ───
-async function sendEmail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
+// `emailHeaders` = optional custom SMTP headers (e.g. List-Unsubscribe /
+// List-Unsubscribe-Post for marketing sends). Supported by both providers:
+//   Resend:   `headers` object — https://resend.com/docs/api-reference/emails/send-email
+//   Postmark: `Headers` [{Name,Value}] — https://postmarkapp.com/developer/api/email-api
+async function sendEmail(to: string, subject: string, html: string, text?: string, emailHeaders?: Record<string, string>): Promise<boolean> {
   if (!to || !to.includes("@")) {
     logger.debug({ to }, "Email skipped — invalid address");
     return false;
@@ -31,7 +35,7 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: FROM, to, subject, html, ...(text ? { text } : {}) }),
+        body: JSON.stringify({ from: FROM, to, subject, html, ...(text ? { text } : {}), ...(emailHeaders ? { headers: emailHeaders } : {}) }),
       });
       if (!r.ok) {
         const detail = await r.text().catch(() => "");
@@ -52,7 +56,7 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
       const r = await fetch("https://api.postmarkapp.com/email", {
         method: "POST",
         headers: { "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN, "Content-Type": "application/json" },
-        body: JSON.stringify({ From: FROM, To: to, Subject: subject, HtmlBody: html, ...(text ? { TextBody: text } : {}), MessageStream: "outbound" }),
+        body: JSON.stringify({ From: FROM, To: to, Subject: subject, HtmlBody: html, ...(text ? { TextBody: text } : {}), ...(emailHeaders ? { Headers: Object.entries(emailHeaders).map(([Name, Value]) => ({ Name, Value })) } : {}), MessageStream: "outbound" }),
       });
       if (!r.ok) {
         const detail = await r.text().catch(() => "");
@@ -70,6 +74,20 @@ async function sendEmail(to: string, subject: string, html: string, text?: strin
   // Dev fallback
   logger.warn({ to, subject }, "Email provider not configured — email skipped (set RESEND_API_KEY)");
   return false;
+}
+
+// ─── Marketing send (campaigns) ───
+// Same providers as every other email, but callers pass fully-rendered content
+// plus List-Unsubscribe headers. Callers MUST have already filtered out
+// emailOptOut recipients — this function does not query the DB.
+export async function sendMarketingEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  emailHeaders: Record<string, string>
+): Promise<boolean> {
+  return sendEmail(to, subject, html, text, emailHeaders);
 }
 
 // ─── Shared HTML layout ───
