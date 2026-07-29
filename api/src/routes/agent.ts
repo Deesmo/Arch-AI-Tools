@@ -539,6 +539,10 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
       const reqs = await tx.apiRequest.deleteMany({ where: { agentId: agent.id } });
       const toks = await tx.oAuthToken.deleteMany({ where: { agentId: agent.id } });
       const codes = await tx.oAuthAuthCode.deleteMany({ where: { agentId: agent.id } });
+      const referralCodes = await tx.referral.updateMany({
+        where: { referrerId: agent.id, referredId: null, status: "pending" },
+        data: { status: "expired" },
+      });
       // Erase the email suppression record so no plaintext email remains (GDPR erasure
       // wins over the bounded free-signup-again risk).
       const ident = email ? await tx.signupIdentity.deleteMany({ where: { normalizedEmail: normalizeEmailIdentity(email) } }) : { count: 0 };
@@ -557,7 +561,14 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
           emailVerified: false, isPublic: false,
         },
       });
-      const counts = { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count, stripeSubscriptions: canceledSubscriptions };
+      const counts = {
+        apiRequests: reqs.count,
+        oauthTokens: toks.count,
+        oauthCodes: codes.count,
+        signupIdentity: ident.count,
+        referralCodesExpired: referralCodes.count,
+        stripeSubscriptions: canceledSubscriptions,
+      };
 
       // Durable deletion audit trail (GDPR Art.5(2) accountability). Written
       // INSIDE the transaction so a deletion can never commit without its audit
