@@ -62,6 +62,15 @@ test("account deletion cancels Stripe subscriptions before local anonymization",
   assert.match(agentSrc, /BILLABLE_SUBSCRIPTION_STATUSES[\s\S]*active[\s\S]*trialing[\s\S]*past_due[\s\S]*unpaid/);
 });
 
+test("account deletion expires pending shareable referral codes", () => {
+  assert.match(
+    agentSrc,
+    /tx\.referral\.updateMany\(\{\s*where:\s*\{\s*referrerId:\s*agent\.id,\s*referredId:\s*null,\s*status:\s*"pending"\s*\},\s*data:\s*\{\s*status:\s*"expired"\s*\}/,
+    "DELETE /v1/agent must expire reusable shareable referral codes before anonymizing the account",
+  );
+  assert.ok(agentSrc.includes("referralCodesExpired: referralCodes.count"), "deletion audit summary must include expired referral-code count");
+});
+
 test("seed catalog advertises the audited default/base prices actually charged", () => {
   assert.strictEqual(seedCredits("web-search"), 14);
   assert.strictEqual(seedCredits("ocr-extract"), 12);

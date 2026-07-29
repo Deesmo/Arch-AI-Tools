@@ -55,6 +55,8 @@ const DAILY_CAP_RESULT: ApplyReferralResult = {
   message: "This referral code has reached its daily reward limit. Try again tomorrow.",
 };
 
+const DELETED_AGENT_EMAIL_SUFFIX = "@deleted.invalid";
+
 // Internal sentinel: thrown inside the reward transaction to roll it back when
 // the in-transaction cap re-check fails under concurrency.
 class DailyCapExceeded extends Error {}
@@ -63,7 +65,7 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
   const code = rawCode.trim();
 
   const referral = await prisma.referral.findFirst({
-    where: { code: { equals: code, mode: "insensitive" }, referredId: null },
+    where: { code: { equals: code, mode: "insensitive" }, referredId: null, status: "pending" },
   });
   if (!referral) {
     return { ok: false, status: 404, error: "invalid_code", message: "Invalid referral code." };
@@ -77,6 +79,13 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
     prisma.agent.findUnique({ where: { id: agentId }, select: { emailVerified: true, email: true } }),
     prisma.agent.findUnique({ where: { id: referral.referrerId }, select: { email: true } }),
   ]);
+
+  // Deletion anonymizes retained financial rows in place. Legacy shareable
+  // referral rows may still point at that anonymized Agent, so treat them as
+  // invalid codes instead of letting a deleted account mint referral credits.
+  if (!referrer || referrer.email.endsWith(DELETED_AGENT_EMAIL_SUFFIX)) {
+    return { ok: false, status: 404, error: "invalid_code", message: "Invalid referral code." };
+  }
 
   // Anti-farming: the referred account must have a verified email before any
   // credits are granted. Unverified accounts hold almost no credits anyway.
