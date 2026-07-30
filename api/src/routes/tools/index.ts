@@ -3171,9 +3171,10 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   // to the caller IP when payer metadata is unresolved, so unrelated callers
   // never share one bucket). Follows the EMAIL_RECIPIENT_DAILY_CAP in-memory
   // pattern (PR #76); env-tunable via VIDEO_HOURLY_CAP (default 5/hour).
-  const videoIdentity = req.agent?.id
+  const preReservedVideoIdentity = (req as AuthedRequest & { x402VideoHourlyIdentity?: string }).x402VideoHourlyIdentity;
+  const videoIdentity = preReservedVideoIdentity ?? req.agent?.id
     ?? `x402:${(req as AuthedRequest & { x402Payer?: string }).x402Payer?.trim().toLowerCase() ?? `ip:${req.ip ?? "unknown"}`}`;
-  if (!videoHourlyGate(videoIdentity)) {
+  if (!preReservedVideoIdentity && !videoHourlyGate(videoIdentity)) {
     res.status(429).json({
       ok: false,
       error: "video_rate_limited",
