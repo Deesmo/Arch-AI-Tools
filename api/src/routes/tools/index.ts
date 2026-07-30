@@ -3140,10 +3140,14 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 // ─── 54. VIDEO-GENERATE (Runway) ──────────────────────────────────────────────
 router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const { prompt, duration = 5, aspect_ratio = "16:9" } = req.body as { prompt?: string; duration?: number; aspect_ratio?: string };
-  if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
-  { const _mod = moderateGenerationPrompt(prompt); if (!_mod.allowed) { console.warn(`[moderation] blocked category=${_mod.category} tool=video-generate`); res.status(400).json({ ok: false, error: "content_policy", category: _mod.category, message: _mod.reason, request_id: reqId() }); return; } }
+  const preReservedVideoIdentity = (req as AuthedRequest & { x402VideoHourlyIdentity?: string }).x402VideoHourlyIdentity;
+  const releasePreReservedVideoSlot = (): void => {
+    if (preReservedVideoIdentity) releaseVideoHourlySlot(preReservedVideoIdentity);
+  };
+  if (!prompt) { releasePreReservedVideoSlot(); res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
+  { const _mod = moderateGenerationPrompt(prompt); if (!_mod.allowed) { releasePreReservedVideoSlot(); console.warn(`[moderation] blocked category=${_mod.category} tool=video-generate`); res.status(400).json({ ok: false, error: "content_policy", category: _mod.category, message: _mod.reason, request_id: reqId() }); return; } }
   const validDurations = [5, 10];
-  if (!validDurations.includes(duration)) { res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
+  if (!validDurations.includes(duration)) { releasePreReservedVideoSlot(); res.status(400).json({ ok: false, error: "invalid_request", message: "duration must be 5 or 10", request_id: reqId() }); return; }
   // Scaled by duration at 140 credits/second, 700 minimum (5s = 700, 10s = 1400).
   // Runway gen4.5 ≈ $0.80–1.00 for 10s; at the worst-case $0.00114/credit bulk rate
   // 1400 credits = $1.60, keeping a safe margin over the top-tier COGS (audit 2026-07-27).
@@ -3160,18 +3164,18 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
   const resolvedRatio = ratioAliases[aspect_ratio] ?? aspect_ratio;
   const validRatios = ["1280:720", "720:1280"];
   if (!validRatios.includes(resolvedRatio)) {
+    releasePreReservedVideoSlot();
     res.status(400).json({ ok: false, error: "invalid_request", message: "aspect_ratio must be one of: 16:9, 9:16, 1280:720, 720:1280", request_id: reqId() });
     return;
   }
   const runwayKey = process.env.RUNWAY_API_KEY;
-  if (!runwayKey) { res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
+  if (!runwayKey) { releasePreReservedVideoSlot(); res.status(503).json({ ok: false, error: "not_configured", message: "RUNWAY_API_KEY not configured", request_id: reqId() }); return; }
   // Hourly per-identity cap (audit 2026-07-27): Runway bills real money per
   // generation, so bound the burst blast radius for ALL payment rails — agent
   // id for credit callers, settled payer wallet for x402 callers (falling back
   // to the caller IP when payer metadata is unresolved, so unrelated callers
   // never share one bucket). Follows the EMAIL_RECIPIENT_DAILY_CAP in-memory
   // pattern (PR #76); env-tunable via VIDEO_HOURLY_CAP (default 5/hour).
-  const preReservedVideoIdentity = (req as AuthedRequest & { x402VideoHourlyIdentity?: string }).x402VideoHourlyIdentity;
   const videoIdentity = preReservedVideoIdentity ?? req.agent?.id
     ?? `x402:${(req as AuthedRequest & { x402Payer?: string }).x402Payer?.trim().toLowerCase() ?? `ip:${req.ip ?? "unknown"}`}`;
   if (!preReservedVideoIdentity && !videoHourlyGate(videoIdentity)) {

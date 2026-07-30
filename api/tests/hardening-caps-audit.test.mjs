@@ -115,6 +115,11 @@ async function main() {
     assert.ok(x402Src.includes("releaseVideoHourlySlot(reservedVideoHourlyIdentity)"), "failed settlement must release the reserved video slot");
     assert.ok(toolsSrc.includes("x402VideoHourlyIdentity"), "route must consume the x402 pre-settlement reservation");
     assert.ok(toolsSrc.includes("!preReservedVideoIdentity && !videoHourlyGate(videoIdentity)"), "route must not count the x402 reservation twice");
+    assert.ok(toolsSrc.includes("releasePreReservedVideoSlot"), "route preflight rejects must release x402 pre-settlement reservations");
+    const releaseHelperIdx = toolsSrc.indexOf("const releasePreReservedVideoSlot");
+    const handlerGateIdx = toolsSrc.indexOf("videoHourlyGate(videoIdentity)");
+    assert.ok(releaseHelperIdx !== -1 && handlerGateIdx !== -1 && releaseHelperIdx < handlerGateIdx,
+      "x402 reservation release helper must be available before route preflight rejects");
   });
 
   // ── 2. web-scrape Firecrawl BYOK/x402 gate ──────────────────────────────────
