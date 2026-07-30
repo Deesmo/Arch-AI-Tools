@@ -60,6 +60,7 @@ function compressedStylePdf(count) {
 
 async function main() {
   const toolsSrc = fs.readFileSync(src("routes", "tools", "index.ts"), "utf-8");
+  const x402Src = fs.readFileSync(src("middleware", "x402.ts"), "utf-8");
   const agentSrc = fs.readFileSync(src("routes", "agent.ts"), "utf-8");
   const schemaSrc = fs.readFileSync(root("prisma", "schema.prisma"), "utf-8");
   const openapiSrc = fs.readFileSync(root("public", "openapi.json"), "utf-8");
@@ -103,6 +104,22 @@ async function main() {
   await test("source: x402 callers are capped too (keyed on settled payer)", () => {
     assert.ok(/x402:\$\{\(req as AuthedRequest & \{ x402Payer\?: string \}\)\.x402Payer/.test(toolsSrc),
       "x402 identity key missing — x402-paid generations must also be capped");
+  });
+  await test("source: x402 video cap rejects before settlement and is not double-counted in the route", () => {
+    const verifyIdx = x402Src.indexOf("const verifyResult = await verifyPayment");
+    const x402GateIdx = x402Src.indexOf('if (toolName === "video-generate")');
+    const settleIdx = x402Src.indexOf("const settleResult = await settlePayment");
+    assert.ok(verifyIdx !== -1 && x402GateIdx > verifyIdx, "x402 video cap must run after payment verification");
+    assert.ok(settleIdx !== -1 && x402GateIdx < settleIdx, "x402 video cap must run before settlement");
+    assert.ok(x402Src.includes('"video_rate_limited"'), "x402 middleware must be able to return the rate-limit error before settle");
+    assert.ok(x402Src.includes("releaseVideoHourlySlot(reservedVideoHourlyIdentity)"), "failed settlement must release the reserved video slot");
+    assert.ok(toolsSrc.includes("x402VideoHourlyIdentity"), "route must consume the x402 pre-settlement reservation");
+    assert.ok(toolsSrc.includes("!preReservedVideoIdentity && !videoHourlyGate(videoIdentity)"), "route must not count the x402 reservation twice");
+    assert.ok(toolsSrc.includes("releasePreReservedVideoSlot"), "route preflight rejects must release x402 pre-settlement reservations");
+    const releaseHelperIdx = toolsSrc.indexOf("const releasePreReservedVideoSlot");
+    const handlerGateIdx = toolsSrc.indexOf("videoHourlyGate(videoIdentity)");
+    assert.ok(releaseHelperIdx !== -1 && handlerGateIdx !== -1 && releaseHelperIdx < handlerGateIdx,
+      "x402 reservation release helper must be available before route preflight rejects");
   });
 
   // ── 2. web-scrape Firecrawl BYOK/x402 gate ──────────────────────────────────
