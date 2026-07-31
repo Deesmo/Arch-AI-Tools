@@ -44,7 +44,9 @@ async function requireAuthOrSession(req: AuthedRequest, res: Response, next: Nex
 }
 
 // ─── One-time credit packs ──────────────────────────────────────────────────
-const CREDIT_PACKS = [
+// Exported as the RATE AUTHORITY for the x402 USDC top-up (routes/topupX402.ts
+// derives its credits-per-dollar from these packs — never from its own numbers).
+export const CREDIT_PACKS = [
   { id: "starter",  credits: 3000,   amount: 900,   label: "Starter Pack",   priceId: process.env.STRIPE_PRICE_STARTER   ?? "" },
   { id: "pro",      credits: 25000,  amount: 4900,  label: "Pro Pack",       priceId: process.env.STRIPE_PRICE_PRO       ?? "" },
   { id: "business", credits: 125000, amount: 19900, label: "Business Pack",  priceId: process.env.STRIPE_PRICE_BUSINESS  ?? "" },

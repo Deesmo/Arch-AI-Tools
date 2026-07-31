@@ -201,7 +201,7 @@ export function isX402AnonymousTool(toolName: string): boolean {
  * translation path (lib/x402V1.ts), but it is NO LONGER what we serve on the wire —
  * 402 challenges are emitted via buildPaymentRequiredV2() below.
  */
-export function buildPaymentRequired(toolName: string, price: string): object {
+export function buildPaymentRequired(toolName: string, price: string, resourceUrl?: string): object {
   const network = config.x402.network;
   // Use x402 named network format (required by client SDK schema validation)
   // "base" / "polygon" / "solana" NOT "eip155:8453" / "eip155:137"
@@ -209,7 +209,9 @@ export function buildPaymentRequired(toolName: string, price: string): object {
   const usdcContract = USDC_CONTRACTS[network] ?? USDC_CONTRACTS["base"];
   // Convert price to USDC atomic units (6 decimals)
   const amountAtomic = Math.round(parseFloat(price) * 1_000_000).toString();
-  const resource = `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`;
+  // resourceUrl override: non-tool x402 resources (e.g. /v1/billing/topup-x402/:tier)
+  // advertise their real endpoint instead of the /v1/tools/<name> default.
+  const resource = resourceUrl ?? `${process.env.PUBLIC_SITE_URL ?? "https://archtools.dev"}/v1/tools/${toolName}`;
 
   const evmWallet = config.x402.walletAddress;
   const accepts: object[] = [];
@@ -788,8 +790,8 @@ export function buildPaymentRequired(toolName: string, price: string): object {
  * extensions.bazaar). Served as BOTH the base64 PAYMENT-REQUIRED header and the
  * JSON body on every 402.
  */
-export function buildPaymentRequiredV2(toolName: string, price: string): object {
-  return toV2PaymentRequired(buildPaymentRequired(toolName, price));
+export function buildPaymentRequiredV2(toolName: string, price: string, resourceUrl?: string): object {
+  return toV2PaymentRequired(buildPaymentRequired(toolName, price, resourceUrl));
 }
 
 /**
@@ -1230,11 +1232,43 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
 }
 
 /**
+ * Settlement facts attached to the request after a successful x402 settle —
+ * downstream handlers (e.g. the credits top-up grant) key idempotent side
+ * effects on `transaction`. Set ONLY when settle returned success===true.
+ */
+export interface X402SettlementInfo {
+  transaction: string | null;
+  network: string | null;
+  payer: string | null;
+  /** USD price the payment was verified/settled against (decimal string). */
+  amountUsd: string;
+}
+
+export interface X402MiddlewareOptions {
+  /**
+   * Fixed USD price (decimal string, same format as X402_PRICES values).
+   * Defaults to X402_PRICES[toolName] ?? "0.010". Lets non-tool resources
+   * (credit top-ups) price their 402 without entering the advertised tool
+   * price map that scripts/check-price-drift.mjs anchors on.
+   */
+  price?: string;
+  /** Exact resource URL for the 402 challenge (default /v1/tools/<toolName>). */
+  resourceUrl?: string;
+  /**
+   * When true, an API credential does NOT bypass the payment gate — every
+   * request without a payment header gets the 402 challenge. Used by routes
+   * where the payment IS the point (credits top-up), which authenticate
+   * separately BEFORE this middleware.
+   */
+  requirePayment?: boolean;
+}
+
+/**
  * x402 middleware — attach to any tool route.
  * Checks for X-Payment header; if missing + no valid API key, returns 402.
  * If X-Payment present, verifies with facilitator and logs payment.
  */
-export function x402Middleware(toolName: string) {
+export function x402Middleware(toolName: string, opts?: X402MiddlewareOptions) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const requestStartMs = Date.now();
 
@@ -1284,7 +1318,7 @@ export function x402Middleware(toolName: string) {
 
     // No payment header — check if they have a valid API key with credits
     if (!paymentHeader) {
-      if (hasApiCredential) {
+      if (hasApiCredential && !opts?.requirePayment) {
         // Let auth middleware handle it (API key or Bearer token)
         next();
         return;
@@ -1296,8 +1330,8 @@ export function x402Middleware(toolName: string) {
       // same PaymentRequired plus a namespaced `links` object with free-signup
       // discovery hints (bodies are a server implementation concern —
       // specs/transports-v2/http.md).
-      const price = X402_PRICES[toolName] ?? "0.010";
-      const paymentRequired = buildPaymentRequiredV2(toolName, price);
+      const price = opts?.price ?? X402_PRICES[toolName] ?? "0.010";
+      const paymentRequired = buildPaymentRequiredV2(toolName, price, opts?.resourceUrl);
       const paymentRequiredB64 = Buffer.from(JSON.stringify(paymentRequired)).toString("base64");
       res.status(402)
         .header("Content-Type", "application/json")
@@ -1342,8 +1376,8 @@ export function x402Middleware(toolName: string) {
     // CRITICAL FIX: paymentRequirements sent to the facilitator MUST match the
     // accepts[] entry the agent selected. We rebuild the full accepts[] and
     // find the matching entry from the payment payload's network/asset.
-    const price = X402_PRICES[toolName] ?? "0.010";
-    const fullPaymentDetails = buildPaymentRequired(toolName, price) as { accepts: any[] };
+    const price = opts?.price ?? X402_PRICES[toolName] ?? "0.010";
+    const fullPaymentDetails = buildPaymentRequired(toolName, price, opts?.resourceUrl) as { accepts: any[] };
     const { network: paymentNetwork, asset: paymentAsset } = extractPaymentNetwork(paymentHeader);
 
     // Find matching accepts[] entry — network match normalizes v1 named networks and
@@ -1443,6 +1477,14 @@ export function x402Middleware(toolName: string) {
     if (payer) {
       (req as Request & { x402Payer?: string }).x402Payer = payer;
     }
+    // Settlement facts for downstream handlers (idempotent side effects key on
+    // the transaction hash). Set ONLY on this success===true path.
+    (req as Request & { x402Settlement?: X402SettlementInfo }).x402Settlement = {
+      transaction: settleResult?.transaction ?? null,
+      network: settleResult?.network ?? (paymentRequirements as any).network ?? config.x402.network ?? null,
+      payer: payer ?? null,
+      amountUsd: price,
+    };
 
     // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 v2 spec §5.3.2
     // ("network: Blockchain network identifier in CAIP-2 format") — normalize the
@@ -1473,7 +1515,10 @@ export function x402Middleware(toolName: string) {
       try {
         await prisma.apiRequest.create({
           data: {
-            agentId: "x402_anonymous",
+            // Routes that authenticate BEFORE this middleware (credits top-up)
+            // attribute the call to the real account; tool routes run x402
+            // first, so req.agent is unset there and behavior is unchanged.
+            agentId: (req as Request & { agent?: { id?: string } }).agent?.id ?? "x402_anonymous",
             toolName,
             creditsUsed: 0,
             // Three-way: SUCCESS (<400) | CLIENT_ERROR (4xx) | ERROR (5xx)

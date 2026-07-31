@@ -26,6 +26,7 @@ import agentRouter from "./routes/agent.js";
 import { requireAuth, AuthedRequest } from "./middleware/auth.js";
 import toolsRouter from "./routes/tools/index.js";
 import billingRouter from "./routes/billing.js";
+import topupX402Router from "./routes/topupX402.js";
 import adminRouter from "./routes/admin.js";
 import workflowsRouter from "./routes/workflows.js";
 import seoRouter from "./routes/seo.js";
@@ -311,6 +312,8 @@ app.use("/v1/tools", toolsRouter);
 // Billing
 app.use("/v1/billing", billingRouter);
 app.use("/webhooks", billingRouter);
+// x402 USDC → credits top-up — /v1/billing ONLY (never on the /webhooks alias)
+app.use("/v1/billing", topupX402Router);
 
 // Admin
 app.use("/v1/admin", adminRouter);
