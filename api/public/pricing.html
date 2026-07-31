@@ -310,17 +310,24 @@ async function startCheckout(endpoint, body) {
   try { apiKey = (sessionStorage.getItem('arch_api_key') || localStorage.getItem('arch_api_key') || '').trim(); } catch(e) {}
   var headers = { 'Content-Type': 'application/json' };
   if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+  function pricingNextForBody(payload) {
+    var pack = payload && payload.pack;
+    return (pack === 'starter' || pack === 'pro' || pack === 'business')
+      ? '/pricing?pack=' + pack
+      : '/pricing';
+  }
   try {
     var res = await fetch(endpoint, { method: 'POST', headers: headers, credentials: 'include', body: JSON.stringify(body) });
     if (res.status === 401) {
+      var next = pricingNextForBody(body);
       if (apiKey) {
         // A stored key failed — clear it and send them to sign back in.
         try { localStorage.removeItem('arch_api_key'); sessionStorage.removeItem('arch_api_key'); } catch(e) {}
-        window.location.href = '/login?next=' + encodeURIComponent('/pricing');
+        window.location.href = '/login?next=' + encodeURIComponent(next);
       } else {
         // Anonymous buy-intent: they have no account to log into — send them to
-        // sign up (free), then return to pricing to complete the purchase.
-        window.location.href = '/signup?next=' + encodeURIComponent('/pricing');
+        // sign up (free), then return to the selected pack to complete checkout.
+        window.location.href = '/signup?next=' + encodeURIComponent(next);
       }
       return;
     }

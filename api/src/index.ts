@@ -379,10 +379,10 @@ app.use("/api/chat", chatRouter);
 app.get("/signup", (req: Request, res: Response) => {
   // Open-redirect guard: ?next= is only honored for the same-origin OAuth
   // authorize path (consent-page "create account" round-trip) or an exact
-  // allowlisted page path (/pricing, /dashboard, /docs, /playground — intent
-  // preservation, e.g. pricing → signup → back to pricing). Anything else
-  // is stripped server-side before the page's client JS can read it; the
-  // signup page JS re-validates with the same rule (defense in depth).
+  // allowlisted page target (/pricing, known /pricing?pack=... preselects,
+  // /dashboard, /docs, /playground). Anything else is stripped server-side
+  // before the page's client JS can read it; the signup page JS re-validates
+  // with the same rule (defense in depth).
   if (req.query.next !== undefined && !isSafeSignupNext(req.query.next)) {
     const cleaned = new URLSearchParams();
     for (const [k, v] of Object.entries(req.query)) {

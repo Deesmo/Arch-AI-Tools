@@ -3,12 +3,12 @@
  *
  * Covers:
  *   A  isSafeSignupNext — the widened /signup ?next= allowlist: exact page
- *      paths (/pricing, /dashboard, /docs, /playground) plus the original
- *      /oauth/authorize prefix rule. Injection hardening unchanged: external
- *      URLs, protocol-relative, javascript:, traversal, lookalikes, query
- *      strings on page paths, and HTML-breakout chars are all rejected.
- *      isSafeOAuthNext itself stays oauth-only (consent-resume surfaces keep
- *      the tighter rule).
+ *      targets (/pricing, validated pricing pack preselects, /dashboard,
+ *      /docs, /playground) plus the original /oauth/authorize prefix rule.
+ *      Injection hardening unchanged: external URLs, protocol-relative,
+ *      javascript:, traversal, lookalikes, unknown query strings, and
+ *      HTML-breakout chars are all rejected. isSafeOAuthNext itself stays
+ *      oauth-only (consent-resume surfaces keep the tighter rule).
  *   B  recommendPack — smallest sufficient pack from credits_needed, with
  *      largest-pack fallback and never-throw degradation; packUrl shape.
  *   C  Surface pins — 402 body carries recommended_pack + links.buy_now;
@@ -50,10 +50,14 @@ async function main() {
   const { DASHBOARD_HTML } = await import(distPath("assets", "dashboardHtml.js"));
 
   // ── A: the signup ?next= allowlist ─────────────────────────────────────
-  console.log("A — isSafeSignupNext (exact page paths + oauth prefix):");
+  console.log("A — isSafeSignupNext (exact page targets + oauth prefix):");
 
   for (const p of ["/pricing", "/dashboard", "/docs", "/playground"]) {
     test(`accepts exact allowlisted path ${p}`, () =>
+      assert.strictEqual(isSafeSignupNext(p), true));
+  }
+  for (const p of ["/pricing?pack=starter", "/pricing?pack=pro", "/pricing?pack=business"]) {
+    test(`accepts exact pricing pack preselect ${p}`, () =>
       assert.strictEqual(isSafeSignupNext(p), true));
   }
   test("accepts the oauth authorize path (rule preserved)", () => {
@@ -62,7 +66,9 @@ async function main() {
   });
 
   const rejected = [
-    ["query string on a page path", "/pricing?pack=starter"],
+    ["unknown pack query string", "/pricing?pack=enterprise"],
+    ["extra query parameter on pricing pack", "/pricing?pack=starter&coupon=x"],
+    ["query string on another page path", "/docs?from=pricing"],
     ["trailing slash", "/pricing/"],
     ["case variant", "/Pricing"],
     ["subpath", "/pricing/evil"],
@@ -91,9 +97,9 @@ async function main() {
       assert.strictEqual(isSafeOAuthNext(p), false, `${p} must NOT pass the oauth-only guard`);
     }
   });
-  test("every allowlisted path is a registered route in index.ts", () => {
+  test("every allowlisted target points at a registered route in index.ts", () => {
     const indexSrc = fs.readFileSync(src("index.ts"), "utf-8");
-    for (const p of SIGNUP_NEXT_LABELS.keys()) {
+    for (const p of new Set(Array.from(SIGNUP_NEXT_LABELS.keys()).map((target) => target.split("?")[0]))) {
       assert.ok(indexSrc.includes(`app.get("${p}"`), `route missing for ${p}`);
     }
   });
@@ -146,7 +152,7 @@ async function main() {
     assert.ok(refusalBlock.includes('res.setHeader("X-Upgrade-URL", packUrl(rec.id))')));
 
   test("signup page mirrors the page allowlist client-side", () => {
-    for (const p of ["/pricing", "/dashboard", "/docs", "/playground"]) {
+    for (const p of ["/pricing", "/pricing?pack=starter", "/pricing?pack=pro", "/pricing?pack=business", "/dashboard", "/docs", "/playground"]) {
       assert.ok(SIGNUP_HTML.includes(`'${p}':`), `client map missing ${p}`);
     }
     assert.ok(SIGNUP_HTML.includes("Object.prototype.hasOwnProperty.call(PAGE_NEXT_LABELS, rawNext)"));
@@ -183,6 +189,14 @@ async function main() {
     for (const forbidden of ["startCheckout", "buyPack", "buySubscription", "fetch("]) {
       assert.ok(!block.includes(forbidden), `preselect block must not call ${forbidden}`);
     }
+  });
+  test("pricing checkout auth redirects preserve clicked pack selection", () => {
+    const pricing = fs.readFileSync(pub("pricing.html"), "utf-8");
+    assert.ok(pricing.includes("function pricingNextForBody(payload)"));
+    assert.ok(pricing.includes("'starter' || pack === 'pro' || pack === 'business'"));
+    assert.ok(pricing.includes("'/pricing?pack=' + pack"));
+    assert.ok(pricing.includes("'/signup?next=' + encodeURIComponent(next)"));
+    assert.ok(pricing.includes("'/login?next=' + encodeURIComponent(next)"));
   });
 
   test("alert emails link the pre-selected starter pack URL", () => {
