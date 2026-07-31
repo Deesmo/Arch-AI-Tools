@@ -95,7 +95,7 @@ Use `client.call("tool-name", **params)` for any tool. Full docs: [archtools.dev
 
 ## x402 USDC Payments (Patent-Pending)
 
-When credits run out, agents can pay per-call with USDC on 15+ blockchains:
+When credits run out, agents can pay per-call with USDC on Base or Polygon:
 
 ```python
 # API returns 402 with payment details
@@ -103,7 +103,7 @@ When credits run out, agents can pay per-call with USDC on 15+ blockchains:
 # No human intervention needed. Fully autonomous.
 ```
 
-Supported chains: Base, Ethereum, Solana, Polygon, Arbitrum, Optimism, Avalanche, Stellar, Sui, Aptos, Noble/Cosmos, and more.
+Supported chains: Base and Polygon.
 
 ## BYOK (Bring Your Own Key)
 

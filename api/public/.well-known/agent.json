@@ -43,7 +43,7 @@
       },
       {
         "type": "x402",
-        "description": "Pay-per-call with USDC on 9 chains. No signup required.",
+        "description": "Pay-per-call with USDC on Base or Polygon. No signup required.",
         "discoveryUrl": "https://archtools.dev/.well-known/x402"
       }
     ]
@@ -135,7 +135,7 @@
     ],
     "x402": {
       "description": "Pay-per-call with USDC — no signup needed",
-      "networks": ["base", "ethereum", "arbitrum", "polygon", "optimism", "avalanche", "solana", "noble", "algorand", "stellar", "sui", "polkadot", "aptos", "unichain", "monad"]
+      "networks": ["base", "polygon"]
     }
   }
 }

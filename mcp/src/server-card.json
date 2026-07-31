@@ -2,7 +2,7 @@
   "serverInfo": {
     "name": "arch-tools-mcp",
     "version": "1.9.0",
-    "description": "63 production-ready API tools for AI agents — the largest MCP tool collection. Web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data (15+ chains), OCR, image generation (DALL-E 3), video generation (Runway), audio transcription, text-to-speech, email, PII detection, semantic search, and more. Pay via Stripe credits or autonomous x402 USDC payments on 15+ blockchains (patent-pending). BYOK supported — bring your own API keys for zero credit cost."
+    "description": "63 production-ready API tools for AI agents — the largest MCP tool collection. Web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data (15+ chains), OCR, image generation (DALL-E 3), video generation (Runway), audio transcription, text-to-speech, email, PII detection, semantic search, and more. Pay via Stripe credits or autonomous x402 USDC payments on Base and Polygon (patent-pending). BYOK supported — bring your own API keys for zero credit cost."
   },
   "authentication": {
     "required": false

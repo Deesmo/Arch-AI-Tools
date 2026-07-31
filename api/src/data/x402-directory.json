@@ -19,33 +19,10 @@
       ],
       "chains_supported": [
         "base",
-        "ethereum",
-        "arbitrum",
-        "polygon",
-        "optimism",
-        "avalanche",
-        "solana",
-        "noble-cosmos",
-        "algorand",
-        "stellar",
-        "sui",
-        "polkadot",
-        "aptos",
-        "unichain",
-        "monad",
-        "bittensor",
-        "near",
-        "bnb-chain"
+        "polygon"
       ],
       "tokens_supported": [
-        "USDC",
-        "USDT",
-        "ETH",
-        "BNB",
-        "NEAR",
-        "SOL",
-        "TAO",
-        "UNI"
+        "USDC"
       ],
       "pricing_model": "per-request",
       "price_range": {

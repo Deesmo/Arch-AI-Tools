@@ -1,6 +1,6 @@
 # Arch Tools
 > The first API platform built for autonomous agent payments.
-> 63 production-ready tools. One API key. USDC on 9 chains via x402 or Stripe.
+> 63 production-ready tools. One API key. USDC on Base or Polygon via x402 or Stripe.
 > Base URL: https://archtools.dev
 > Docs: https://archtools.dev/docs
 > OpenAPI: https://archtools.dev/openapi.json

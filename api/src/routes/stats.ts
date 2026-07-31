@@ -39,10 +39,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
       _count: { network: true },
     });
 
-    const supportedChains = [
-      "Base", "Ethereum", "Arbitrum", "Polygon", "Optimism",
-      "Avalanche", "Solana", "Unichain", "Monad",
-    ];
+    const supportedChains = ["Base", "Polygon"];
 
     const data = {
       ok: true,

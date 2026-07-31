@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The First Developer Tool API Natively Accepting Crypto from AI Agents — Arch Tools</title>
-  <meta name="description" content="AI agents can now pay autonomously with USDC, USDT, and native tokens across 9 networks via the x402 protocol. No human credit card. No subscription. This is how the agent economy works.">
+  <meta name="description" content="AI agents can now pay autonomously with USDC on Base and Polygon via the x402 protocol. No human credit card. No subscription. This is how the agent economy works.">
   <meta property="og:title" content="The First Developer Tool API Natively Accepting Crypto from AI Agents">
-  <meta property="og:description" content="AI agents can now pay autonomously with USDC, USDT, and native tokens (ETH/SOL/BNB/TAO/NEAR) across 9 networks via x402. No human credit card. No subscription. Arch Tools is the first.">
+  <meta property="og:description" content="AI agents can now pay autonomously with USDC on Base and Polygon via x402. No human credit card. No subscription. Arch Tools is the first.">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://archtools.dev/blog/x402">
   <meta property="og:image" content="https://archtools.dev/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="The First Developer Tool API Natively Accepting Crypto from AI Agents">
-  <meta name="twitter:description" content="AI agents pay autonomously with USDC, USDT, and native tokens across 9 networks via x402. No credit card. No subscription.">
+  <meta name="twitter:description" content="AI agents pay autonomously with USDC on Base and Polygon via x402. No credit card. No subscription.">
   <meta name="twitter:image" content="https://archtools.dev/og-image.png">
   <meta name="keywords" content="x402, crypto payments, AI agents, USDC, autonomous payments, Coinbase, blockchain API, agentic commerce, developer tools">
   <link rel="canonical" href="https://archtools.dev/blog-x402.html">
@@ -78,7 +78,7 @@
 
     <p>That made sense in 2015. It doesn't make sense in 2026.</p>
 
-    <p>AI agents are calling APIs at scale, autonomously, without a human in the loop. They need to pay the same way. Today, Arch Tools is the first developer tool API platform to accept <strong>USDC, USDT, and native tokens</strong> across 9 networks via the <strong>x402 payment protocol</strong> — natively, from day one.</p>
+    <p>AI agents are calling APIs at scale, autonomously, without a human in the loop. They need to pay the same way. Today, Arch Tools is the first developer tool API platform to accept <strong>USDC</strong> on Base and Polygon via the <strong>x402 payment protocol</strong> — natively, from day one.</p>
 
     <h2>Why This Matters</h2>
 
@@ -87,7 +87,7 @@
     <p>x402 changes that. An AI agent can now:</p>
     <ol>
       <li>Discover that a tool accepts x402 payments via <code>/.well-known/x402</code></li>
-      <li>Pay the exact amount per call in USDC, USDT, or a native token (ETH, SOL, BNB, TAO, NEAR) across 9 networks</li>
+      <li>Pay the exact amount per call in USDC on Base or Polygon</li>
       <li>Get the tool result — all in a single HTTP round-trip</li>
     </ol>
 
@@ -101,7 +101,7 @@
 
     <div class="callout">
       <strong>Path 1 — x402 (Autonomous Agent Payments)</strong><br><br>
-      The agent includes a signed x402 payment header with each request. The facilitator verifies the transfer on-chain (USDC, USDT, or native token across 9 networks). The tool executes and returns results. No account required.
+      The agent includes a signed x402 payment header with each request. The facilitator verifies the transfer on-chain (USDC on Base or Polygon). The tool executes and returns results. No account required.
     </div>
 
     <div class="callout">
@@ -117,15 +117,14 @@ Register with your email, get an API key and 100 free credits (25 instant, 75 on
     <pre><code><span class="comment"># Step 1: Agent discovers x402 pricing</span>
 curl https://archtools.dev/.well-known/x402
 
-<span class="comment"># Returns (9 chains advertised for discovery — settle-ready rails ride on each 402):</span>
+<span class="comment"># Returns (settle-ready rails — USDC on Base and Polygon):</span>
 <span class="out">{
   "version": "2",
   "supportedRails": [
     { "scheme": "exact", "network": "eip155:8453", "asset": "0x833589fC...", "token": "USDC" },
-    { "scheme": "exact", "network": "eip155:137",  "asset": "0x3c499c54...", "token": "USDC" },
-    { "scheme": "exact", "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "asset": "EPjFWdd5...", "token": "USDC" }
+    { "scheme": "exact", "network": "eip155:137",  "asset": "0x3c499c54...", "token": "USDC" }
   ],
-  "note": "9 chains advertised here via /.well-known discovery. Each tool's 402 challenge carries spec-shaped x402 v2 accepts[] with the exact `amount` for the facilitator-settleable rails (USDC/USDT on Base, Polygon, Solana)."
+  "note": "Each tool's 402 challenge carries spec-shaped x402 v2 accepts[] with the exact `amount` for the facilitator-settleable rails (USDC on Base and Polygon)."
 }</span>
 
 <span class="comment"># Step 2: Agent constructs payment header (x402 v2) and calls tool</span>
@@ -151,12 +150,12 @@ curl https://archtools.dev/v1/tools/web-scrape \
     <p>We support both because both users exist:</p>
     <ul>
       <li><strong>Human developers</strong> → Stripe credit packs, API key, never expires</li>
-      <li><strong>AI agents</strong> → x402, USDC/USDT/native tokens · 9 networks, per-call settlement</li>
+      <li><strong>AI agents</strong> → x402, USDC on Base or Polygon, per-call settlement</li>
     </ul>
 
     <h2>The Numbers Behind the Decision</h2>
 
-    <p>x402 processed over <strong>115 million micropayments</strong> in its first months. That number doubled in weeks. Coinbase's Base network is the primary settlement layer for USDC, but Arch Tools now supports <strong>9 networks</strong> — including Ethereum, Solana, Polygon, Arbitrum, Optimism, and Avalanche. USDT is accepted on Base and Polygon.</p>
+    <p>x402 processed over <strong>115 million micropayments</strong> in its first months. That number doubled in weeks. Coinbase's Base network is the primary settlement layer for USDC; Arch Tools settles USDC on <strong>Base and Polygon</strong>.</p>
 
     <p>The market signal is clear: agent-to-agent and agent-to-API payments are real, they're growing fast, and the infrastructure is here. Being first on the platform side matters.</p>
 
@@ -171,7 +170,7 @@ curl https://archtools.dev/v1/tools/web-scrape \
 
     <h2>Start Building</h2>
 
-<p>63 tools. One key. USDC, USDT, and native tokens across 9 networks — accepted natively. Start with 100 free credits (25 instant, 75 on verify) and no credit card required — or connect your agent wallet and pay per call.</p>
+<p>63 tools. One key. USDC on Base and Polygon — accepted natively. Start with 100 free credits (25 instant, 75 on verify) and no credit card required — or connect your agent wallet and pay per call.</p>
 
   </article>
 </div>
@@ -179,7 +178,7 @@ curl https://archtools.dev/v1/tools/web-scrape \
 <div class="wrap">
   <div class="cta-section">
     <h2>The agent economy needs infrastructure.</h2>
-<p>Get your API key and 100 free credits (25 instant, 75 on verify). Or connect your agent wallet and pay with USDC, USDT, or a native token across 9 networks.</p>
+<p>Get your API key and 100 free credits (25 instant, 75 on verify). Or connect your agent wallet and pay with USDC on Base or Polygon.</p>
     <a class="btn" href="/#register">$ get-api-key →</a>
     <a class="btn-ghost" href="/#x402">x402 docs</a>
   </div>

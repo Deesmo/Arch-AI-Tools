@@ -178,7 +178,7 @@ router.get("/status", requireAuth, async (req: AuthedRequest, res: Response): Pr
       response.upgrade_url = "https://archtools.dev/pricing";
       response.x402_info = {
         description: "When calling any tool without credits, the API returns HTTP 402 with x-payment-details header containing USDC payment instructions.",
-        supported_networks: ["Base", "Ethereum", "Arbitrum", "Polygon", "Optimism", "Avalanche", "Solana"],
+        supported_networks: ["Base", "Polygon"],
         example_prices: {
           "web-scrape": X402_PRICES["web-scrape"] ?? "0.005",
           "ai-generate": X402_PRICES["ai-generate"] ?? "0.020",
