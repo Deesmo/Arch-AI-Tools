@@ -185,10 +185,14 @@ async function main() {
     }
   });
 
-  test("alert emails link the pre-selected starter pack URL", () => {
+  test("alert emails link the pre-selected pack URLs (one-click buy)", () => {
     const emailSrc = fs.readFileSync(src("services", "email.ts"), "utf-8");
-    const hits = emailSrc.split("${SITE}/pricing?pack=starter").length - 1;
-    assert.ok(hits >= 2, `expected low-credit + depleted emails to carry the pack URL, found ${hits}`);
+    // The helper builds the same ?pack= preselect deep-link shape …
+    assert.ok(emailSrc.includes("`${SITE}/pricing?pack=${id}`"), "packHref helper missing");
+    // … and both the low-credit and depleted emails use it for the CTA button.
+    const hits = emailSrc.split('packHref("starter")').length - 1;
+    assert.ok(hits >= 2, `expected low-credit + depleted emails to carry the pack CTA, found ${hits}`);
+    // Deep render coverage lives in credit-email-buylinks.test.mjs.
   });
 
   const landers = [

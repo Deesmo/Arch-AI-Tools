@@ -1,4 +1,5 @@
 import { logger } from "../lib/logger.js";
+import { RECOMMENDABLE_PACKS, type PackInfo } from "../lib/creditPacks.js";
 
 /**
  * Arch Tools — Email Service
@@ -17,6 +18,34 @@ const SITE = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\
 
 // Low credit alert threshold
 export const LOW_CREDIT_THRESHOLD = Number(process.env.LOW_CREDIT_THRESHOLD || 20);
+
+// ─── One-click buy links (credit alert emails) ───
+// GET deep-link to the pricing page with the pack pre-selected (?pack= is
+// allowlisted to starter|pro|business in public/pricing.html). The page only
+// highlights + scrolls — checkout NEVER auto-fires from a GET (explicit click
+// required; council-binding, pinned by intent-funnel.test.mjs). Same shape as
+// lib/creditPacks.packUrl but built on SITE so PUBLIC_SITE_URL is honored
+// like every other link in these emails.
+function packHref(id: PackInfo["id"]): string {
+  return `${SITE}/pricing?pack=${id}`;
+}
+function packLabel(id: PackInfo["id"]): string {
+  return `${id.charAt(0).toUpperCase()}${id.slice(1)} Pack`;
+}
+// Pack cards rendered from the RECOMMENDATION catalog (lib/creditPacks.ts —
+// mirrors routes/billing.ts; the intent-funnel test pins the sizes), each one
+// a one-click link to its pre-selected pricing page.
+function packLinksHtml(): string {
+  const cards = RECOMMENDABLE_PACKS.map((p) =>
+    `<a class="stat" href="${packHref(p.id)}" style="text-decoration:none;color:#AA77FF;"><span>${packLabel(p.id)}</span>${p.credits.toLocaleString()} credits · $${p.priceUsd} — <strong style="color:#FF9010;">Buy →</strong></a>`
+  ).join("\n      ");
+  return `<div class="stats">\n      ${cards}\n    </div>`;
+}
+function packLinksText(): string {
+  return RECOMMENDABLE_PACKS.map((p) =>
+    `- ${packLabel(p.id)} (${p.credits.toLocaleString()} credits · $${p.priceUsd}): ${packHref(p.id)}`
+  ).join("\n");
+}
 
 // ─── Core send helper ───
 // `emailHeaders` = optional custom SMTP headers (e.g. List-Unsubscribe /
@@ -252,21 +281,34 @@ export async function sendWelcomeEmail(to: string, agentId: string, apiKey: stri
 }
 
 // ─── 3. Low Credit Alert ───
-export async function sendLowCreditAlert(to: string, creditsRemaining: number, agentId: string): Promise<void> {
+// Exported for render tests (pattern: renderVerificationEmail). Every pack is
+// a one-click GET deep-link to the pre-selected pricing page — buying stays an
+// explicit click there (never auto-fires; see packHref).
+export function renderLowCreditAlert(creditsRemaining: number, agentId: string): { subject: string; html: string; text: string } {
   const subject = `⚠️ Low credits — ${creditsRemaining} remaining on Arch Tools`;
   const html = layout(subject, `
     <div class="alert-warn"><strong>⚠️ Running low:</strong> You have <strong>${creditsRemaining} credits</strong> remaining. Top up now to keep your pipelines running without interruption.</div>
     <p>Add credits with one click — they never expire and stack on your existing balance.</p>
-    <div class="stats">
-      <div class="stat"><span>Starter Pack</span>3,000 credits · $9</div>
-      <div class="stat"><span>Pro Pack</span>25,000 credits · $49</div>
-      <div class="stat"><span>Business Pack</span>125,000 credits · $199</div>
-    </div>
-    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing?pack=starter">Top up credits →</a></div>
+    <div class="btn-wrap"><a class="btn" href="${packHref("starter")}">Buy credits now →</a></div>
+    <p style="font-size:13px;color:#8A85B0;margin:0 0 12px;">Or jump straight to a pack — it's pre-selected on the pricing page, and nothing is charged until you confirm checkout:</p>
+    ${packLinksHtml()}
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}…</p>
   `);
-  await sendEmail(to, subject, html);
+  const text = `Low credits: ${creditsRemaining} remaining on Arch Tools.
+
+Top up in one click — credits never expire and stack on your existing balance:
+${packLinksText()}
+
+Buy now: ${packHref("starter")}
+
+Agent: ${agentId.slice(0, 20)}…`;
+  return { subject, html, text };
+}
+
+export async function sendLowCreditAlert(to: string, creditsRemaining: number, agentId: string): Promise<void> {
+  const { subject, html, text } = renderLowCreditAlert(creditsRemaining, agentId);
+  await sendEmail(to, subject, html, text);
 }
 
 // ─── 4. Purchase Confirmation ───
@@ -456,19 +498,34 @@ export async function sendEmail80PctAlert(to: string, creditsRemaining: number, 
 // Sent at the credit-exhaustion moment (a call was refused, or the balance hit
 // 0 mid-run). Deduped to once per depletion cycle in utils/credits.ts —
 // resets when credits are granted.
-export async function sendCreditsDepletedAlert(to: string, agentId: string, creditsRemaining = 0): Promise<void> {
+// Exported for render tests (pattern: renderVerificationEmail).
+export function renderCreditsDepletedAlert(agentId: string, creditsRemaining = 0): { subject: string; html: string; text: string } {
   const subject = `Your Arch Tools credits ran out — how to top up`;
   const html = layout(subject, `
     <div class="alert-warn"><strong>Credits exhausted:</strong> Your balance (<strong>${creditsRemaining} credits</strong>) can no longer cover tool calls. Calls that cost more than your balance return <code>402 Payment Required</code>.</div>
-    <p>Two ways to keep building:</p>
-    <div class="stats">
-      <div class="stat"><span>Option 1</span>Buy credits at archtools.dev/pricing</div>
-      <div class="stat"><span>Option 2</span>Pay per-call with USDC via x402 protocol</div>
-    </div>
-    <p>Your agents can still make calls — they just need to include an <code>X-Payment</code> header with a signed USDC payment. <a href="${SITE}/x402-guide">Learn about x402 →</a></p>
-    <div class="btn-wrap"><a class="btn" href="${SITE}/pricing?pack=starter">Buy credits →</a></div>
+    <p>Buy credits in one click — each link pre-selects the pack on the pricing page, and nothing is charged until you confirm checkout:</p>
+    <div class="btn-wrap"><a class="btn" href="${packHref("starter")}">Buy credits →</a></div>
+    ${packLinksHtml()}
+    <p>Or keep paying per-call: your agents can still make calls — they just need to include an <code>X-Payment</code> header with a signed USDC payment. <a href="${SITE}/x402-guide">Learn about x402 →</a></p>
     <hr class="divider">
     <p style="font-size:13px;color:#8A85B0;">Agent: ${agentId.slice(0, 20)}… · Reply "stop" to unsubscribe.</p>
   `);
-  await sendEmail(to, subject, html);
+  const text = `Your Arch Tools credits ran out.
+
+Your balance (${creditsRemaining} credits) can no longer cover tool calls — calls that cost more than your balance return 402 Payment Required.
+
+Buy credits in one click (the pack is pre-selected; nothing is charged until you confirm checkout):
+${packLinksText()}
+
+Buy now: ${packHref("starter")}
+
+Or pay per-call with USDC via the x402 protocol: ${SITE}/x402-guide
+
+Agent: ${agentId.slice(0, 20)}… · Reply "stop" to unsubscribe.`;
+  return { subject, html, text };
+}
+
+export async function sendCreditsDepletedAlert(to: string, agentId: string, creditsRemaining = 0): Promise<void> {
+  const { subject, html, text } = renderCreditsDepletedAlert(agentId, creditsRemaining);
+  await sendEmail(to, subject, html, text);
 }
