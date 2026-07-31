@@ -165,15 +165,18 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     // ?next= round-trips (server strips anything else too — this is defense
     // in depth; validated values are safe to embed in a double-quoted href):
     //  - OAuth consent: /signup?next=/oauth/authorize?... resume-consent CTA.
-    //  - Page intent: an EXACT allowlisted path (keys of PAGE_NEXT_LABELS,
+    //  - Page intent: an EXACT allowlisted target (keys of PAGE_NEXT_LABELS,
     //    mirroring utils/oauthNext.ts SIGNUP_NEXT_LABELS) renders a
     //    "Continue to <label>" button on success — e.g. pricing.html sends
-    //    logged-out buyers here with next=%2Fpricing so purchase intent
-    //    survives signup.
+    //    logged-out buyers here with next=%2Fpricing%3Fpack%3Dpro so purchase
+    //    intent survives signup.
     var oauthNext = '';
     var pageNext = '';
     var PAGE_NEXT_LABELS = {
       '/pricing': 'pricing',
+      '/pricing?pack=starter': 'pricing',
+      '/pricing?pack=pro': 'pricing',
+      '/pricing?pack=business': 'pricing',
       '/dashboard': 'dashboard',
       '/docs': 'docs',
       '/playground': 'playground'
