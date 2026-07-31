@@ -32,6 +32,12 @@
  *  SEND_DELAY_MS      Default 600 — delay between sends. Resend's default API
  *                     rate limit is 2 requests/sec
  *                     (https://resend.com/docs/api-reference/introduction#rate-limit).
+ *  EXCLUDE_EMAIL_DOMAINS  Comma-separated email domains to skip entirely
+ *                     (no email, no top-up). Default "archtools.dev": Cloudflare
+ *                     Email Routing for archtools.dev forwards ONLY abuse@/
+ *                     security@/privacy@/support@ and the catch-all is DISABLED,
+ *                     so marketing sends to internal aliases hard-bounce at SMTP
+ *                     and damage Resend sender reputation. Set to "" to disable.
  *
  * ── HOW TO RUN IN PRODUCTION (Render one-off job) ────────────────────────────
  * One-off jobs run the service's image with the service's env vars
@@ -82,6 +88,32 @@ const ADDRESS_PLACEHOLDER = "[BUSINESS_ADDRESS — Brad to provide]";
 // Exported for tests (tests/reactivation-render.test.mjs). Importing this
 // module never runs the campaign — see the isMainModule guard at the bottom.
 export const SUBJECT = "Your Arch Tools account just got a lot more useful";
+
+// ─── Internal-domain exclusion (2026-07-31) ──────────────────────────────────
+// A live dry-run showed the first recipients were ALL internal @archtools.dev
+// aliases. Those addresses hard-bounce (Cloudflare Email Routing forwards only
+// abuse@/security@/privacy@/support@; catch-all disabled), which would burn
+// Resend sender reputation. Excluded recipients get NO email and NO top-up.
+// Exported for reuse (outreachActiveDevs.ts) and tests.
+
+/** Parse EXCLUDE_EMAIL_DOMAINS. Unset → default "archtools.dev"; "" → none. */
+export function parseExcludeDomains(raw: string | undefined): Set<string> {
+  const src = raw ?? "archtools.dev";
+  return new Set(
+    src
+      .split(",")
+      .map((d) => d.trim().toLowerCase())
+      .filter((d) => d.length > 0)
+  );
+}
+
+/** Lower-cased domain part of an email address ("" if malformed). */
+export function emailDomain(email: string): string {
+  const at = email.lastIndexOf("@");
+  return at >= 0 ? email.slice(at + 1).trim().toLowerCase() : "";
+}
+
+const EXCLUDE_DOMAINS = parseExcludeDomains(process.env.EXCLUDE_EMAIL_DOMAINS);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -231,11 +263,12 @@ export function renderHtml(name: string | null, balance: number, toppedUp: boole
 </html>`;
 }
 
-function escapeHtml(s: string): string {
+// Exported for reuse (outreachActiveDevs.ts) — pure string helpers.
+export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function maskEmail(email: string): string {
+export function maskEmail(email: string): string {
   const at = email.indexOf("@");
   if (at <= 0) return "***";
   return `${email.slice(0, Math.min(2, at))}***${email.slice(at)}`;
@@ -257,17 +290,23 @@ async function main(): Promise<void> {
   }
 
   // Recipients: existing relationship + verified + not opted out.
-  const all = await prisma.agent.findMany({
+  const fetched = await prisma.agent.findMany({
     where: { emailVerified: true, emailOptOut: false, email: { contains: "@" } },
     select: { id: true, email: true, name: true, credits: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
+  // Internal-domain exclusion happens BEFORE SEND_LIMIT slicing and BEFORE
+  // top-up selection: excluded accounts get no email and no top-up.
+  const excludedInternal = fetched.filter((a) => EXCLUDE_DOMAINS.has(emailDomain(a.email)));
+  const all = fetched.filter((a) => !EXCLUDE_DOMAINS.has(emailDomain(a.email)));
   const recipients = SEND_LIMIT > 0 ? all.slice(0, SEND_LIMIT) : all;
   const needTopup = TOPUP_MIN > 0 ? recipients.filter((a) => a.credits < TOPUP_MIN) : [];
 
   console.log(JSON.stringify({
     mode: CONFIRM ? "SEND" : "DRY-RUN",
     eligible: all.length,
+    excludedInternal: excludedInternal.length,
+    excludeDomains: [...EXCLUDE_DOMAINS].sort(),
     selected: recipients.length,
     sendLimit: SEND_LIMIT || null,
     topupMin: TOPUP_MIN,
@@ -286,6 +325,18 @@ async function main(): Promise<void> {
     console.log("\n===== DRY RUN — nothing sent. First recipients (masked): =====");
     for (const r of recipients.slice(0, 10)) console.log(`  ${maskEmail(r.email)}  credits=${r.credits}  topup=${TOPUP_MIN > 0 && r.credits < TOPUP_MIN}`);
     if (recipients.length > 10) console.log(`  … +${recipients.length - 10} more`);
+    // Per-domain histogram of the eligible (post-exclusion) recipient pool, so
+    // the job log makes internal-alias pollution impossible to miss.
+    const domainCounts = new Map<string, number>();
+    for (const r of all) {
+      const d = emailDomain(r.email) || "(no domain)";
+      domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1);
+    }
+    console.log("\n===== RECIPIENT DOMAINS (eligible, after exclusion) =====");
+    for (const [domain, count] of [...domainCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+      console.log(`  ${domain}: ${count}`);
+    }
+    console.log(`Excluded as internal (${[...EXCLUDE_DOMAINS].sort().join(", ") || "none"}): ${excludedInternal.length}`);
     console.log(`\n===== SAMPLE EMAIL (to ${maskEmail(sample.email)}) =====`);
     console.log(`Subject: ${SUBJECT}`);
     console.log(`List-Unsubscribe: <${unsubUrl}>`);

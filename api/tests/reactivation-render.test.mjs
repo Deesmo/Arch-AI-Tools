@@ -9,7 +9,7 @@ import assert from "assert";
 process.env.UNSUBSCRIBE_SECRET = "test-secret-do-not-use-in-prod";
 process.env.DATABASE_URL = process.env.DATABASE_URL || "postgresql://test:test@127.0.0.1:5/test";
 
-const { SUBJECT, renderText, renderHtml } = await import("../dist/scripts/reactivationEmail.js");
+const { SUBJECT, renderText, renderHtml, parseExcludeDomains, emailDomain } = await import("../dist/scripts/reactivationEmail.js");
 
 let failures = 0;
 function test(name, fn) {
@@ -56,6 +56,35 @@ test("html escapes a hostile display name", () => {
   const out = renderHtml('<script>alert(1)</script>', 25, true, UNSUB, ADDR);
   assert.ok(!out.includes("<script>alert(1)</script>"));
   assert.ok(out.includes("&lt;script&gt;"));
+});
+
+console.log("\nInternal-domain exclusion (recipient selection):");
+
+test("EXCLUDE_EMAIL_DOMAINS unset → defaults to archtools.dev", () => {
+  const set = parseExcludeDomains(undefined);
+  assert.deepStrictEqual([...set], ["archtools.dev"]);
+});
+
+test("EXCLUDE_EMAIL_DOMAINS parses comma-separated, trimmed, lowercased", () => {
+  const set = parseExcludeDomains(" Foo.COM , bar.io ,,archtools.dev ");
+  assert.deepStrictEqual([...set].sort(), ["archtools.dev", "bar.io", "foo.com"]);
+});
+
+test("EXCLUDE_EMAIL_DOMAINS='' explicitly disables exclusion", () => {
+  assert.strictEqual(parseExcludeDomains("").size, 0);
+});
+
+test("emailDomain lowercases and takes the part after the last @", () => {
+  assert.strictEqual(emailDomain("Brad@ArchTools.DEV"), "archtools.dev");
+  assert.strictEqual(emailDomain("no-at-sign"), "");
+});
+
+test("internal aliases match the default exclusion; real users do not", () => {
+  const set = parseExcludeDomains(undefined);
+  for (const internal of ["lucius@archtools.dev", "brad@archtools.dev", "mc1@ARCHTOOLS.DEV"]) {
+    assert.ok(set.has(emailDomain(internal)), `${internal} should be excluded`);
+  }
+  assert.ok(!set.has(emailDomain("someone@gmail.com")));
 });
 
 if (failures) { console.error(`\n${failures} failed`); process.exit(1); }
