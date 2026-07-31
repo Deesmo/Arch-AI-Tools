@@ -355,7 +355,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
 
   res.json({
     name: "Arch Tools",
-    description: "The first API platform built for autonomous agent payments. 63 production tools, USDC on 9 chains via x402 or Stripe.",
+    description: "The first API platform built for autonomous agent payments. 63 production tools, USDC on Base or Polygon via x402 or Stripe.",
     url: BASE_URL,
     api_base: API_BASE,
     // x402 protocol version served on our 402 challenges (spec-correct v2 —
@@ -661,7 +661,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 
 const LLMS_TXT = `# Arch Tools
 > The first API platform built for autonomous agent payments.
-> 63 production-ready tools. One key. USDC on 9 chains via x402 or Stripe.
+> 63 production-ready tools. One key. USDC on Base or Polygon via x402 or Stripe.
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json

@@ -117,7 +117,7 @@ WHAT'S WAITING FOR YOU
     2. Add a custom connector with this URL: ${SITE}/mcp
     3. Authorize — all 63 tools appear in your chat, ready to call.
 
-* x402 agent payments — your agents can pay per call in USDC (Base, Ethereum, Solana + more). No card, no key, no human in the loop.
+* x402 agent payments — your agents can pay per call in USDC (Base or Polygon). No card, no key, no human in the loop.
 
 TRY IT IN 30 SECONDS (costs 1 credit)
 
@@ -206,7 +206,7 @@ export function renderHtml(name: string | null, balance: number, toppedUp: boole
 
     <div class="feature">
       <h3>⚡ x402 agent payments</h3>
-      <p>Your agents can pay per call in USDC (Base, Ethereum, Solana + more). No card, no key, no human in the loop.</p>
+      <p>Your agents can pay per call in USDC (Base or Polygon). No card, no key, no human in the loop.</p>
     </div>
 
     <hr class="divider">

@@ -423,7 +423,7 @@ export async function sendDay7ReengagementEmail(to: string, creditsRemaining: nu
     <p>If you haven't tried x402 payments yet, here's what they unlock:</p>
     <div class="stats">
       <div class="stat"><span>For agents</span>Pay per-call with USDC, no API key needed</div>
-      <div class="stat"><span>Chains</span>Base, Ethereum, Solana, Polygon + 12 more</div>
+      <div class="stat"><span>Chains</span>Base, Polygon</div>
       <div class="stat"><span>Cost</span>As low as $0.001 per call</div>
     </div>
     <p>You have <strong>${creditsRemaining} credits</strong> left. When they run out, your agents can keep going via x402 without any human intervention.</p>
