@@ -118,5 +118,13 @@ test("upstream calls send the trimmed window, not the raw stored history", () =>
   assert.match(sessionMessageRoute, /context_truncated: true/);
 });
 
+test("OpenAI provider errors do not become successful empty assistant messages", () => {
+  assert.match(sessionMessageRoute, /if \(!resp\.ok\)/, "OpenAI non-2xx responses must be checked");
+  assert.match(sessionMessageRoute, /removePendingUserMessage\(\);\s*const detail = data\.error\?\.message/s, "failed OpenAI calls must remove the pending user turn");
+  assert.match(sessionMessageRoute, /error: resp\.status === 429 \? "rate_limited" : "openai_error"/, "provider failure must return an error body");
+  assert.match(sessionMessageRoute, /typeof choiceText !== "string" \|\| choiceText\.length === 0/, "empty OpenAI choices must not be reported as success");
+  assert.ok(!/responseText = data\.choices\?\.\[0\]\?\.message\?\.content \?\? ""/.test(sessionMessageRoute), "must not coerce missing OpenAI output into an empty success");
+});
+
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log("\nAll session-pricing tests passed.");
