@@ -60,6 +60,7 @@ function compressedStylePdf(count) {
 
 async function main() {
   const toolsSrc = fs.readFileSync(src("routes", "tools", "index.ts"), "utf-8");
+  const x402Src = fs.readFileSync(src("middleware", "x402.ts"), "utf-8");
   const agentSrc = fs.readFileSync(src("routes", "agent.ts"), "utf-8");
   const schemaSrc = fs.readFileSync(root("prisma", "schema.prisma"), "utf-8");
   const openapiSrc = fs.readFileSync(root("public", "openapi.json"), "utf-8");
@@ -159,12 +160,26 @@ async function main() {
   await test("source: both input paths are capped before the Anthropic call", () => {
     assert.ok(toolsSrc.includes("buffer.length > EXTRACT_PDF_MAX_BYTES"), "bytes cap missing");
     assert.ok(toolsSrc.includes("estPages > EXTRACT_PDF_MAX_PAGES"), "pages cap missing");
-    assert.ok(toolsSrc.includes('Buffer.from(pdf_base64!, "base64")'),
+    assert.ok(toolsSrc.includes('Buffer.from(pdfBase64!, "base64")'),
       "base64 input must be decoded and size-checked (it previously had no cap)");
     assert.ok(toolsSrc.includes('"pdf_too_large"'), "pages-cap error code missing");
     const capIdx = toolsSrc.indexOf("EXTRACT_PDF_MAX_BYTES");
     const anthropicIdx = toolsSrc.indexOf('"anthropic-beta": "pdfs-2024-09-25"');
     assert.ok(capIdx !== -1 && capIdx < anthropicIdx, "caps must run before the model call");
+  });
+  await test("source: x402 extract-pdf caps run after verify but before settlement", () => {
+    assert.ok(
+      toolsSrc.includes('router.post("/extract-pdf", ...toolMiddleware("extract-pdf", preSettleExtractPdf)'),
+      "extract-pdf route must wire the x402 pre-settlement cap check");
+    assert.ok(toolsSrc.includes("(req as ExtractPdfRequest).extractPdfBuffer = buffer"),
+      "pre-settlement PDF fetch must be reused by the handler");
+    const verifyIdx = x402Src.indexOf("const verifyResult = await verifyPayment");
+    const preSettleIdx = x402Src.indexOf("const okToSettle = await preSettleCheck");
+    const settleIdx = x402Src.indexOf("const settleResult = await settlePayment");
+    assert.ok(verifyIdx !== -1 && preSettleIdx > verifyIdx, "pre-settle check must run only after payment verification");
+    assert.ok(settleIdx !== -1 && preSettleIdx < settleIdx, "pre-settle check must run before payment settlement");
+    assert.ok(x402Src.slice(preSettleIdx, settleIdx).includes("releaseStoredNonce(nonce)"),
+      "rejected pre-settlement requests must not pin the nonce");
   });
   await test("advertised = charged: openapi.json + discovery describe the caps", () => {
     assert.ok(openapiSrc.includes("max 5MB / 50 pages per call"), "openapi.json summary missing the limits");

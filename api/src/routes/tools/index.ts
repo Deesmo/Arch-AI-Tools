@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth.js";
-import { x402Middleware, X402_PRICES, isX402AnonymousTool, buildPaymentRequiredV2 } from "../../middleware/x402.js";
+import { x402Middleware, X402_PRICES, isX402AnonymousTool, buildPaymentRequiredV2, type X402PreSettleCheck } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr, waiveCharge } from "../../utils/credits.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
@@ -129,8 +129,8 @@ function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFuncti
   next();
 }
 
-function toolMiddleware(toolName: string) {
-  return [x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
+function toolMiddleware(toolName: string, preSettleCheck?: X402PreSettleCheck) {
+  return [x402Middleware(toolName, preSettleCheck), requireAuth, requireExecuteScope, tierRateLimiter];
 }
 
 function isX402Paid(req: Request): boolean {
@@ -186,6 +186,67 @@ function hasByokKeys(req: Request, headerNames: readonly string[] = BYOK_HEADER_
 function byokAdjustedCost(req: Request, cost: number, headerNames: readonly string[] = BYOK_HEADER_NAMES): number {
   return hasByokKeys(req, headerNames) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
 }
+
+type ExtractPdfRequest = AuthedRequest & { extractPdfBuffer?: Buffer };
+
+function extractPdfInput(req: Request): { pdfBase64?: string; pdfUrl?: string } {
+  const body = req.body as { pdf_base64?: string; pdf_url?: string; url?: string };
+  return {
+    pdfBase64: body.pdf_base64,
+    pdfUrl: (body.pdf_url ?? body.url) as string | undefined,
+  };
+}
+
+async function loadExtractPdfBuffer(req: Request, res: Response): Promise<Buffer | null> {
+  const { pdfBase64, pdfUrl } = extractPdfInput(req);
+  if (!pdfUrl && !pdfBase64) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url (or url) or pdf_base64 is required", request_id: reqId() });
+    return null;
+  }
+
+  if (pdfUrl && !pdfBase64) {
+    try {
+      await validateUrl(pdfUrl);
+    } catch (err) {
+      res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() });
+      return null;
+    }
+    const resp = await safeAxiosGet(pdfUrl, { responseType: "arraybuffer", timeout: 20000 });
+    return Buffer.from(resp.data as ArrayBuffer);
+  }
+
+  return Buffer.from(pdfBase64!, "base64");
+}
+
+function enforceExtractPdfCaps(buffer: Buffer, res: Response): boolean {
+  const maxMb = Math.round(EXTRACT_PDF_MAX_BYTES / (1024 * 1024));
+  if (buffer.length > EXTRACT_PDF_MAX_BYTES) {
+    res.status(400).json({ ok: false, error: "file_too_large", message: `PDF must be under ${maxMb}MB (applies to both pdf_url and pdf_base64 input)`, request_id: reqId() });
+    return false;
+  }
+  const estPages = estimatePdfPageCount(buffer);
+  if (estPages > EXTRACT_PDF_MAX_PAGES) {
+    res.status(400).json({ ok: false, error: "pdf_too_large", message: `This PDF appears to have ~${estPages} pages — extract-pdf accepts at most ${EXTRACT_PDF_MAX_PAGES} pages per call at its flat price. Split the document and extract it in parts.`, request_id: reqId() });
+    return false;
+  }
+  return true;
+}
+
+const preSettleExtractPdf: X402PreSettleCheck = async (req, res) => {
+  if (!getAnthropic()) {
+    res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() });
+    return false;
+  }
+  try {
+    const buffer = await loadExtractPdfBuffer(req, res);
+    if (!buffer || !enforceExtractPdfCaps(buffer, res)) return false;
+    (req as ExtractPdfRequest).extractPdfBuffer = buffer;
+    return true;
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "pdf_error", message: safeErr(e), request_id: reqId() });
+    return false;
+  }
+};
 
 function extractJsonObject(text: string): string | null {
   const cleaned = text.replace(/```json|```/g, "").trim();
@@ -1436,16 +1497,13 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
 
 // ─── 30. EXTRACT-PDF ─────────────────────────────────────────────────────────
 
-router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: AuthedRequest, res: Response): Promise<void> => {
+router.post("/extract-pdf", ...toolMiddleware("extract-pdf", preSettleExtractPdf), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
     const ok = await deductCredits(req, res, "extract-pdf", 6);
     if (!ok) return;
   }
   if (!getAnthropic()) { res.status(503).json({ ok: false, error: "service_unavailable", message: "This tool requires an Anthropic API key that has not been configured.", request_id: reqId() }); return; }
-  const { pdf_base64 } = req.body as { pdf_base64?: string };
-  const pdf_url = (req.body.pdf_url ?? req.body.url) as string | undefined; // accept documented alias `url`
-  if (!pdf_url && !pdf_base64) { res.status(400).json({ ok: false, error: "invalid_request", message: "pdf_url (or url) or pdf_base64 is required", request_id: reqId() }); return; }
   try {
     // Size caps (audit 2026-07-27): the whole document goes to Anthropic as
     // billed input tokens (~1,500–3,000 per page), so bound BOTH input paths —
@@ -1453,24 +1511,8 @@ router.post("/extract-pdf", ...toolMiddleware("extract-pdf"), async (req: Authed
     // PDF consume unbounded inference at a flat 6-credit price. Env-tunable via
     // EXTRACT_PDF_MAX_BYTES / EXTRACT_PDF_MAX_PAGES; limits are advertised in
     // the tool description + openapi.json (advertised=charged includes limits).
-    let buffer: Buffer;
-    if (pdf_url && !pdf_base64) {
-      try { await validateUrl(pdf_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-      const resp = await safeAxiosGet(pdf_url, { responseType: "arraybuffer", timeout: 20000 });
-      buffer = Buffer.from(resp.data as ArrayBuffer);
-    } else {
-      buffer = Buffer.from(pdf_base64!, "base64");
-    }
-    const maxMb = Math.round(EXTRACT_PDF_MAX_BYTES / (1024 * 1024));
-    if (buffer.length > EXTRACT_PDF_MAX_BYTES) {
-      res.status(400).json({ ok: false, error: "file_too_large", message: `PDF must be under ${maxMb}MB (applies to both pdf_url and pdf_base64 input)`, request_id: reqId() });
-      return;
-    }
-    const estPages = estimatePdfPageCount(buffer);
-    if (estPages > EXTRACT_PDF_MAX_PAGES) {
-      res.status(400).json({ ok: false, error: "pdf_too_large", message: `This PDF appears to have ~${estPages} pages — extract-pdf accepts at most ${EXTRACT_PDF_MAX_PAGES} pages per call at its flat price. Split the document and extract it in parts.`, request_id: reqId() });
-      return;
-    }
+    const buffer = (req as ExtractPdfRequest).extractPdfBuffer ?? await loadExtractPdfBuffer(req, res);
+    if (!buffer || !enforceExtractPdfCaps(buffer, res)) return;
     const base64Data = buffer.toString("base64");
     try {
       // Use messages.create with betas header for PDF document type support
