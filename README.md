@@ -1,5 +1,7 @@
 # Arch AI Tools
 
+[![MCP Queen operational grade](https://mcpqueen.com/badge/io.github.Deesmo/arch-tools-mcp.svg)](https://mcpqueen.com/s/io.github.Deesmo/arch-tools-mcp)
+
 **63 production-ready API tools for AI agents** — web scraping, AI generation (Claude/GPT-4/Grok/Gemini), crypto data, OCR, image generation (DALL-E 3), audio transcription, text-to-speech, email, domain lookup, and more.
 
 [![Smithery](https://smithery.ai/badge/mcmetaverse/arch-tools)](https://smithery.ai/server/mcmetaverse/arch-tools)
