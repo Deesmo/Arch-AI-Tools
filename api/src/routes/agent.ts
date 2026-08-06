@@ -9,6 +9,7 @@ import { stripe } from "../lib/stripe.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { clearSessionCookie } from "./auth.js";
 import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity, allowVerificationResend, reissueEmailVerification } from "../lib/verification.js";
 import { VERIFY_TOKEN_RE, renderVerifyConfirmPage, renderVerifyActivationPage, renderVerifyErrorPage, renderVerifyResendSentPage } from "../assets/verifyEmailHtml.js";
 import { REFERRAL_REWARD } from "../lib/referralReward.js";
@@ -582,6 +583,7 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
 
     // Structured log mirrors the DataDeletionAudit row (no PII — counts + audit id).
     logger.info(`[gdpr] account deleted agent=${agent.id} erased=${JSON.stringify(result.counts)} audit=${result.auditId} at=${new Date().toISOString()}`);
+    clearSessionCookie(res);
 
     res.json({
       ok: true,

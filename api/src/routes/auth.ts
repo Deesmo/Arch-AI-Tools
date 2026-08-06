@@ -8,6 +8,7 @@ import { logAudit } from "../lib/audit.js";
 import { logger } from "../lib/logger.js";
 import { sendPasswordResetEmail } from "../services/email.js";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
+import { isDeletedAgent } from "../lib/deletedAgent.js";
 
 const router = Router();
 
@@ -27,6 +28,11 @@ const COOKIE_OPTS = {
   maxAge: SESSION_TTL_MS,
   path: "/",
 };
+
+export function clearSessionCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
+  res.cookie(COOKIE_NAME, "", { ...COOKIE_OPTS, maxAge: 0 });
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -173,8 +179,7 @@ router.post("/set-password", sensitiveLimiter, async (req: Request, res: Respons
 });
 
 router.get("/logout", (_req: Request, res: Response): void => {
-  res.clearCookie(COOKIE_NAME, { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
-  res.cookie(COOKIE_NAME, "", { ...COOKIE_OPTS, maxAge: 0 });
+  clearSessionCookie(res);
   res.redirect("/login");
 });
 
@@ -191,9 +196,9 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     return;
   }
   const agent = await prisma.agent.findUnique({ where: { id: payload.sub } });
-  if (!agent) {
-    res.clearCookie(COOKIE_NAME, { path: "/" });
-    res.status(401).json({ ok: false, error: "agent_not_found" });
+  if (!agent || isDeletedAgent(agent)) {
+    clearSessionCookie(res);
+    res.status(401).json({ ok: false, error: isDeletedAgent(agent) ? "account_deleted" : "agent_not_found" });
     return;
   }
   res.json({
@@ -212,7 +217,11 @@ router.get("/api-key", async (req: Request, res: Response): Promise<void> => {
   const payload = verifySession(token);
   if (!payload) { res.status(401).json({ ok: false, error: "session_expired" }); return; }
   const agent = await prisma.agent.findUnique({ where: { id: payload.sub } });
-  if (!agent) { res.status(401).json({ ok: false, error: "agent_not_found" }); return; }
+  if (!agent || isDeletedAgent(agent)) {
+    clearSessionCookie(res);
+    res.status(401).json({ ok: false, error: isDeletedAgent(agent) ? "account_deleted" : "agent_not_found" });
+    return;
+  }
   // Plaintext keys are no longer stored — only the prefix can be shown.
   // Full keys are returned exactly once at registration/rotation.
   const masked = agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null;

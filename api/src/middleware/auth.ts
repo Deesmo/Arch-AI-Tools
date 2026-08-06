@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
+import { isDeletedAgent } from "../lib/deletedAgent.js";
 
 export interface AuthedRequest extends Request {
   agent?: {
@@ -83,11 +84,11 @@ export async function requireAuth(
       }
     }
 
-    if (!agent) {
+    if (!agent || isDeletedAgent(agent)) {
       res.status(401).json({
         ok: false,
-        error: "unauthorized",
-        message: "Invalid API key or OAuth token. Register at https://archtools.dev",
+        error: isDeletedAgent(agent) ? "account_deleted" : "unauthorized",
+        message: isDeletedAgent(agent) ? "This account has been deleted." : "Invalid API key or OAuth token. Register at https://archtools.dev",
         request_id: crypto.randomUUID(),
       });
       return;
