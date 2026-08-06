@@ -20,6 +20,7 @@
 import assert from "assert";
 
 process.env.DATABASE_URL ??= "postgresql://stub:stub@127.0.0.1:5432/stub";
+process.env.JWT_SECRET ??= "test-secret-do-not-use-in-prod";
 
 const { prisma } = await import("../dist/lib/prisma.js");
 const { peekEmailVerifyToken } = await import("../dist/lib/verification.js");
