@@ -2,13 +2,14 @@ import { Router, Request, Response, NextFunction } from "express";
 import { prisma } from "../lib/prisma.js";
 import { stripe } from "../lib/stripe.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
-import { verifySession } from "./auth.js";
+import { clearSessionCookie, verifySession } from "./auth.js";
 import { reqId } from "../utils/credits.js";
 import { sendPurchaseConfirmation, sendAdminAlert } from "../services/email.js";
 import { fireWebhookEvent } from "../services/webhooks.js";
 import { safeErr } from "../utils/credits.js";
 import { tierFromSubscriptionPlanId } from "../lib/tiers.js";
 import { clawbackDelta, proratedClawbackTarget } from "../lib/clawback.js";
+import { isDeletedAgent } from "../lib/deletedAgent.js";
 
 const router = Router();
 
@@ -34,7 +35,8 @@ async function requireAuthOrSession(req: AuthedRequest, res: Response, next: Nex
     return;
   }
   const agent = await prisma.agent.findUnique({ where: { id: payload.sub } }).catch(() => null);
-  if (!agent) {
+  if (!agent || isDeletedAgent(agent)) {
+    if (isDeletedAgent(agent)) clearSessionCookie(res);
     res.status(401).json({ ok: false, error: "unauthorized", message: "Session invalid. Sign in again at /login", request_id: reqId() });
     return;
   }

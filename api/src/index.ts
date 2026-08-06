@@ -31,7 +31,7 @@ import workflowsRouter from "./routes/workflows.js";
 import seoRouter from "./routes/seo.js";
 import legalRouter from "./routes/legal.js";
 import oauthRouter from "./routes/oauth.js";
-import authRouter, { verifySession } from "./routes/auth.js";
+import authRouter, { clearSessionCookie, verifySession } from "./routes/auth.js";
 import chatRouter from "./routes/chat.js";
 import directoryRouter from "./routes/directory.js";
 import walletRouter from "./routes/wallet.js";
@@ -47,6 +47,8 @@ import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 import mcpRouter from "./routes/mcp.js";
 import unsubscribeRouter from "./routes/unsubscribe.js";
+import { prisma } from "./lib/prisma.js";
+import { isDeletedAgent } from "./lib/deletedAgent.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
 import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus, warmX402Sdk } from "./middleware/x402-sdk.js";
@@ -395,9 +397,15 @@ app.get("/signup", (req: Request, res: Response) => {
 });
 app.get("/register", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 app.get("/login", (_req: Request, res: Response) => res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate").set("Pragma", "no-cache").set("Expires", "0").type("text/html").send(LOGIN_HTML));
-app.get("/dashboard", (req: Request, res: Response) => {
+app.get("/dashboard", async (req: Request, res: Response) => {
   const token = req.cookies?.arch_session;
-  if (!token || !verifySession(token)) {
+  const payload = token ? verifySession(token) : null;
+  if (!payload) {
+    return res.redirect(302, "/login?next=/dashboard");
+  }
+  const agent = await prisma.agent.findUnique({ where: { id: payload.sub } }).catch(() => null);
+  if (!agent || isDeletedAgent(agent)) {
+    clearSessionCookie(res);
     return res.redirect(302, "/login?next=/dashboard");
   }
   return res.type("text/html").send(DASHBOARD_HTML);
