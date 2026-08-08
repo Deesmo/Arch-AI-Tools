@@ -195,6 +195,72 @@ export function isX402AnonymousTool(toolName: string): boolean {
   return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
 }
 
+type X402BodyField = {
+  required?: boolean;
+  enum?: unknown[];
+};
+
+export type X402PreflightError = {
+  field: string;
+  message: string;
+};
+
+const X402_PREFLIGHT_ALIASES: Record<string, Record<string, readonly string[]>> = {
+  "transform-text": { mode: ["operation"] },
+  "workflow-agent": { goal: ["task", "objective"] },
+};
+
+const X402_PREFLIGHT_REQUIRED_OVERRIDES: Record<string, readonly string[]> = {
+  // Static discovery metadata predates the route's namespace requirement.
+  "session-create": ["namespace"],
+};
+
+function hasUsableBodyValue(body: Record<string, unknown>, field: string): boolean {
+  const value = body[field];
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  return true;
+}
+
+function hasRequiredField(body: Record<string, unknown>, toolName: string, field: string): boolean {
+  if (hasUsableBodyValue(body, field)) return true;
+  return (X402_PREFLIGHT_ALIASES[toolName]?.[field] ?? []).some((alias) => hasUsableBodyValue(body, alias));
+}
+
+/**
+ * Validate cheap, deterministic request shape before settling an anonymous x402
+ * payment. Route handlers still own full validation; this preflight exists only
+ * to avoid charging pay-per-call users for requests that are known to be rejected.
+ */
+export function preflightX402ToolInput(toolName: string, body: unknown): X402PreflightError | null {
+  const fields = (TOOL_OUTPUT_SCHEMAS[toolName] as { input?: { bodyFields?: Record<string, X402BodyField> } } | undefined)?.input?.bodyFields ?? {};
+  const requestBody = body && typeof body === "object" && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
+
+  for (const field of X402_PREFLIGHT_REQUIRED_OVERRIDES[toolName] ?? []) {
+    if (!hasRequiredField(requestBody, toolName, field)) {
+      return { field, message: `${field} is required before x402 payment can be settled` };
+    }
+  }
+
+  for (const [field, schema] of Object.entries(fields)) {
+    if (schema.required && !hasRequiredField(requestBody, toolName, field)) {
+      return { field, message: `${field} is required before x402 payment can be settled` };
+    }
+
+    const value = requestBody[field];
+    if (value !== undefined && value !== null && Array.isArray(schema.enum) && schema.enum.length > 0) {
+      const allowed = schema.enum.map(String);
+      if (!allowed.includes(String(value))) {
+        return { field, message: `${field} must be one of: ${allowed.join(", ")}` };
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * INTERNAL v1-shaped payment-requirements builder. This remains the single source of
  * truth for wallets/chains/prices/CDP filtering and for the v1→v2 facilitator
@@ -1304,6 +1370,17 @@ export function x402Middleware(toolName: string) {
         .header("PAYMENT-REQUIRED", paymentRequiredB64)
         .header("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, Payment-Required, PAYMENT-SIGNATURE, Payment-Signature, PAYMENT-RESPONSE, Payment-Response, X-Payment, X-Payment-Response")
         .json({ ...paymentRequired, links: DISCOVERY_LINKS });
+      return;
+    }
+
+    const preflightError = preflightX402ToolInput(toolName, req.body);
+    if (preflightError) {
+      res.status(400).json({
+        ok: false,
+        error: "invalid_request",
+        message: preflightError.message,
+        field: preflightError.field,
+      });
       return;
     }
 

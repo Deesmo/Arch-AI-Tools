@@ -4,6 +4,7 @@
  * Covers the confirmed-live fixes on this branch:
  *   A (#22)  NFT tokenId path-injection validator (decimal-only, bounded).
  *   B (#19)  platform side-effect tools require an account even when x402-paid.
+ *   B.2      x402 preflights known-bad tool inputs before verify/settle.
  *   C.2 (#11) x402 in-memory nonce release on failed verify/settle.
  *   C.3 (#11) AI Oracle BYOK: bad user key never falls through to a free
  *             platform-key response.
@@ -102,6 +103,44 @@ async function main() {
     assert.ok(guardIdx > -1, "guard missing");
     assert.ok(guardIdx < verifyIdx, "guard must precede verify");
     assert.ok(guardIdx < settleIdx, "guard must precede settle");
+  });
+
+  // ── B.2: anonymous x402 must not settle requests handlers will reject ─────
+  console.log("B.2 — x402 preflight before settlement:");
+  await test("missing required input is rejected before settlement", () => {
+    const err = x402.preflightX402ToolInput("generate-hash", {});
+    assert.deepStrictEqual(err, {
+      field: "text",
+      message: "text is required before x402 payment can be settled",
+    });
+  });
+  await test("enum-only invalid input is rejected before settlement", () => {
+    const err = x402.preflightX402ToolInput("generate-hash", { text: "abc", algorithm: "sha999" });
+    assert.deepStrictEqual(err, {
+      field: "algorithm",
+      message: "algorithm must be one of: sha256, sha512, md5, sha1",
+    });
+  });
+  await test("valid aliases and schema-conformant inputs pass preflight", () => {
+    assert.strictEqual(x402.preflightX402ToolInput("generate-hash", { text: "abc", algorithm: "sha256" }), null);
+    assert.strictEqual(x402.preflightX402ToolInput("transform-text", { text: "abc", operation: "upper" }), null);
+    assert.strictEqual(x402.preflightX402ToolInput("workflow-agent", { task: "do it" }), null);
+  });
+  await test("session-create namespace override catches schema drift", () => {
+    assert.strictEqual(x402.preflightX402ToolInput("session-create", { namespace: "demo" }), null);
+    const err = x402.preflightX402ToolInput("session-create", {});
+    assert.strictEqual(err?.field, "namespace");
+  });
+  await test("preflight runs BEFORE nonce reservation, verify, and settle", () => {
+    const mwIdx = x402Src.indexOf("export function x402Middleware");
+    const preflightIdx = x402Src.indexOf("const preflightError = preflightX402ToolInput", mwIdx);
+    const nonceIdx = x402Src.indexOf("const nonce = extractNonce", mwIdx);
+    const verifyIdx = x402Src.indexOf("const verifyResult = await verifyPayment", mwIdx);
+    const settleIdx = x402Src.indexOf("const settleResult = await settlePayment", mwIdx);
+    assert.ok(preflightIdx > -1, "preflight call missing");
+    assert.ok(preflightIdx < nonceIdx, "preflight must happen before nonce reservation");
+    assert.ok(preflightIdx < verifyIdx, "preflight must happen before verify");
+    assert.ok(preflightIdx < settleIdx, "preflight must happen before settle");
   });
 
   // ── C.2 (#11): x402 in-memory nonce release on failure ─────────────────────
@@ -221,6 +260,18 @@ async function main() {
   });
   await test("research-report BYOK discount is scoped to its usable providers", () =>
     assert.ok(toolsSrc.includes('byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"])')));
+
+  // ── Deploy workflow: tests and Render trigger fail closed ──────────────────
+  console.log("D — deploy workflow failure visibility:");
+  const deployWorkflow = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "deploy.yml"), "utf-8");
+  await test("deploy workflow runs API tests from api/ and does not swallow failures", () => {
+    assert.ok(/- name: Run integration tests\n\s+working-directory: api\n\s+run: npm run test\b/.test(deployWorkflow));
+    assert.ok(!deployWorkflow.includes("npm run test || true"), "test failures must fail the deploy job");
+  });
+  await test("Render deploy trigger failure fails the workflow step", () => {
+    assert.ok(!deployWorkflow.includes("|| echo"), "curl failure must not be converted to success");
+    assert.ok(/curl -sf -X POST/.test(deployWorkflow), "Render trigger should stay fail-fast");
+  });
 
   if (failures > 0) {
     console.error(`\n${failures} test(s) failed`);
