@@ -34,7 +34,8 @@ jobs:
         run: npm run build
 
       - name: Run integration tests
-        run: npm run test || true  # Don't block deploy on test failures (tests need DB)
+        working-directory: api
+        run: npm run test
 
       - name: Deploy to Render
         if: success()
@@ -43,6 +44,5 @@ jobs:
             "https://api.render.com/v1/services/srv-d6iuo3ua2pns73asd8dg/deploys" \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d '{"clearCache":"do_not_clear"}' \
-            && echo "✅ Deploy triggered successfully" \
-            || echo "⚠️ Deploy trigger failed (check RENDER_API_KEY secret)"
+            -d '{"clearCache":"do_not_clear"}'
+          echo "✅ Deploy triggered successfully"
