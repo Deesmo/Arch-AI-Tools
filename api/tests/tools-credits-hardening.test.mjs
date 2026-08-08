@@ -161,7 +161,7 @@ async function main() {
     assert.ok(x402Src.includes("memNonceCache.delete(nonce)"), "must clear in-memory store");
     assert.ok(!/if \(nonce && redis\) await redis\.del/.test(x402Src), "redis-only cleanup must be gone");
     const count = (x402Src.match(/if \(nonce\) await releaseStoredNonce\(nonce\)/g) || []).length;
-    assert.strictEqual(count, 2, "both verify-fail and settle-fail must release the nonce");
+    assert.ok(count >= 3, "no-match, verify-fail, and settle-fail branches must release the nonce");
   });
 
   // ── C.3 (#11): AI Oracle BYOK — no free platform fallback ──────────────────
@@ -236,8 +236,9 @@ async function main() {
   await test("GET handler calls buildPaymentRequired and never x402Middleware", () => {
     const getIdx = toolsSrc.indexOf('router.get("/:toolName"');
     assert.ok(getIdx > 0, "GET handler missing");
-    const getHandler = toolsSrc.slice(getIdx);
-    assert.ok(getHandler.includes("buildPaymentRequired(toolName, price)"), "must build 402 directly");
+    const endIdx = toolsSrc.indexOf("export default router", getIdx);
+    const getHandler = toolsSrc.slice(getIdx, endIdx > getIdx ? endIdx : undefined);
+    assert.ok(getHandler.includes("buildPaymentRequiredV2(toolName, price)"), "must build 402 directly");
     assert.ok(!getHandler.includes("x402Middleware(toolName)"), "must not route probe through settlement middleware");
     assert.ok(getHandler.includes("!isX402AnonymousTool(toolName)"), "account-required tools stay out of discovery");
   });
