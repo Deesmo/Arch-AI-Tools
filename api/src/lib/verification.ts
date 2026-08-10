@@ -309,9 +309,9 @@ export async function reissueEmailVerification(email: string): Promise<boolean> 
   const lowered = email.toLowerCase().trim();
   const normalized = normalizeEmailIdentity(email);
   const rows = await prisma.$queryRaw<
-    { id: string; email: string; email_verified: boolean; pending_credits: number; verify_token_expiry: Date | null }[]
+    { id: string; email: string; email_verified: boolean; pending_credits: number; verify_token: string | null; verify_token_expiry: Date | null }[]
   >`
-    SELECT "id", "email", "email_verified", "pending_credits", "verify_token_expiry" FROM "Agent"
+    SELECT "id", "email", "email_verified", "pending_credits", "verify_token", "verify_token_expiry" FROM "Agent"
     WHERE (
       CASE WHEN lower(split_part(email, '@', 2)) IN ('gmail.com', 'googlemail.com')
         THEN replace(split_part(split_part(lower(email), '@', 1), '+', 1), '.', '') || '@gmail.com'
@@ -326,6 +326,7 @@ export async function reissueEmailVerification(email: string): Promise<boolean> 
     id: row.id,
     email: row.email,
     pendingCredits: row.pending_credits,
+    verifyToken: row.verify_token,
     verifyTokenExpiry: row.verify_token_expiry,
   };
   if (agent.verifyTokenExpiry) {
@@ -343,10 +344,28 @@ export async function reissueEmailVerification(email: string): Promise<boolean> 
     },
   });
   const verifyUrl = `https://archtools.dev/v1/agent/verify-email?token=${token}`;
-  sendVerificationEmail({ to: agent.email, verifyUrl, pendingCredits: agent.pendingCredits }).catch((e) => {
-    logger.warn({ agentId: agent.id, error: String(e) }, "Verification resend email failed");
-  });
-  logger.info({ agentId: agent.id }, "Verification token re-issued");
+  const restorePreviousToken = async (message: string, error?: unknown) => {
+    try {
+      await prisma.agent.updateMany({
+        where: { id: agent.id, verifyToken: token },
+        data: {
+          verifyToken: agent.verifyToken,
+          verifyTokenExpiry: agent.verifyTokenExpiry,
+        },
+      });
+      logger.warn({ agentId: agent.id, ...(error ? { error: String(error) } : {}) }, message);
+    } catch (restoreError) {
+      logger.error({ agentId: agent.id, error: String(restoreError) }, "Verification token rollback failed");
+    }
+  };
+  void sendVerificationEmail({ to: agent.email, verifyUrl, pendingCredits: agent.pendingCredits })
+    .then((sent) => {
+      if (!sent) {
+        return restorePreviousToken("Verification token reissue rolled back because email was not delivered");
+      }
+      logger.info({ agentId: agent.id }, "Verification token re-issued");
+    })
+    .catch((e) => restorePreviousToken("Verification token reissue rolled back because email send failed", e));
   return true;
 }
 

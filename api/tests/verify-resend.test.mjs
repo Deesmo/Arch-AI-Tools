@@ -23,6 +23,21 @@
 import assert from "assert";
 
 process.env.DATABASE_URL ??= "postgresql://stub:stub@127.0.0.1:5432/stub";
+process.env.RESEND_API_KEY = "test-resend-key";
+
+const realFetch = globalThis.fetch.bind(globalThis);
+let emailSendOk = true;
+let emailSendGate = null;
+let sentEmails = [];
+globalThis.fetch = async (input, init) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
+  if (url === "https://api.resend.com/emails") {
+    sentEmails.push(JSON.parse(String(init?.body ?? "{}")));
+    if (emailSendGate) await emailSendGate;
+    return new Response(emailSendOk ? "{}" : "resend unavailable", { status: emailSendOk ? 200 : 503 });
+  }
+  return realFetch(input, init);
+};
 
 const { prisma } = await import("../dist/lib/prisma.js");
 const { renderVerifyErrorPage, renderVerifyResendSentPage } = await import("../dist/assets/verifyEmailHtml.js");
@@ -94,17 +109,20 @@ const BASE = `http://127.0.0.1:${server.address().port}`;
 // with the raw snake_case column names.
 let agentRow = null;          // what the normalized-identity lookup returns
 let updates = [];             // captured update() calls
+let updateManyCalls = [];      // captured rollback updateMany() calls
 let lookupParams = [];        // captured $queryRaw bind values
 const rawRow = () => ({
   id: agentRow.id,
   email: agentRow.email ?? "stored@example.com",
   email_verified: agentRow.emailVerified,
   pending_credits: agentRow.pendingCredits,
+  verify_token: agentRow.verifyToken ?? null,
   verify_token_expiry: agentRow.verifyTokenExpiry,
 });
 const stubLookup = async (_strings, ...values) => { lookupParams = values; return agentRow ? [rawRow()] : []; };
 prisma.$queryRaw = stubLookup;
 prisma.agent.update = async (args) => { updates.push(args); return {}; };
+prisma.agent.updateMany = async (args) => { updateManyCalls.push(args); return { count: 1 }; };
 
 async function postResend(email, headers = {}) {
   const res = await fetch(`${BASE}/v1/agent/verify-email/resend`, {
@@ -114,6 +132,21 @@ async function postResend(email, headers = {}) {
   });
   const text = await res.text();
   return { res, text };
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((r) => { resolve = r; });
+  return { promise, resolve };
+}
+
+async function waitFor(predicate, label, timeoutMs = 250) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  assert.ok(predicate(), label);
 }
 
 // The exact neutral body every internal outcome must produce (modulo request_id).
@@ -127,10 +160,14 @@ function neutralShape(text) {
 
 await atest("happy path: unverified account + EXPIRED token → 200, single token-only rotation", async () => {
   updates = [];
+  updateManyCalls = [];
+  sentEmails = [];
+  emailSendOk = true;
   agentRow = {
     id: "agent-resend-1",
     emailVerified: false,
     pendingCredits: 75,
+    verifyToken: "old-expired-token",
     verifyTokenExpiry: new Date(Date.now() - 60_000), // expired 1 min ago (issued 31 min ago)
   };
   const { res, text } = await postResend("stranded@example.com");
@@ -145,6 +182,8 @@ await atest("happy path: unverified account + EXPIRED token → 200, single toke
   for (const forbidden of ["credits", "pendingCredits", "emailVerified"]) {
     assert.ok(!(forbidden in data), `resend must not write ${forbidden}`);
   }
+  assert.strictEqual(updateManyCalls.length, 0, "successful delivery must not roll back the token");
+  assert.strictEqual(sentEmails.length, 1, "verification email sent once");
 });
 
 let happyBody;
@@ -188,10 +227,52 @@ await atest("cooldown: token minted moments ago → 200 but NOT re-minted", asyn
 
 await atest("no-token unverified account (failed signup setup) → recoverable", async () => {
   updates = [];
+  updateManyCalls = [];
+  emailSendOk = true;
   agentRow = { id: "agent-notoken", emailVerified: false, pendingCredits: 0, verifyTokenExpiry: null };
   const { res } = await postResend("failedsetup@example.com");
   assert.strictEqual(res.status, 200);
   assert.strictEqual(updates.length, 1, "token issued even when none existed");
+  assert.strictEqual(updateManyCalls.length, 0, "successful recovery must not roll back");
+});
+
+await atest("provider failure → neutral 200 before provider completes, then previous token restored", async () => {
+  updates = [];
+  updateManyCalls = [];
+  sentEmails = [];
+  emailSendOk = false;
+  const gate = deferred();
+  emailSendGate = gate.promise;
+  const oldExpiry = new Date(Date.now() + 10 * 60 * 1000); // live token, minted outside cooldown
+  agentRow = {
+    id: "agent-maildown",
+    email: "maildown@example.com",
+    emailVerified: false,
+    pendingCredits: 75,
+    verifyToken: "still-usable-token",
+    verifyTokenExpiry: oldExpiry,
+  };
+  const resendPromise = postResend("maildown@example.com");
+  const returnedBeforeProvider = await Promise.race([
+    resendPromise.then(() => true),
+    new Promise((resolve) => setTimeout(() => resolve(false), 50)),
+  ]);
+  assert.strictEqual(returnedBeforeProvider, true, "neutral response must not wait on the email provider");
+  const { res, text } = await resendPromise;
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(neutralShape(text), happyBody);
+  assert.strictEqual(updates.length, 1, "resend attempts to mint a fresh token");
+  const mintedToken = updates[0].data.verifyToken;
+  assert.strictEqual(sentEmails.length, 1, "delivery was attempted");
+  assert.strictEqual(updateManyCalls.length, 0, "rollback waits for the provider result");
+  gate.resolve();
+  emailSendGate = null;
+  await waitFor(() => updateManyCalls.length === 1, "failed delivery rolls the token back");
+  assert.strictEqual(updateManyCalls.length, 1, "failed delivery rolls the token back");
+  assert.deepStrictEqual(updateManyCalls[0].where, { id: "agent-maildown", verifyToken: mintedToken });
+  assert.strictEqual(updateManyCalls[0].data.verifyToken, "still-usable-token");
+  assert.strictEqual(updateManyCalls[0].data.verifyTokenExpiry, oldExpiry);
+  emailSendOk = true;
 });
 
 await atest("gmail alias submitted → stored dotted account still found, token rotated", async () => {

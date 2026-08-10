@@ -240,11 +240,16 @@ export function renderVerificationEmail(verifyUrl: string, pendingCredits?: numb
   return { subject, html, text };
 }
 
-export async function sendVerificationEmail(args: { to: string; verifyUrl: string; pendingCredits?: number }): Promise<void> {
+export async function sendVerificationEmail(args: { to: string; verifyUrl: string; pendingCredits?: number }): Promise<boolean> {
   const { to, verifyUrl, pendingCredits } = args;
   const { subject, html, text } = renderVerificationEmail(verifyUrl, pendingCredits);
-  await sendEmail(to, subject, html, text);
-  logger.info({ to }, "Verification email sent");
+  const sent = await sendEmail(to, subject, html, text);
+  if (sent) {
+    logger.info({ to }, "Verification email sent");
+  } else {
+    logger.warn({ to }, "Verification email not sent");
+  }
+  return sent;
 }
 
 // ─── 2. Welcome Email ───
