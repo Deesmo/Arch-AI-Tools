@@ -21,6 +21,15 @@ export interface SessionContextMessage {
   content: string;
 }
 
+export const DEFAULT_SESSION_CONTEXT_MAX_CHARS = 40000;
+
+export function parseSessionContextMaxChars(raw: string | undefined): number {
+  const value = (raw ?? String(DEFAULT_SESSION_CONTEXT_MAX_CHARS)).trim();
+  if (!/^\d+$/.test(value)) return DEFAULT_SESSION_CONTEXT_MAX_CHARS;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : DEFAULT_SESSION_CONTEXT_MAX_CHARS;
+}
+
 export function trimSessionContext<T extends SessionContextMessage>(
   messages: T[],
   maxChars: number,

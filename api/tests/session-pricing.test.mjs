@@ -12,7 +12,7 @@ import assert from "assert";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { trimSessionContext } from "../dist/lib/sessionContext.js";
+import { DEFAULT_SESSION_CONTEXT_MAX_CHARS, parseSessionContextMaxChars, trimSessionContext } from "../dist/lib/sessionContext.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const toolsSrc = fs.readFileSync(path.join(__dirname, "..", "src", "routes", "tools", "index.ts"), "utf8");
@@ -81,6 +81,24 @@ test("stored history is not mutated by trimming", () => {
   assert.deepStrictEqual(messages, copy);
 });
 
+console.log("\nContext cap env parsing:");
+
+test("default context cap is the safe 40k budget", () => {
+  assert.strictEqual(DEFAULT_SESSION_CONTEXT_MAX_CHARS, 40000);
+  assert.strictEqual(parseSessionContextMaxChars(undefined), 40000);
+});
+
+for (const bad of ["", "   ", "abc", "40000x", "-1", "0", String(Number.MAX_SAFE_INTEGER + 1)]) {
+  test(`invalid SESSION_CONTEXT_MAX_CHARS=${JSON.stringify(bad)} falls back to default`, () => {
+    assert.strictEqual(parseSessionContextMaxChars(bad), DEFAULT_SESSION_CONTEXT_MAX_CHARS);
+  });
+}
+
+test("valid SESSION_CONTEXT_MAX_CHARS is honored", () => {
+  assert.strictEqual(parseSessionContextMaxChars("25000"), 25000);
+  assert.strictEqual(parseSessionContextMaxChars(" 12000 "), 12000);
+});
+
 console.log("\nsession-message route shape:");
 
 const sessionMessageRoute = route("session-message");
@@ -110,7 +128,8 @@ test("x402-paid session-create cannot store a premium model", () => {
 
 test("upstream calls send the trimmed window, not the raw stored history", () => {
   assert.match(sessionMessageRoute, /trimSessionContext\(session\.messages, SESSION_CONTEXT_MAX_CHARS\)/);
-  assert.match(sessionMessageRoute, /SESSION_CONTEXT_MAX_CHARS = parseInt\(process\.env\.SESSION_CONTEXT_MAX_CHARS \?\? "40000", 10\)/);
+  assert.match(sessionMessageRoute, /SESSION_CONTEXT_MAX_CHARS = parseSessionContextMaxChars\(process\.env\.SESSION_CONTEXT_MAX_CHARS\)/);
+  assert.ok(!/SESSION_CONTEXT_MAX_CHARS = parseInt/.test(sessionMessageRoute), "bare parseInt would let NaN disable trimming");
   assert.match(sessionMessageRoute, /messages: upstreamMessages\.map/);
   assert.match(sessionMessageRoute, /\.\.\.upstreamMessages\.map/);
   assert.ok(!/messages: session\.messages\.map/.test(sessionMessageRoute), "raw history must not be sent to Anthropic");

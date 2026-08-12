@@ -7,7 +7,7 @@ import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
 import { prisma } from "../../lib/prisma.js";
 import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
-import { trimSessionContext } from "../../lib/sessionContext.js";
+import { parseSessionContextMaxChars, trimSessionContext } from "../../lib/sessionContext.js";
 import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
@@ -3116,7 +3116,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
   // a loop. Trim oldest-first to SESSION_CONTEXT_MAX_CHARS (env-tunable,
   // default 40000); the newest message is always sent. Stored history is
   // unchanged — only the window sent upstream is trimmed.
-  const SESSION_CONTEXT_MAX_CHARS = parseInt(process.env.SESSION_CONTEXT_MAX_CHARS ?? "40000", 10);
+  const SESSION_CONTEXT_MAX_CHARS = parseSessionContextMaxChars(process.env.SESSION_CONTEXT_MAX_CHARS);
   const { window: upstreamMessages, truncated: contextTruncated } =
     trimSessionContext(session.messages, SESSION_CONTEXT_MAX_CHARS);
 
