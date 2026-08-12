@@ -187,6 +187,27 @@ function byokAdjustedCost(req: Request, cost: number, headerNames: readonly stri
   return hasByokKeys(req, headerNames) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
 }
 
+async function readProviderJson(resp: globalThis.Response): Promise<Record<string, any>> {
+  return (await resp.json().catch(() => ({}))) as Record<string, any>;
+}
+
+function providerFailureStatus(status: number): number {
+  return status === 429 ? 429 : 502;
+}
+
+function providerFailureCode(provider: string, status: number): string {
+  return status === 429 ? "rate_limited" : `${provider}_error`;
+}
+
+function providerFailureMessage(label: string, status: number, data: Record<string, any>): string {
+  const detail = typeof data.error?.message === "string"
+    ? data.error.message
+    : typeof data.message === "string"
+      ? data.message
+      : "";
+  return detail ? `${label} API error: ${detail}` : `${label} API returned ${status}`;
+}
+
 function extractJsonObject(text: string): string | null {
   const cleaned = text.replace(/```json|```/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
@@ -1274,8 +1295,16 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
         body: JSON.stringify({ model, max_tokens: maxTok, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }] }),
       });
-      const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const data = await readProviderJson(resp) as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number }; error?: { message?: string }; message?: string };
+      if (!resp.ok) {
+        res.status(providerFailureStatus(resp.status)).json({ ok: false, error: providerFailureCode("openai", resp.status), message: providerFailureMessage("OpenAI", resp.status, data), request_id: reqId() });
+        return;
+      }
       const text = data.choices?.[0]?.message?.content ?? "";
+      if (!text) {
+        res.status(502).json({ ok: false, error: "openai_error", message: "OpenAI returned an empty response", request_id: reqId() });
+        return;
+      }
       const _u = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
       res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: _u, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_u.input_tokens * 0.000003 + _u.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "openai" ? { byok: true, byok_provider: "openai" } : {}), request_id: reqId() });
       return;
@@ -1291,8 +1320,16 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { maxOutputTokens: maxTok } }),
       });
-      const data = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
+      const data = await readProviderJson(resp) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }; error?: { message?: string }; message?: string };
+      if (!resp.ok) {
+        res.status(providerFailureStatus(resp.status)).json({ ok: false, error: providerFailureCode("google", resp.status), message: providerFailureMessage("Google", resp.status, data), request_id: reqId() });
+        return;
+      }
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      if (!text) {
+        res.status(502).json({ ok: false, error: "google_error", message: "Google returned an empty response", request_id: reqId() });
+        return;
+      }
       const _ug = { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 };
       res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.000001 + _ug.output_tokens * 0.000004).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "google" ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
       return;
@@ -1307,8 +1344,16 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${xaiKey}` },
         body: JSON.stringify({ model, max_tokens: maxTok, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }] }),
       });
-      const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const data = await readProviderJson(resp) as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number }; error?: { message?: string }; message?: string };
+      if (!resp.ok) {
+        res.status(providerFailureStatus(resp.status)).json({ ok: false, error: providerFailureCode("xai", resp.status), message: providerFailureMessage("xAI", resp.status, data), request_id: reqId() });
+        return;
+      }
       const text = data.choices?.[0]?.message?.content ?? "";
+      if (!text) {
+        res.status(502).json({ ok: false, error: "xai_error", message: "xAI returned an empty response", request_id: reqId() });
+        return;
+      }
       const _ux = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
       res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.000005 + _ux.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "xai" ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
       return;
