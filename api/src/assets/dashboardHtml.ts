@@ -76,8 +76,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     .depleted-banner { background:rgba(248,113,113,0.10); border:1px solid rgba(248,113,113,0.35); border-radius:14px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }
     .depleted-text { font-size:14px; color:rgba(255,255,255,0.85); }
     .depleted-text strong { color:#f87171; }
-    .verify-banner { background:rgba(34,211,238,0.07); border:1px solid rgba(34,211,238,0.25); border-radius:14px; padding:14px 20px; display:flex; align-items:center; gap:12px; margin-bottom:16px; font-size:13px; color:rgba(255,255,255,0.75); }
+    .verify-banner { background:rgba(34,211,238,0.07); border:1px solid rgba(34,211,238,0.25); border-radius:14px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; font-size:13px; color:rgba(255,255,255,0.75); }
     .verify-banner strong { color:#22d3ee; }
+    .verify-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .verify-btn { height:34px; padding:0 12px; border-radius:8px; border:1px solid rgba(34,211,238,0.35); background:rgba(34,211,238,0.12); color:#22d3ee; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; }
+    .verify-btn:disabled { opacity:0.55; cursor:not-allowed; }
+    .verify-status { font-size:12px; color:rgba(255,255,255,0.55); min-height:16px; }
     /* STATUS */
     .status-tag { font-size:12px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
     @media (max-width:600px) {
@@ -196,6 +200,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <!-- UNVERIFIED EMAIL — pending credits waiting -->
       <div id="verify-banner" class="verify-banner" style="display:none">
         <div>Your email isn&#39;t verified yet — verify it to unlock your <strong><span id="pending-credits">0</span> pending credits</strong>. Use the verification link we emailed you at signup.</div>
+        <div class="verify-actions">
+          <button id="resend-verify-btn" class="verify-btn" type="button">Resend email</button>
+          <span id="verify-resend-status" class="verify-status"></span>
+        </div>
       </div>
 
       <!-- ACTIVITY -->
@@ -336,6 +344,14 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         var pending = data.pending_credits ?? 0;
         if (data.email_verified === false && pending > 0) {
           document.getElementById("pending-credits").textContent = pending.toLocaleString();
+          var accountEmail = (typeof data.email === "string") ? data.email : "";
+          var resendBtn = document.getElementById("resend-verify-btn");
+          var resendStatus = document.getElementById("verify-resend-status");
+          if (resendStatus) resendStatus.textContent = "";
+          if (resendBtn) {
+            resendBtn.disabled = !accountEmail;
+            resendBtn.onclick = function() { resendVerificationEmail(accountEmail); };
+          }
           document.getElementById("verify-banner").style.display = "flex";
         } else {
           document.getElementById("verify-banner").style.display = "none";
@@ -380,6 +396,30 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         showKeyEntryFallback();
       } finally {
         btn.disabled = false; btn.textContent = "Load";
+      }
+    }
+
+    async function resendVerificationEmail(email) {
+      var btn = document.getElementById("resend-verify-btn");
+      var st = document.getElementById("verify-resend-status");
+      if (!email || !btn || !st) return;
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+      st.textContent = "";
+      try {
+        var resp = await fetch("/v1/agent/verify-email/resend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email })
+        });
+        var data;
+        try { data = await resp.json(); } catch(_) { data = {}; }
+        st.textContent = data.message || (resp.ok ? "Requested — check your inbox." : "Could not resend right now.");
+      } catch(_) {
+        st.textContent = "Could not reach the server — try again shortly.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Resend email";
       }
     }
 

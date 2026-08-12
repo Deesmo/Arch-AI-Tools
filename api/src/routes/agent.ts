@@ -354,6 +354,7 @@ router.get("/usage", requireAuth, async (req: AuthedRequest, res: Response): Pro
     res.json({
       ok: true,
       agent_id: agent.id,
+      email: agent.email,
       credits_remaining: agent.credits,
       calls_today: callsToday,
       total_calls: agent.totalCalls,
