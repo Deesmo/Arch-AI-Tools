@@ -162,13 +162,17 @@ async function main() {
     assert.ok(DASHBOARD_HTML.includes('id="depleted-banner"'), "zero-balance banner missing");
     assert.ok(DASHBOARD_HTML.includes('id="upgrade-banner"'), "low-balance banner missing");
     assert.ok(DASHBOARD_HTML.includes('id="verify-banner"'), "verify banner missing");
+    assert.ok(DASHBOARD_HTML.includes('id="resend-verify-btn"'), "verify resend button missing");
     assert.ok(DASHBOARD_HTML.includes('(cr === 0) ? "flex" : "none"'));
     assert.ok(DASHBOARD_HTML.includes('(cr > 0 && cr < 50) ? "flex" : "none"'));
     assert.ok(DASHBOARD_HTML.includes('data.email_verified === false && pending > 0'));
+    assert.ok(DASHBOARD_HTML.includes('resendVerificationEmail(accountEmail)'), "verify banner must wire an explicit resend action");
+    assert.ok(DASHBOARD_HTML.includes('/v1/agent/verify-email/resend'), "dashboard must call the neutral resend endpoint");
     assert.ok(DASHBOARD_HTML.includes('href="/pricing?pack=starter"'));
   });
-  test("/v1/agent/usage exposes email_verified + pending_credits", () => {
+  test("/v1/agent/usage exposes email + email_verified + pending_credits", () => {
     const agentSrc = fs.readFileSync(src("routes", "agent.ts"), "utf-8");
+    assert.ok(agentSrc.includes("email: agent.email"));
     assert.ok(agentSrc.includes("email_verified: verification?.emailVerified ?? true"));
     assert.ok(agentSrc.includes("pending_credits: verification?.pendingCredits ?? 0"));
   });
