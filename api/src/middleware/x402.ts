@@ -88,6 +88,44 @@ const USDT_CONTRACTS: Record<string, string> = {
   bsc:       "0x55d398326f99059fF775485246999027B3197955",  // USDT on BSC (BEP-20) — $40B+ liquidity
 };
 
+// CDP Facilitator supported networks ONLY.
+// CDP supports: Base, Polygon, Solana — for ERC-20 tokens (USDC via EIP-3009, any ERC-20 via Permit2).
+// CDP does NOT support: Avalanche, Ethereum mainnet, Arbitrum, Optimism, native ETH, native SOL, or any non-ERC-20.
+// Source: https://docs.cdp.coinbase.com/x402/network-support
+const CDP_SUPPORTED_NETWORKS = new Set([
+  "base",
+  "base-sepolia",
+  "eip155:8453",
+  "eip155:84532",
+  "polygon",
+  "polygon-amoy",
+  "eip155:137",
+  "eip155:80002",
+  "solana",
+  "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "solana-devnet",
+  "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+]);
+
+export function filterCdpSupportedAccepts<T extends Record<string, any>>(accepts: T[]): T[] {
+  return accepts
+    .map((a) => {
+      // Normalize Solana to full CAIP-2 — @x402/svm registerV1 uses this exact string.
+      if (a.network === "solana:mainnet" || a.network === "solana") {
+        return { ...a, network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" };
+      }
+      return a;
+    })
+    .filter((a) => {
+      if (!CDP_SUPPORTED_NETWORKS.has(a.network)) return false;
+      if (a.asset === "native") return false; // native SOL — CDP can't handle
+      if (a.asset === "0x0000000000000000000000000000000000000000") return false; // native ETH
+      if (a.extra?.version === "native" || a.extra?.version === "native-base") return false; // no native ETH/SOL
+      if (a.extra?.version === "usol-erc20" || a.asset === "0x311935cd80b76769bf2ecc9d8ab7635b2139cf82") return false;
+      return true;
+    });
+}
+
 // Aptos native USDC token address (Circle native, launched Jan 2025)
 const APTOS_USDC_ADDRESS = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b";
 
@@ -718,49 +756,7 @@ export function buildPaymentRequired(toolName: string, price: string): object {
     }
   }
 
-  // CDP Facilitator supported networks ONLY.
-  // CDP supports: Base, Polygon, Solana — for ERC-20 tokens (USDC via EIP-3009, any ERC-20 via Permit2).
-  // CDP does NOT support: Avalanche, Ethereum mainnet, Arbitrum, Optimism, native ETH, native SOL, or any non-ERC-20.
-  // Source: https://docs.cdp.coinbase.com/x402/network-support
-  // CDP supports ONLY these exact network identifiers. Named aliases (e.g. "base", "polygon") are NOT
-  // used here intentionally — they would also match native ETH/SOL options that CDP cannot handle.
-  // All CDP-supported options in buildPaymentRequired use CAIP-2 format (eip155:*) or "solana".
-  // CDP supports these networks. Use x402 named format (base/polygon/solana) in accepts[].
-  // CAIP-2 (eip155:*) variants included for internal verify/settle calls that may use them.
-  const CDP_SUPPORTED_NETWORKS = new Set([
-    "base",          // Base mainnet ✅ (named — used in accepts[])
-    "base-sepolia",  // Base Sepolia ✅
-    "eip155:8453",   // Base mainnet ✅ (CAIP-2 — used in verify/settle)
-    "eip155:84532",  // Base Sepolia ✅
-    "polygon",       // Polygon mainnet ✅ (named — used in accepts[])
-    "polygon-amoy",  // Polygon Amoy ✅
-    "eip155:137",    // Polygon mainnet ✅ (CAIP-2 — used in verify/settle)
-    "eip155:80002",  // Polygon Amoy ✅
-    "solana",                                        // Solana mainnet (short alias) ✅
-    "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",      // Solana mainnet (full CAIP-2) ✅
-    "solana-devnet",                                  // Solana devnet ✅
-    "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",       // Solana devnet (full CAIP-2) ✅
-  ]);
-
-  // Filter to only CDP-supported networks.
-  // Normalize Solana network to full CAIP-2 format required by @x402/svm client SDK.
-  const filteredAccepts = accepts
-    .map((a: any) => {
-      // Normalize Solana to full CAIP-2 — @x402/svm registerV1 uses this exact string
-      if (a.network === "solana:mainnet" || a.network === "solana") {
-        a.network = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
-      }
-      return a;
-    })
-    .filter((a: any) => {
-      if (!CDP_SUPPORTED_NETWORKS.has(a.network)) return false;
-      if (a.asset === "native") return false; // native SOL — CDP can't handle
-      if (a.asset === "0x0000000000000000000000000000000000000000") return false; // native ETH
-      if (a.extra?.version === "native" || a.extra?.version === "native-base") return false; // no native ETH/SOL
-      if (a.extra?.version === "usol-erc20") return false; // no wrapped SOL on Base — CDP can't verify this
-      if (a.extra?.version === "usol-erc20" || a.asset === "0x311935cd80b76769bf2ecc9d8ab7635b2139cf82") return false;
-      return true;
-    });
+  const filteredAccepts = filterCdpSupportedAccepts(accepts as Array<Record<string, any>>);
 
   return {
     x402Version: 1,
