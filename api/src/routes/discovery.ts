@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { redis } from "../lib/redis.js";
-import { X402_PRICES } from "../middleware/x402.js";
+import { X402_PRICES, filterCdpSupportedAccepts } from "../middleware/x402.js";
 import { getStatusPageData } from "../middleware/analytics.js";
 import { config } from "../config.js";
 import { isValidAdminKey } from "../middleware/auth.js";
@@ -144,7 +144,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
   const suiWallet = process.env.SUI_WALLET_ADDRESS ?? "";
   const polkadotWallet = process.env.POLKADOT_WALLET_ADDRESS ?? "";
   const aptosWallet = process.env.APTOS_WALLET_ADDRESS ?? "";
-  const usdtWallet = process.env.USDT_ETH_WALLET_ADDRESS ?? "";
+  const usdtWallet = evmWallet;
   const ethWallet = process.env.ETH_WALLET_ADDRESS ?? "";
   const bnbWallet = process.env.BNB_WALLET_ADDRESS ?? "";
   const nearWallet = process.env.NEAR_WALLET_ADDRESS ?? "";
@@ -172,8 +172,7 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
   };
 
   // Build accepts array from live wallet config
-  const accepts: object[] = [];
-  const activeNetworks: string[] = [];
+  const accepts: Array<Record<string, unknown>> = [];
 
   // USDC on EVM chains (Base, Ethereum, Arbitrum, Polygon, Optimism, Avalanche, Unichain, Monad)
   if (evmWallet) {
@@ -189,7 +188,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     ];
     for (const { network, chain, description } of evmUsdcChains) {
       accepts.push({ scheme: "exact", network, asset: USDC_CONTRACTS[chain], payTo: evmWallet, token: "USDC", description });
-      activeNetworks.push(network);
     }
   }
 
@@ -204,7 +202,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       token: "USDC",
       description: "USDC on Solana (fast, cheap)",
     });
-    activeNetworks.push("solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp");
   }
 
   // USDC on Noble/Cosmos
@@ -217,7 +214,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       token: "USDC",
       description: "USDC on Noble/Cosmos (IBC to 50+ Cosmos chains)",
     });
-    activeNetworks.push("cosmos:noble-1");
   }
 
   // USDC on Algorand
@@ -230,7 +226,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       token: "USDC",
       description: "USDC on Algorand (ASA #31566704)",
     });
-    activeNetworks.push("algorand:mainnet");
   }
 
   // USDC on Stellar
@@ -244,7 +239,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       description: "USDC on Stellar (17-sec settlement)",
       memo: stellarMemo || undefined,
     });
-    activeNetworks.push("stellar:pubnet");
   }
 
   // USDC on Sui
@@ -257,7 +251,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       token: "USDC",
       description: "USDC on Sui (Move L1, Circle CCTP)",
     });
-    activeNetworks.push("sui:mainnet");
   }
 
   // USDC on Polkadot Asset Hub
@@ -270,7 +263,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       token: "USDC",
       description: "USDC on Polkadot Asset Hub (XCM to all parachains)",
     });
-    activeNetworks.push("polkadot:asset-hub");
   }
 
   // USDC on Aptos
@@ -283,7 +275,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
       token: "USDC",
       description: "USDC on Aptos (Move L1, native Circle)",
     });
-    activeNetworks.push("aptos:mainnet");
   }
 
   // USDT on EVM chains
@@ -321,13 +312,11 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
   // Native BNB
   if (bnbWallet) {
     accepts.push({ scheme: "exact", network: "eip155:56", asset: "0x0000000000000000000000000000000000000000", payTo: bnbWallet, token: "BNB", description: "Native BNB on BNB Chain" });
-    activeNetworks.push("eip155:56");
   }
 
   // Native NEAR
   if (nearWallet) {
     accepts.push({ scheme: "exact", network: "near:mainnet", asset: "near", payTo: nearWallet, token: "NEAR", description: "Native NEAR on NEAR Protocol" });
-    activeNetworks.push("near:mainnet");
   }
 
   // Native SOL
@@ -338,7 +327,6 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
   // TAO (Bittensor)
   if (taoWallet) {
     accepts.push({ scheme: "exact", network: "bittensor:finney", asset: "TAO", payTo: taoWallet, token: "TAO", description: "TAO on Bittensor (AI-native blockchain)" });
-    activeNetworks.push("bittensor:finney");
   }
 
   // UNI (Uniswap)
@@ -352,6 +340,9 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     price: `$${price}`,
     description: TOOL_DESCRIPTIONS[tool] ?? tool,
   }));
+  const supportedRails = filterCdpSupportedAccepts(accepts);
+  const supportedNetworks = [...new Set(supportedRails.map((rail) => String(rail.network)))];
+  const supportedTokens = [...new Set(supportedRails.map((rail) => String(rail.token)).filter(Boolean))];
 
   res.json({
     name: "Arch Tools",
@@ -371,13 +362,13 @@ router.get("/.well-known/x402", (_req: Request, res: Response): void => {
     // mention in coinbase/x402 specs/) and x402scan's discovery parser dropped it
     // (@agentcash/discovery 1.7.5 SPECIFICATION.md: "Legacy /.well-known/x402 ...
     // no longer parsed" — it discovers via /openapi.json).
-    supportedRails: accepts,
+    supportedRails,
     rails_note:
       "supportedRails is a chain/asset/wallet summary for humans and crawlers. Spec-shaped x402 v2 PaymentRequirements (CAIP-2 network, amount, maxTimeoutSeconds) are served in the accepts[] of each tool's 402 challenge.",
     endpoints,
     payment: {
       stripe: { url: `${BASE_URL}/pricing` },
-      x402: { status: "active", networks: [...new Set(activeNetworks)], token: "USDC/USDT/ETH/BNB/NEAR/SOL/TAO/UNI" },
+      x402: { status: "active", networks: supportedNetworks, token: supportedTokens.join("/") || "USDC" },
     },
     mcp: {
       server: "arch-tools-mcp",
