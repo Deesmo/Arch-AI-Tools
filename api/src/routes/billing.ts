@@ -132,6 +132,16 @@ export async function paymentIntentIdFromCheckoutSession(session: {
   return stripeObjectId(invoice.payment_intent);
 }
 
+export function agentUpdateForPaidSubscriptionInvoice(
+  creditsPerMonth: number,
+  planId: string | undefined
+): { credits: { increment: number }; tier?: string } {
+  const tier = tierFromSubscriptionPlanId(planId ?? "");
+  return tier === "free"
+    ? { credits: { increment: creditsPerMonth } }
+    : { credits: { increment: creditsPerMonth }, tier };
+}
+
 // GET /v1/billing/plans — returns all plans (one-time + subscription)
 router.get("/plans", (_req: Request, res: Response): void => {
   res.json({
@@ -431,9 +441,10 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         ? invoice.payment_intent
         : invoice.payment_intent?.id ?? null;
 
+      const agentUpdate = agentUpdateForPaidSubscriptionInvoice(creditsPerMonth, subscription.metadata?.plan_id);
       await prisma.$transaction([
         prisma.purchase.create({ data: { agentId, stripeId: invoiceId, paymentIntentId: renewalPaymentIntentId, credits: creditsPerMonth, amountCents: invoice.amount_paid ?? 0, status: "completed" } }),
-        prisma.agent.update({ where: { id: agentId }, data: { credits: { increment: creditsPerMonth } } }),
+        prisma.agent.update({ where: { id: agentId }, data: agentUpdate }),
       ]);
       console.log(`[billing] Renewal: +${creditsPerMonth} credits to agent ${agentId}`);
       // Fire webhook event (non-blocking)

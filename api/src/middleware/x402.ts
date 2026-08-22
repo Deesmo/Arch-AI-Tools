@@ -28,6 +28,8 @@ import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements 
 import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual, paymentPayloadVersion } from "../lib/x402V2.js";
 import { getToolSellCopy, railDescription, registerToolSellCopy } from "../lib/toolSellCopy.js";
 
+export type X402PreSettleCheck = (req: Request, res: Response) => boolean | Promise<boolean>;
+
 // Per-tool sell copy: load DB Tool.description rows into the sell-copy registry
 // at startup (Play #6). Sanitization + length-capping happens INSIDE
 // registerToolSellCopy at the insert boundary (council mod: nothing DB-sourced
@@ -1234,7 +1236,7 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
  * Checks for X-Payment header; if missing + no valid API key, returns 402.
  * If X-Payment present, verifies with facilitator and logs payment.
  */
-export function x402Middleware(toolName: string) {
+export function x402Middleware(toolName: string, preSettleCheck?: X402PreSettleCheck) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const requestStartMs = Date.now();
 
@@ -1388,6 +1390,16 @@ export function x402Middleware(toolName: string) {
         message: "x402 payment verification failed",
       });
       return;
+    }
+
+    if (preSettleCheck) {
+      const okToSettle = await preSettleCheck(req, res);
+      if (!okToSettle) {
+        // No settlement occurred, so free the nonce and let the caller retry
+        // with a corrected request body against the same payment proof.
+        if (nonce) await releaseStoredNonce(nonce);
+        return;
+      }
     }
 
     // Settle payment using spec-compliant format
