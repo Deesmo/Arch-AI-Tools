@@ -8,3 +8,5 @@ sdk/typescript/.npmrc
 sdk/python/dist/
 sdk/python/*.egg-info/
 sdk/typescript/dist/
+__pycache__/
+*.pyc
