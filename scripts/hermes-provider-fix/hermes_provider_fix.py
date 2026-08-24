@@ -164,18 +164,43 @@ def find_python(home: Path) -> Optional[Path]:
     """Locate the interpreter that can import hermes_cli.
 
     The git installer puts the venv under <home>/hermes-agent/venv; root-mode
-    installs land in /usr/local/lib/hermes-agent. A pip install into the
-    ambient interpreter is covered by the sys.executable fallback.
+    installs land in /usr/local/lib/hermes-agent. Anything else (pipx, Homebrew,
+    a relocated venv) is found via the `hermes` launcher's own shebang, and a
+    plain pip install into the ambient interpreter via sys.executable.
     """
     candidates = [
         home / "hermes-agent" / "venv" / "bin" / "python",
         Path("/usr/local/lib/hermes-agent/venv/bin/python"),
         Path(sys.executable),
     ]
+    shebang = _python_from_launcher(find_cli(home))
+    if shebang is not None:
+        candidates.insert(0, shebang)
+
     for candidate in candidates:
         if candidate.is_file() and _imports_hermes(candidate):
             return candidate
     return None
+
+
+def _python_from_launcher(cli: Optional[Path]) -> Optional[Path]:
+    """Read the interpreter path out of the `hermes` console script's shebang."""
+    if cli is None or not cli.is_file():
+        return None
+    try:
+        with cli.open("rb") as handle:
+            first = handle.readline(512).decode("utf-8", "replace").strip()
+    except OSError:
+        return None
+    if not first.startswith("#!"):
+        return None
+    # "#!/path/to/python" or "#!/usr/bin/env python3"
+    parts = first[2:].strip().split()
+    if not parts:
+        return None
+    interpreter = parts[1] if parts[0].endswith("env") and len(parts) > 1 else parts[0]
+    path = Path(interpreter)
+    return path if path.is_absolute() else None
 
 
 def _imports_hermes(python: Path) -> bool:
@@ -656,15 +681,17 @@ def _diagnose_env(setup: Setup) -> List[Finding]:
         findings.append(
             Finding(
                 severity="warning",
-                title="OPENROUTER_API_KEY makes auto-detection pick OpenRouter",
+                title="OPENROUTER_API_KEY currently wins the provider auto-detect",
                 detail=(
                     "With no explicit model.provider, the presence of OPENROUTER_API_KEY in "
                     "~/.hermes/.env is itself enough to select OpenRouter."
                 ),
                 remedy=(
-                    "Setting model.provider explicitly (--apply does this) makes the key inert. "
-                    "Remove it from ~/.hermes/.env only if you never want OpenRouter as a manual option."
+                    "Keep the key. Setting model.provider explicitly (--apply does this) makes it "
+                    "inert -- it stops winning auto-detect but stays available for `hermes model` "
+                    "or `/model openrouter:...` whenever you want it. Nothing needs deleting."
                 ),
+                auto_fixed=True,
             )
         )
 
@@ -1277,9 +1304,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     report_setup(setup)
 
     if setup.python is None:
+        # __file__ is absent or "<stdin>" when piped straight into python.
+        script = globals().get("__file__") or ""
+        name = Path(script).name if script and script != "<stdin>" else "hermes_provider_fix.py"
         print("Could not find a Python interpreter that can import hermes_cli.")
         print("Run this script with the Hermes interpreter, e.g.:")
-        print(f"  {setup.home}/hermes-agent/venv/bin/python {Path(__file__).name}")
+        print(f"  {setup.home}/hermes-agent/venv/bin/python {name}")
         return 2
 
     report_resolution(setup)

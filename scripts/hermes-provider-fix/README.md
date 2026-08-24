@@ -50,8 +50,17 @@ Two related traps:
 
 ## The fix
 
-Set `model.provider` explicitly. That satisfies step 2, so steps 3 and 4 never run and
-the OpenRouter key (or the absence of one) stops mattering.
+Set `model.provider` explicitly. That satisfies step 2, so steps 3 and 4 never run.
+
+**Keep the OpenRouter key.** Nothing needs deleting. An explicit `model.provider` means
+the key simply stops winning auto-detection — it stays in `~/.hermes/.env` and remains
+available whenever you deliberately ask for it (`hermes model`, or
+`/model openrouter:<model>` mid-session). Verified with a key present:
+
+```
+default session      -> anthropic  https://api.anthropic.com
+explicit openrouter  -> openrouter https://openrouter.ai/api/v1   key resolves: True
+```
 
 | Vendor | Provider id | Key env var |
 |--------|-------------|-------------|
@@ -62,8 +71,19 @@ the OpenRouter key (or the absence of one) stops mattering.
 
 ## Usage
 
-Run it with the interpreter that has Hermes installed (it finds that itself in the
-common layouts, but being explicit never hurts):
+It locates your Hermes install itself — the standard `~/.hermes/hermes-agent/venv`, a
+root-mode `/usr/local/lib/hermes-agent`, or any other layout via the `hermes` launcher's
+shebang — so plain `python3` is fine.
+
+Without a repo checkout, straight onto the machine running Hermes:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Deesmo/Arch-AI-Tools/main/scripts/hermes-provider-fix/hermes_provider_fix.py -o /tmp/hermes_provider_fix.py
+python3 /tmp/hermes_provider_fix.py --verify          # look
+python3 /tmp/hermes_provider_fix.py --verify --apply  # fix
+```
+
+From a checkout:
 
 ```bash
 # 1. Look, change nothing
