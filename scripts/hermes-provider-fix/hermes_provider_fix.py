@@ -751,6 +751,7 @@ def _diagnose_credential_pool(setup: Setup) -> List[Finding]:
                     "Setting model.provider explicitly (--apply does this) takes precedence. "
                     "To drop the credential entirely: hermes auth remove openrouter"
                 ),
+                auto_fixed=True,
             )
         )
 
@@ -817,12 +818,58 @@ def read_env_file(path: Path) -> Dict[str, str]:
     return values
 
 
+# Resolves the requested key variables exactly the way Hermes does at startup:
+# load_hermes_dotenv() applies ~/.hermes/.env with override=False (existing env
+# vars win) and resolves external secret sources (Bitwarden, 1Password). Only
+# the requested variables cross back over the pipe; nothing is printed or written.
+_KEY_SNIPPET = r"""
+import json, os, sys
+try:
+    from hermes_cli.env_loader import load_hermes_dotenv
+    load_hermes_dotenv()
+except Exception:
+    pass
+names = json.loads(sys.argv[1])
+json.dump(
+    {name: os.environ[name].strip() for name in names if os.environ.get(name, "").strip()},
+    sys.stdout,
+)
+"""
+
+
 def collect_keys(setup: Setup) -> Dict[str, str]:
-    """Key values for probing: process environment first, then ~/.hermes/.env."""
+    """Key values for probing, resolved the way Hermes resolves them.
+
+    Runs Hermes' own loader in the Hermes interpreter so precedence (process
+    environment beats ~/.hermes/.env) and external secret sources match what
+    Hermes uses at startup. Falls back to a flat read only when the Hermes
+    interpreter is unavailable.
+    """
+    names = sorted({var for group in PROVIDER_KEY_VARS.values() for var in group})
+    if setup.python is not None:
+        env = dict(os.environ)
+        env["HERMES_HOME"] = str(setup.home)
+        try:
+            proc = subprocess.run(
+                [str(setup.python), "-c", _KEY_SNIPPET, json.dumps(names)],
+                capture_output=True,
+                text=True,
+                timeout=180,
+                env=env,
+            )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                if isinstance(data, dict):
+                    return {name: value for name, value in data.items() if value}
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+            pass
+
+    # Fallback: same precedence as load_hermes_dotenv (override=False) --
+    # process environment wins over the file.
     keys = read_env_file(setup.env_path)
     for name, value in os.environ.items():
         if value.strip():
-            keys.setdefault(name, value.strip())
+            keys[name] = value.strip()
     return keys
 
 
@@ -1079,7 +1126,7 @@ def apply_fix(
     statuses: Dict[str, KeyStatus],
     primary: str,
     dry_run: bool,
-) -> None:
+) -> bool:
     heading = "PLANNED CHANGES (dry run)" if dry_run else "APPLYING CHANGES"
     print(heading)
     print("-" * len(heading))
@@ -1087,18 +1134,18 @@ def apply_fix(
     backup_config(setup, dry_run)
 
     current_model = dig(setup.config, "model", "default") or dig(setup.config, "model", "model")
-    run_config(setup, ["set", "model.provider", primary], dry_run)
+    ok = run_config(setup, ["set", "model.provider", primary], dry_run)
 
     replacement = native_model_id(setup, primary, current_model)
     if replacement:
         print(f"    model id: {current_model!r} -> {replacement!r} (native for {primary})")
-        run_config(setup, ["set", "model.default", replacement], dry_run)
+        ok = run_config(setup, ["set", "model.default", replacement], dry_run) and ok
     else:
         print(f"    model id: keeping {current_model!r}")
 
     # Everything the diagnosis found that a single `config unset` can clear.
     for key in sorted({key for finding in findings for key in finding.config_unset}):
-        run_config(setup, ["unset", key], dry_run)
+        ok = run_config(setup, ["unset", key], dry_run) and ok
     print()
 
     spares = [
@@ -1122,11 +1169,18 @@ def apply_fix(
     if dry_run:
         print("Nothing was written. Re-run with --apply to make these changes.")
         print()
-        return
+        return ok
+
+    if not ok:
+        print("Some config writes FAILED -- the fix is incomplete. Review the errors")
+        print("above, then re-run this tool.")
+        print()
+        return False
 
     _report_post_apply(setup)
     print("Done. Cross-check with `hermes doctor`, then start a session with `hermes`.")
     print()
+    return True
 
 
 def _report_post_apply(setup: Setup) -> None:
@@ -1338,7 +1392,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         print()
 
-    apply_fix(setup, findings, statuses, primary, dry_run=not args.apply)
+    applied = apply_fix(setup, findings, statuses, primary, dry_run=not args.apply)
+    if args.apply and not applied:
+        return 2
     return 1 if blockers and not args.apply else 0
 
 
