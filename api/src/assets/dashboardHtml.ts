@@ -452,18 +452,6 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     // Loop-breaker: track if we already attempted auth this page load
     var _authAttempted = sessionStorage.getItem("_dash_auth_attempt") === "1";
     setTimeout(async function() {
-      var params = new URLSearchParams(window.location.search);
-      var qKey = params.get("key");
-      if (qKey && qKey.startsWith("arch_")) {
-        // Consume key from URL immediately — strip from history so it never leaks
-        history.replaceState({}, "", "/dashboard");
-        sessionStorage.setItem("arch_api_key", qKey);
-        try { localStorage.setItem("arch_api_key", qKey); } catch(_) {}
-        document.getElementById("key-input").value = qKey;
-        document.getElementById("loading-card").style.display = "none";
-        await loadDashboard();
-        return;
-      }
       // Primary: session cookie — this is the normal path after email/password login
       try {
         var meResp = await fetch("/auth/me", { credentials: "include" });
