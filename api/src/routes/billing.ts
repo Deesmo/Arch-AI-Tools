@@ -13,34 +13,37 @@ import { clawbackDelta, proratedClawbackTarget } from "../lib/clawback.js";
 const router = Router();
 
 /**
- * Auth that accepts EITHER an API key (Authorization/x-api-key, via requireAuth)
- * OR a logged-in browser session (arch_session cookie). Lets the pricing page
- * buy buttons work for users who signed in with email/password and never
- * pasted their API key into localStorage.
+ * Auth that accepts a logged-in browser session (arch_session cookie) OR an API
+ * key. When both are present, the session wins: browser storage can contain a
+ * stale/poisoned key, but the signed httpOnly session is the user's current
+ * checkout identity.
  */
 async function requireAuthOrSession(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
   // Billing must establish a real account identity (API key or session). An
   // x402 payment proves a payment was made, NOT who the caller is, so it is
   // intentionally NOT accepted as authentication here.
+  const token = (req as unknown as { cookies?: Record<string, string> }).cookies?.["arch_session"];
+  const payload = token ? verifySession(token) : null;
+  if (payload) {
+    const agent = await prisma.agent.findUnique({ where: { id: payload.sub } }).catch(() => null);
+    if (agent) {
+      // Plaintext keys are no longer stored — session-authenticated requests carry no API key.
+      req.agent = { id: agent.id, apiKey: "", email: agent.email ?? "", credits: agent.credits, tier: agent.tier, totalCalls: agent.totalCalls };
+      next();
+      return;
+    }
+  }
+
   const hasApiKeyAuth = Boolean(req.headers.authorization?.startsWith("Bearer ") || req.headers["x-api-key"]);
   if (hasApiKeyAuth) {
     requireAuth(req, res, next);
     return;
   }
-  const token = (req as unknown as { cookies?: Record<string, string> }).cookies?.["arch_session"];
-  const payload = token ? verifySession(token) : null;
   if (!payload) {
     res.status(401).json({ ok: false, error: "unauthorized", message: "Sign in or provide an API key (Authorization: Bearer <key>)", request_id: reqId() });
     return;
   }
-  const agent = await prisma.agent.findUnique({ where: { id: payload.sub } }).catch(() => null);
-  if (!agent) {
-    res.status(401).json({ ok: false, error: "unauthorized", message: "Session invalid. Sign in again at /login", request_id: reqId() });
-    return;
-  }
-  // Plaintext keys are no longer stored — session-authenticated requests carry no API key.
-  req.agent = { id: agent.id, apiKey: "", email: agent.email ?? "", credits: agent.credits, tier: agent.tier, totalCalls: agent.totalCalls };
-  next();
+  res.status(401).json({ ok: false, error: "unauthorized", message: "Session invalid. Sign in again at /login", request_id: reqId() });
 }
 
 // ─── One-time credit packs ──────────────────────────────────────────────────

@@ -12,6 +12,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
+const billingSrc = fs.readFileSync(path.join(srcRoot, "routes", "billing.ts"), "utf8");
+const dashboardSrc = fs.readFileSync(path.join(srcRoot, "assets", "dashboardHtml.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
 
@@ -91,6 +93,30 @@ test("research-report reports the deducted cost variable, not the stale flat 15"
   const payloads = [...route.matchAll(/credits_used:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
   assert.ok(payloads.length >= 2, "research-report has both success payloads");
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
+});
+
+test("billing checkout uses the signed session before any stored API key header", () => {
+  const start = billingSrc.indexOf("async function requireAuthOrSession");
+  const end = billingSrc.indexOf("// ─── One-time credit packs", start);
+  assert.ok(start >= 0 && end > start, "missing billing auth helper");
+  const block = billingSrc.slice(start, end);
+  const sessionRead = block.indexOf('cookies?.["arch_session"]');
+  const sessionAgent = block.indexOf("req.agent = { id: agent.id");
+  const apiHeader = block.indexOf("const hasApiKeyAuth");
+  const requireAuthCall = block.indexOf("requireAuth(req, res, next)");
+  assert.ok(sessionRead >= 0, "billing auth must read the httpOnly session cookie");
+  assert.ok(sessionAgent > sessionRead, "billing auth must establish session identity");
+  assert.ok(apiHeader > sessionAgent, "API-key fallback must run only after the session path");
+  assert.ok(requireAuthCall > apiHeader, "API-key auth must remain available as a fallback");
+});
+
+test("dashboard autoload never accepts API keys from the URL", () => {
+  assert.ok(!dashboardSrc.includes("qKey"), "dashboard must not branch on a URL-supplied key");
+  assert.ok(!dashboardSrc.includes('params.get("key")'), "dashboard must not read ?key into storage");
+  const sessionPath = dashboardSrc.indexOf('fetch("/auth/me", { credentials: "include" })');
+  const savedKeyPath = dashboardSrc.indexOf('localStorage.getItem("arch_api_key")');
+  assert.ok(sessionPath >= 0, "dashboard must still attempt session autoload");
+  assert.ok(savedKeyPath > sessionPath, "stored-key fallback must remain behind the session path");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
