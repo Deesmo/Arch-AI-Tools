@@ -2942,14 +2942,11 @@ setInterval(() => {
 router.post("/session-create", ...toolMiddleware("session-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   const sessionCreateCost = paid ? 0 : 5;
-  if (!paid) {
-    const ok = await deductCredits(req, res, "session-create", sessionCreateCost);
-    if (!ok) return;
-  }
   const { namespace, model } = req.body as { namespace?: string; model?: string };
   const systemPrompt = req.body.system_prompt ?? req.body.system;
-  if (!namespace || typeof namespace !== "string") {
-    res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
+  const namespaceValue = namespace === undefined ? "default" : namespace;
+  if (typeof namespaceValue !== "string" || namespaceValue.trim().length === 0) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "namespace must be a non-empty string", request_id: reqId() });
     return;
   }
 
@@ -2980,14 +2977,19 @@ router.post("/session-create", ...toolMiddleware("session-create"), async (req: 
     res.status(403).json({ ok: false, error: "session_owner_required", message: "Unable to identify the caller for this session.", request_id: reqId() });
     return;
   }
+  if (!paid) {
+    const ok = await deductCredits(req, res, "session-create", sessionCreateCost);
+    if (!ok) return;
+  }
 
   const session_id = `sess_${crypto.randomUUID().replace(/-/g, "")}`;
   const created_at = new Date().toISOString();
+  const normalizedNamespace = namespaceValue.trim().slice(0, 100);
 
   const session: SessionData = {
     session_id,
     owner_key: ownerKey,
-    namespace: namespace.slice(0, 100),
+    namespace: normalizedNamespace,
     system_prompt: systemPrompt ? String(systemPrompt).slice(0, 4000) : null,
     model: resolvedModel,
     messages: [],
