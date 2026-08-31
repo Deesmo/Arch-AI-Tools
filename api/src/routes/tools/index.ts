@@ -1945,8 +1945,10 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
             ],
           }),
         });
-        const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+        const data = await resp.json().catch(() => ({})) as { error?: { message?: string }; message?: string; choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+        if (!resp.ok) throw new Error(data.error?.message || data.message || `OpenAI API error ${resp.status}`);
         const text = data.choices?.[0]?.message?.content ?? "";
+        if (!text.trim()) throw new Error("OpenAI returned an empty response");
         return { text, model: "gpt-4o", usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 } };
       },
     });

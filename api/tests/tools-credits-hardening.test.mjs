@@ -122,7 +122,8 @@ async function main() {
     assert.ok(x402Src.includes("memNonceCache.delete(nonce)"), "must clear in-memory store");
     assert.ok(!/if \(nonce && redis\) await redis\.del/.test(x402Src), "redis-only cleanup must be gone");
     const count = (x402Src.match(/if \(nonce\) await releaseStoredNonce\(nonce\)/g) || []).length;
-    assert.strictEqual(count, 2, "both verify-fail and settle-fail must release the nonce");
+    assert.ok(count >= 2, "verify-fail and settle-fail must release the nonce");
+    assert.ok(x402Src.includes("No accepts[] match") && count >= 3, "rail-mismatch rejection should also release the nonce");
   });
 
   // ── C.3 (#11): AI Oracle BYOK — no free platform fallback ──────────────────
@@ -135,6 +136,22 @@ async function main() {
       "platform openai must require !oracleHasByok"));
   await test("response byok flag is per-provider, not the blanket oracleHasByok", () =>
     assert.ok(/\.\.\.\(provider\.byok \? \{ byok: true, byok_provider: providerName \} : \{\}\)/.test(toolsSrc)));
+  await test("OpenAI oracle fallback fails non-2xx or empty responses instead of returning ok:true", () => {
+    const start = toolsSrc.indexOf('router.post("/ai-oracle"');
+    assert.ok(start > 0, "ai-oracle route missing");
+    const end = toolsSrc.indexOf("router.post(", start + 1);
+    const route = toolsSrc.slice(start, end > start ? end : undefined);
+    const openaiStart = route.indexOf("const openaiKey = oraclByokOpenaiKey");
+    assert.ok(openaiStart > 0, "OpenAI oracle provider missing");
+    const openaiProvider = route.slice(openaiStart, route.indexOf("if (providers.length === 0)", openaiStart));
+    assert.match(openaiProvider, /if \(!resp\.ok\) throw new Error\(/, "non-2xx OpenAI responses must throw");
+    assert.match(openaiProvider, /if \(!text\.trim\(\)\) throw new Error\("OpenAI returned an empty response"\)/, "empty OpenAI output must throw");
+    const okCheck = openaiProvider.indexOf("if (!resp.ok)");
+    const emptyCheck = openaiProvider.indexOf("if (!text.trim())");
+    const successReturn = openaiProvider.indexOf('return { text, model: "gpt-4o"');
+    assert.ok(okCheck > 0 && okCheck < successReturn, "must check resp.ok before returning success");
+    assert.ok(emptyCheck > okCheck && emptyCheck < successReturn, "must check non-empty text before returning success");
+  });
 
   // ── C.4 (#11): finalizeCharge only charges on a delivered response ─────────
   console.log("C.4 — refund/no-charge when response not delivered:");
@@ -194,11 +211,11 @@ async function main() {
 
   // ── #12.1: x402 GET discovery must never settle a paid probe ───────────────
   console.log("#12.1 — x402 GET discovery builds 402 directly (no settle):");
-  await test("GET handler calls buildPaymentRequired and never x402Middleware", () => {
+  await test("GET handler calls buildPaymentRequiredV2 and never x402Middleware", () => {
     const getIdx = toolsSrc.indexOf('router.get("/:toolName"');
     assert.ok(getIdx > 0, "GET handler missing");
     const getHandler = toolsSrc.slice(getIdx);
-    assert.ok(getHandler.includes("buildPaymentRequired(toolName, price)"), "must build 402 directly");
+    assert.ok(getHandler.includes("buildPaymentRequiredV2(toolName, price)"), "must build 402 directly");
     assert.ok(!getHandler.includes("x402Middleware(toolName)"), "must not route probe through settlement middleware");
     assert.ok(getHandler.includes("!isX402AnonymousTool(toolName)"), "account-required tools stay out of discovery");
   });
