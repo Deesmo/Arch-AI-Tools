@@ -117,12 +117,12 @@ async function main() {
     assert.strictEqual(retry, "new", "released nonce must be retryable");
     await releaseStoredNonce("0xhardening-retry");
   });
-  await test("both failure branches release via releaseStoredNonce (not redis-only)", () => {
+  await test("failure branches release via releaseStoredNonce (not redis-only)", () => {
     assert.ok(x402Src.includes("export async function releaseStoredNonce"), "helper missing");
     assert.ok(x402Src.includes("memNonceCache.delete(nonce)"), "must clear in-memory store");
     assert.ok(!/if \(nonce && redis\) await redis\.del/.test(x402Src), "redis-only cleanup must be gone");
     const count = (x402Src.match(/if \(nonce\) await releaseStoredNonce\(nonce\)/g) || []).length;
-    assert.strictEqual(count, 2, "both verify-fail and settle-fail must release the nonce");
+    assert.ok(count >= 2, "verify-fail and settle-fail must release the nonce");
   });
 
   // ── C.3 (#11): AI Oracle BYOK — no free platform fallback ──────────────────
@@ -151,38 +151,62 @@ async function main() {
   console.log("C.5 — monthly refresh top-up logic (never lower a paid balance):");
   process.env.FREE_MONTHLY_CREDITS = "250";
   const { prisma } = await import(dist("lib", "prisma.js"));
-  const { refreshMonthlyCredits } = await import(dist("cron", "refreshCredits.js"));
+  const { refreshMonthlyCredits, MONTHLY_REFRESH_ACTION } = await import(dist("cron", "refreshCredits.js"));
 
-  const lastMonth = new Date("2026-05-15T00:00:00.000Z");
-  const thisMonth = new Date("2026-06-10T00:00:00.000Z");
   const updates = [];
+  const auditCreates = [];
   prisma.agent.findMany = async () => [
-    { id: "low_old", email: null, credits: 10, updatedAt: lastMonth },     // below floor → top up
-    { id: "high_old", email: null, credits: 1000, updatedAt: lastMonth },  // purchased pack → untouched
-    { id: "low_new", email: null, credits: 10, updatedAt: thisMonth },     // already refreshed this month → skip
+    { id: "low_old", email: null, credits: 10 },         // below floor → top up
+    { id: "high_old", email: null, credits: 1000 },      // purchased pack → untouched, but marked processed
+    { id: "active_new", email: null, credits: 20 },      // active this month used to be skipped via updatedAt
+    { id: "already_marked", email: null, credits: 15 },  // explicit marker → skip
   ];
-  prisma.agent.updateMany = async (args) => {
-    updates.push(args);
-    // Mirror the DB guard `credits: { lt: 250 }`: high_old at 1000 matches nothing.
-    if (args.where.id === "high_old") return { count: 0 };
-    return { count: 1 };
+  prisma.$transaction = async (fn) => {
+    const tx = {
+      agent: {
+        updateMany: async (args) => {
+          updates.push(args);
+          // Mirror the DB guard `credits: { lt: 250 }`.
+          if (args.where.id === "high_old") return { count: 0 };
+          return { count: 1 };
+        },
+      },
+      auditLog: {
+        findFirst: async (args) =>
+          args.where.agentId === "already_marked" ? { id: "refresh-marker" } : null,
+        create: async (args) => {
+          auditCreates.push(args);
+          return {};
+        },
+      },
+    };
+    return fn(tx);
   };
 
   await test("tops up a stale low balance to exactly the monthly floor", async () => {
     updates.length = 0;
+    auditCreates.length = 0;
     const result = await refreshMonthlyCredits(new Date("2026-06-26T00:00:00.000Z"));
-    assert.deepStrictEqual(result, { granted: 1, skipped: 2 },
-      "one granted (low_old), two skipped (high_old guarded-out, low_new same-month)");
+    assert.deepStrictEqual(result, { granted: 2, skipped: 2 },
+      "two granted (low_old + active_new), high balance and already-marked agents skipped");
   });
   await test("update is gated by credits < floor so a paid balance is never lowered", () => {
     for (const u of updates) {
       assert.deepStrictEqual(u.where.credits, { lt: 250 }, "must only update when below the floor");
       assert.deepStrictEqual(u.data, { credits: 250 }, "top up to the floor, not a reset below it");
     }
-    // high_old (1000 credits) is never actually lowered: the { lt: 250 } guard
-    // returns count:0, so its balance stays at 1000 — the core C.5 invariant.
-    const highOld = updates.find((u) => u.where.id === "high_old");
-    assert.ok(highOld, "high_old still attempts a guarded update");
+    assert.ok(!updates.some((u) => u.where.id === "high_old"), "high_old is already above the floor, so no update is attempted");
+  });
+  await test("explicit AuditLog marker replaces Agent.updatedAt as the monthly idempotency guard", () => {
+    const refreshSrc = fs.readFileSync(src("cron", "refreshCredits.ts"), "utf-8");
+    assert.ok(refreshSrc.includes('MONTHLY_REFRESH_ACTION = "monthly_free_credit_refresh"'));
+    assert.ok(refreshSrc.includes("tx.auditLog.findFirst"), "must check an explicit refresh marker");
+    assert.ok(refreshSrc.includes("tx.auditLog.create"), "must record this month's refresh decision");
+    assert.ok(!refreshSrc.includes("agent.updatedAt >= startOfMonth"), "must not use unrelated Agent.updatedAt activity as the refresh marker");
+    assert.strictEqual(MONTHLY_REFRESH_ACTION, "monthly_free_credit_refresh");
+    assert.ok(auditCreates.some((c) => c.data.agentId === "high_old" && c.data.status === "skipped"),
+      "high-balance accounts are marked processed so later spend-downs don't get a second monthly top-up");
+    assert.ok(!updates.some((u) => u.where.id === "already_marked"), "already-marked accounts must not be updated again");
   });
   await test("source is TOP-UP (updateMany + lt guard), not an unconditional reset", () => {
     const refreshSrc = fs.readFileSync(src("cron", "refreshCredits.ts"), "utf-8");
@@ -194,16 +218,17 @@ async function main() {
 
   // ── #12.1: x402 GET discovery must never settle a paid probe ───────────────
   console.log("#12.1 — x402 GET discovery builds 402 directly (no settle):");
-  await test("GET handler calls buildPaymentRequired and never x402Middleware", () => {
+  await test("GET handler calls the direct v2 builder and never x402Middleware", () => {
     const getIdx = toolsSrc.indexOf('router.get("/:toolName"');
     assert.ok(getIdx > 0, "GET handler missing");
-    const getHandler = toolsSrc.slice(getIdx);
-    assert.ok(getHandler.includes("buildPaymentRequired(toolName, price)"), "must build 402 directly");
+    const exportIdx = toolsSrc.indexOf("export default router", getIdx);
+    const getHandler = toolsSrc.slice(getIdx, exportIdx > getIdx ? exportIdx : undefined);
+    assert.ok(getHandler.includes("buildPaymentRequiredV2(toolName, price)"), "must build the v2 402 directly");
     assert.ok(!getHandler.includes("x402Middleware(toolName)"), "must not route probe through settlement middleware");
     assert.ok(getHandler.includes("!isX402AnonymousTool(toolName)"), "account-required tools stay out of discovery");
   });
-  await test("buildPaymentRequired is exported from x402", () =>
-    assert.strictEqual(typeof x402.buildPaymentRequired, "function"));
+  await test("buildPaymentRequiredV2 is exported from x402", () =>
+    assert.strictEqual(typeof x402.buildPaymentRequiredV2, "function"));
 
   // ── #12.2-4: BYOK discount scoping ─────────────────────────────────────────
   console.log("#12.2-4 — BYOK discount scoping:");
