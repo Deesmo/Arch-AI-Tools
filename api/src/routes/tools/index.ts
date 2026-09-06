@@ -3190,6 +3190,10 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
     const ok = await deductCredits(req, res, "video-generate", videoCost);
     if (!ok) { releaseVideoHourlySlot(videoIdentity); return; }
   }
+  let runwayTaskStarted = false;
+  const releaseVideoSlotBeforeRunwaySpend = (): void => {
+    if (!runwayTaskStarted) releaseVideoHourlySlot(videoIdentity);
+  };
   try {
     const candidateModels = [process.env.RUNWAY_VIDEO_MODEL, "gen4.5"].filter((value, index, self): value is string => !!value && self.indexOf(value) === index);
     let startResp: import("axios").AxiosResponse<{ id?: string }> | null = null;
@@ -3218,16 +3222,19 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
 
       console.error("[video-generate] Runway start error:", attempt.status, err);
+      releaseVideoSlotBeforeRunwaySpend();
       res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
 
     if (!startResp || !selectedModel) {
+      releaseVideoSlotBeforeRunwaySpend();
       res.status(503).json({ ok: false, error: "not_configured", message: startError ?? "No compatible Runway model is configured for this API key", request_id: reqId() }); return;
     }
 
     const startData = startResp.data as { id?: string };
     const taskId = startData.id;
-    if (!taskId) { res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
+    if (!taskId) { releaseVideoSlotBeforeRunwaySpend(); res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
+    runwayTaskStarted = true;
 
     // Poll for completion (max 120s)
     let videoUrl: string | null = null;

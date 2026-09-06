@@ -17,7 +17,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import {
-  VIDEO_HOURLY_CAP, videoHourlyGate, _resetVideoHourlyGate,
+  VIDEO_HOURLY_CAP, videoHourlyGate, releaseVideoHourlySlot, _resetVideoHourlyGate,
   firecrawlFallbackKey,
   EXTRACT_PDF_MAX_BYTES, EXTRACT_PDF_MAX_PAGES, estimatePdfPageCount,
 } from "../dist/lib/toolLimits.js";
@@ -91,6 +91,15 @@ async function main() {
     assert.strictEqual(videoHourlyGate("agent-D", h1), false, "exhausted in hour 10");
     assert.strictEqual(videoHourlyGate("agent-D", h2), true, "fresh window in hour 11");
   });
+  await test("releaseVideoHourlySlot returns pre-spend capacity to the same hour", () => {
+    _resetVideoHourlyGate();
+    const h = new Date("2026-07-28T10:15:00Z");
+    for (let i = 0; i < VIDEO_HOURLY_CAP; i++) videoHourlyGate("agent-release", h);
+    assert.strictEqual(videoHourlyGate("agent-release", h), false, "cap should be exhausted before release");
+    releaseVideoHourlySlot("agent-release", h);
+    assert.strictEqual(videoHourlyGate("agent-release", h), true, "released slot should be reusable");
+    assert.strictEqual(videoHourlyGate("agent-release", h), false, "only one slot was released");
+  });
   await test("source: video-generate route enforces the gate with a 429", () => {
     assert.ok(toolsSrc.includes("videoHourlyGate(videoIdentity)"), "gate call missing");
     assert.ok(toolsSrc.includes('"video_rate_limited"'), "429 error code missing");
@@ -103,6 +112,24 @@ async function main() {
   await test("source: x402 callers are capped too (keyed on settled payer)", () => {
     assert.ok(/x402:\$\{\(req as AuthedRequest & \{ x402Payer\?: string \}\)\.x402Payer/.test(toolsSrc),
       "x402 identity key missing — x402-paid generations must also be capped");
+  });
+  await test("source: video-generate releases quota when Runway never starts a task", () => {
+    const routeIdx = toolsSrc.indexOf('router.post("/video-generate"');
+    const routeEnd = toolsSrc.indexOf('router.post("/image-remove-bg"', routeIdx);
+    const route = toolsSrc.slice(routeIdx, routeEnd);
+    assert.ok(route.includes("let runwayTaskStarted = false"), "route must track whether Runway accepted a task");
+    assert.ok(route.includes("const releaseVideoSlotBeforeRunwaySpend"), "route must have a pre-spend release helper");
+    assert.ok(route.includes("if (!runwayTaskStarted) releaseVideoHourlySlot(videoIdentity)"), "helper must release only before a task starts");
+    assert.ok(/releaseVideoSlotBeforeRunwaySpend\(\);\s*res\.status\(502\)\.json\(\{ ok: false, error: "runway_error"/.test(route),
+      "Runway start errors must release the hourly slot");
+    assert.ok(/if \(!startResp \|\| !selectedModel\) \{\s*releaseVideoSlotBeforeRunwaySpend\(\);/.test(route),
+      "model-unavailable exhaustion must release the hourly slot");
+    assert.ok(/if \(!taskId\) \{\s*releaseVideoSlotBeforeRunwaySpend\(\);/.test(route),
+      "missing task id must release the hourly slot");
+    const markStartedIdx = route.indexOf("runwayTaskStarted = true");
+    const pollIdx = route.indexOf("// Poll for completion");
+    assert.ok(markStartedIdx !== -1 && pollIdx !== -1 && markStartedIdx < pollIdx,
+      "once a task id exists, later poll failures should still count against the cap");
   });
 
   // ── 2. web-scrape Firecrawl BYOK/x402 gate ──────────────────────────────────
