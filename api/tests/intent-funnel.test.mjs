@@ -23,6 +23,7 @@
 import assert from "assert";
 import fs from "fs";
 import path from "path";
+import vm from "vm";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,6 +40,126 @@ function test(name, fn) {
     failures++;
     console.error(`  ✗ ${name}: ${e.message}`);
   }
+}
+
+async function testAsync(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✓ ${name}`);
+  } catch (e) {
+    failures++;
+    console.error(`  ✗ ${name}: ${e.message}`);
+  }
+}
+
+async function runDashboardSessionAutoload(DASHBOARD_HTML, options = {}) {
+  const storedKey = options.storedKey ?? "arch_1234567890abcdef1234567890abcdef";
+  const sessionAgentId = options.sessionAgentId ?? "agent_session";
+  const usageAgentId = options.usageAgentId ?? sessionAgentId;
+  const script = DASHBOARD_HTML.match(/<script>\s*([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script, "dashboard script missing");
+
+  const elements = new Map();
+  function getElement(id) {
+    if (!elements.has(id)) {
+      elements.set(id, {
+        id,
+        style: {},
+        value: "",
+        textContent: "",
+        innerHTML: "",
+        disabled: false,
+        classList: { add() {}, remove() {} },
+        addEventListener() {},
+        appendChild() {},
+        focus() {},
+      });
+    }
+    return elements.get(id);
+  }
+
+  function makeStorage(seed = {}) {
+    const data = new Map(Object.entries(seed));
+    return {
+      getItem(k) { return data.has(k) ? data.get(k) : null; },
+      setItem(k, v) { data.set(k, String(v)); },
+      removeItem(k) { data.delete(k); },
+    };
+  }
+
+  const calls = [];
+  const timers = [];
+  const localStorage = makeStorage({ arch_api_key: storedKey });
+  const sessionStorage = makeStorage();
+  const response = (body, ok = true, status = ok ? 200 : 401) => ({
+    ok,
+    status,
+    headers: { get() { return null; } },
+    json: async () => body,
+  });
+  const fetch = async (url, fetchOptions = {}) => {
+    calls.push({ url, options: fetchOptions });
+    if (url === "/auth/me") {
+      return response({ ok: true, agent_id: sessionAgentId });
+    }
+    if (url === "/auth/api-key") {
+      return response({ ok: true, api_key: null, api_key_masked: "arch_1234567..." });
+    }
+    if (url === "/v1/agent/usage") {
+      return response({
+        ok: true,
+        agent_id: usageAgentId,
+        credits_remaining: 42,
+        calls_today: 0,
+        total_calls: 0,
+        tier: "free",
+        email_verified: true,
+        pending_credits: 0,
+        recent_activity: [],
+        purchase_history: [],
+      });
+    }
+    if (url === "/v1/affiliate/link") {
+      return response({ ok: false }, false, 404);
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+
+  const sandbox = {
+    console,
+    fetch,
+    localStorage,
+    sessionStorage,
+    URLSearchParams,
+    setTimeout(fn) { timers.push(fn); return timers.length; },
+    clearTimeout() {},
+    history: { replaceState() {} },
+    navigator: { clipboard: { writeText: async () => {} } },
+    document: {
+      getElementById: getElement,
+      createElement: (tag) => ({ ...getElement(`created-${tag}-${elements.size}`), tagName: tag.toUpperCase() }),
+      addEventListener() {},
+    },
+    window: { location: { search: "", href: "" } },
+  };
+  sandbox.window.window = sandbox.window;
+  sandbox.window.document = sandbox.document;
+  sandbox.window.localStorage = localStorage;
+  sandbox.window.sessionStorage = sessionStorage;
+
+  vm.runInNewContext(script, sandbox, { filename: "dashboard-inline.js" });
+  assert.ok(timers.length > 0, "autoload timer was not registered");
+  await timers[0]();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  return {
+    calls,
+    localStorage,
+    sessionStorage,
+    element: (id) => getElement(id),
+    storedKey,
+  };
 }
 
 async function main() {
@@ -166,6 +287,23 @@ async function main() {
     assert.ok(DASHBOARD_HTML.includes('(cr > 0 && cr < 50) ? "flex" : "none"'));
     assert.ok(DASHBOARD_HTML.includes('data.email_verified === false && pending > 0'));
     assert.ok(DASHBOARD_HTML.includes('href="/pricing?pack=starter"'));
+  });
+  await testAsync("dashboard session autoload preserves a same-account stored full key", async () => {
+    const result = await runDashboardSessionAutoload(DASHBOARD_HTML);
+    const usageCall = result.calls.find((c) => c.url === "/v1/agent/usage");
+    assert.ok(usageCall, "usage call missing");
+    assert.strictEqual(usageCall.options.headers.Authorization, `Bearer ${result.storedKey}`);
+    assert.strictEqual(result.localStorage.getItem("arch_api_key"), result.storedKey);
+    assert.strictEqual(result.sessionStorage.getItem("arch_api_key"), result.storedKey);
+    assert.strictEqual(result.element("key-entry-card").style.display, "none");
+  });
+  await testAsync("dashboard session autoload rejects a stored key for another account", async () => {
+    const result = await runDashboardSessionAutoload(DASHBOARD_HTML, { usageAgentId: "agent_other" });
+    assert.strictEqual(result.localStorage.getItem("arch_api_key"), null);
+    assert.strictEqual(result.sessionStorage.getItem("arch_api_key"), null);
+    assert.strictEqual(result.element("key-input").value, "");
+    assert.strictEqual(result.element("status-tag").textContent, "Session account changed — enter your API key");
+    assert.strictEqual(result.element("key-entry-card").style.display, "block");
   });
   test("/v1/agent/usage exposes email_verified + pending_credits", () => {
     const agentSrc = fs.readFileSync(src("routes", "agent.ts"), "utf-8");
