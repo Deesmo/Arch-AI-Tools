@@ -288,7 +288,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       });
     });
 
-    async function loadDashboard() {
+    async function loadDashboard(expectedAgentId) {
       var raw = (document.getElementById("key-input").value || "").trim();
       var token = raw.replace(/^authorization:\\s*/i, "").replace(/^bearer /i, "").trim();
       
@@ -306,7 +306,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         if (!resp.ok || data.ok === false) {
           setStatus(data.error === "unauthorized" ? "\u274C Invalid key" : (data.message || "Error"), "#f87171");
           showKeyEntryFallback();
-          return;
+          return false;
+        }
+
+        if (expectedAgentId && data.agent_id !== expectedAgentId) {
+          sessionStorage.removeItem("arch_api_key");
+          try { localStorage.removeItem("arch_api_key"); } catch(_) {}
+          document.getElementById("key-input").value = "";
+          setStatus("Session account changed — enter your API key", "#f87171");
+          showKeyEntryFallback();
+          return false;
         }
 
         fullKey = token;
@@ -374,10 +383,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         fetch("/auth/me", { credentials: "include" }).then(r => r.json()).then(function(me) {
           if (!me.ok) document.getElementById("set-password-card").style.display = "block";
         }).catch(function() { document.getElementById("set-password-card").style.display = "block"; });
+        return true;
 
       } catch(_) {
         setStatus("Connection error", "#f87171");
         showKeyEntryFallback();
+        return false;
       } finally {
         btn.disabled = false; btn.textContent = "Load";
       }
@@ -470,10 +481,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         if (meResp.ok) {
           var me = await meResp.json();
           if (me.ok) {
-            // Sentinel fix: clear stale localStorage key before loading session key
-            // Prevents cross-account key bleed if /auth/api-key fails transiently
-            sessionStorage.removeItem("arch_api_key");
-            try { localStorage.removeItem("arch_api_key"); } catch(_) {}
+            var savedForSession = sessionStorage.getItem("arch_api_key");
+            if (!savedForSession) { try { savedForSession = localStorage.getItem("arch_api_key"); } catch(_) {} }
             try {
               var keyResp = await fetch("/auth/api-key", { credentials: "include" });
               if (keyResp.ok) {
@@ -489,7 +498,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
                 }
               }
             } catch(_) {}
-            // Session valid but /auth/api-key failed — show error, do NOT fall to stale localStorage
+            if (savedForSession && savedForSession.startsWith("arch_")) {
+              document.getElementById("key-input").value = savedForSession;
+              document.getElementById("loading-card").style.display = "none";
+              if (await loadDashboard(me.agent_id)) {
+                sessionStorage.removeItem("_dash_auth_attempt");
+                return;
+              }
+              return;
+            }
+            // Session valid but no full key is available — show manual recovery.
             document.getElementById("loading-card").style.display = "none";
             showKeyEntryFallback();
             document.getElementById("status-tag").textContent = "Session error — enter your API key";
