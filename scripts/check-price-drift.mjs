@@ -283,6 +283,9 @@ function checkX402(surface, tool, advertisedUsd) {
       }
     }
   }
+  if (!/router\.get\("\/v1\/discover"[\s\S]*?catch \{[\s\S]*?FALLBACK_TOOLS\.map/.test(discoverySrc)) {
+    fail("discovery.ts /v1/discover fallback", "tool credits", "not sourced from FALLBACK_TOOLS", "FALLBACK_CREDITS");
+  }
 
   // 5c. Metered honesty notes must quote the real formula constants.
   const ttsNote = discoverySrc.match(/"text-to-speech": "metered by length — (\d+) base \+ (\d+) credits per 100 characters"/);
