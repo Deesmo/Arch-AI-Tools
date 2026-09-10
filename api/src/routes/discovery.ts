@@ -573,14 +573,14 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
       },
     });
   } catch {
-    // Fallback with static tool list
-    const toolList = Object.entries(TOOL_DESCRIPTIONS).map(([name, description]) => ({
+    // Fallback with the same checked static prices served by /v1/tools.
+    const toolList = FALLBACK_TOOLS.map(({ name, description, method, credits, category }) => ({
       name,
       description,
       endpoint: `${API_BASE}/v1/tools/${name}`,
-      method: "POST",
-      credits: 5,
-      category: "utility",
+      method,
+      credits,
+      category,
     }));
     res.json({
       ok: true,
