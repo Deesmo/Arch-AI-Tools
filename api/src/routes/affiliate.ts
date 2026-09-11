@@ -16,6 +16,7 @@ import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
 import { redis } from "../lib/redis.js";
 import { requireAuth, AuthedRequest } from "../middleware/auth.js";
+import { requireAccountAuth } from "../middleware/requireAccountAuth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import { REFERRAL_REWARD } from "../lib/referralReward.js";
@@ -41,7 +42,7 @@ const clickStore = new Map<string, { clicks: number; lastClick: string; ips: Set
 
 // ─── GET /v1/affiliate/link ─────────────────────────────────────────────────
 // Returns the authenticated user's affiliate/referral link
-router.get("/link", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.get("/link", requireAuth, requireAccountAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 
@@ -174,7 +175,7 @@ router.post("/track", trackLimiter, async (req: Request, res: Response): Promise
 
 // ─── GET /v1/affiliate/stats ────────────────────────────────────────────────
 // Detailed affiliate performance metrics for the authenticated user
-router.get("/stats", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.get("/stats", requireAuth, requireAccountAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 

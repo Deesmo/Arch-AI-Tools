@@ -12,6 +12,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
+const affiliateSrc = fs.readFileSync(path.join(srcRoot, "routes", "affiliate.ts"), "utf8");
+const referralSrc = fs.readFileSync(path.join(srcRoot, "routes", "referral.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
 
@@ -60,6 +62,38 @@ test("account deletion cancels Stripe subscriptions before local anonymization",
   assert.ok(transactionIndex > 0, "DELETE /v1/agent still anonymizes in a transaction");
   assert.ok(cancelIndex < transactionIndex, "Stripe subscriptions are canceled before the local account is anonymized");
   assert.match(agentSrc, /BILLABLE_SUBSCRIPTION_STATUSES[\s\S]*active[\s\S]*trialing[\s\S]*past_due[\s\S]*unpaid/);
+});
+
+test("account deletion deletes registered webhooks and includes them in the audit counts", () => {
+  assert.match(
+    agentSrc,
+    /tx\.webhook\.deleteMany\(\{\s*where:\s*\{\s*agentId:\s*agent\.id\s*\}\s*\}\)/,
+    "DELETE /v1/agent must delete webhook URLs/secrets for the erased account",
+  );
+  assert.match(
+    agentSrc,
+    /webhooks:\s*whs\.count/,
+    "deletion audit summary must include deleted webhook count",
+  );
+});
+
+test("OAuth tool tokens cannot access referral or affiliate account surfaces", () => {
+  assert.match(affiliateSrc, /import\s*\{\s*requireAccountAuth\s*\}\s*from\s*"[^"]*requireAccountAuth\.js"/);
+  assert.match(
+    affiliateSrc,
+    /router\.get\("\/link",\s*requireAuth,\s*requireAccountAuth,/,
+    "affiliate link creates account state and must require API-key account auth",
+  );
+  assert.match(
+    affiliateSrc,
+    /router\.get\("\/stats",\s*requireAuth,\s*requireAccountAuth,/,
+    "affiliate stats expose account metrics and must require API-key account auth",
+  );
+  assert.match(
+    referralSrc,
+    /router\.get\("\/stats",\s*requireAuth,\s*requireAccountAuth,/,
+    "referral stats expose account metrics and must require API-key account auth",
+  );
 });
 
 test("seed catalog advertises the audited default/base prices actually charged", () => {
