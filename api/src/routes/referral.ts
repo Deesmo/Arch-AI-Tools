@@ -92,7 +92,7 @@ router.post("/apply", requireAuth, requireAccountAuth, async (req: AuthedRequest
 
 // ─── GET /api/v1/referral/stats ─────────────────────────────────────────────
 // See your referral stats and earned credits
-router.get("/stats", requireAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
+router.get("/stats", requireAuth, requireAccountAuth, async (req: AuthedRequest, res: Response): Promise<void> => {
   const agent = req.agent;
   if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return; }
 
