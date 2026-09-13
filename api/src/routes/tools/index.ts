@@ -238,6 +238,10 @@ function sanitizeOutboundEmailHtml(html: string | undefined, body: string | unde
   return { htmlBody, textBody };
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
 const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; starter: number; business: number }> = {
   "webhook-send": { free: 10, pro: 50, starter: 50, business: 200 },
   "email-send": { free: 5, pro: 25, starter: 25, business: 100 },
@@ -1631,18 +1635,21 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
     const ok = await deductCredits(req, res, "webhook-send", 2);
     if (!ok) return;
   }
-  const webhook_url = req.body.url ?? req.body.webhook_url;
-  const { payload, headers: customHeaders = {}, method = "POST" } = req.body as {
-    payload?: unknown;
-    headers?: Record<string, string>;
-    method?: string;
-  };
-  if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const webhookUrlRaw = body.url ?? body.webhook_url;
+  const methodRaw = body.method;
+  const payload = body.payload;
+  const customHeaders = body.headers as Record<string, string> | undefined;
+  if (!isNonEmptyString(webhookUrlRaw)) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
+  if (methodRaw !== undefined && typeof methodRaw !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "method must be a string", request_id: reqId() }); return; }
+  const webhook_url = webhookUrlRaw.trim();
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("https://")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must use https", request_id: reqId() }); return; }
   try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   const allowedMethods = ["POST"];
-  const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
+  const method = methodRaw ?? "POST";
+  const methodUpper = method.toUpperCase();
+  const httpMethod = allowedMethods.includes(methodUpper) ? methodUpper : "POST";
   const payloadString = JSON.stringify(payload ?? {});
   if (payloadString.length > 20_000) { res.status(400).json({ ok: false, error: "invalid_request", message: "payload must be 20KB or less", request_id: reqId() }); return; }
   const safeHeaders = sanitizeWebhookHeaders(customHeaders);
@@ -2405,8 +2412,9 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "email-send", 3);
     if (!ok) return;
   }
-  const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
-  if (!to || !subject || (!body && !html)) { res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return; }
+  const { to, subject, body, from, html } = (req.body ?? {}) as Record<string, unknown>;
+  if (!isNonEmptyString(to) || !isNonEmptyString(subject) || (!isNonEmptyString(body) && !isNonEmptyString(html))) { res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return; }
+  if (from !== undefined && typeof from !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "from must be a string", request_id: reqId() }); return; }
   if (!to.includes("@")) { res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return; }
   if (/[,\n\r]/.test(to)) { res.status(400).json({ ok: false, error: "invalid_request", message: "Only one recipient is allowed", request_id: reqId() }); return; }
   if (subject.length > 200) { res.status(400).json({ ok: false, error: "invalid_request", message: "subject must be 200 characters or less", request_id: reqId() }); return; }
@@ -2425,8 +2433,11 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return; }
   try {
-    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
-    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
+    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && typeof from === "string" && from ? from : getDefaultSender();
+    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(
+      typeof html === "string" ? html : undefined,
+      typeof body === "string" ? body : undefined
+    );
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -2453,9 +2464,12 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
     const ok = await deductCredits(req, res, "send-email", 3);
     if (!ok) return;
   }
-  const { to, subject, body, from, html } = req.body as { to?: string; subject?: string; body?: string; from?: string; html?: string };
-  if (!to || !subject || (!body && !html)) {
+  const { to, subject, body, from, html } = (req.body ?? {}) as Record<string, unknown>;
+  if (!isNonEmptyString(to) || !isNonEmptyString(subject) || (!isNonEmptyString(body) && !isNonEmptyString(html))) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "to, subject, and body (or html) are required", request_id: reqId() }); return;
+  }
+  if (from !== undefined && typeof from !== "string") {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "from must be a string", request_id: reqId() }); return;
   }
   if (!to.includes("@")) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email address", request_id: reqId() }); return;
@@ -2479,8 +2493,11 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
     res.status(503).json({ ok: false, error: "not_configured", message: "Email sending not configured", request_id: reqId() }); return;
   }
   try {
-    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && from ? from : getDefaultSender();
-    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(html, body);
+    const fromAddr = process.env.ALLOW_CUSTOM_EMAIL_FROM === "true" && typeof from === "string" && from ? from : getDefaultSender();
+    const { htmlBody, textBody } = sanitizeOutboundEmailHtml(
+      typeof html === "string" ? html : undefined,
+      typeof body === "string" ? body : undefined
+    );
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
