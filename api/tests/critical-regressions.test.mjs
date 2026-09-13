@@ -93,5 +93,24 @@ test("research-report reports the deducted cost variable, not the stale flat 15"
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
 });
 
+test("side-effect tools validate JSON field types before string dereferences", () => {
+  const webhookStart = toolsSrc.indexOf('router.post("/webhook-send"');
+  const emailStart = toolsSrc.indexOf('router.post("/email-send"');
+  const sendEmailStart = toolsSrc.indexOf('router.post("/send-email"');
+  assert.ok(webhookStart >= 0, "missing webhook-send route");
+  assert.ok(emailStart >= 0, "missing email-send route");
+  assert.ok(sendEmailStart >= 0, "missing send-email route");
+
+  const webhookRoute = toolsSrc.slice(webhookStart, emailStart);
+  const emailRoute = toolsSrc.slice(emailStart, sendEmailStart);
+  const sendEmailRoute = toolsSrc.slice(sendEmailStart, toolsSrc.indexOf("router.post(", sendEmailStart + 1));
+
+  assert.ok(webhookRoute.includes("!isNonEmptyString(webhookUrlRaw)"), "webhook URL must be narrowed before startsWith");
+  assert.ok(webhookRoute.includes('typeof methodRaw !== "string"'), "webhook method must be type-checked before toUpperCase");
+  assert.ok(webhookRoute.indexOf('typeof methodRaw !== "string"') < webhookRoute.indexOf("method.toUpperCase()"), "method type check must precede toUpperCase");
+  assert.ok(emailRoute.includes("!isNonEmptyString(to)") && emailRoute.includes("!isNonEmptyString(subject)"), "email-send must narrow to/subject before string methods");
+  assert.ok(sendEmailRoute.includes("!isNonEmptyString(to)") && sendEmailRoute.includes("!isNonEmptyString(subject)"), "send-email must narrow to/subject before string methods");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
