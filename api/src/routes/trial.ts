@@ -18,7 +18,7 @@ import { reqId, safeErr } from "../utils/credits.js";
 import { logger } from "../lib/logger.js";
 import { X402_PRICES } from "../middleware/x402.js";
 import crypto from "crypto";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits, recordSignupIp } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits, recordSignupIp, normalizeSubmittedEmail } from "../lib/verification.js";
 import bcrypt from "bcryptjs";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
 
@@ -31,9 +31,9 @@ const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "", 10) || SIGNUP_FR
 // Requires only an email. Returns API key + trial info.
 router.post("/activate", async (req: Request, res: Response): Promise<void> => {
   const { email: rawEmail, name } = req.body ?? {};
-  const email = rawEmail?.toLowerCase().trim();
+  const email = normalizeSubmittedEmail(rawEmail);
 
-  if (!email || typeof email !== "string") {
+  if (!email) {
     res.status(400).json({
       ok: false,
       error: "email_required",

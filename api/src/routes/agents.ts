@@ -19,7 +19,7 @@ import {
   BADGE_THRESHOLDS,
 } from "../services/reputation.js";
 import { validateUrl } from "../lib/ssrf.js";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits, recordSignupIp } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, enforceSignupLimits, recordSignupIp, normalizeSubmittedEmail } from "../lib/verification.js";
 
 const router = Router();
 
@@ -210,7 +210,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       is_public?: boolean;
     };
 
-    const email = rawEmail?.toLowerCase().trim();
+    const email = normalizeSubmittedEmail(rawEmail);
     if (!email) {
       res.status(400).json({
         ok: false,
