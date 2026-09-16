@@ -9,7 +9,7 @@ import { stripe } from "../lib/stripe.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity, allowVerificationResend, reissueEmailVerification } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity, normalizeSubmittedEmail, allowVerificationResend, reissueEmailVerification } from "../lib/verification.js";
 import { VERIFY_TOKEN_RE, renderVerifyConfirmPage, renderVerifyActivationPage, renderVerifyErrorPage, renderVerifyResendSentPage } from "../assets/verifyEmailHtml.js";
 import { REFERRAL_REWARD } from "../lib/referralReward.js";
 
@@ -59,7 +59,7 @@ async function cancelStripeSubscriptionsForDeletedAgent(agentId: string, email: 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
   const { name, email: rawEmail, password } = req.body as { name?: string; email?: string; password?: string };
-  const email = rawEmail?.toLowerCase().trim();
+  const email = normalizeSubmittedEmail(rawEmail);
   if (!email) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
     return;

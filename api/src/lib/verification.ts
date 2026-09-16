@@ -86,6 +86,17 @@ export function normalizeEmailIdentity(email: string): string {
 }
 
 /**
+ * Normalize a caller-submitted email field only after proving it is a string.
+ * Public signup routes receive untrusted JSON; calling string methods on a
+ * non-string before the route's error handling can crash the Express process.
+ */
+export function normalizeSubmittedEmail(rawEmail: unknown): string | null {
+  if (typeof rawEmail !== "string") return null;
+  const email = rawEmail.toLowerCase().trim();
+  return email.length > 0 ? email : null;
+}
+
+/**
  * Atomically claim the free-grant slot for a normalized email identity.
  * INSERT … ON CONFLICT DO NOTHING against the UNIQUE "SignupIdentity" table —
  * the database is the arbiter, so concurrent signups for the same identity
