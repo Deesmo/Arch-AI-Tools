@@ -19,6 +19,15 @@ function sanitizeScope(raw: string | undefined): string {
   return requested.length ? Array.from(new Set(requested)).join(" ") : "tools:read";
 }
 
+function singleParam(value: unknown, defaultValue?: string): string | null {
+  if (value === undefined) return defaultValue ?? null;
+  return typeof value === "string" ? value : null;
+}
+
+function allParamsAreStrings<K extends string>(params: Record<K, string | null>): params is Record<K, string> {
+  return Object.values(params).every((value): value is string => value !== null);
+}
+
 // HTML escape to prevent XSS injection in consent page
 export function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
@@ -117,15 +126,21 @@ return `<!DOCTYPE html>
 
 // ─── GET /oauth/authorize ─────────────────────────────────────────────────────
 router.get("/authorize", async (req: Request, res: Response): Promise<void> => {
-  const {
-    client_id,
-    redirect_uri,
-    response_type,
-    scope = "tools:read tools:execute",
-    state = "",
-    code_challenge = "",
-    code_challenge_method = "",
-  } = req.query as Record<string, string>;
+  const params = {
+    client_id: singleParam(req.query.client_id),
+    redirect_uri: singleParam(req.query.redirect_uri),
+    response_type: singleParam(req.query.response_type),
+    scope: singleParam(req.query.scope, "tools:read tools:execute"),
+    state: singleParam(req.query.state, ""),
+    code_challenge: singleParam(req.query.code_challenge, ""),
+    code_challenge_method: singleParam(req.query.code_challenge_method, ""),
+  };
+
+  if (!allParamsAreStrings(params)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "OAuth authorize parameters must be single string values" });
+    return;
+  }
+  const { client_id, redirect_uri, response_type, scope, state, code_challenge, code_challenge_method } = params;
 
   if (!client_id || !redirect_uri || response_type !== "code") {
     res.status(400).json({ ok: false, error: "invalid_request", message: "client_id, redirect_uri, and response_type=code are required" });
@@ -150,16 +165,22 @@ router.get("/authorize", async (req: Request, res: Response): Promise<void> => {
 
 // ─── POST /oauth/authorize (consent form submit) ──────────────────────────────
 router.post("/authorize", async (req: Request, res: Response): Promise<void> => {
-  const {
-    client_id,
-    redirect_uri,
-    scope,
-    state,
-    email,
-    apiKey,
-    code_challenge = "",
-    code_challenge_method = "",
-  } = req.body as Record<string, string>;
+  const params = {
+    client_id: singleParam(req.body?.client_id),
+    redirect_uri: singleParam(req.body?.redirect_uri),
+    scope: singleParam(req.body?.scope, "tools:read"),
+    state: singleParam(req.body?.state, ""),
+    email: singleParam(req.body?.email, ""),
+    apiKey: singleParam(req.body?.apiKey, ""),
+    code_challenge: singleParam(req.body?.code_challenge, ""),
+    code_challenge_method: singleParam(req.body?.code_challenge_method, ""),
+  };
+
+  if (!allParamsAreStrings(params)) {
+    res.status(400).json({ ok: false, error: "invalid_request", message: "OAuth authorize parameters must be single string values" });
+    return;
+  }
+  const { client_id, redirect_uri, scope, state, email, apiKey, code_challenge, code_challenge_method } = params;
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
   if (!client || !client.redirectUris.includes(redirect_uri)) {

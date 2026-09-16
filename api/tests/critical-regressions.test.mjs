@@ -13,6 +13,7 @@ const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
 const agentsSrc = fs.readFileSync(path.join(srcRoot, "routes", "agents.ts"), "utf8");
+const oauthSrc = fs.readFileSync(path.join(srcRoot, "routes", "oauth.ts"), "utf8");
 const trialSrc = fs.readFileSync(path.join(srcRoot, "routes", "trial.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
@@ -107,6 +108,23 @@ test("public signup routes reject non-string email bodies before string normaliz
     assert.ok(source.includes("normalizeSubmittedEmail(rawEmail)"), `${label} must use guarded normalization`);
     assert.ok(!source.includes("rawEmail?.toLowerCase().trim()"), `${label} must not call string methods on untrusted email`);
   }
+});
+
+test("OAuth authorize rejects repeated or non-string params before rendering consent HTML", () => {
+  assert.match(oauthSrc, /function singleParam\(value: unknown, defaultValue\?: string\): string \| null \{\s*if \(value === undefined\) return defaultValue \?\? null;\s*return typeof value === "string" \? value : null;\s*\}/);
+  assert.ok(oauthSrc.includes("function allParamsAreStrings"));
+  const getStart = oauthSrc.indexOf('router.get("/authorize"');
+  const postStart = oauthSrc.indexOf('router.post("/authorize"');
+  assert.ok(getStart > -1 && postStart > getStart, "authorize routes are missing");
+  const getRoute = oauthSrc.slice(getStart, postStart);
+  const postRoute = oauthSrc.slice(postStart, oauthSrc.indexOf("// ─── POST /oauth/token", postStart));
+
+  for (const [label, route] of [["GET /oauth/authorize", getRoute], ["POST /oauth/authorize", postRoute]]) {
+    assert.ok(route.includes("singleParam("), `${label} must use single-value parsing`);
+    assert.ok(route.includes('OAuth authorize parameters must be single string values'), `${label} must reject array/object params with 400`);
+  }
+  assert.ok(getRoute.indexOf("!allParamsAreStrings(params)") < getRoute.indexOf("CONSENT_PAGE("), "GET must validate before rendering consent");
+  assert.ok(postRoute.indexOf("!allParamsAreStrings(params)") < postRoute.indexOf("CONSENT_PAGE("), "POST must validate before rendering consent");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
