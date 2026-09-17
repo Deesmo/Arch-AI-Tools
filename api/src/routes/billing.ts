@@ -524,6 +524,12 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
       }
 
       const { clawed, already } = await prisma.$transaction(async (tx) => {
+        // Serialize clawbacks for a purchase before computing prior deltas.
+        // Stripe refund events report cumulative totals, so concurrent partial
+        // refunds must not both aggregate against the same pre-clawback state.
+        await tx.$queryRaw`
+          SELECT "id" FROM "Purchase" WHERE "id" = ${purchase.id} FOR UPDATE`;
+
         // Idempotency guard: the DB decides whether we've processed this reversal.
         // A redelivered event loses this INSERT (0 rows) → we skip the decrement.
         const inserted = await tx.$executeRaw`
@@ -536,8 +542,9 @@ router.post("/stripe", async (req: Request, res: Response): Promise<void> => {
         // use Stripe's cumulative amount_refunded, then subtract prior credits
         // already clawed for this purchase so partial refunds only remove the
         // new delta.
-        const agentRow = await tx.agent.findUnique({ where: { id: purchase.agentId }, select: { credits: true } });
-        const currentBalance = agentRow?.credits ?? 0;
+        const agentRows = await tx.$queryRaw<{ credits: number }[]>`
+          SELECT "credits" FROM "Agent" WHERE "id" = ${purchase.agentId} FOR UPDATE`;
+        const currentBalance = agentRows[0]?.credits ?? 0;
         const priorClawbacks = await tx.clawback.aggregate({
           where: {
             purchaseStripeId: purchase.stripeId,

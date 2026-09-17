@@ -10,6 +10,8 @@
  */
 process.env.DATABASE_URL ??= "postgresql://stub:stub@127.0.0.1:5432/stub";
 
+import { readFileSync } from "node:fs";
+
 const { clawbackAmount, clawbackDelta, proratedClawbackTarget } = await import("../dist/lib/clawback.js");
 
 let passed = 0;
@@ -74,6 +76,17 @@ simulateReversal(state2, "dp_first", 25000);
 assert(state2.balance === 0, "distinct reversal id decrements its own grant");
 const dupDispute = simulateReversal(state2, "dp_first", 25000);
 assert(dupDispute.already && state2.balance === 0, "same dispute id redelivered = single decrement");
+
+console.log("\nWebhook serialization guard:");
+const billingSource = readFileSync(new URL("../src/routes/billing.ts", import.meta.url), "utf8");
+assert(
+  /SELECT "id" FROM "Purchase"[\s\S]+FOR UPDATE/.test(billingSource),
+  "refund webhook locks the Purchase row before computing cumulative clawback deltas",
+);
+assert(
+  /SELECT "credits" FROM "Agent"[\s\S]+FOR UPDATE/.test(billingSource),
+  "refund webhook locks the Agent balance before applying the decrement",
+);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
