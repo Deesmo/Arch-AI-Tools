@@ -195,6 +195,13 @@ export function isX402AnonymousTool(toolName: string): boolean {
   return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
 }
 
+const X402_ANTHROPIC_SYNTHESIS_TOOLS = new Set(["research-report", "fact-check"]);
+
+function hasAnthropicSynthesisCredential(req: Request): boolean {
+  const byok = req.headers["x-anthropic-key"];
+  return (typeof byok === "string" && byok.trim() !== "") || !!process.env.ANTHROPIC_API_KEY;
+}
+
 /**
  * INTERNAL v1-shaped payment-requirements builder. This remains the single source of
  * truth for wallets/chains/prices/CDP filtering and for the v1→v2 facilitator
@@ -1250,6 +1257,15 @@ export function x402Middleware(toolName: string) {
     const authHeader = req.headers.authorization;
     const apiKey = req.headers["x-api-key"] as string | undefined;
     const hasApiCredential = !!(authHeader?.startsWith("Bearer ") || apiKey);
+
+    if ((paymentHeader || !hasApiCredential) && X402_ANTHROPIC_SYNTHESIS_TOOLS.has(toolName) && !hasAnthropicSynthesisCredential(req)) {
+      res.status(503).json({
+        ok: false,
+        error: "no_provider",
+        message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.",
+      });
+      return;
+    }
 
     // Platform side-effect tools (email through Arch-owned Resend, etc.) must
     // NOT be reachable via anonymous x402 — require API-key authentication so
