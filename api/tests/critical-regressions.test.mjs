@@ -12,7 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
+const billingSrc = fs.readFileSync(path.join(srcRoot, "routes", "billing.ts"), "utf8");
+const oauthSrc = fs.readFileSync(path.join(srcRoot, "routes", "oauth.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
+const x402Src = fs.readFileSync(path.join(srcRoot, "middleware", "x402.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
 
 let passed = 0;
@@ -41,6 +44,13 @@ function responseCredits(toolName) {
   const matches = [...route[0].matchAll(/credits_used:\s*(\d+)/g)].map((m) => Number(m[1]));
   assert.ok(matches.length > 0, `missing credits_used response for ${toolName}`);
   return new Set(matches);
+}
+
+function toolRoute(toolName) {
+  const start = toolsSrc.indexOf(`router.post("/${toolName}"`);
+  assert.ok(start >= 0, `missing ${toolName} route`);
+  const end = toolsSrc.indexOf("router.post(", start + 1);
+  return toolsSrc.slice(start, end > start ? end : undefined);
 }
 
 test("account deletion erases SignupIdentity using the shared normalized email identity", () => {
@@ -81,16 +91,55 @@ test("successful result bodies report the same fixed price the route deducts", (
 });
 
 test("research-report reports the deducted cost variable, not the stale flat 15", () => {
-  const start = toolsSrc.indexOf('router.post("/research-report"');
-  assert.ok(start >= 0, "missing research-report route");
-  const end = toolsSrc.indexOf("router.post(", start + 1);
-  const route = toolsSrc.slice(start, end > start ? end : undefined);
+  const route = toolRoute("research-report");
   assert.ok(!/credits_used:\s*15\b/.test(route), "stale flat credits_used: 15 must be gone");
   assert.match(route, /deductCredits\(req, res, "research-report", researchReportCost\)/);
   assert.match(route, /researchReportCost = paid \? 0 : byokAdjustedCost\(req, 40,/);
   const payloads = [...route.matchAll(/credits_used:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
-  assert.ok(payloads.length >= 2, "research-report has both success payloads");
+  assert.ok(payloads.length >= 1, "research-report has a success payload");
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
+});
+
+test("OAuth dynamic client registration rejects malformed metadata arrays before iterating or persisting", () => {
+  assert.match(oauthSrc, /typeof client_name !== "string"/, "client_name must be type-checked");
+  assert.match(oauthSrc, /redirect_uris\.every\(\(uri\) => typeof uri === "string"\)/, "redirect_uris entries must be strings");
+  assert.match(oauthSrc, /grant_types !== undefined && \(!Array\.isArray\(grant_types\)/, "grant_types must be checked before iteration");
+  assert.match(oauthSrc, /response_types !== undefined && \(!Array\.isArray\(response_types\)/, "response_types must be checked before response/persistence");
+  assert.match(oauthSrc, /token_endpoint_auth_method !== undefined && typeof token_endpoint_auth_method !== "string"/, "auth method must be a string");
+});
+
+test("billing checkout and subscription normalize only string pack or plan values", () => {
+  assert.match(billingSrc, /function normalizeBillingKey\(value: unknown\): string \{\s*return typeof value === "string" \? value\.toLowerCase\(\)\.trim\(\) : "";\s*\}/);
+  assert.match(billingSrc, /const \{ pack, plan \} = req\.body as \{ pack\?: unknown; plan\?: unknown \};\s*const rawKey = normalizeBillingKey\(pack \?\? plan\);/);
+  assert.match(billingSrc, /const \{ plan, pack \} = req\.body as \{ plan\?: unknown; pack\?: unknown \};\s*const planKey = normalizeBillingKey\(plan \?\? pack\);/);
+});
+
+test("research-report and fact-check fail closed when Anthropic cannot produce the paid artifact", () => {
+  const researchRoute = toolRoute("research-report");
+  const factRoute = toolRoute("fact-check");
+
+  const researchProviderCheck = researchRoute.indexOf('error: "no_provider"');
+  const researchDeduct = researchRoute.indexOf('deductCredits(req, res, "research-report", researchReportCost)');
+  assert.ok(researchProviderCheck > 0, "research-report must reject missing Anthropic");
+  assert.ok(researchProviderCheck < researchDeduct, "research-report must not deduct credits before rejecting missing Anthropic");
+  assert.ok(!researchRoute.includes("report: null"), "research-report must not return ok:true with report:null");
+  assert.match(researchRoute, /if \(!report\) \{\s*return void res\.status\(502\)\.json\(\{ ok: false, error: "synthesis_failed"/, "empty reports must fail");
+
+  const factProviderCheck = factRoute.indexOf('error: "no_provider"');
+  const factDeduct = factRoute.indexOf('deductCredits(req, res, "fact-check", 14)');
+  assert.ok(factProviderCheck > 0, "fact-check must reject missing Anthropic");
+  assert.ok(factProviderCheck < factDeduct, "fact-check must not deduct credits before rejecting missing Anthropic");
+  assert.ok(!factRoute.includes("verdict: null"), "fact-check must not return ok:true with verdict:null");
+  assert.match(factRoute, /if \(!raw\) \{\s*return void res\.status\(502\)\.json\(\{ ok: false, error: "analysis_failed"/, "empty analysis must fail");
+});
+
+test("anonymous x402 analysis tools reject missing Anthropic before returning a payment challenge or settling", () => {
+  assert.match(x402Src, /const X402_ANTHROPIC_SYNTHESIS_TOOLS = new Set\(\["research-report", "fact-check"\]\);/);
+  assert.match(
+    x402Src,
+    /if \(\(paymentHeader \|\| !hasApiCredential\) && X402_ANTHROPIC_SYNTHESIS_TOOLS\.has\(toolName\) && !hasAnthropicSynthesisCredential\(req\)\)/,
+    "x402 middleware must fail provider-unavailable analysis calls before settlement",
+  );
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

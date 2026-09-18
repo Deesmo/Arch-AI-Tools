@@ -2732,7 +2732,6 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
   // Report exactly what was deducted (0 for x402-paid, BYOK-discounted otherwise) —
   // the flat 15 this used to advertise predates the 2026-07-27 pricing audit (40 base).
   const researchReportCost = paid ? 0 : byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"]);
-  if (!paid) { const ok = await deductCredits(req, res, "research-report", researchReportCost); if (!ok) return; }
   const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
@@ -2747,6 +2746,11 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
   const anthropicKey = byokAnthropicKeyRR || process.env.ANTHROPIC_API_KEY;
   const numResults = depth === "deep" ? 10 : 5;
   const rrHasByok = !!(byokBraveKeyRR || byokTavilyKeyRR || byokAnthropicKeyRR);
+
+  if (!anthropicKey) {
+    return void res.status(503).json({ ok: false, error: "no_provider", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() });
+  }
+  if (!paid) { const ok = await deductCredits(req, res, "research-report", researchReportCost); if (!ok) return; }
 
   // Step 1: Gather search results
   let searchResults: Array<{ title: string; url: string; description: string }> = [];
@@ -2785,10 +2789,6 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
   }
 
   // Step 2: Synthesize with Claude
-  if (!anthropicKey) {
-    return void res.json({ ok: true, query, sources: searchResults, report: null, message: "Search results only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: researchReportCost, ...(rrHasByok ? { byok: true, byok_provider: rrSearchProvider || "unknown" } : {}), request_id: reqId() });
-  }
-
   const sourcesText = searchResults.map((s, i) => `[${i+1}] ${s.title}\n${s.url}\n${s.description}`).join("\n\n");
   const systemPrompt = `You are a research analyst. Write a concise, well-structured research report based on the provided sources. Include: an executive summary, key findings, and a conclusion. Cite sources using [N] notation. Be factual and objective.`;
   const userPrompt = `Research query: "${query}"\n\nSources:\n${sourcesText}\n\nWrite a ${depth === "deep" ? "comprehensive" : "concise"} research report.`;
@@ -2803,6 +2803,9 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
       timeout: 30000
     });
     const report = ((claude.data as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "").trim();
+    if (!report) {
+      return void res.status(502).json({ ok: false, error: "synthesis_failed", message: "Anthropic returned an empty report", request_id: reqId() });
+    }
     return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: researchReportCost, ...(rrHasByok ? { byok: true, byok_provider: byokAnthropicKeyRR ? "anthropic" : rrSearchProvider } : {}), request_id: reqId() });
   } catch (e) {
     return void res.status(502).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
@@ -2812,7 +2815,6 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
 // ─── 53. FACT-CHECK ───────────────────────────────────────────────────────────
 router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  if (!paid) { const ok = await deductCredits(req, res, "fact-check", 14); if (!ok) return; }
   const claim = String(req.body.claim ?? req.query.claim ?? "").trim();
   if (!claim) return void res.status(400).json({ ok: false, error: "missing_param", message: "claim is required" });
 
@@ -2826,6 +2828,11 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
   const anthropicKey = byokAnthropicKeyFC || process.env.ANTHROPIC_API_KEY;
   const fcHasByok = !!(byokBraveKeyFC || byokTavilyKeyFC || byokAnthropicKeyFC);
   let fcSearchProvider = "";
+
+  if (!anthropicKey) {
+    return void res.status(503).json({ ok: false, error: "no_provider", message: "Anthropic key not configured. Pass x-anthropic-key header for BYOK.", request_id: reqId() });
+  }
+  if (!paid) { const ok = await deductCredits(req, res, "fact-check", 14); if (!ok) return; }
 
   // Step 1: Search for evidence
   let evidence: Array<{ title: string; url: string; description: string }> = [];
@@ -2858,10 +2865,6 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
     } catch (_) { /* fall through */ }
   }
 
-  if (!anthropicKey) {
-    return void res.json({ ok: true, claim, verdict: null, confidence: null, evidence, message: "Evidence only — Anthropic key not configured. Pass x-anthropic-key header for BYOK.", credits_used: 14, ...(fcHasByok ? { byok: true, byok_provider: fcSearchProvider || "unknown" } : {}), request_id: reqId() });
-  }
-
   // Step 2: Analyze with Claude
   const evidenceText = evidence.map((e, i) => `[${i+1}] ${e.title}\n${e.url}\n${e.description}`).join("\n\n");
   const systemPrompt = `You are a professional fact-checker. Analyze the provided claim and evidence to determine its accuracy. Respond in JSON with exactly these fields:
@@ -2882,7 +2885,10 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
       timeout: 20000
     });
 
-    const raw = (claude.data as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "{}";
+    const raw = ((claude.data as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "").trim();
+    if (!raw) {
+      return void res.status(502).json({ ok: false, error: "analysis_failed", message: "Anthropic returned an empty analysis", request_id: reqId() });
+    }
     let analysis: Record<string, unknown> = {};
     try {
       // Extract JSON from response (may have markdown wrapping)
