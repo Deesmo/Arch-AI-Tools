@@ -9,7 +9,7 @@ import { stripe } from "../lib/stripe.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, normalizeEmailIdentity, allowVerificationResend, reissueEmailVerification } from "../lib/verification.js";
+import { SIGNUP_FREE_CREDITS, isDisposableEmail, issueEmailVerification, verifyEmailToken, peekEmailVerifyToken, enforceSignupLimits, recordSignupIp, tombstoneSignupIdentity, allowVerificationResend, reissueEmailVerification } from "../lib/verification.js";
 import { VERIFY_TOKEN_RE, renderVerifyConfirmPage, renderVerifyActivationPage, renderVerifyErrorPage, renderVerifyResendSentPage } from "../assets/verifyEmailHtml.js";
 import { REFERRAL_REWARD } from "../lib/referralReward.js";
 
@@ -539,9 +539,10 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
       const reqs = await tx.apiRequest.deleteMany({ where: { agentId: agent.id } });
       const toks = await tx.oAuthToken.deleteMany({ where: { agentId: agent.id } });
       const codes = await tx.oAuthAuthCode.deleteMany({ where: { agentId: agent.id } });
-      // Erase the email suppression record so no plaintext email remains (GDPR erasure
-      // wins over the bounded free-signup-again risk).
-      const ident = email ? await tx.signupIdentity.deleteMany({ where: { normalizedEmail: normalizeEmailIdentity(email) } }) : { count: 0 };
+      // Replace the plaintext grant guard with a one-way tombstone. This keeps
+      // GDPR erasure from retaining normalized email while preserving the
+      // "one free grant per identity" invariant after account deletion.
+      const signupIdentity = email ? await tombstoneSignupIdentity(email, tx) : 0;
       // Anonymize the Agent row in place — keeps Purchase/X402Payment FK integrity for
       // financial retention while removing every PII field.
       await tx.agent.update({
@@ -557,7 +558,7 @@ router.delete("/", requireAuth, requireApiKeyAuth, async (req: AuthedRequest, re
           emailVerified: false, isPublic: false,
         },
       });
-      const counts = { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity: ident.count, stripeSubscriptions: canceledSubscriptions };
+      const counts = { apiRequests: reqs.count, oauthTokens: toks.count, oauthCodes: codes.count, signupIdentity, stripeSubscriptions: canceledSubscriptions };
 
       // Durable deletion audit trail (GDPR Art.5(2) accountability). Written
       // INSIDE the transaction so a deletion can never commit without its audit

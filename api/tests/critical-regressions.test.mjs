@@ -43,12 +43,24 @@ function responseCredits(toolName) {
   return new Set(matches);
 }
 
-test("account deletion erases SignupIdentity using the shared normalized email identity", () => {
-  assert.ok(agentSrc.includes("normalizeEmailIdentity"), "agent route imports normalizeEmailIdentity");
+test("account deletion preserves free-grant suppression with a non-plaintext tombstone", () => {
+  const verificationSrc = fs.readFileSync(path.join(srcRoot, "lib", "verification.ts"), "utf8");
+  assert.ok(agentSrc.includes("tombstoneSignupIdentity"), "deletion route imports the SignupIdentity tombstone helper");
+  assert.ok(!agentSrc.includes("signupIdentity.deleteMany"), "deletion must not remove the free-grant guard outright");
   assert.match(
     agentSrc,
-    /signupIdentity\.deleteMany\(\{\s*where:\s*\{\s*normalizedEmail:\s*normalizeEmailIdentity\(email\)\s*\}\s*\}\)/,
-    "DELETE /v1/agent must delete the same normalized identity signup stored",
+    /tombstoneSignupIdentity\(email,\s*tx\)/,
+    "DELETE /v1/agent must replace the plaintext grant guard inside the deletion transaction",
+  );
+  assert.match(
+    verificationSrc,
+    /deleted-sha256:\$\{crypto\.createHash\("sha256"\)\.update\(normalized\)\.digest\("hex"\)\}/,
+    "SignupIdentity tombstones must not retain the plaintext normalized email",
+  );
+  assert.match(
+    verificationSrc,
+    /WHERE NOT EXISTS \(\s*SELECT 1 FROM "SignupIdentity"\s*WHERE "normalized_email" = \$\{tombstone\}\s*\)/,
+    "free-credit claims must check deletion tombstones before inserting a new grant row",
   );
 });
 
