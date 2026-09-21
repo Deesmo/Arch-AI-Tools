@@ -85,6 +85,11 @@ export function normalizeEmailIdentity(email: string): string {
   return `${local}@${domain}`;
 }
 
+export function signupIdentityTombstone(email: string): string {
+  const normalized = normalizeEmailIdentity(email);
+  return `deleted-sha256:${crypto.createHash("sha256").update(normalized).digest("hex")}`;
+}
+
 /**
  * Atomically claim the free-grant slot for a normalized email identity.
  * INSERT … ON CONFLICT DO NOTHING against the UNIQUE "SignupIdentity" table —
@@ -98,6 +103,7 @@ export function normalizeEmailIdentity(email: string): string {
  */
 export async function claimSignupIdentity(email: string): Promise<boolean> {
   const normalized = normalizeEmailIdentity(email);
+  const tombstone = signupIdentityTombstone(email);
   // Prisma's @default(cuid()) does NOT apply to raw SQL, and the migration
   // defines "id" as TEXT NOT NULL with no DB default — so the id MUST be
   // supplied explicitly here. created_at has DEFAULT CURRENT_TIMESTAMP in
@@ -106,11 +112,15 @@ export async function claimSignupIdentity(email: string): Promise<boolean> {
   try {
     const inserted = await prisma.$executeRaw`
       INSERT INTO "SignupIdentity" ("id", "normalized_email")
-      VALUES (${id}, ${normalized})
+      SELECT ${id}, ${normalized}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "SignupIdentity"
+        WHERE "normalized_email" = ${tombstone}
+      )
       ON CONFLICT ("normalized_email") DO NOTHING`;
     // Deterministic, non-throwing outcomes:
     //   1 row inserted  → new claim → grant credits (true)
-    //   0 rows (ON CONFLICT) → identity already claimed → gate credits (false)
+    //   0 rows (ON CONFLICT or deletion tombstone) → already claimed → gate credits (false)
     return inserted > 0;
   } catch (e) {
     // Fail CLOSED: on an unexpected DB error we cannot prove this identity has
@@ -120,6 +130,27 @@ export async function claimSignupIdentity(email: string): Promise<boolean> {
     logger.warn({ error: String(e) }, "SignupIdentity claim failed (failing closed — no grant)");
     return false;
   }
+}
+
+export async function tombstoneSignupIdentity(
+  email: string,
+  db: Pick<typeof prisma, "$executeRaw"> = prisma,
+): Promise<number> {
+  const normalized = normalizeEmailIdentity(email);
+  const tombstone = signupIdentityTombstone(email);
+  const id = crypto.randomUUID();
+
+  // Preserve the anti-farming guard without retaining the plaintext normalized
+  // email after GDPR deletion. Future claims check this tombstone before grant.
+  const inserted = await db.$executeRaw`
+    INSERT INTO "SignupIdentity" ("id", "normalized_email")
+    VALUES (${id}, ${tombstone})
+    ON CONFLICT ("normalized_email") DO NOTHING`;
+  const deletedPlaintext = await db.$executeRaw`
+    DELETE FROM "SignupIdentity"
+    WHERE "normalized_email" = ${normalized}`;
+
+  return Number(inserted) + Number(deletedPlaintext);
 }
 
 // Per-IP signup counter (in-process, daily window). Conservative blast-radius
