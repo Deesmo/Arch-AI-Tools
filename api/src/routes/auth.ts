@@ -223,11 +223,12 @@ export default router;
 
 router.post("/forgot-password", forgotLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body ?? {};
-  if (!email) {
+  if (typeof email !== "string" || !email.trim()) {
     res.status(400).json({ ok: false, error: "email_required" });
     return;
   }
-  const agent = await prisma.agent.findUnique({ where: { email: email.toLowerCase().trim() } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const agent = await prisma.agent.findUnique({ where: { email: normalizedEmail } });
   if (agent) {
     const token = crypto.randomBytes(32).toString("hex");
     const expiry = new Date(Date.now() + 60 * 60 * 1000);
