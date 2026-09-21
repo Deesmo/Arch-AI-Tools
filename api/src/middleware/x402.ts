@@ -27,6 +27,7 @@ import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
 import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
 import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual, paymentPayloadVersion } from "../lib/x402V2.js";
 import { getToolSellCopy, railDescription, registerToolSellCopy } from "../lib/toolSellCopy.js";
+import { VIDEO_HOURLY_CAP, videoHourlyGate, releaseVideoHourlySlot } from "../lib/toolLimits.js";
 
 // Per-tool sell copy: load DB Tool.description rows into the sell-copy registry
 // at startup (Play #6). Sanitization + length-capping happens INSIDE
@@ -1390,6 +1391,23 @@ export function x402Middleware(toolName: string) {
       return;
     }
 
+    let reservedVideoHourlyIdentity: string | null = null;
+    if (toolName === "video-generate") {
+      const payer = verifyResult.payer ?? extractPayerAddress(paymentHeader);
+      const identity = `x402:${payer?.trim().toLowerCase() ?? `ip:${req.ip ?? "unknown"}`}`;
+      if (!videoHourlyGate(identity)) {
+        if (nonce) await releaseStoredNonce(nonce);
+        res.status(429).json({
+          ok: false,
+          error: "video_rate_limited",
+          message: `Video generation is limited to ${VIDEO_HOURLY_CAP} requests per hour per account — a cost-abuse guard on the underlying Runway generation spend. Try again next hour.`,
+        });
+        return;
+      }
+      reservedVideoHourlyIdentity = identity;
+      (req as Request & { x402VideoHourlyIdentity?: string }).x402VideoHourlyIdentity = identity;
+    }
+
     // Settle payment using spec-compliant format
     const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
 
@@ -1401,6 +1419,7 @@ export function x402Middleware(toolName: string) {
     if (!settled) {
       // Free the nonce so the agent can retry the payment
       if (nonce) await releaseStoredNonce(nonce);
+      if (reservedVideoHourlyIdentity) releaseVideoHourlySlot(reservedVideoHourlyIdentity);
       try {
         await prisma.x402Payment.create({
           data: {
