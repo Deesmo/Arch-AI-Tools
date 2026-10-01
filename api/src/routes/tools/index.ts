@@ -137,6 +137,11 @@ function isX402Paid(req: Request): boolean {
   return !!(req as Request & { x402Paid?: boolean }).x402Paid;
 }
 
+function optionalModelParam(value: unknown): string | undefined | null {
+  if (value === undefined || value === null || value === "") return undefined;
+  return typeof value === "string" ? value : null;
+}
+
 // ─── email recipient anti-abuse (CAN-SPAM) ───────────────────────────────────
 // Per-recipient daily send cap, independent of the per-agent limit, so one address
 // can't be spammed via many accounts. In-memory + per-instance (resets daily / on
@@ -1180,11 +1185,13 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
   const byokXaiKey = req.headers["x-xai-key"] as string | undefined;
   const byokGoogleKey = req.headers["x-google-key"] as string | undefined;
 
-  const { prompt, system, model: explicitModel, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: string; mode?: string; max_tokens?: number };
+  const { prompt, system, model: explicitModelRaw, mode, max_tokens = 1000 } = req.body as { prompt?: string; system?: string; model?: unknown; mode?: string; max_tokens?: number };
   const paid = isX402Paid(req);
   if (!prompt) { res.status(400).json({ ok: false, error: "invalid_request", message: "prompt is required", request_id: reqId() }); return; }
   const MAX_PROMPT = parseInt(process.env.AI_MAX_PROMPT_CHARS ?? "32000", 10);
   if (prompt.length > MAX_PROMPT) { res.status(400).json({ ok: false, error: "prompt_too_long", message: `Prompt exceeds ${MAX_PROMPT} character limit`, request_id: reqId() }); return; }
+  const explicitModel = optionalModelParam(explicitModelRaw);
+  if (explicitModel === null) { res.status(400).json({ ok: false, error: "invalid_model", message: "model must be a string", request_id: reqId() }); return; }
 
   // Resolve model: explicit model > mode preset > default "smart"
   const validModes = Object.keys(AI_MODE_PRESETS);
@@ -2940,13 +2947,18 @@ setInterval(() => {
 }, 30 * 60 * 1000);
 
 router.post("/session-create", ...toolMiddleware("session-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
+  const { namespace, model: rawModel } = req.body as { namespace?: string; model?: unknown };
+  const model = optionalModelParam(rawModel);
+  if (model === null) {
+    res.status(400).json({ ok: false, error: "invalid_model", message: "model must be a string", request_id: reqId() });
+    return;
+  }
   const paid = isX402Paid(req);
   const sessionCreateCost = paid ? 0 : 5;
   if (!paid) {
     const ok = await deductCredits(req, res, "session-create", sessionCreateCost);
     if (!ok) return;
   }
-  const { namespace, model } = req.body as { namespace?: string; model?: string };
   const systemPrompt = req.body.system_prompt ?? req.body.system;
   if (!namespace || typeof namespace !== "string") {
     res.status(400).json({ ok: false, error: "invalid_request", message: "namespace is required", request_id: reqId() });
