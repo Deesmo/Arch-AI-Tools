@@ -13,6 +13,7 @@ const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
+const oauthSrc = fs.readFileSync(path.join(srcRoot, "routes", "oauth.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
 
 let passed = 0;
@@ -91,6 +92,19 @@ test("research-report reports the deducted cost variable, not the stale flat 15"
   const payloads = [...route.matchAll(/credits_used:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
   assert.ok(payloads.length >= 2, "research-report has both success payloads");
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
+});
+
+test("OAuth token endpoint rejects non-string body fields before crypto helpers", () => {
+  const start = oauthSrc.indexOf('router.post("/token"');
+  assert.ok(start >= 0, "missing OAuth token route");
+  const end = oauthSrc.indexOf('router.post("/register"', start);
+  const route = oauthSrc.slice(start, end > start ? end : undefined);
+  assert.match(oauthSrc, /function tokenParam\(value: unknown\): string \| undefined \{\s*return typeof value === "string" \? value : undefined;\s*\}/);
+  assert.match(route, /const body = req\.body as Record<string, unknown>;/);
+  for (const field of ["grant_type", "code", "client_id", "client_secret", "redirect_uri", "refresh_token", "code_verifier"]) {
+    assert.ok(route.includes(`const ${field} = tokenParam(body.${field});`), `${field} must be normalized through tokenParam`);
+  }
+  assert.ok(!route.includes("req.body as Record<string, string>"), "token route must not trust body fields as strings");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
