@@ -13,6 +13,7 @@ const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
+const x402Src = fs.readFileSync(path.join(srcRoot, "middleware", "x402.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
 
 let passed = 0;
@@ -91,6 +92,38 @@ test("research-report reports the deducted cost variable, not the stale flat 15"
   const payloads = [...route.matchAll(/credits_used:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
   assert.ok(payloads.length >= 2, "research-report has both success payloads");
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
+});
+
+test("anonymous x402 text-to-speech cannot settle payment when ElevenLabs is unavailable", () => {
+  assert.match(
+    x402Src,
+    /toolName === "text-to-speech" && !process\.env\.ELEVENLABS_API_KEY\?\.trim\(\)/,
+    "x402 middleware must know text-to-speech depends on ELEVENLABS_API_KEY",
+  );
+
+  const middleware = x402Src.slice(x402Src.indexOf("export function x402Middleware"));
+  const preflight = middleware.indexOf("getX402ProviderUnavailable(toolName)");
+  const noPaymentChallenge = middleware.indexOf("No payment header");
+  const nonceCheck = middleware.indexOf("Nonce-based replay protection");
+  const verify = middleware.indexOf("verifyPayment(");
+  const settle = middleware.indexOf("settlePayment(");
+  assert.ok(preflight > 0, "x402 middleware must run the provider preflight");
+  assert.ok(preflight < noPaymentChallenge, "provider preflight must run before issuing a 402 challenge");
+  assert.ok(preflight < nonceCheck, "provider preflight must run before nonce reservation");
+  assert.ok(preflight < verify, "provider preflight must run before facilitator verify");
+  assert.ok(preflight < settle, "provider preflight must run before facilitator settlement");
+});
+
+test("text-to-speech checks provider config before deducting API-key credits", () => {
+  const start = toolsSrc.indexOf('router.post("/text-to-speech"');
+  assert.ok(start >= 0, "missing text-to-speech route");
+  const end = toolsSrc.indexOf("router.post(", start + 1);
+  const route = toolsSrc.slice(start, end > start ? end : undefined);
+  const provider = route.indexOf("process.env.ELEVENLABS_API_KEY");
+  const deduct = route.indexOf('deductCredits(req, res, "text-to-speech"');
+  assert.ok(provider > 0, "text-to-speech route must check ELEVENLABS_API_KEY");
+  assert.ok(deduct > 0, "text-to-speech route must still meter successful configured calls");
+  assert.ok(provider < deduct, "provider-unavailable 503 must happen before any credit deduction");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

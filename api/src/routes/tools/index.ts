@@ -2321,6 +2321,8 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(voice_id))) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "voice_id must be alphanumeric (letters, digits, _ or -)", request_id: reqId() }); return;
   }
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() }); return; }
   const paid = isX402Paid(req);
   if (!paid) {
     // Metered by length: 25 base + 8 credits per 100 chars (covers ElevenLabs COGS)
@@ -2328,8 +2330,6 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
     const ok = await deductCredits(req, res, "text-to-speech", ttsCost);
     if (!ok) return;
   }
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) { res.status(503).json({ ok: false, error: "not_configured", message: "Text-to-speech not configured", request_id: reqId() }); return; }
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice_id)}`, {
       method: "POST",
