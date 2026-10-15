@@ -195,6 +195,13 @@ export function isX402AnonymousTool(toolName: string): boolean {
   return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
 }
 
+export function getX402ProviderUnavailable(toolName: string): { error: string; message: string } | null {
+  if (toolName === "text-to-speech" && !process.env.ELEVENLABS_API_KEY?.trim()) {
+    return { error: "not_configured", message: "Text-to-speech not configured" };
+  }
+  return null;
+}
+
 /**
  * INTERNAL v1-shaped payment-requirements builder. This remains the single source of
  * truth for wallets/chains/prices/CDP filtering and for the v1→v2 facilitator
@@ -1274,6 +1281,17 @@ export function x402Middleware(toolName: string) {
       }
       next();
       return;
+    }
+
+    // Anonymous x402 must never request or settle payment for a tool the server
+    // already knows cannot run. API-key callers continue through auth and get
+    // the same route-level 503 without any credit deduction.
+    if (!hasApiCredential) {
+      const unavailable = getX402ProviderUnavailable(toolName);
+      if (unavailable) {
+        res.status(503).json({ ok: false, ...unavailable });
+        return;
+      }
     }
 
     // If the SDK already handled payment, skip custom middleware
