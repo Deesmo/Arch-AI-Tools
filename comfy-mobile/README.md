@@ -16,7 +16,9 @@ Skytech over Tailscale, `http://100.103.142.118:8188`) and to nothing else.
 
 | Mode | What you get |
 |---|---|
-| **Studio** | Phone-sized create flow: Text→Video / Image→Video / Image chips, template picker with live server availability, prompt + negative, model pickers populated from the server, resolution presets, duration (frames × fps), steps/CFG, seed with randomize/fixed, LoRA picker with local ratings + trigger words, **Recipes** (saved settings + trigger words that are prepended to the prompt), **Review-before-queue** sheet, live progress with preview frames, and a video-first results feed with Save / Reuse settings / Open graph. |
+| **Studio** | Phone-sized create flow: Text→Video / Image→Video / Image chips, template picker with live server availability, prompt + negative, model pickers populated from the server, a collapsible **LoRAs** section on every video template (search the server's whole `loras` folder, pick up to 4, strength slider each — they become `LoraLoaderModelOnly` nodes in the queued workflow), resolution presets, duration (frames × fps), steps/CFG, seed with randomize/fixed, **Recipes** (saved settings + trigger words that are prepended to the prompt), **Review-before-queue** sheet, live progress with preview frames, and a video-first results feed with Save / Reuse settings / Open graph. One-line plain-language hints sit under every section header. |
+| **Library** | Everything the server exposes, read-only: every `/models/<folder>` (discovered via `GET /models`, so custom-node folders show up too) grouped with counts and a word-AND search; tap a file → **Use in Studio** (sets the matching model picker, or adds a LoRA to the Studio stack) or **Open in Graph** (adds the right loader node with the file selected). **Workflows** saved in the ComfyUI web UI (`/api/userdata?dir=workflows`) can be opened in Graph or run as-is; **Assets** shows the server's input images (use one as a Studio reference) and output history thumbnails. |
+| **Guide** | A dismissible 4-card "How this works" walkthrough on first launch (Studio · Graph · Library · your server, no cloud), reachable again from Settings → Help. |
 | **Graph** | Full ComfyUI-style node editor: pan, pinch-zoom, drag nodes, drag links from pins (drop on a pin, a node, or empty canvas → type-filtered node search), tap link midpoints to delete, node search over the server's `/object_info`, node inspector with every widget type (combo, number + slider, seed + control-after-generate, toggle, text, image/video upload), bypass / mute / clone / delete, colours, collapse, undo/redo, autosave, import/export LiteGraph JSON (and PNG metadata), live execution highlighting + progress bar + per-node outputs. |
 | **Queue** | Running / pending with cancel and interrupt; history with status, outputs, error messages, "Open graph", delete/clear. |
 | **Gallery** | Every output in server history, videos first (mp4/webm, VHS gifs, animated webp, SaveVideo), with a fullscreen viewer, swipe navigation, byte-range video playback, Save to device / Share. |
@@ -52,9 +54,15 @@ npm run mock             # http://localhost:8188 – recorded /object_info, simu
 npm run dev              # then set the server URL to http://localhost:8188 in the connection screen
 ```
 
+The mock also serves 17 model folders (66 LoRAs in sub-folders, embeddings, controlnet, ipadapter,
+…), two server-saved workflows under `mock-server/userdata/workflows/` via the `/userdata` API, and
+five input images, so the Library tab, the Studio LoRA stack and the first-run guide all work
+offline. Open `http://127.0.0.1:5173/?tab=library` to jump straight to a tab.
+
 Mock server switches: `MOCK_ALL_NODES=1` (also expose AnimateDiff/VHS nodes), `MOCK_NO_CORS=1`
 (reproduce the CORS failure the app diagnoses), `MOCK_FAIL=1` (every third prompt fails),
-`MOCK_SPEED=3` (faster fake sampling), `PORT=…`.
+`MOCK_SPEED=3` (faster fake sampling), `PORT=…` (`PORT=0` picks a free port and prints it),
+`HOST=…` (default `0.0.0.0`).
 
 ### ComfyUI server requirements
 
@@ -72,7 +80,8 @@ forwarding to the Windows Tailscale IP must also be in place for `100.103.142.11
 
 ```bash
 npm run typecheck        # tsc --noEmit
-npm test                 # node:test unit checks for src/core (template round-trip, connection diagnosis, media, store)
+npm test                 # node:test unit checks for src/core (template round-trip, connection diagnosis, media, store,
+                         # library grouping/search/loader lookup, Studio LoRA stack, /models + /userdata enumeration against the mock)
 npm run build            # typecheck + vite build → dist/
 npm run audit:privacy    # scans dist/ (+ package.json deps) for any outbound URL; exit 1 on findings
 npm run verify           # typecheck + tests + build + audit
@@ -97,12 +106,14 @@ The ComfyUI server is plain `http://`, so:
 ```
 comfy-mobile/
   src/core/        engine shared by both modes (no React UI): API client, WebSocket, graph model,
-                   serialisation, prompt compiler, templates + bindings, validation, stores, recipes
-  src/studio/      Studio mode UI (create bar, param form, recipes, LoRA lab, review sheet, results)
+                   serialisation, prompt compiler, templates + bindings + LoRA stack, validation,
+                   library helpers (folder grouping, search, loader lookup, userdata parsing), stores, recipes
+  src/studio/      Studio mode UI (create bar, param form, LoRAs section + picker, recipes, review sheet, results)
+  src/library/     Library tab (models / server workflows / assets) and its Studio/Graph actions
   src/editor/      Graph mode UI (canvas, nodes, links, search, inspector, toolbar)
   src/screens/     Queue, Gallery, Viewer, Settings, Workflows, Connection gate
-  src/shared/      Sheet, fields, media view, icons, toasts, ui store
-  mock-server/     mock ComfyUI (HTTP + WS) with recorded object_info and media fixtures
+  src/shared/      Sheet, fields, media view, icons, toasts, first-run Guide, ui store
+  mock-server/     mock ComfyUI (HTTP + WS) with recorded object_info, userdata workflows and media fixtures
   scripts/         audit-privacy.mjs
 ```
 

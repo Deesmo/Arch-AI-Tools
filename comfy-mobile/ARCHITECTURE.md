@@ -8,18 +8,22 @@ Comfy Mobile is one Vite/React app with **two UI layers** that share **one engin
 │  create bar · param form │   │  canvas · nodes · links  │     no fetch/WebSocket code
 │  recipes · LoRA · review │   │  search · inspector      │
 └────────────┬─────────────┘   └────────────┬─────────────┘
+             │        src/library (Library tab: models · server workflows · assets)
              │        src/screens (queue, gallery, settings, connection)
-             │        src/shared  (sheet, fields, media view, toasts)
+             │        src/shared  (sheet, fields, media view, toasts, first-run guide)
 ┌────────────▼────────────────────────────────▼─────────────┐
 │  src/core — the engine (framework-agnostic except Zustand) │
 │  api/        HTTP client · WebSocket · ComfyUI types       │
 │  graph/      LiteGraph model · widgets from object_info ·  │
 │              serialise/import/export · graph→prompt        │
 │  templates/  Studio template schema · binding engine ·     │
+│              Studio LoRA stack (LoraLoaderModelOnly chain) │
 │              validation against object_info + /models      │
+│  library/    model-folder grouping · search · loader       │
+│              lookup · userdata (server workflow) parsing   │
 │  recipes/    recipe schema + trigger-word injection        │
 │  store/      server · graph · studio · workflows · loras · │
-│              settings (Zustand, persisted to localStorage) │
+│              library · settings (Zustand → localStorage)   │
 │  connection/ CORS / unreachable / mixed-content diagnosis  │
 │  platform/   save/share via Capacitor, web fallback        │
 │  media.ts    output normalisation (video-first)            │
@@ -93,6 +97,65 @@ data only: a workflow JSON and a param list, no UI code.
 missing models warn (the user can pick another file in the combo, which is populated from the same
 `/models` lists).
 
+### Studio LoRA stack (`core/templates/loras.ts`)
+
+Every video template gets a per-template stack of up to `MAX_STUDIO_LORAS` (4) `StudioLora
+{ file, strength }` entries, kept in `useStudioStore.loras[templateId]`. The stack is *not* part
+of the template's bindings; it is applied when the workflow is built:
+
+* `modelRoots(wf)` finds every node that outputs `MODEL` but takes no `MODEL` input (one for most
+  templates, the high- and low-noise `UNETLoader`s for Wan 2.2).
+* `withStudioLoras(wf, stack, objectInfo)` first strips any previous stack, then inserts one
+  `LoraLoaderModelOnly` per LoRA after each root (`lora_name`, `strength_model`), rewires the root's
+  former consumers to the end of the chain and tags each injected node with
+  `properties['comfy-mobile.studioLora']` so it can be recognised later.
+* `readStudioLoras(wf)` reads the stack back from those tags, so "Open in Graph" → edit → "Sync
+  from graph" round-trips, and `stripStudioLoras(wf)` restores the original wiring.
+* `supportsStudioLoras(kind, wf, objectInfo)` gates the UI: video kind, the server has
+  `LoraLoaderModelOnly`, and the template has at least one model root.
+
+`useStudio().buildWorkflow()` is the single place this is applied (Generate, Review sheet and Open
+in Graph all go through it). `studio/lora/LoraSection.tsx` renders the collapsible section with
+strength sliders and opens `LoraPicker` in multi-select mode (word-AND search, paged by 150, local
+ratings/trigger words still editable per file).
+
+### Library (`core/library`, `core/store/library.ts`, `src/library`)
+
+The Library tab is a read-only view of the server:
+
+* **Models.** `useLibraryStore.refreshFolders()` calls `GET /models` for the folder list, then
+  `refreshModels(folder)` (server store) for every folder in parallel, so folders added by custom
+  node packs appear without code changes. `groupModelFolders()` orders and labels them
+  (`FOLDER_META` has plain-language blurbs for the standard ComfyUI folders); `filterModelGroups()`
+  applies the case-insensitive word-AND search and drops empty groups while searching.
+  `loaderFor(folder, file, objectInfo)` picks the loader node for "Open in Graph": a preferred
+  node per folder (`CheckpointLoaderSimple`, `UNETLoader`, `LoraLoaderModelOnly`, `VAELoader`,
+  `ControlNetLoader`, …) when its combo actually lists the file, otherwise any node whose combo
+  does, otherwise the preferred node if the type exists. `studioTargetFor()` decides what "Use in
+  Studio" means for the current template: add to the LoRA stack, set a `role: 'model'` param whose
+  folder matches, or insert an embedding token into the prompt.
+* **Workflows.** `GET /api/userdata?dir=workflows&recurse=true&full_info=true` lists what was saved
+  in the ComfyUI web UI (`user/default/workflows`); `parseUserdataList()` accepts both response
+  shapes (`{ path, size, modified }` objects or bare path strings), keeps `.json` only and sorts
+  newest first. `GET /api/userdata/<encoded path>` (one URL-encoded segment, e.g.
+  `workflows%2Fvideo%2Fclip.json`) fetches the file; `parseWorkflow()` turns it into the editor
+  model so it opens in Graph, and "Run now" compiles and queues it directly. A 404 (older server /
+  no user dir) is shown as an empty list, not an error.
+* **Assets.** Input images come from the `LoadImage` combo in `/object_info` plus files this app
+  uploaded (`uploadedInputs`); thumbnails use `/view?type=input`. Outputs reuse the history store
+  and `mediaFromHistoryEntry`. "Use as reference" switches Studio to the image-to-video template and
+  sets its reference param.
+
+The library store resets whenever `serverUrl` changes (as does `modelLists`), so one server's
+folders are never shown for another.
+
+### First-run guide (`shared/Guide.tsx`)
+
+`App.tsx` opens the four-card guide when `useSettingsStore.guideSeen` is false; Skip / Got it set it
+to true. Settings → Help → "How this works" reopens it. The cards are static copy (`GUIDE_CARDS`)
+with an "Open <tab>" button each; no network, no state beyond the flag. `?tab=<id>` in the URL
+selects a tab on load (handy for screenshots and deep links).
+
 ### Video-first media (`core/media.ts`)
 
 `mediaFromOutput()` normalises every output shape ComfyUI produces — `images[]`, `gifs[]` (VHS;
@@ -121,7 +184,8 @@ prop contract; the engine behind it is already in `core`.
 | Unified create bar / mode chips | `studio/StudioScreen.tsx` (MODES) | `useStudio()` | Chips map to `TemplateKind`s; the first template tagged `primary` in that kind is selected. |
 | Parameter controls | `studio/ParamForm.tsx` | `TemplateParam.role` | Replace a role renderer (e.g. a slick duration slider) without touching bindings. |
 | Recipes + trigger words | `studio/recipes/RecipePicker.tsx` | `core/recipes` (`useRecipesStore`, `bindTriggerWords`) | A recipe = template id + values + `triggerWords[]` + `loras[]`. Trigger words are prepended to the positive prompt at generate time; `finalPrompt` is exposed by `useStudio()` for the review sheet. |
-| LoRA Lab | `studio/lora/LoraPicker.tsx` | `useLorasStore` (rating, favourite, trigger words, notes per file) + `modelLists.loras` | Ratings sort the list; extend with previews/tags by widening `LoraMeta`. |
+| LoRA stack | `studio/lora/LoraSection.tsx` + `LoraPicker.tsx` (multi mode) | `useStudioStore.loras` + `withStudioLoras` / `readStudioLoras` + `useLorasStore` (rating, favourite, trigger words, notes per file) | Raise `MAX_STUDIO_LORAS` or add `strength_clip` by switching the injected node to `LoraLoader` in `loras.ts`. |
+| Library → Studio / Graph | `library/useLibraryActions.ts` | `studioTargetFor`, `loaderFor`, `useGraphStore.addNode/setWidget` | Add a new folder → loader mapping in `PREFERRED_LOADERS`; the rest is discovered from `/object_info`. |
 | Review before queue | `studio/ReviewSheet.tsx` | `useStudio().buildWorkflow()` + `graphToPrompt` | Shows final prompt, key params, validation warnings, executable node count; opt-out stored in settings (`reviewBeforeQueue`). |
 | Results feed | `studio/ResultsFeed.tsx` | `history` + `submitted` + `mediaFromHistoryEntry` | Live card (progress + preview frame) then finished runs. "Reuse settings" calls `readTemplateValues`. |
 | Import-and-run | `screens/WorkflowsScreen.tsx` ▶ button | `useQueue().queueWorkflow` | Queues a saved/imported workflow without opening the editor. |
@@ -143,15 +207,16 @@ prop contract; the engine behind it is already in `core`.
 
 | Key | Store | Contents |
 |---|---|---|
-| `comfy-mobile.settings` | `useSettingsStore` | server URL, default mode, editor prefs |
+| `comfy-mobile.settings` | `useSettingsStore` | server URL, default mode, editor prefs, `guideSeen` |
 | `comfy-mobile.graph.autosave` | `useGraphStore` | the open graph, name, template id |
 | `comfy-mobile.workflows` | `useWorkflowsStore` | saved workflows (LiteGraph JSON) |
-| `comfy-mobile.studio` | `useStudioStore` | per-template parameter values, seed mode |
+| `comfy-mobile.studio` | `useStudioStore` | per-template parameter values, seed mode, LoRA stack |
 | `comfy-mobile.recipes` | `useRecipesStore` | recipes + active recipe |
 | `comfy-mobile.loras` | `useLorasStore` | LoRA ratings / trigger words / notes |
 | `comfy-mobile.clientId` | server store | stable WebSocket client id |
 
-Nothing is synced anywhere; "Clear local data" in Settings wipes these keys.
+The library store (`useLibraryStore`: folder list, server workflow list) is in-memory only and is
+refetched per session. Nothing is synced anywhere; "Clear local data" in Settings wipes these keys.
 
 ## Privacy: local-only guarantee
 
@@ -161,8 +226,9 @@ The app's only network peer is the ComfyUI server URL in Settings. Concretely:
   stylesheets, no `preconnect`/`dns-prefetch`, no web fonts at all. Icons are inline SVG paths.
 * **No telemetry, analytics, crash reporting or update checks.** There is no code path that
   contacts a vendor; Capacitor is configured without `CapacitorHttp` or live-update plugins.
-* **No external APIs or cloud fallbacks.** Model lists, node definitions, uploads, outputs and
-  history all come from the configured server. LoRA/recipe metadata is local.
+* **No external APIs or cloud fallbacks.** Model lists, node definitions, server-saved workflows
+  (`/userdata`), uploads, outputs and history all come from the configured server. LoRA/recipe
+  metadata and the guide flag are local. The Library never writes to the server.
 * **Runtime dependencies are pinned to a reviewed allow-list** (`react`, `react-dom`, `zustand`,
   `@capacitor/core|ios|android|filesystem|share`); the audit also checks their transitive deps.
 * **The build is audited.** `npm run audit:privacy` (`scripts/audit-privacy.mjs`) scans every JS/CSS/
