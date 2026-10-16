@@ -44,6 +44,11 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
           {recipe.triggerWords.length ? ` · triggers ${recipe.triggerWords.join(', ')}` : ''}
         </div>
       )}
+      {studio.loraTriggerWords.length > 0 && (
+        <div className="small muted" style={{ marginBottom: 8 }}>
+          LoRA trigger words (My Studio): {studio.loraTriggerWords.join(', ')}
+        </div>
+      )}
       <div className="card" style={{ marginBottom: 10 }}>
         <div className="field-label">Final prompt</div>
         <div style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{finalPrompt || <span className="muted">(empty)</span>}</div>
