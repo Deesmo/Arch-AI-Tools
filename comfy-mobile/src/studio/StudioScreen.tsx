@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { useSettingsStore, type TemplateKind } from '../core';
 import { Icon } from '../shared/Icon';
 import { useUiStore } from '../shared/ui';
-import { ParamForm } from './ParamForm';
+import { Hint, ParamForm } from './ParamForm';
 import { ResultsFeed } from './ResultsFeed';
 import { ReviewSheet } from './ReviewSheet';
 import { TemplatePicker, kindLabel } from './TemplatePicker';
@@ -83,7 +83,8 @@ export function StudioScreen() {
 
       <div className="screen-body" style={{ paddingBottom: 0 }}>
         {/* CreateBar */}
-        <div className="segmented" style={{ width: '100%', marginBottom: 10 }}>
+        <Hint>Pick what to make, choose a template, fill in the prompt, then Generate. Everything runs on your own ComfyUI server.</Hint>
+        <div className="segmented" style={{ width: '100%', marginBottom: 10, marginTop: 6 }}>
           {MODES.map((m) => (
             <button key={m.label} style={{ flex: 1 }} className={m.kinds.includes(template.kind) ? 'active' : ''} onClick={() => switchMode(m.kinds)}>
               {m.label}
@@ -115,7 +116,15 @@ export function StudioScreen() {
           </div>
         )}
 
-        <ParamForm template={template} values={values} set={set} seedMode={studio.seedMode} setSeedMode={studio.setSeedMode} missingInputKeys={missingInputs.map((m) => m.param.key)} />
+        <ParamForm
+          template={template}
+          values={values}
+          set={set}
+          seedMode={studio.seedMode}
+          setSeedMode={studio.setSeedMode}
+          missingInputKeys={missingInputs.map((m) => m.param.key)}
+          loraStack={studio.lorasSupported ? { loras: studio.loras, add: studio.addLora, remove: studio.removeLora, setStrength: studio.setLoraStrength } : undefined}
+        />
       </div>
 
       {/* GenerateBar */}
@@ -143,6 +152,7 @@ export function StudioScreen() {
             Gallery <Icon name="chevron" size={14} />
           </button>
         </div>
+        <Hint>Your latest runs, newest first. Tap one to view it full-screen or reuse its settings.</Hint>
         <ResultsFeed />
       </div>
 

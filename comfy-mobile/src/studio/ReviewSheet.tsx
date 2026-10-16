@@ -57,6 +57,18 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
             </div>
           </div>
         ))}
+        {studio.loras.length > 0 && studio.lorasSupported && (
+          <div className="list-item" style={{ cursor: 'default', minHeight: 40, padding: '8px 12px' }}>
+            <div className="title small">LoRAs</div>
+            <div className="small mono" style={{ maxWidth: '60%', textAlign: 'right' }}>
+              {studio.loras.map((l) => (
+                <div className="ellipsis" key={l.file}>
+                  {l.file.split('/').pop()} × {l.strength.toFixed(2)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       {validation.missingNodes.length > 0 && (
         <div className="card" style={{ borderColor: 'var(--error-text)', marginBottom: 10 }}>

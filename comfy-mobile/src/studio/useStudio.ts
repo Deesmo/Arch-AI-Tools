@@ -15,12 +15,16 @@ import {
   getTemplate,
   missingReferenceInputs,
   modelFoldersFor,
+  readStudioLoras,
   readTemplateValues,
+  supportsStudioLoras,
   useGraphStore,
   useRecipesStore,
   useServerStore,
   useStudioStore,
   validateTemplate,
+  withStudioLoras,
+  type StudioLora,
   type StudioTemplate,
   type TemplateValues,
   type Workflow,
@@ -32,7 +36,8 @@ export function useStudio() {
   const templateId = useStudioStore((s) => s.templateId);
   const storedValues = useStudioStore((s) => s.values[s.templateId]);
   const seedMode = useStudioStore((s) => s.seedMode[s.templateId] ?? 'randomize');
-  const { selectTemplate, setValue, setValues, setSeedMode, resetTemplate } = useStudioStore();
+  const storedLoras = useStudioStore((s) => s.loras[s.templateId]);
+  const { selectTemplate, setValue, setValues, setSeedMode, resetTemplate, addLora, removeLora, setLoraStrength, setLoras } = useStudioStore();
   const info = useServerStore((s) => s.objectInfo);
   const modelLists = useServerStore((s) => s.modelLists);
   const uploadedInputs = useServerStore((s) => s.uploadedInputs);
@@ -74,13 +79,18 @@ export function useStudio() {
     return bindTriggerWords(text, recipe && recipe.templateId === template.id ? recipe : null);
   }, [template, values, recipe]);
 
-  /** Builds the workflow that would be queued right now. */
+  const loras: StudioLora[] = useMemo(() => storedLoras ?? [], [storedLoras]);
+  /** Whether this template takes the Studio LoRA stack (video templates with a model loader). */
+  const lorasSupported = useMemo(() => supportsStudioLoras(template.kind, applyTemplate(template, defaults, info), info), [template, defaults, info]);
+
+  /** Builds the workflow that would be queued right now (template + values + Studio LoRA stack). */
   const buildWorkflow = useCallback((): Workflow => {
     const merged: TemplateValues = { ...values };
     const p = template.params.find((x) => x.role === 'positive_prompt');
     if (p) merged[p.key] = finalPrompt;
-    return applyTemplate(template, merged, info);
-  }, [template, values, finalPrompt, info]);
+    const wf = applyTemplate(template, merged, info);
+    return lorasSupported ? withStudioLoras(wf, loras, info) : wf;
+  }, [template, values, finalPrompt, info, loras, lorasSupported]);
 
   const randomiseSeed = useCallback(() => {
     for (const p of template.params) {
@@ -113,8 +123,9 @@ export function useStudio() {
     const g = useGraphStore.getState();
     if (g.templateId !== template.id) return false;
     setValues(template.id, { ...storedValues, ...readTemplateValues(template, g.workflow) });
+    if (lorasSupported) setLoras(template.id, readStudioLoras(g.workflow));
     return true;
-  }, [template, storedValues, setValues]);
+  }, [template, storedValues, setValues, setLoras, lorasSupported]);
 
   return {
     template,
@@ -127,6 +138,11 @@ export function useStudio() {
     setSeedMode: (m: 'randomize' | 'fixed') => setSeedMode(template.id, m),
     validation,
     missingInputs,
+    loras,
+    lorasSupported,
+    addLora: (file: string, strength?: number) => addLora(template.id, file, strength),
+    removeLora: (file: string) => removeLora(template.id, file),
+    setLoraStrength: (file: string, strength: number) => setLoraStrength(template.id, file, strength),
     recipe: recipe && recipe.templateId === template.id ? recipe : null,
     activeRecipeId,
     finalPrompt,
