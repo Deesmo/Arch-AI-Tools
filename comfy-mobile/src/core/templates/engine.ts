@@ -54,19 +54,47 @@ export function applyTemplate(
   return wf;
 }
 
-/** Reads current values back from a workflow (used when returning from Graph mode). */
-export function readTemplateValues(template: StudioTemplate, wf: Workflow): TemplateValues {
-  const values: TemplateValues = {};
-  for (const param of template.params) {
-    const b = param.bindings[0];
-    if (!b || b.transform) continue;
+/** Inverse of `transformValue`, so transformed bindings round-trip from a workflow. */
+function untransformValue(value: unknown, binding: Binding, values: TemplateValues): unknown {
+  switch (binding.transform) {
+    case 'seconds_to_frames': {
+      const fps = Number(values.fps ?? 16);
+      return Number(value) / Math.max(1, fps);
+    }
+    case 'frames_plus_one':
+      return Number(value) - 1;
+    case 'half':
+      return Number(value) * 2;
+    default:
+      return value;
+  }
+}
+
+/** Reads one param back from the workflow: the first readable binding wins, untransformed bindings preferred. */
+function readParam(param: TemplateParam, wf: Workflow, values: TemplateValues): unknown {
+  const ordered = [...param.bindings].sort((a, b) => Number(!!a.transform) - Number(!!b.transform));
+  for (const b of ordered) {
     const node = findNode(wf, b.node);
     if (!node) continue;
-    if (b.target === 'mode') {
-      values[param.key] = node.mode !== NODE_MODE_BYPASS;
-      continue;
-    }
+    if (b.target === 'mode') return node.mode !== NODE_MODE_BYPASS;
     const v = getWidgetValue(node, b.widget);
+    if (v === undefined) continue;
+    return b.transform ? untransformValue(v, b, values) : v;
+  }
+  return undefined;
+}
+
+/**
+ * Reads current values back from a workflow (used when returning from Graph
+ * mode and for "Reuse settings"). Params whose only bindings are transformed
+ * (e.g. duration in seconds -> frames) are inverted; `fps` is read first so
+ * `seconds_to_frames` can be undone.
+ */
+export function readTemplateValues(template: StudioTemplate, wf: Workflow): TemplateValues {
+  const values: TemplateValues = {};
+  const params = [...template.params].sort((a, b) => Number(a.key !== 'fps') - Number(b.key !== 'fps'));
+  for (const param of params) {
+    const v = readParam(param, wf, values);
     if (v !== undefined) values[param.key] = v;
   }
   return values;
