@@ -4,7 +4,7 @@
  * mode; the stack is turned into `LoraLoaderModelOnly` nodes by
  * `withStudioLoras` when the workflow is built (see useStudio.buildWorkflow).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MAX_STUDIO_LORAS, useServerStore, type StudioLora } from '../../core';
 import { Icon } from '../../shared/Icon';
 import { LoraPicker } from './LoraPicker';
@@ -24,6 +24,12 @@ export function LoraSection({ loras, onAdd, onRemove, onStrength, appliesTo }: P
   const total = useServerStore((s) => s.modelLists.loras?.length);
   const [open, setOpen] = useState(loras.length > 0);
   const [picking, setPicking] = useState(false);
+
+  // Something outside this section (Library → "Add to Studio LoRAs") can fill the stack while
+  // Studio is already mounted; unfold so the new row is visible.
+  useEffect(() => {
+    if (loras.length > 0) setOpen(true);
+  }, [loras.length]);
 
   const toggle = (file: string) => {
     if (loras.some((l) => l.file === file)) onRemove(file);
