@@ -7,9 +7,15 @@
  *   MOCK_ALL_NODES=1 npm run mock     # also expose the AnimateDiff / VHS custom nodes
  *   MOCK_NO_CORS=1 npm run mock       # omit CORS headers (to test the app's CORS diagnosis)
  *   MOCK_FAIL=1 npm run mock          # every 3rd prompt fails with an execution_error
+ *   MOCK_OBJECT_INFO_MB=30 npm run mock   # pad /object_info with synthetic node packs to ~30 MB (phone-link testing)
+ *   MOCK_THROTTLE_KBPS=400 npm run mock   # pace the /object_info body at N KB/s (server-side slow link)
+ *   MOCK_STALL_AFTER_MB=5 npm run mock    # send N MB of /object_info, then hold the connection open forever
+ *   MOCK_NO_WS=1 npm run mock             # refuse every /ws upgrade (to test the app's HTTP-only fallback)
+ *   MOCK_STATS_DELAY_MS=20000 npm run mock # delay /system_stats (to test the connect deadline)
  *
  * Implements the subset of the ComfyUI HTTP + WebSocket API the app uses:
  *   GET  /system_stats /object_info /object_info/:t /models /models/:f /queue /history /history/:id /view /prompt /features /embeddings /extensions
+ *   GET  /userdata?dir=workflows&recurse=true[&full_info=true]  /userdata/:file   (served from mock-server/userdata/)
  *   POST /prompt /queue /history /interrupt /upload/image
  *   WS   /ws?clientId=…  status, execution_start, executing, progress, binary preview frames, executed, execution_success|error
  *
@@ -18,8 +24,8 @@
  * produce the bundled fixtures (mp4 / gif / png) in the right history shape.
  */
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync, createReadStream } from 'node:fs';
-import { join, dirname, extname } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, createReadStream } from 'node:fs';
+import { join, dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
@@ -28,14 +34,53 @@ import { buildObjectInfo, MODELS } from './object-info.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const FIX = join(here, 'fixtures');
 const INPUT_DIR = join(here, '.input');
+/** Mirrors ComfyUI's per-user `user/default/` tree; `workflows/` holds what the web UI's "Save" writes. */
+const USERDATA_DIR = resolve(here, 'userdata');
 mkdirSync(INPUT_DIR, { recursive: true });
 
 const PORT = Number(process.env.PORT ?? 8188);
 const NO_CORS = process.env.MOCK_NO_CORS === '1';
 const FAIL_EVERY_3RD = process.env.MOCK_FAIL === '1';
 const SPEED = Number(process.env.MOCK_SPEED ?? 1); // >1 = faster
+const THROTTLE_KBPS = Number(process.env.MOCK_THROTTLE_KBPS ?? 0);
+const STALL_AFTER_BYTES = Number(process.env.MOCK_STALL_AFTER_MB ?? 0) * 1024 * 1024;
+const NO_WS = process.env.MOCK_NO_WS === '1';
+const STATS_DELAY_MS = Number(process.env.MOCK_STATS_DELAY_MS ?? 0);
 
 const OBJECT_INFO = buildObjectInfo();
+/** Serialised once: with MOCK_OBJECT_INFO_MB this is tens of MB and must not be re-stringified per request. */
+let objectInfoBody = Buffer.from(JSON.stringify(OBJECT_INFO));
+const refreshObjectInfoBody = () => {
+  objectInfoBody = Buffer.from(JSON.stringify(OBJECT_INFO));
+};
+
+/**
+ * Streams the /object_info body. Honours MOCK_THROTTLE_KBPS (paced 16 KB
+ * chunks) and MOCK_STALL_AFTER_MB (stop mid-body, keep the socket open) so the
+ * app's progress line, "slow" and "stalled" diagnostics can be exercised.
+ */
+function sendObjectInfo(req, res) {
+  cors(res);
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': objectInfoBody.length });
+  if (!THROTTLE_KBPS && !STALL_AFTER_BYTES) return res.end(objectInfoBody);
+  const chunk = 16 * 1024;
+  const interval = THROTTLE_KBPS ? (chunk / (THROTTLE_KBPS * 1024)) * 1000 : 0;
+  let offset = 0;
+  let closed = false;
+  req.on('close', () => {
+    closed = true;
+  });
+  const tick = () => {
+    if (closed) return;
+    if (STALL_AFTER_BYTES && offset >= STALL_AFTER_BYTES) return; // stall: never end()
+    const end = Math.min(objectInfoBody.length, offset + chunk);
+    res.write(objectInfoBody.subarray(offset, end));
+    offset = end;
+    if (offset >= objectInfoBody.length) return res.end();
+    setTimeout(tick, interval);
+  };
+  tick();
+}
 const MIME = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json' };
 
 // ---- state -----------------------------------------------------------------
@@ -60,6 +105,26 @@ function json(res, status, body) {
   cors(res);
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body));
+}
+function text(res, status, body) {
+  cors(res);
+  res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end(body);
+}
+/** Resolves a user-data relative path inside USERDATA_DIR, or null when it escapes it. */
+function safeUserdataPath(rel) {
+  const abs = resolve(USERDATA_DIR, rel.replace(/\\/g, '/'));
+  return abs === USERDATA_DIR || abs.startsWith(USERDATA_DIR + sep) ? abs : null;
+}
+function listFiles(dir, recurse) {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (recurse) out.push(...listFiles(abs, true));
+    } else out.push(abs);
+  }
+  return out;
 }
 function readBody(req) {
   return new Promise((resolve) => {
@@ -247,12 +312,13 @@ const server = createServer(async (req, res) => {
       return res.end('<!doctype html><title>ComfyUI (mock)</title><h1>Comfy Mobile mock ComfyUI server</h1>');
     }
     if (req.method === 'GET' && path === '/system_stats') {
+      if (STATS_DELAY_MS) await new Promise((r) => setTimeout(r, STATS_DELAY_MS));
       return json(res, 200, {
         system: { os: 'nt', ram_total: 68719476736, ram_free: 51539607552, comfyui_version: '0.3.60-mock', required_frontend_version: '1.28.8', python_version: '3.12.7', pytorch_version: '2.8.0+cu128', embedded_python: false, argv: ['main.py', '--listen', '0.0.0.0', '--enable-cors-header'] },
         devices: [{ name: 'cuda:0 NVIDIA GeForce RTX 5090 : cudaMallocAsync', type: 'cuda', index: 0, vram_total: 34359738368, vram_free: 31138512896, torch_vram_total: 2147483648, torch_vram_free: 1073741824 }],
       });
     }
-    if (req.method === 'GET' && path === '/object_info') return json(res, 200, OBJECT_INFO);
+    if (req.method === 'GET' && path === '/object_info') return sendObjectInfo(req, res);
     if (req.method === 'GET' && path.startsWith('/object_info/')) {
       const t = decodeURIComponent(path.slice('/object_info/'.length));
       return json(res, 200, OBJECT_INFO[t] ? { [t]: OBJECT_INFO[t] } : {});
@@ -262,7 +328,33 @@ const server = createServer(async (req, res) => {
       const folder = decodeURIComponent(path.slice('/models/'.length));
       return json(res, 200, MODELS[folder] ?? []);
     }
-    if (req.method === 'GET' && path === '/embeddings') return json(res, 200, []);
+    if (req.method === 'GET' && path === '/embeddings') return json(res, 200, MODELS.embeddings.map((f) => f.replace(/\.[^.]+$/, '')));
+    // User data (app/user_manager.py): GET /userdata?dir=…&recurse=true[&full_info=true] lists files,
+    // GET /userdata/{file} serves one (the whole relative path is a single URL-encoded segment).
+    if (req.method === 'GET' && path === '/userdata') {
+      const dir = url.searchParams.get('dir') ?? '';
+      if (!dir) return text(res, 400, 'Directory not provided');
+      const root = safeUserdataPath(dir);
+      if (!root) return text(res, 403, 'Invalid directory');
+      if (!existsSync(root) || !statSync(root).isDirectory()) return text(res, 404, 'Directory not found');
+      const recurse = url.searchParams.get('recurse') === 'true';
+      const fullInfo = url.searchParams.get('full_info') === 'true';
+      const files = listFiles(root, recurse).map((abs) => {
+        const rel = relative(root, abs).split(sep).join('/');
+        if (!fullInfo) return rel;
+        const st = statSync(abs);
+        return { path: rel, size: st.size, modified: Math.round(st.mtimeMs) };
+      });
+      return json(res, 200, files);
+    }
+    if (req.method === 'GET' && path.startsWith('/userdata/')) {
+      const file = safeUserdataPath(decodeURIComponent(path.slice('/userdata/'.length)));
+      if (!file) return text(res, 403, 'Invalid file');
+      if (!existsSync(file) || !statSync(file).isFile()) return text(res, 404, 'File not found');
+      cors(res);
+      res.writeHead(200, { 'Content-Type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream', 'Content-Disposition': 'attachment', 'X-Content-Type-Options': 'nosniff' });
+      return createReadStream(file).pipe(res);
+    }
     if (req.method === 'GET' && path === '/extensions') return json(res, 200, []);
     if (req.method === 'GET' && path === '/features') return json(res, 200, { supports_preview_metadata: true, max_upload_size: 104857600 });
     if (req.method === 'GET' && path === '/queue') {
@@ -375,7 +467,10 @@ const server = createServer(async (req, res) => {
       writeFileSync(join(INPUT_DIR, name), data);
       // Make the new file selectable in LoadImage combos, like real ComfyUI does after refresh.
       const li = OBJECT_INFO.LoadImage?.input.required.image;
-      if (li && !li[0].includes(name)) li[0].push(name);
+      if (li && !li[0].includes(name)) {
+        li[0].push(name);
+        refreshObjectInfoBody();
+      }
       console.log(log, `-> stored ${name} (${data.length} bytes)`);
       return json(res, 200, { name, subfolder: '', type: 'input' });
     }
@@ -393,6 +488,11 @@ const wss = new WebSocketServer({ noServer: true });
 server.on('upgrade', (req, socket, head) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname !== '/ws' && url.pathname !== '/api/ws') return socket.destroy();
+  if (NO_WS) {
+    console.log('WS upgrade refused (MOCK_NO_WS=1)');
+    socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    return socket.destroy();
+  }
   wss.handleUpgrade(req, socket, head, (ws) => {
     const clientId = url.searchParams.get('clientId') ?? randomUUID();
     if (!clients.has(clientId)) clients.set(clientId, new Set());
@@ -406,6 +506,8 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Mock ComfyUI listening on http://0.0.0.0:${PORT}  (nodes: ${Object.keys(OBJECT_INFO).length}, CORS: ${NO_CORS ? 'OFF' : 'on'}, fail: ${FAIL_EVERY_3RD ? 'every 3rd' : 'off'})`);
+server.listen(PORT, process.env.HOST ?? '0.0.0.0', () => {
+  const addr = server.address();
+  const mb = (objectInfoBody.length / (1024 * 1024)).toFixed(1);
+  console.log(`Mock ComfyUI listening on http://${addr.address}:${addr.port}  (nodes: ${Object.keys(OBJECT_INFO).length}, object_info: ${mb} MB${THROTTLE_KBPS ? ` @ ${THROTTLE_KBPS} KB/s` : ''}${STALL_AFTER_BYTES ? `, stalls after ${process.env.MOCK_STALL_AFTER_MB} MB` : ''}, CORS: ${NO_CORS ? 'OFF' : 'on'}, WS: ${NO_WS ? 'REFUSED' : 'on'}, fail: ${FAIL_EVERY_3RD ? 'every 3rd' : 'off'})`);
 });

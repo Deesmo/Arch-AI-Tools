@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import type { MediaItem } from '../core';
 
-export type Tab = 'studio' | 'mystudio' | 'graph' | 'queue' | 'gallery' | 'settings';
+export type Tab = 'studio' | 'mystudio' | 'graph' | 'library' | 'queue' | 'gallery' | 'settings';
 
 export interface Toast {
   id: number;
@@ -24,7 +24,10 @@ interface UiState {
   confirm: ConfirmRequest | null;
   viewer: { items: MediaItem[]; index: number } | null;
   workflowsOpen: boolean;
+  /** First-run walkthrough / Settings → "How this works". */
+  guideOpen: boolean;
   setTab: (tab: Tab) => void;
+  setGuideOpen: (open: boolean) => void;
   toast: (text: string, kind?: Toast['kind']) => void;
   dismissToast: (id: number) => void;
   ask: (req: Omit<ConfirmRequest, 'resolve'>) => Promise<boolean>;
@@ -42,7 +45,9 @@ export const useUiStore = create<UiState>()((set, get) => ({
   confirm: null,
   viewer: null,
   workflowsOpen: false,
+  guideOpen: false,
   setTab: (tab) => set({ tab }),
+  setGuideOpen: (guideOpen) => set({ guideOpen }),
   toast: (text, kind = 'info') => {
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, kind }] }));

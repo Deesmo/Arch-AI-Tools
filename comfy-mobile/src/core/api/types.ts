@@ -160,6 +160,15 @@ export interface UploadResponse {
   type: string;
 }
 
+/** `GET /api/userdata?dir=…&full_info=true` entry (older servers return the bare path string). */
+export interface UserdataFileInfo {
+  path: string;
+  size: number;
+  /** Unix timestamp in milliseconds. */
+  modified: number;
+}
+export type UserdataListEntry = UserdataFileInfo | string;
+
 // ---- WebSocket messages -------------------------------------------------
 
 export interface WsStatus {

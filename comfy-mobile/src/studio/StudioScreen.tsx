@@ -11,10 +11,10 @@
  * components above to restyle without touching the engine.
  */
 import { useState } from 'react';
-import { useSettingsStore, type TemplateKind } from '../core';
+import { mediaNoun, useSettingsStore, type TemplateKind } from '../core';
 import { Icon } from '../shared/Icon';
 import { useUiStore } from '../shared/ui';
-import { ParamForm } from './ParamForm';
+import { Hint, ParamForm } from './ParamForm';
 import { ResultsFeed } from './ResultsFeed';
 import { ReviewSheet } from './ReviewSheet';
 import { TemplatePicker, kindLabel } from './TemplatePicker';
@@ -29,7 +29,7 @@ const MODES: { kinds: TemplateKind[]; label: string; icon: 'video' | 'image' }[]
 
 export function StudioScreen() {
   const studio = useStudio();
-  const { template, templates, values, set, validation, missingInputs, connected, recipe } = studio;
+  const { template, templates, values, set, validation, missingInputs, connected, nodeListReady, recipe } = studio;
   const reviewBeforeQueue = useSettingsStore((s) => s.reviewBeforeQueue);
   const setTab = useUiStore((s) => s.setTab);
   const [picker, setPicker] = useState(false);
@@ -83,7 +83,8 @@ export function StudioScreen() {
 
       <div className="screen-body" style={{ paddingBottom: 0 }}>
         {/* CreateBar */}
-        <div className="segmented" style={{ width: '100%', marginBottom: 10 }}>
+        <Hint>Pick what to make, choose a template, fill in the prompt, then Generate. Everything runs on your own ComfyUI server.</Hint>
+        <div className="segmented" style={{ width: '100%', marginBottom: 10, marginTop: 6 }}>
           {MODES.map((m) => (
             <button key={m.label} style={{ flex: 1 }} className={m.kinds.includes(template.kind) ? 'active' : ''} onClick={() => switchMode(m.kinds)}>
               {m.label}
@@ -98,7 +99,7 @@ export function StudioScreen() {
             <h3>{template.name}</h3>
             <p>{kindLabel(template.kind)} · {template.engine}</p>
             <div className="meta">
-              {validation.unknown && <span className="badge">not connected</span>}
+              {validation.unknown && <span className="badge">{connected ? 'loading node list…' : 'not connected'}</span>}
               {!validation.unknown && blocked && <span className="badge red">{validation.missingNodes.length} missing node types</span>}
               {!validation.unknown && !blocked && validation.missingModels.length > 0 && <span className="badge amber">{validation.missingModels.length} model files not found</span>}
               {!validation.unknown && !blocked && validation.missingModels.length === 0 && <span className="badge green">ready</span>}
@@ -115,18 +116,26 @@ export function StudioScreen() {
           </div>
         )}
 
-        <ParamForm template={template} values={values} set={set} seedMode={studio.seedMode} setSeedMode={studio.setSeedMode} missingInputKeys={missingInputs.map((m) => m.param.key)} />
+        <ParamForm
+          template={template}
+          values={values}
+          set={set}
+          seedMode={studio.seedMode}
+          setSeedMode={studio.setSeedMode}
+          missingInputKeys={missingInputs.map((m) => m.param.key)}
+          loraStack={studio.lorasSupported ? { loras: studio.loras, add: studio.addLora, remove: studio.removeLora, setStrength: studio.setLoraStrength } : undefined}
+        />
       </div>
 
       {/* GenerateBar */}
       <div className="generate-bar">
-        <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || blocked || needsUpload || busy} onClick={onGenerate}>
+        <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || !nodeListReady || blocked || needsUpload || busy} onClick={onGenerate}>
           <Icon name="play" size={18} />{' '}
-          {busy ? 'Queuing…' : !connected ? 'Not connected' : needsUpload ? `Upload ${missingInputs[0].param.type === 'video' ? 'a video' : 'an image'} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
+          {busy ? 'Queuing…' : !connected ? 'Not connected' : !nodeListReady ? 'Loading node list…' : needsUpload ? `Upload ${mediaNoun(missingInputs[0].param.type as 'image' | 'video')} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
         </button>
         {needsUpload && !blocked && (
           <div className="small" style={{ color: 'var(--warning)' }}>
-            {missingInputs.map((m) => (m.value ? `“${m.value}” is not on this server — upload a ${m.param.type} for ${m.param.label}.` : `${m.param.label}: upload a ${m.param.type} first.`)).join(' ')}
+            {missingInputs.map((m) => (m.value ? `“${m.value}” is not on this server — upload ${mediaNoun(m.param.type as 'image' | 'video')} for ${m.param.label}.` : `${m.param.label}: upload ${mediaNoun(m.param.type as 'image' | 'video')} first.`)).join(' ')}
           </div>
         )}
         {validation.missingModels.length > 0 && !blocked && (
@@ -143,6 +152,7 @@ export function StudioScreen() {
             Gallery <Icon name="chevron" size={14} />
           </button>
         </div>
+        <Hint>Your latest runs, newest first. Tap one to view it full-screen or reuse its settings.</Hint>
         <ResultsFeed />
       </div>
 

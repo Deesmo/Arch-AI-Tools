@@ -12,6 +12,7 @@ import { useCallback, useMemo } from 'react';
 import {
   allTemplates,
   api,
+  applyTemplate,
   defaultValues,
   getTemplate,
   joinPrompt,
@@ -21,6 +22,7 @@ import {
   matchServerLoras,
   parseWorkflow,
   prettyName,
+  supportsStudioLoras,
   useContentStore,
   useGraphStore,
   useRecipesStore,
@@ -158,14 +160,27 @@ export function useMyStudio() {
   const pickLora = useCallback(
     (file: string, slot?: LoraSlot): 'done' | 'choose' | 'failed' => {
       const t = currentTemplate();
-      if (!slots.length) {
-        toast(`${t.name} has no LoRA slot. Pick a Wan / LTX template in Studio first.`, 'error');
-        return 'failed';
-      }
       const serverFile = serverFileFor(file);
       if (!serverFile) {
         toast(serverLoras ? `“${prettyName(file)}” is not in models/loras on this server` : 'LoRA list not loaded yet — connect to the server first', 'error');
         return 'failed';
+      }
+      if (!slots.length) {
+        // No dedicated slot: fall back to the Studio LoRA stack (video templates with a model loader).
+        const { objectInfo, modelLists } = useServerStore.getState();
+        const stackable = supportsStudioLoras(t.kind, applyTemplate(t, defaultValues(t, objectInfo, modelLists), objectInfo), objectInfo);
+        if (!stackable) {
+          toast(`${t.name} takes no LoRAs. Pick a Wan / LTX template in Studio first.`, 'error');
+          return 'failed';
+        }
+        const strength = loraIndex.byKey[loraKey(file)]?.card?.strength;
+        if (!useStudioStore.getState().addLora(t.id, serverFile, strength ?? undefined)) {
+          toast(`${prettyName(file)} is already in the stack (or the stack is full)`, 'error');
+          return 'failed';
+        }
+        toast(`${prettyName(file)} → Studio LoRA stack`, 'success');
+        setTab('studio');
+        return 'done';
       }
       if (!slot && slots.length > 1) return 'choose';
       const target = slot ?? slots[0];
@@ -176,7 +191,7 @@ export function useMyStudio() {
       setTab('studio');
       return 'done';
     },
-    [slots, serverFileFor, serverLoras, toast, setTab],
+    [slots, serverFileFor, serverLoras, loraIndex, toast, setTab],
   );
 
   // ---- presets ------------------------------------------------------------

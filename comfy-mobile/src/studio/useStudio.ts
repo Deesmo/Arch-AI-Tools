@@ -14,9 +14,12 @@ import {
   bindTriggerWords,
   defaultValues,
   getTemplate,
+  mediaNoun,
   missingReferenceInputs,
   modelFoldersFor,
+  readStudioLoras,
   readTemplateValues,
+  supportsStudioLoras,
   triggerWordsForLora,
   useContentStore,
   useGraphStore,
@@ -24,6 +27,8 @@ import {
   useServerStore,
   useStudioStore,
   validateTemplate,
+  withStudioLoras,
+  type StudioLora,
   type StudioTemplate,
   type TemplateValues,
   type Workflow,
@@ -35,7 +40,8 @@ export function useStudio() {
   const templateId = useStudioStore((s) => s.templateId);
   const storedValues = useStudioStore((s) => s.values[s.templateId]);
   const seedMode = useStudioStore((s) => s.seedMode[s.templateId] ?? 'randomize');
-  const { selectTemplate, setValue, setValues, setSeedMode, resetTemplate } = useStudioStore();
+  const storedLoras = useStudioStore((s) => s.loras[s.templateId]);
+  const { selectTemplate, setValue, setValues, setSeedMode, resetTemplate, addLora, removeLora, setLoraStrength, setLoras } = useStudioStore();
   const info = useServerStore((s) => s.objectInfo);
   const modelLists = useServerStore((s) => s.modelLists);
   const uploadedInputs = useServerStore((s) => s.uploadedInputs);
@@ -71,11 +77,17 @@ export function useStudio() {
 
   const set = useCallback((key: string, value: unknown) => setValue(template.id, key, value), [setValue, template.id]);
 
-  /** Trigger words from My Studio content for the LoRAs currently selected (and enabled). */
-  const loraTriggerWords = useMemo(
-    () => activeLoraFiles(template, values).flatMap((file) => triggerWordsForLora(loraIndex, file)),
-    [template, values, loraIndex],
-  );
+  const loras: StudioLora[] = useMemo(() => storedLoras ?? [], [storedLoras]);
+  /** Whether this template takes the Studio LoRA stack (video templates with a model loader). */
+  const lorasSupported = useMemo(() => supportsStudioLoras(template.kind, applyTemplate(template, defaults, info), info), [template, defaults, info]);
+
+  /** Trigger words from My Studio content for the LoRAs currently selected (template slots + the Studio LoRA stack). */
+  const loraTriggerWords = useMemo(() => {
+    const files = [...activeLoraFiles(template, values), ...(lorasSupported ? loras.map((l) => l.file) : [])];
+    const out: string[] = [];
+    for (const file of files) for (const w of triggerWordsForLora(loraIndex, file)) if (!out.includes(w)) out.push(w);
+    return out;
+  }, [template, values, loraIndex, loras, lorasSupported]);
 
   /** Final positive prompt after recipe + selected-LoRA trigger words. */
   const finalPrompt = useMemo(() => {
@@ -86,13 +98,14 @@ export function useStudio() {
     return bindTriggerWords(text, { triggerWords: [...(active?.triggerWords ?? []), ...loraTriggerWords], loras: active?.loras ?? [] });
   }, [template, values, recipe, loraTriggerWords]);
 
-  /** Builds the workflow that would be queued right now. */
+  /** Builds the workflow that would be queued right now (template + values + Studio LoRA stack). */
   const buildWorkflow = useCallback((): Workflow => {
     const merged: TemplateValues = { ...values };
     const p = template.params.find((x) => x.role === 'positive_prompt');
     if (p) merged[p.key] = finalPrompt;
-    return applyTemplate(template, merged, info);
-  }, [template, values, finalPrompt, info]);
+    const wf = applyTemplate(template, merged, info);
+    return lorasSupported ? withStudioLoras(wf, loras, info) : wf;
+  }, [template, values, finalPrompt, info, loras, lorasSupported]);
 
   const randomiseSeed = useCallback(() => {
     for (const p of template.params) {
@@ -106,7 +119,7 @@ export function useStudio() {
       return null;
     }
     if (missingInputs.length) {
-      toast(`Upload a ${missingInputs[0].param.type} for “${missingInputs[0].param.label}” first`, 'error');
+      toast(`Upload ${mediaNoun(missingInputs[0].param.type as 'image' | 'video')} for “${missingInputs[0].param.label}” first`, 'error');
       return null;
     }
     const wf = buildWorkflow();
@@ -125,8 +138,9 @@ export function useStudio() {
     const g = useGraphStore.getState();
     if (g.templateId !== template.id) return false;
     setValues(template.id, { ...storedValues, ...readTemplateValues(template, g.workflow) });
+    if (lorasSupported) setLoras(template.id, readStudioLoras(g.workflow));
     return true;
-  }, [template, storedValues, setValues]);
+  }, [template, storedValues, setValues, setLoras, lorasSupported]);
 
   return {
     template,
@@ -139,6 +153,11 @@ export function useStudio() {
     setSeedMode: (m: 'randomize' | 'fixed') => setSeedMode(template.id, m),
     validation,
     missingInputs,
+    loras,
+    lorasSupported,
+    addLora: (file: string, strength?: number) => addLora(template.id, file, strength),
+    removeLora: (file: string) => removeLora(template.id, file),
+    setLoraStrength: (file: string, strength: number) => setLoraStrength(template.id, file, strength),
     recipe: recipe && recipe.templateId === template.id ? recipe : null,
     activeRecipeId,
     loraTriggerWords,
@@ -149,6 +168,8 @@ export function useStudio() {
     syncFromGraph,
     randomiseSeed,
     connected: status === 'connected',
+    /** The server's node list has arrived (connected no longer implies it — `/object_info` loads in the background). */
+    nodeListReady: info !== null,
   };
 }
 

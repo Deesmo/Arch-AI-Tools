@@ -93,6 +93,11 @@ export function missingReferenceInputs(
   return out;
 }
 
+/** "an image" / "a video" — the reference media type with its indefinite article, for user-facing copy. */
+export function mediaNoun(type: 'image' | 'video'): string {
+  return type === 'image' ? 'an image' : 'a video';
+}
+
 /** Distinct model folders referenced by a set of templates (to prefetch lists). */
 export function modelFoldersFor(templates: StudioTemplate[]): string[] {
   const folders = new Set<string>();

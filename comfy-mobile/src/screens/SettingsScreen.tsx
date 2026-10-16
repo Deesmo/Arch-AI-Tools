@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   DEFAULT_SERVER_URL,
   diagnoseConnection,
+  nodeListCache,
   normalizeServerUrl,
   problemFix,
   problemTitle,
@@ -19,6 +20,7 @@ export function SettingsScreen() {
   const { status, systemStats, objectInfo, lastError, connect, wsState } = useServerStore();
   const toast = useUiStore((s) => s.toast);
   const ask = useUiStore((s) => s.ask);
+  const setGuideOpen = useUiStore((s) => s.setGuideOpen);
   const [url, setUrl] = useState(settings.serverUrl);
   const [diag, setDiag] = useState<ConnectionProblem | null>(null);
   const [testing, setTesting] = useState(false);
@@ -96,6 +98,18 @@ export function SettingsScreen() {
           )}
         </div>
 
+        <div className="section-title">Help</div>
+        <div className="card" style={{ padding: 0 }}>
+          <div className="list-item" onClick={() => setGuideOpen(true)}>
+            <Icon name="help" size={20} />
+            <div className="title">
+              <div>How this works</div>
+              <div className="sub">Studio, Graph, Library and where your models live — the 4-card intro</div>
+            </div>
+            <Icon name="chevron" size={16} />
+          </div>
+        </div>
+
         <div className="section-title">Launch</div>
         <div className="card" style={{ padding: 0 }}>
           <Row label="Default mode" hint="Screen shown when the app opens">
@@ -140,6 +154,7 @@ export function SettingsScreen() {
             onClick={async () => {
               if (await ask({ title: 'Clear all local data?', message: 'Saved workflows, recipes, settings and the current graph on this device will be erased. Nothing on the server is touched.', confirmLabel: 'Erase', danger: true })) {
                 Object.keys(localStorage).filter((k) => k.startsWith('comfy-mobile.')).forEach((k) => localStorage.removeItem(k));
+                void nodeListCache.clear();
                 toast('Local data cleared — restart the app');
               }
             }}

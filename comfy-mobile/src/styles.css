@@ -1309,3 +1309,319 @@ details.advanced summary::-webkit-details-marker {
   border-radius: 4px;
   padding: 1px 5px;
 }
+
+/* ---------- Section helper text (Studio / Library) ---------- */
+.section-hint {
+  margin: 2px 0 6px;
+  line-height: 1.4;
+}
+.section-label {
+  margin: 14px 0 4px;
+}
+.section-label label {
+  display: block;
+  font-size: 13px;
+  color: var(--drag-text);
+  font-weight: 600;
+}
+.list-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.list-item .title .sub.mono {
+  font-size: 11px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ---------- Library ---------- */
+details.lib-group {
+  margin-bottom: 8px;
+}
+details.lib-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--comfy-menu-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+details.lib-group > summary::-webkit-details-marker {
+  display: none;
+}
+details.lib-group[open] > summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+details.lib-group[open] > summary svg:last-child {
+  transform: rotate(180deg);
+}
+details.lib-group > summary .title {
+  flex: 1;
+  min-width: 0;
+}
+details.lib-group > summary .title .sub {
+  font-size: 12px;
+  color: var(--descrip-text);
+  margin-top: 2px;
+}
+details.lib-group > .card {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.media-tile .kind.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Studio LoRA stack ---------- */
+.lora-section .lora-head {
+  width: 100%;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.lora-row {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.lora-row .title .sub {
+  font-size: 11px;
+  color: var(--descrip-text);
+}
+input.slider {
+  width: 100%;
+  margin: 8px 0 0;
+  accent-color: var(--accent);
+  height: 28px;
+}
+.check-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: #fff;
+}
+.check-box.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- First-run guide ---------- */
+.guide-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 16px) 12px calc(var(--safe-bottom) + 16px);
+}
+.guide {
+  width: 100%;
+  max-width: 440px;
+  background: var(--comfy-menu-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.guide-card {
+  background: var(--comfy-menu-secondary-bg);
+  border-radius: 12px;
+  padding: 18px 16px 16px;
+  min-height: 300px;
+  animation: guide-in 0.18s ease-out;
+}
+@keyframes guide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.guide-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(74, 144, 226, 0.18);
+  color: var(--accent-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.guide-card h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.guide-card p {
+  margin: 0 0 10px;
+  color: var(--drag-text);
+  line-height: 1.45;
+}
+.guide-card ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  color: var(--input-text);
+  line-height: 1.5;
+  font-size: 14px;
+}
+.guide-card li + li {
+  margin-top: 4px;
+}
+.guide-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.guide-dots button {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--border-color);
+}
+.guide-dots button.on {
+  background: var(--accent);
+  width: 20px;
+  border-radius: 4px;
+}
+
+/* ---------- Connection: phase line, failure card, node-list banner ---------- */
+.conn-phase {
+  margin: -6px 0 14px;
+  color: var(--descrip-text);
+}
+.conn-failure {
+  text-align: left;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 14px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.conn-report {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 14px;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+  resize: none;
+}
+/* Sits between the screens and the tab bar (own flex row, never covers content). */
+.nodelist-banner {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 11px;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  background: var(--comfy-menu-bg);
+  color: var(--fg-color);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+}
+.nodelist-banner.error {
+  border-top-color: var(--error-text);
+}
+.nodelist-banner.warn {
+  border-top-color: var(--warning);
+}
+.nodelist-banner .nodelist-text {
+  display: flex;
+  flex-direction: column;
+}
+.nodelist-banner .nodelist-text .nodelist-detail {
+  color: var(--descrip-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.nodelist-banner .nodelist-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--accent-2);
+}
+.nodelist-banner.error .nodelist-icon {
+  color: var(--error-text);
+}
+.nodelist-banner.warn .nodelist-icon {
+  color: var(--warning);
+}
+.nodelist-banner .nodelist-text {
+  flex: 1;
+  min-width: 0;
+}
+.nodelist-banner .nodelist-text > span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nodelist-banner .nodelist-pct {
+  flex-shrink: 0;
+  color: var(--descrip-text);
+}
+.nodelist-banner .nodelist-retry {
+  flex-shrink: 0;
+  color: var(--accent-2);
+  font-weight: 600;
+  padding: 2px 6px;
+}
+.nodelist-banner .nodelist-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.nodelist-banner .nodelist-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s linear;
+}
+.nodelist-banner .nodelist-bar > span.indeterminate {
+  width: 30%;
+  animation: indeterminate 1.2s infinite ease-in-out;
+}

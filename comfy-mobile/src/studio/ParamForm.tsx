@@ -5,9 +5,10 @@
  * Advanced section. Replace/extend per-role renderers here to restyle Studio.
  */
 import { useState } from 'react';
-import { paramOptions, useServerStore, type StudioTemplate, type TemplateParam, type TemplateValues } from '../core';
+import { paramOptions, useServerStore, type StudioLora, type StudioTemplate, type TemplateParam, type TemplateValues } from '../core';
 import { ComboField, NumberField, SeedField, TextField, ToggleField, UploadField } from '../shared/fields';
 import { LoraPicker } from './lora/LoraPicker';
+import { LoraSection } from './lora/LoraSection';
 
 interface Props {
   template: StudioTemplate;
@@ -17,9 +18,19 @@ interface Props {
   setSeedMode: (m: 'randomize' | 'fixed') => void;
   /** Keys of image/video params whose file the server does not have (see `missingReferenceInputs`). */
   missingInputKeys?: string[];
+  /** Studio LoRA stack (video templates). Omit to hide the section. */
+  loraStack?: {
+    loras: StudioLora[];
+    add: (file: string) => boolean;
+    remove: (file: string) => void;
+    setStrength: (file: string, strength: number) => void;
+  };
 }
 
-export function ParamForm({ template, values, set, seedMode, setSeedMode, missingInputKeys = [] }: Props) {
+/** One-line, plain-language helper shown under a section header. */
+export const Hint = ({ children }: { children: React.ReactNode }) => <div className="field-hint section-hint">{children}</div>;
+
+export function ParamForm({ template, values, set, seedMode, setSeedMode, missingInputKeys = [], loraStack }: Props) {
   const info = useServerStore((s) => s.objectInfo);
   const modelLists = useServerStore((s) => s.modelLists);
   const [showNegative, setShowNegative] = useState(false);
@@ -86,6 +97,8 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
   );
 
   const seconds = frames && fps ? (num(frames) / Math.max(1, num(fps))).toFixed(1) : null;
+  const isVideo = template.kind.includes('video');
+  const modelRootsHint = template.id.startsWith('wan22') ? 'applied to both the high- and low-noise models' : undefined;
 
   return (
     <div>
@@ -105,6 +118,7 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
               </button>
             )}
           </div>
+          <Hint>{isVideo ? 'Describe the shot in plain words: subject, motion, camera, light. The negative lists what to avoid.' : 'Describe the picture in plain words. The negative lists what to avoid.'}</Hint>
           <textarea
             className="textarea"
             style={{ minHeight: 110, marginTop: 6, fontSize: 16 }}
@@ -120,15 +134,26 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
         </Field>
       )}
 
+      {models.length > 0 && (
+        <div className="section-label">
+          <label>{models.length > 1 ? 'Models' : 'Model'}</label>
+          <Hint>The main weights on your server that do the generating. Lists come straight from the server's models folder.</Hint>
+        </div>
+      )}
       {models.map((p) => (
         <Field p={p} key={p.key}>
           <ComboField title={p.label} value={String(values[p.key] ?? '')} options={paramOptions(p, template, info)} onChange={(v) => set(p.key, v)} />
         </Field>
       ))}
 
+      {loraStack && (
+        <LoraSection loras={loraStack.loras} onAdd={loraStack.add} onRemove={loraStack.remove} onStrength={loraStack.setStrength} appliesTo={modelRootsHint} />
+      )}
+
       {width && height && (
         <div className="field">
           <label>Resolution</label>
+          <Hint>Bigger is sharper but slower and uses more VRAM. Presets are safe starting points.</Hint>
           {template.resolutionPresets && (
             <div className="chips" style={{ marginBottom: 8 }}>
               {template.resolutionPresets.map((r) => {
@@ -171,6 +196,7 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
               </span>
             )}
           </div>
+          <Hint>How long the clip is. More frames = longer video and a longer wait.</Hint>
           <div className="grid-2" style={{ marginTop: 6 }}>
             <div>
               <div className="field-label">Frames</div>
@@ -193,6 +219,12 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
         </Field>
       )}
 
+      {(steps || cfg) && (
+        <div className="section-label">
+          <label>Quality</label>
+          <Hint>Steps = how many passes (more is slower, usually better). CFG = how strictly it follows your prompt.</Hint>
+        </div>
+      )}
       {(steps || cfg) && (
         <div className="grid-2">
           {steps && (
@@ -227,6 +259,7 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
               </button>
             </div>
           </div>
+          <Hint>The random starting point. Keep it fixed to repeat a result; randomize for variety.</Hint>
           <div style={{ marginTop: 6 }}>
             <SeedField value={num(seed)} onChange={(v) => set(seed.key, v)} />
           </div>
@@ -236,6 +269,7 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode, missin
       {advanced.length > 0 && (
         <details className="advanced">
           <summary>Advanced ({advanced.length})</summary>
+          <Hint>Fine-tuning knobs from the workflow. The defaults are the template author's picks.</Hint>
           {advanced.map((p) => (
             <Field p={p} key={p.key}>
               {renderGeneric(p)}

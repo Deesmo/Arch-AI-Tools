@@ -32,13 +32,28 @@ export const MODELS = {
     'wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors',
     'wan_cinematic_drone_v2.safetensors',
     'add_detail.safetensors',
+    // A spread of realistic names (with subfolders, like a real models/loras tree) so the
+    // Library search and the Studio LoRA picker have something to chew on offline.
+    ...['wan', 'sdxl', 'sd15', 'characters', 'styles', 'motion'].flatMap((sub) =>
+      ['anime_lineart', 'film_grain_v3', 'golden_hour_light', 'handheld_camera_shake', 'macro_lens', 'neon_city', 'oil_painting', 'pixel_art', 'slow_dolly_in', 'watercolor_wash'].map(
+        (n) => `${sub}/${n}.safetensors`,
+      ),
+    ),
   ],
+  embeddings: ['easynegative.safetensors', 'badhandv4.pt', 'ng_deepnegative_v1_75t.pt'],
+  controlnet: ['control_v11p_sd15_openpose.pth', 'control_v11f1p_sd15_depth.pth', 'controlnet-union-sdxl-1.0.safetensors'],
+  ipadapter: ['ip-adapter-plus_sd15.safetensors', 'ip-adapter_sdxl_vit-h.safetensors'],
+  clip_vision: ['clip_vision_h.safetensors', 'CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors'],
   animatediff_models: ['mm_sd_v15_v2.ckpt'],
-  upscale_models: ['RealESRGAN_x4plus.pth'],
-  embeddings: [],
+  upscale_models: ['RealESRGAN_x4plus.pth', '4x-UltraSharp.pth'],
+  style_models: [],
+  gligen: [],
+  hypernetworks: [],
+  photomaker: [],
+  configs: ['anything_v3.yaml', 'v1-inference.yaml'],
 };
 
-const INPUT_IMAGES = ['example.png', 'sample.png'];
+const INPUT_IMAGES = ['example.png', 'sample.png', 'portrait_ref.png', 'city_street.jpg', 'storyboard_frame_01.png'];
 
 const INT = (def, min, max, step = 1, extra = {}) => ['INT', { default: def, min, max, step, ...extra }];
 const FLOAT = (def, min, max, step = 0.01, extra = {}) => ['FLOAT', { default: def, min, max, step, ...extra }];
@@ -241,7 +256,8 @@ const core = {
   ConditioningCombine: def('ConditioningCombine', { category: 'conditioning', display: 'Conditioning (Combine)', required: { conditioning_1: ['CONDITIONING'], conditioning_2: ['CONDITIONING'] }, output: ['CONDITIONING'] }),
   LatentUpscale: def('LatentUpscale', { category: 'latent', display: 'Upscale Latent', required: { samples: ['LATENT'], upscale_method: COMBO(['nearest-exact', 'bilinear', 'area', 'bicubic', 'bislerp']), width: INT(512, 0, 16384, 8), height: INT(512, 0, 16384, 8), crop: COMBO(['disabled', 'center']) }, output: ['LATENT'] }),
   CLIPSetLastLayer: def('CLIPSetLastLayer', { category: 'conditioning', display: 'CLIP Set Last Layer', required: { clip: ['CLIP'], stop_at_clip_layer: INT(-1, -24, -1) }, output: ['CLIP'] }),
-  CLIPVisionLoader: def('CLIPVisionLoader', { category: 'loaders', display: 'Load CLIP Vision', required: { clip_name: COMBO(['clip_vision_h.safetensors']) }, output: ['CLIP_VISION'] }),
+  CLIPVisionLoader: def('CLIPVisionLoader', { category: 'loaders', display: 'Load CLIP Vision', required: { clip_name: COMBO(MODELS.clip_vision) }, output: ['CLIP_VISION'] }),
+  ControlNetLoader: def('ControlNetLoader', { category: 'loaders', display: 'Load ControlNet Model', required: { control_net_name: COMBO(MODELS.controlnet) }, output: ['CONTROL_NET'] }),
   CLIPVisionEncode: def('CLIPVisionEncode', { category: 'conditioning', display: 'CLIP Vision Encode', required: { clip_vision: ['CLIP_VISION'], image: ['IMAGE'], crop: COMBO(['center', 'none']) }, output: ['CLIP_VISION_OUTPUT'] }),
   LoadVideo: def('LoadVideo', { category: 'image/video', display: 'Load Video', required: { file: COMBO(['sample.mp4'], { video_upload: true }) }, output: ['VIDEO'] }),
   GetVideoComponents: def('GetVideoComponents', { category: 'image/video', display: 'Get Video Components', required: { video: ['VIDEO'] }, output: ['IMAGE', 'AUDIO', 'FLOAT'], outputName: ['images', 'audio', 'fps'] }),
@@ -281,5 +297,57 @@ export function buildObjectInfo() {
   const omit = new Set((process.env.MOCK_OMIT ?? '').split(',').map((s) => s.trim()).filter(Boolean));
   const out = { ...core, ...(all ? custom : {}) };
   for (const k of omit) delete out[k];
+  const inflateMb = Number(process.env.MOCK_OBJECT_INFO_MB ?? 0);
+  if (inflateMb > 0) inflateObjectInfo(out, inflateMb);
   return out;
+}
+
+/**
+ * Pads `info` with synthetic custom-node packs until its JSON is about
+ * `targetMb` MB — the shape of a real server with ~100 node packs (Skytech's
+ * /object_info is 6000+ types, tens of MB). Every synthetic node is a valid
+ * definition (combo + numeric widgets, typed slots) so the app parses and
+ * indexes it like real ones.
+ */
+export function inflateObjectInfo(info, targetMb) {
+  const target = targetMb * 1024 * 1024;
+  let size = JSON.stringify(info).length;
+  const words = ['Latent', 'Image', 'Mask', 'Conditioning', 'Sampler', 'Scheduler', 'Upscale', 'Blend', 'Composite', 'Tile', 'Noise', 'Guide', 'Control', 'Detail', 'Color', 'Film', 'Motion', 'Camera', 'Depth', 'Pose'];
+  const options = Array.from({ length: 160 }, (_, i) => `${words[i % words.length].toLowerCase()}_${words[(i * 7) % words.length].toLowerCase()}_preset_${String(i).padStart(3, '0')}`);
+  const makeDef = (packName, name, i) => ({
+    input: {
+      required: {
+        image: ['IMAGE', { tooltip: `Input image for ${name}. Synthetic node generated by the mock server to make /object_info large.` }],
+        preset: [options, { default: options[0], tooltip: 'One of many presets; long combo lists are what make real object_info payloads big.' }],
+        strength: ['FLOAT', { default: 1, min: 0, max: 10, step: 0.01, tooltip: 'Effect strength.' }],
+        steps: ['INT', { default: 20, min: 1, max: 10000, tooltip: 'Iterations.' }],
+        mode: [['add', 'multiply', 'screen', 'overlay', 'soft_light', 'hard_light', 'difference', 'exclusion'], { default: 'add' }],
+        text: ['STRING', { default: '', multiline: true, dynamicPrompts: true, tooltip: 'Free text.' }],
+      },
+      optional: { mask: ['MASK'], latent: ['LATENT'] },
+    },
+    input_order: { required: ['image', 'preset', 'strength', 'steps', 'mode', 'text'], optional: ['mask', 'latent'] },
+    output: ['IMAGE', 'MASK'],
+    output_is_list: [false, false],
+    output_name: ['IMAGE', 'MASK'],
+    name,
+    display_name: `${words[i % words.length]} ${words[(i * 3) % words.length]} (${packName})`,
+    description: `Synthetic ${words[i % words.length]} ${words[(i * 3) % words.length]} node from ${packName}. Exists only to inflate the mock server's node list to a realistic size.`,
+    python_module: `custom_nodes.${packName}`,
+    category: `${packName}/${words[i % words.length]}`,
+    output_node: false,
+  });
+  // All synthetic defs serialise to (almost) the same length; measure one instead of re-stringifying 30 MB.
+  const perNode = JSON.stringify(makeDef('MockPack000', 'MockPack000_LatentLatentNode00000', 0)).length + 40;
+  let pack = 0;
+  let n = 0;
+  while (size < target) {
+    const packName = `MockPack${String(pack).padStart(3, '0')}`;
+    for (let i = 0; i < 50 && size < target; i++, n++) {
+      const name = `${packName}_${words[i % words.length]}${words[(i * 3) % words.length]}Node${String(n).padStart(5, '0')}`;
+      info[name] = makeDef(packName, name, i);
+      size += perNode;
+    }
+    pack += 1;
+  }
 }

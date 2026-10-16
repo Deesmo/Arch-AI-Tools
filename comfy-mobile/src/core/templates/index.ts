@@ -10,6 +10,7 @@ import type { StudioTemplate } from './schema';
 export * from './schema';
 export * from './engine';
 export * from './validate';
+export * from './loras';
 export { buildWorkflow } from './builder';
 
 const registry = new Map<string, StudioTemplate>();

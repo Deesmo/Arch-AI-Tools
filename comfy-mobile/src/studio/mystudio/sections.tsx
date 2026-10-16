@@ -249,7 +249,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
   return (
     <>
       <p className="muted small ms-hint">
-        Your rated LoRAs. {actions.serverLoras ? `${actions.serverMatch.matched} of ${index.length} are in models/loras on this server.` : 'Connect to see which are on the server.'} Tap one to put it in the current template’s LoRA slot.
+        Your rated LoRAs. {actions.serverLoras ? `${actions.serverMatch.matched} of ${index.length} are in models/loras on this server.` : 'Connect to see which are on the server.'} Tap one to put it in the current template’s LoRA slot (or its LoRA stack).
       </p>
       <div className="chips" style={{ marginBottom: 8 }}>
         <button className={`chip${onlyServer ? ' active' : ''}`} onClick={() => setOnlyServer((v) => !v)}>On server</button>

@@ -5,7 +5,7 @@
  * "pre-render review" UX.
  */
 import { useMemo } from 'react';
-import { graphToPrompt, useSettingsStore } from '../core';
+import { graphToPrompt, mediaNoun, useSettingsStore } from '../core';
 import { Icon } from '../shared/Icon';
 import { Sheet } from '../shared/Sheet';
 import type { StudioModel } from './useStudio';
@@ -62,6 +62,18 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
             </div>
           </div>
         ))}
+        {studio.loras.length > 0 && studio.lorasSupported && (
+          <div className="list-item" style={{ cursor: 'default', minHeight: 40, padding: '8px 12px' }}>
+            <div className="title small">LoRAs</div>
+            <div className="small mono" style={{ maxWidth: '60%', textAlign: 'right' }}>
+              {studio.loras.map((l) => (
+                <div className="ellipsis" key={l.file}>
+                  {l.file.split('/').pop()} × {l.strength.toFixed(2)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       {validation.missingNodes.length > 0 && (
         <div className="card" style={{ borderColor: 'var(--error-text)', marginBottom: 10 }}>
@@ -75,7 +87,7 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
           <div className="small" style={{ marginTop: 4 }}>
             {missingInputs.map((m) => (
               <div key={m.param.key}>
-                {m.param.label}: {m.value ? <span className="mono">{m.value}</span> : '(none chosen)'} — upload a {m.param.type} in Studio first.
+                {m.param.label}: {m.value ? <span className="mono">{m.value}</span> : '(none chosen)'} — upload {mediaNoun(m.param.type as 'image' | 'video')} in Studio first.
               </div>
             ))}
           </div>
