@@ -71,9 +71,10 @@ forwarding to the Windows Tailscale IP must also be in place for `100.103.142.11
 
 ```bash
 npm run typecheck        # tsc --noEmit
+npm test                 # node:test unit checks for src/core (template round-trip, connection diagnosis, media, store)
 npm run build            # typecheck + vite build → dist/
 npm run audit:privacy    # scans dist/ (+ package.json deps) for any outbound URL; exit 1 on findings
-npm run verify           # build + audit
+npm run verify           # typecheck + tests + build + audit
 
 npm run cap:ios          # build, sync, open Xcode
 npm run cap:android      # build, sync, open Android Studio
