@@ -47,7 +47,7 @@ export function NodeListBanner() {
   if (!active && !failed && !socketDown) return null;
 
   const label = serverLabel(serverUrl);
-  const text = active || failed ? describeNodeListLoad(nodeList, label, now) : `Live updates unavailable (WebSocket blocked) — polling the queue instead`;
+  const text = active || failed ? describeNodeListLoad(nodeList, label, now) : { title: 'Live updates unavailable (WebSocket blocked)', detail: 'polling the queue instead · tap for details' };
   const pct = nodeList.total && nodeList.total > 0 ? Math.min(100, Math.round((nodeList.received / nodeList.total) * 100)) : null;
   const problem = classifyNodeList(serverUrl, nodeList, now);
   const tone = failed ? 'error' : socketDown && !active ? 'warn' : 'info';
@@ -64,7 +64,10 @@ export function NodeListBanner() {
         <span className="nodelist-icon">
           {active ? <Icon name="refresh" size={14} className="spin" /> : <Icon name="warning" size={14} />}
         </span>
-        <span className="nodelist-text">{text}</span>
+        <span className="nodelist-text">
+          <span>{text.title}</span>
+          {text.detail && <span className="nodelist-detail">{text.detail}</span>}
+        </span>
         {active && pct !== null && <span className="nodelist-pct mono">{pct}%</span>}
         {failed && (
           <span
@@ -90,7 +93,7 @@ export function NodeListBanner() {
           <div className="card" style={{ marginBottom: 10 }}>
             <strong>{problem ? problemTitle(problem) : failed ? 'Node list failed' : socketDown ? 'HTTP works, but the WebSocket is blocked' : 'Node list loading'}</strong>
             <div className="small muted" style={{ marginTop: 4 }}>
-              {problem ? problemFix(problem) : failed ? (nodeList.error ?? '') : socketDown ? 'The REST API answers but /ws never opened; the app polls the queue every 5 s instead. Live progress and previews need the socket (check any proxy in front of ComfyUI).' : text}
+              {problem ? problemFix(problem) : failed ? (nodeList.error ?? '') : socketDown ? 'The REST API answers but /ws never opened; the app polls the queue every 5 s instead. Live progress and previews need the socket (check any proxy in front of ComfyUI).' : `${text.title} ${text.detail}`}
             </div>
           </div>
           <div className="small mono muted" style={{ lineHeight: 1.6 }}>

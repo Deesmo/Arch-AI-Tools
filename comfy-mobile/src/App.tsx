@@ -76,7 +76,6 @@ export default function App() {
         {tab === 'queue' && <QueueScreen />}
         {tab === 'gallery' && <GalleryScreen />}
         {tab === 'settings' && <SettingsScreen />}
-        {!showGate && <NodeListBanner />}
         {showGate && !guideOpen && (
           <ConnectionScreen
             onContinueOffline={() => {
@@ -86,6 +85,7 @@ export default function App() {
           />
         )}
       </div>
+      {!showGate && <NodeListBanner />}
       <nav className="tabbar">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)} aria-label={t.label}>

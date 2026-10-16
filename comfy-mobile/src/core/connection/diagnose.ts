@@ -203,17 +203,20 @@ export function problemFix(p: ConnectionProblem): string {
   }
 }
 
-/** Short status line for the in-app node-list banner. */
-export function describeNodeListLoad(nl: NodeListLoad, serverLabel: string, now = Date.now()): string {
+/**
+ * Two-line status for the in-app node-list banner: what is happening, and
+ * the numbers ("12 MB / 31 MB · 1.2 MB/s · no data for 7s").
+ */
+export function describeNodeListLoad(nl: NodeListLoad, serverLabel: string, now = Date.now()): { title: string; detail: string } {
   switch (nl.phase) {
     case 'idle':
-      return nl.fromCache ? `Node list from cache` : '';
+      return { title: nl.fromCache ? 'Node list from cache' : '', detail: '' };
     case 'parsing':
-      return `Parsing node list (${formatBytes(nl.received)})…`;
+      return { title: `Parsing node list from ${serverLabel}…`, detail: formatBytes(nl.received) };
     case 'ready':
-      return '';
+      return { title: '', detail: '' };
     case 'error':
-      return `Node list failed: ${nl.error ?? 'unknown error'}`;
+      return { title: 'Node list failed', detail: nl.error ?? 'unknown error' };
     case 'loading': {
       const verb = nl.fromCache ? 'Refreshing' : 'Loading';
       const bytes = nl.total !== null ? `${formatBytes(nl.received)} / ${formatBytes(nl.total)}` : formatBytes(nl.received);
@@ -221,7 +224,7 @@ export function describeNodeListLoad(nl: NodeListLoad, serverLabel: string, now 
       const rate = elapsed > 1 && nl.received > 0 ? ` · ${formatBytes(nl.received / elapsed)}/s` : '';
       const sinceByte = nl.updatedAt ? (now - nl.updatedAt) / 1000 : 0;
       const stall = sinceByte > 5 ? ` · no data for ${Math.round(sinceByte)}s` : '';
-      return `${verb} node list from ${serverLabel}… ${bytes}${rate}${stall}`;
+      return { title: `${verb} node list from ${serverLabel}…`, detail: `${bytes}${rate}${stall}` };
     }
   }
 }
