@@ -3,8 +3,10 @@
  * screen can show the right fix. Browsers report CORS failures and dead hosts
  * identically (`TypeError: Failed to fetch`), so we probe again in `no-cors`
  * mode: an opaque response means the host answered (CORS problem), a rejection
- * means the host is unreachable.
+ * means the host is unreachable — or, for an https page talking to a plain
+ * http server in a browser, that mixed-content blocking rejected both fetches.
  */
+import { Capacitor } from '@capacitor/core';
 import { baseUrl } from '../api/client';
 
 export type ConnectionProblem =
@@ -31,17 +33,20 @@ export async function diagnoseConnection(timeoutMs = 6000): Promise<ConnectionPr
     if ((err as Error)?.name === 'AbortError') {
       return { kind: 'unreachable', serverUrl, detail: `No response within ${timeoutMs / 1000}s` };
     }
-    // Probe reachability without CORS.
+    // Probe reachability without CORS. Mixed-content blocking rejects this
+    // probe as well, so an opaque success can only mean a CORS problem.
     try {
       const ctrl2 = new AbortController();
       const t2 = setTimeout(() => ctrl2.abort(), timeoutMs);
       await fetch(`${serverUrl}/system_stats`, { mode: 'no-cors', signal: ctrl2.signal, cache: 'no-store' });
       clearTimeout(t2);
-      if (pageOrigin.startsWith('https:') && serverUrl.startsWith('http:')) {
-        return { kind: 'mixed-content', pageOrigin };
-      }
       return { kind: 'cors', serverUrl };
     } catch (err2) {
+      // Native builds allow mixed content (allowMixedContent / cleartext), so
+      // there a rejected probe really is an unreachable host.
+      if (!Capacitor.isNativePlatform() && pageOrigin.startsWith('https:') && serverUrl.startsWith('http:')) {
+        return { kind: 'mixed-content', pageOrigin };
+      }
       return { kind: 'unreachable', serverUrl, detail: (err2 as Error)?.message ?? 'Failed to fetch' };
     }
   } finally {

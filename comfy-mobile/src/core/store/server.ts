@@ -341,7 +341,11 @@ export const useServerStore = create<ServerState>()((set, get) => {
       await get().refreshHistory();
     },
     clearNodeErrors: () => set({ nodeErrors: {} }),
-    clearOutputs: () => set({ execution: idleExecution() }),
+    clearOutputs: () => {
+      const prev = get().execution.previewUrl;
+      if (prev) URL.revokeObjectURL(prev);
+      set({ execution: idleExecution() });
+    },
   };
 });
 
@@ -349,6 +353,7 @@ export const useServerStore = create<ServerState>()((set, get) => {
 useSettingsStore.subscribe((s, prev) => {
   if (s.serverUrl !== prev.serverUrl) {
     useServerStore.getState().disconnect();
+    useServerStore.getState().clearOutputs();
     useServerStore.setState({ objectInfo: null, systemStats: null, history: null, queue: null });
     void useServerStore.getState().connect();
   }

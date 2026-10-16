@@ -64,7 +64,8 @@ export function mediaFromOutput(output: NodeOutput, nodeId?: string, promptId?: 
   (output.images ?? []).forEach((r, i) => push(r, i));
   // VideoHelperSuite VHS_VideoCombine
   (output.gifs ?? []).forEach((r, i) => push(r as ImageRef & { format?: string }, i));
-  // Some custom nodes use `videos`
+  // SaveVideo uses `video`; some custom nodes use `videos`
+  ((output as { video?: ImageRef[] }).video ?? []).forEach((r, i) => push(r, i, true));
   ((output as { videos?: ImageRef[] }).videos ?? []).forEach((r, i) => push(r, i, true));
   (output.audio ?? []).forEach((r, i) => push(r, i));
   return items;
