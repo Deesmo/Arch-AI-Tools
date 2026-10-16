@@ -64,6 +64,13 @@ Mock server switches: `MOCK_ALL_NODES=1` (also expose AnimateDiff/VHS nodes), `M
 `MOCK_SPEED=3` (faster fake sampling), `PORT=…` (`PORT=0` picks a free port and prints it),
 `HOST=…` (default `0.0.0.0`).
 
+Phone-link switches (reproduce a slow or broken Tailscale/cellular path):
+`MOCK_OBJECT_INFO_MB=30` (inflate `/object_info` to ~30 MB like a server with 100+ custom node
+packs), `MOCK_THROTTLE_KBPS=90` (pace the `/object_info` body), `MOCK_STALL_AFTER_MB=3` (stop
+sending mid-body so the stall timeout fires), `MOCK_NO_WS=1` (reject the WebSocket upgrade – the app
+must still connect over HTTP and poll), `MOCK_STATS_DELAY_MS=20000` (slow `/system_stats`, trips the
+12 s connect deadline).
+
 ### ComfyUI server requirements
 
 ComfyUI must accept connections from other machines **and** send CORS headers, otherwise the WebView

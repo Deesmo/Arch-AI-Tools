@@ -59,9 +59,25 @@ functions. Studio never touches the graph editor's components; both are swappabl
 
 ### Server store (`core/store/server.ts`)
 
-Single source of truth for connection + execution. `connect()` fetches `/system_stats` and
-`/object_info`, opens the WebSocket (`core/api/ws.ts`, auto-reconnect, binary preview frames
-decoded into blob URLs), and keeps:
+Single source of truth for connection + execution. `connect()` is deliberately cheap:
+
+1. `GET /system_stats` with a 12 s deadline (`STATS_TIMEOUT_MS`) — failure/timeout/non-ComfyUI
+   responses land in `lastFailure` with the exact URL + status for the Connection screen.
+2. Open the WebSocket (`core/api/ws.ts`: 8 s open timeout, jittered exponential backoff
+   0.5 s → 15 s, binary preview frames decoded into blob URLs). The store waits at most 6 s
+   (`WS_GRACE_MS`) for it; if it does not open, status still becomes `connected` with
+   `wsBlocked: true` and `/queue` is polled every 5 s until the socket comes up.
+3. `/object_info` is **never** on the connect path. `loadNodeList()` streams it in the background
+   via `api.getObjectInfo({ onProgress })` (15 s headers / 30 s stall timeouts, `TimeoutError`
+   carries the URL) and publishes byte progress in `nodeList` so `NodeListBanner` can show
+   "Loading node list from <host>… 12 MB / 30 MB". A cached copy (`core/connection/cache.ts`,
+   IndexedDB `comfy-mobile.cache`, key `serverUrl|comfyui-version`) is applied first so a second
+   launch is usable instantly while the fresh list downloads.
+
+`connect()` is idempotent (one in-flight promise) and generation-guarded, so a server switch or a
+foreground return never stacks parallel downloads. The store owns the lifecycle listeners
+(`visibilitychange`, `pagehide`, `pageshow`, `online`) and calls `resume()`, which only cycles the
+socket when it is not open or the tab was suspended for more than 20 s. It also keeps:
 
 * `execution` — current prompt id, executing node, progress, preview URL, per-node outputs, final
   status/error. Both the Graph canvas (node highlight + progress bar) and the Studio results feed
@@ -171,8 +187,12 @@ sort videos first.
 diagnoser runs a normal `GET /system_stats`; on failure it re-probes with `mode: 'no-cors'` — an
 opaque success means the host answered but CORS headers are missing (→ "add
 `--enable-cors-header`"), a second failure means unreachable; it also detects HTTPS-page →
-HTTP-server mixed content and non-ComfyUI responders. The Connection screen and Settings show the
-matching fix text.
+HTTP-server mixed content, non-ComfyUI responders, a blocked WebSocket (HTTP fine, `/ws` never
+opens) and — from the server store's `nodeList` progress — a node list that is slow-but-moving
+(`slow`, with a bytes/s estimate; fix text recommends `--enable-compress-response-body`) or
+stalled. Every problem carries the failing URL; `buildConnectionReport` + `formatConnectionReport`
+produce the plain-text block behind the "Copy details" button on the Connection screen and the
+node-list banner sheet.
 
 ## Studio UX extension points
 
@@ -216,7 +236,10 @@ prop contract; the engine behind it is already in `core`.
 | `comfy-mobile.clientId` | server store | stable WebSocket client id |
 
 The library store (`useLibraryStore`: folder list, server workflow list) is in-memory only and is
-refetched per session. Nothing is synced anywhere; "Clear local data" in Settings wipes these keys.
+refetched per session. IndexedDB `comfy-mobile.cache` (stores `objectInfo`, `models`, keyed by
+`serverUrl|comfyui-version`) holds the last `/object_info` and `/models/*` responses per server so a
+relaunch is usable before the fresh download lands. Nothing is synced anywhere; "Clear local data"
+in Settings wipes these keys and the cache.
 
 ## Privacy: local-only guarantee
 
