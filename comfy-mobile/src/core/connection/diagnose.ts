@@ -5,6 +5,15 @@
  * mode: an opaque response means the host answered (CORS problem), a rejection
  * means the host is unreachable — or, for an https page talking to a plain
  * http server in a browser, that mixed-content blocking rejected both fetches.
+ *
+ * Mixed content is deliberately NOT decided from the schemes alone: Chrome
+ * allows (with a console warning) plain-http requests from an https page to
+ * private-network addresses (LAN ranges and the Tailscale 100.64/10 range),
+ * and `http://localhost` is never mixed content, so an https page can
+ * legitimately get a CORS failure from an http server. Only when the probe is
+ * rejected too do we attribute it to mixed-content blocking (Safari, public
+ * hosts) — which from JS is indistinguishable from a dead host, hence the
+ * wording of the mixed-content fix text.
  */
 import { Capacitor } from '@capacitor/core';
 import { baseUrl } from '../api/client';
@@ -78,7 +87,7 @@ export function problemFix(p: ConnectionProblem): string {
     case 'cors':
       return 'Start ComfyUI on the server with --enable-cors-header (e.g. python main.py --listen 0.0.0.0 --port 8188 --enable-cors-header). Without it the browser/WebView refuses the API responses even though the host is online.';
     case 'mixed-content':
-      return 'The app is served from an https origin and the server is plain http. On Android keep server.androidScheme = "http" or allowMixedContent in capacitor.config.ts; on the web use an https URL or a local proxy.';
+      return 'The app is served from an https origin and the server is plain http, so the browser may be blocking the request (Safari always does; Chrome allows LAN/Tailscale addresses). Use an https URL or a local proxy on the web, or the native app (allowMixedContent / cleartext are enabled). If the browser does allow it, the server is simply not answering — check ComfyUI is running and the URL/port are right.';
     case 'unreachable':
       return `Check that ComfyUI is running, that this device is on the same Tailscale tailnet, and that the URL/port are right. (${p.detail})`;
     case 'http-error':
