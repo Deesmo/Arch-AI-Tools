@@ -15,9 +15,11 @@ interface Props {
   set: (key: string, value: unknown) => void;
   seedMode: 'randomize' | 'fixed';
   setSeedMode: (m: 'randomize' | 'fixed') => void;
+  /** Keys of image/video params whose file the server does not have (see `missingReferenceInputs`). */
+  missingInputKeys?: string[];
 }
 
-export function ParamForm({ template, values, set, seedMode, setSeedMode }: Props) {
+export function ParamForm({ template, values, set, seedMode, setSeedMode, missingInputKeys = [] }: Props) {
   const info = useServerStore((s) => s.objectInfo);
   const modelLists = useServerStore((s) => s.modelLists);
   const [showNegative, setShowNegative] = useState(false);
@@ -69,9 +71,9 @@ export function ParamForm({ template, values, set, seedMode, setSeedMode }: Prop
           </button>
         );
       case 'image':
-        return <UploadField value={String(values[p.key] ?? '')} kind="image" onUploaded={(f) => set(p.key, f)} />;
+        return <UploadField value={String(values[p.key] ?? '')} kind="image" missing={missingInputKeys.includes(p.key)} onUploaded={(f) => set(p.key, f)} />;
       case 'video':
-        return <UploadField value={String(values[p.key] ?? '')} kind="video" onUploaded={(f) => set(p.key, f)} />;
+        return <UploadField value={String(values[p.key] ?? '')} kind="video" missing={missingInputKeys.includes(p.key)} onUploaded={(f) => set(p.key, f)} />;
     }
   };
 

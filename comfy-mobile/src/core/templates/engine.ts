@@ -47,7 +47,7 @@ export function applyTemplate(
       if (b.target === 'mode') {
         wf = updateNode(wf, node.id, { mode: raw ? NODE_MODE_ALWAYS : NODE_MODE_BYPASS });
       } else {
-        wf = setWidgetValue(wf, node.id, b.widget, transformValue(raw, b, values));
+        wf = setWidgetValue(wf, node.id, b.widget, transformValue(raw, b, values), info);
       }
     }
   }
@@ -137,8 +137,8 @@ export function paramOptions(param: TemplateParam, template: StudioTemplate, inf
   return comboValues(input.spec);
 }
 
-/** Default values for all params (template defaults, falling back to the workflow's widget values). */
-export function defaultValues(template: StudioTemplate, info: ObjectInfo | null): TemplateValues {
+/** Values baked into the template workflow for each param (before any server-aware substitution). */
+export function bakedValues(template: StudioTemplate, info: ObjectInfo | null): TemplateValues {
   const wf = parseWorkflow(template.workflow, info);
   const values: TemplateValues = {};
   for (const p of template.params) {
@@ -155,6 +155,51 @@ export function defaultValues(template: StudioTemplate, info: ObjectInfo | null)
     }
     const v = getWidgetValue(node, b.widget);
     if (v !== undefined) values[p.key] = v;
+  }
+  return values;
+}
+
+/** Folder a model param's baked file lives in, per the template's `models` list. */
+export function modelFolderFor(template: StudioTemplate, file: unknown): string | undefined {
+  return (template.models ?? []).find((m) => m.file === file)?.folder;
+}
+
+/**
+ * Picks the file a model param should default to on this server: the baked
+ * file when the server has it, otherwise the first entry of the matching
+ * `/models/<folder>` list (or of the widget's combo). Returns undefined when
+ * nothing on the server can be checked yet.
+ */
+export function serverModelDefault(
+  param: TemplateParam,
+  template: StudioTemplate,
+  baked: unknown,
+  info: ObjectInfo | null,
+  modelLists: Record<string, string[]>,
+): string | undefined {
+  if (!info) return undefined;
+  const options = paramOptions(param, template, info);
+  const folder = modelFolderFor(template, baked);
+  const onDisk = folder ? modelLists[folder] : undefined;
+  const known = onDisk ?? options;
+  if (known.length === 0) return undefined;
+  if (known.includes(String(baked))) return undefined;
+  return (onDisk ?? options)[0];
+}
+
+/**
+ * Default values for all params: template defaults, falling back to the
+ * workflow's widget values. Model params (`role: "model"`) whose baked file is
+ * not on the connected server default to the first file the server does have,
+ * so e.g. the SD1.5 image templates pick a real checkpoint instead of a
+ * `v1-5-pruned-emaonly.safetensors` that was never installed.
+ */
+export function defaultValues(template: StudioTemplate, info: ObjectInfo | null, modelLists: Record<string, string[]> = {}): TemplateValues {
+  const values = bakedValues(template, info);
+  for (const p of template.params) {
+    if (p.role !== 'model' || p.type !== 'combo' || values[p.key] === undefined) continue;
+    const fallback = serverModelDefault(p, template, values[p.key], info, modelLists);
+    if (fallback !== undefined) values[p.key] = fallback;
   }
   return values;
 }

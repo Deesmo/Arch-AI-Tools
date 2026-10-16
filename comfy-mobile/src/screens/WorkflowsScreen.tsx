@@ -40,7 +40,7 @@ export function WorkflowsSheet({ onClose, onLoaded }: { onClose: () => void; onL
   const openTemplate = (id: string) => {
     const t = allTemplates().find((x) => x.id === id);
     if (!t) return;
-    load(applyTemplate(t, defaultValues(t, info), info), { name: t.name, templateId: t.id });
+    load(applyTemplate(t, defaultValues(t, info, modelLists), info), { name: t.name, templateId: t.id });
     setTab('graph');
     onLoaded?.();
     onClose();
@@ -135,7 +135,7 @@ export function WorkflowsSheet({ onClose, onLoaded }: { onClose: () => void; onL
       <div className="section-title">Bundled templates</div>
       <div className="card" style={{ padding: 0 }}>
         {allTemplates().map((t) => {
-          const v = validateTemplate(t, info, modelLists);
+          const v = validateTemplate(t, info, modelLists, defaultValues(t, info, modelLists));
           return (
             <div className="list-item" key={t.id} onClick={() => openTemplate(t.id)}>
               <Icon name={t.kind.includes('video') ? 'video' : 'image'} size={20} />

@@ -1,5 +1,5 @@
 /** Sheet listing Studio templates grouped by kind with live availability. */
-import { describeValidation, useServerStore, validateTemplate, type StudioTemplate, type TemplateKind } from '../core';
+import { defaultValues, describeValidation, useServerStore, validateTemplate, type StudioTemplate, type TemplateKind } from '../core';
 import { Icon } from '../shared/Icon';
 import { Sheet } from '../shared/Sheet';
 
@@ -38,7 +38,7 @@ export function TemplatePicker({
             {templates
               .filter((t) => t.kind === kind)
               .map((t) => {
-                const v = validateTemplate(t, info, modelLists);
+                const v = validateTemplate(t, info, modelLists, defaultValues(t, info, modelLists));
                 return (
                   <div
                     key={t.id}

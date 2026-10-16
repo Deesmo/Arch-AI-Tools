@@ -5,8 +5,8 @@
  * can show it and Graph mode can highlight the nodes.
  */
 import type { ObjectInfo } from '../api/types';
-import { templateAvailability } from './engine';
-import type { StudioTemplate } from './schema';
+import { bakedValues, paramOptions, templateAvailability } from './engine';
+import type { StudioTemplate, TemplateParam, TemplateValues } from './schema';
 
 export interface TemplateValidation {
   templateId: string;
@@ -22,21 +22,36 @@ export interface TemplateValidation {
   ok: boolean;
 }
 
+/**
+ * `values` (current Studio values) makes the model check reflect what will
+ * actually be queued: a baked file that a model param has since been pointed
+ * elsewhere (user choice or `defaultValues` server fallback) is judged by the
+ * param's current value, not the template's original filename.
+ */
 export function validateTemplate(
   template: StudioTemplate,
   info: ObjectInfo | null,
   modelLists: Record<string, string[]>,
+  values?: TemplateValues,
 ): TemplateValidation {
   const avail = templateAvailability(template, info);
   const missingModels: { folder: string; file: string }[] = [];
   const unchecked = new Set<string>();
+  const baked = values ? bakedValues(template, info) : {};
+  const effectiveFile = (file: string): string => {
+    if (!values) return file;
+    const p = template.params.find((x) => x.role === 'model' && baked[x.key] === file);
+    const current = p ? values[p.key] : undefined;
+    return typeof current === 'string' && current ? current : file;
+  };
   for (const m of template.models ?? []) {
     const list = modelLists[m.folder];
     if (!list) {
       unchecked.add(m.folder);
       continue;
     }
-    if (!list.includes(m.file)) missingModels.push(m);
+    const file = effectiveFile(m.file);
+    if (!list.includes(file)) missingModels.push({ folder: m.folder, file });
   }
   return {
     templateId: template.id,
@@ -46,6 +61,36 @@ export function validateTemplate(
     unknown: avail.unknown,
     ok: !avail.unknown && avail.missing.length === 0,
   };
+}
+
+export interface MissingReferenceInput {
+  param: TemplateParam;
+  /** Current value; empty string when nothing has been chosen yet. */
+  value: string;
+}
+
+/**
+ * Reference media params (`image` / `video`) whose current value is not a
+ * file the server has. The server's LoadImage/LoadVideo combo lists its input
+ * folder at connect time; `uploadedInputs` covers files uploaded since. An
+ * empty value always counts as missing. Returns [] until object_info is loaded
+ * (nothing can be checked yet), so callers gate only on a known-missing file.
+ */
+export function missingReferenceInputs(
+  template: StudioTemplate,
+  values: TemplateValues,
+  info: ObjectInfo | null,
+  uploadedInputs: readonly string[] = [],
+): MissingReferenceInput[] {
+  if (!info) return [];
+  const out: MissingReferenceInput[] = [];
+  for (const param of template.params) {
+    if (param.type !== 'image' && param.type !== 'video') continue;
+    const value = String(values[param.key] ?? param.default ?? '');
+    if (value && (uploadedInputs.includes(value) || paramOptions(param, template, info).includes(value))) continue;
+    out.push({ param, value });
+  }
+  return out;
 }
 
 /** Distinct model folders referenced by a set of templates (to prefetch lists). */

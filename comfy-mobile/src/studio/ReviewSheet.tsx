@@ -11,13 +11,13 @@ import { Sheet } from '../shared/Sheet';
 import type { StudioModel } from './useStudio';
 
 export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioModel; onConfirm: () => void; onClose: () => void }) {
-  const { template, values, validation, finalPrompt, recipe } = studio;
+  const { template, values, validation, missingInputs, finalPrompt, recipe } = studio;
   const setSettings = useSettingsStore((s) => s.set);
   const wf = useMemo(() => studio.buildWorkflow(), [studio]);
   const { prompt } = useMemo(() => graphToPrompt(wf), [wf]);
 
   const keyParams = template.params.filter((p) => p.role && !['positive_prompt', 'negative_prompt', 'reference_image', 'reference_video'].includes(p.role));
-  const blocked = validation.missingNodes.length > 0;
+  const blocked = validation.missingNodes.length > 0 || missingInputs.length > 0;
 
   return (
     <Sheet
@@ -58,10 +58,22 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
           </div>
         ))}
       </div>
-      {blocked && (
+      {validation.missingNodes.length > 0 && (
         <div className="card" style={{ borderColor: 'var(--error-text)', marginBottom: 10 }}>
           <strong className="error-text">Cannot run: missing node types on server</strong>
           <div className="small mono" style={{ marginTop: 4 }}>{validation.missingNodes.join(', ')}</div>
+        </div>
+      )}
+      {missingInputs.length > 0 && (
+        <div className="card" style={{ borderColor: 'var(--error-text)', marginBottom: 10 }}>
+          <strong className="error-text">Cannot run: reference file not on server</strong>
+          <div className="small" style={{ marginTop: 4 }}>
+            {missingInputs.map((m) => (
+              <div key={m.param.key}>
+                {m.param.label}: {m.value ? <span className="mono">{m.value}</span> : '(none chosen)'} — upload a {m.param.type} in Studio first.
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {validation.missingModels.length > 0 && (

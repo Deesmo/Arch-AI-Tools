@@ -81,7 +81,7 @@ export const defaultImg2Img: StudioTemplate = {
   workflow: buildWorkflow(
     [
       { id: 4, type: 'CheckpointLoaderSimple', pos: [40, 420], widgets_values: ['v1-5-pruned-emaonly.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
-      { id: 10, type: 'LoadImage', pos: [40, 60], widgets_values: ['example.png', 'image'], outputs: [['IMAGE', 'IMAGE'], ['MASK', 'MASK']] },
+      { id: 10, type: 'LoadImage', pos: [40, 60], widgets_values: [''], outputs: [['IMAGE', 'IMAGE'], ['MASK', 'MASK']] },
       { id: 11, type: 'VAEEncode', pos: [400, 60], inputs: [['pixels', 'IMAGE'], ['vae', 'VAE']], outputs: [['LATENT', 'LATENT']] },
       { id: 6, type: 'CLIPTextEncode', title: 'Positive Prompt', pos: [400, 200], size: [320, 0], widgets_values: ['a painting in the style of van gogh'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#232', bgcolor: '#353' },
       { id: 7, type: 'CLIPTextEncode', title: 'Negative Prompt', pos: [400, 400], size: [320, 0], widgets_values: ['text, watermark, blurry'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#322', bgcolor: '#533' },

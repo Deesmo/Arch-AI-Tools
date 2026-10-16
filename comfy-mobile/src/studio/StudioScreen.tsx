@@ -29,7 +29,7 @@ const MODES: { kinds: TemplateKind[]; label: string; icon: 'video' | 'image' }[]
 
 export function StudioScreen() {
   const studio = useStudio();
-  const { template, templates, values, set, validation, connected, recipe } = studio;
+  const { template, templates, values, set, validation, missingInputs, connected, recipe } = studio;
   const reviewBeforeQueue = useSettingsStore((s) => s.reviewBeforeQueue);
   const setTab = useUiStore((s) => s.setTab);
   const [picker, setPicker] = useState(false);
@@ -59,6 +59,7 @@ export function StudioScreen() {
   };
 
   const blocked = validation.missingNodes.length > 0;
+  const needsUpload = missingInputs.length > 0;
 
   return (
     <div className="screen">
@@ -114,14 +115,20 @@ export function StudioScreen() {
           </div>
         )}
 
-        <ParamForm template={template} values={values} set={set} seedMode={studio.seedMode} setSeedMode={studio.setSeedMode} />
+        <ParamForm template={template} values={values} set={set} seedMode={studio.seedMode} setSeedMode={studio.setSeedMode} missingInputKeys={missingInputs.map((m) => m.param.key)} />
       </div>
 
       {/* GenerateBar */}
       <div className="generate-bar">
-        <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || blocked || busy} onClick={onGenerate}>
-          <Icon name="play" size={18} /> {busy ? 'Queuing…' : connected ? `Generate ${template.kind.includes('video') ? 'video' : 'image'}` : 'Not connected'}
+        <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || blocked || needsUpload || busy} onClick={onGenerate}>
+          <Icon name="play" size={18} />{' '}
+          {busy ? 'Queuing…' : !connected ? 'Not connected' : needsUpload ? `Upload ${missingInputs[0].param.type === 'video' ? 'a video' : 'an image'} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
         </button>
+        {needsUpload && !blocked && (
+          <div className="small" style={{ color: 'var(--warning)' }}>
+            {missingInputs.map((m) => (m.value ? `“${m.value}” is not on this server — upload a ${m.param.type} for ${m.param.label}.` : `${m.param.label}: upload a ${m.param.type} first.`)).join(' ')}
+          </div>
+        )}
         {validation.missingModels.length > 0 && !blocked && (
           <div className="small" style={{ color: 'var(--warning)' }}>
             {validation.missingModels.length} referenced model file{validation.missingModels.length > 1 ? 's' : ''} not on server — check the model pickers.

@@ -13,6 +13,7 @@ import {
   bindTriggerWords,
   defaultValues,
   getTemplate,
+  missingReferenceInputs,
   modelFoldersFor,
   readTemplateValues,
   useGraphStore,
@@ -34,6 +35,7 @@ export function useStudio() {
   const { selectTemplate, setValue, setValues, setSeedMode, resetTemplate } = useStudioStore();
   const info = useServerStore((s) => s.objectInfo);
   const modelLists = useServerStore((s) => s.modelLists);
+  const uploadedInputs = useServerStore((s) => s.uploadedInputs);
   const refreshModels = useServerStore((s) => s.refreshModels);
   const status = useServerStore((s) => s.status);
   const activeRecipeId = useRecipesStore((s) => s.activeId);
@@ -53,13 +55,15 @@ export function useStudio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  const defaults = useMemo(() => defaultValues(template, info), [template, info]);
+  const defaults = useMemo(() => defaultValues(template, info, modelLists), [template, info, modelLists]);
   const values: TemplateValues = useMemo(
     () => ({ ...defaults, ...(recipe && recipe.templateId === template.id ? recipe.values : {}), ...(storedValues ?? {}) }),
     [defaults, storedValues, recipe, template.id],
   );
 
-  const validation = useMemo(() => validateTemplate(template, info, modelLists), [template, info, modelLists]);
+  const validation = useMemo(() => validateTemplate(template, info, modelLists, values), [template, info, modelLists, values]);
+  /** Reference image/video params that still need an upload (the server has no such file). */
+  const missingInputs = useMemo(() => missingReferenceInputs(template, values, info, uploadedInputs), [template, values, info, uploadedInputs]);
 
   const set = useCallback((key: string, value: unknown) => setValue(template.id, key, value), [setValue, template.id]);
 
@@ -89,11 +93,15 @@ export function useStudio() {
       toast(`Missing nodes on server: ${validation.missingNodes.join(', ')}`, 'error');
       return null;
     }
+    if (missingInputs.length) {
+      toast(`Upload a ${missingInputs[0].param.type} for “${missingInputs[0].param.label}” first`, 'error');
+      return null;
+    }
     const wf = buildWorkflow();
     const id = await queueWorkflow(wf, { source: 'studio', templateId: template.id });
     if (id && seedMode === 'randomize') randomiseSeed();
     return id;
-  }, [validation, buildWorkflow, queueWorkflow, template.id, seedMode, randomiseSeed, toast]);
+  }, [validation, missingInputs, buildWorkflow, queueWorkflow, template.id, seedMode, randomiseSeed, toast]);
 
   /** Open the current configuration in Graph mode. */
   const openInGraph = useCallback(() => {
@@ -118,6 +126,7 @@ export function useStudio() {
     seedMode,
     setSeedMode: (m: 'randomize' | 'fixed') => setSeedMode(template.id, m),
     validation,
+    missingInputs,
     recipe: recipe && recipe.templateId === template.id ? recipe : null,
     activeRecipeId,
     finalPrompt,

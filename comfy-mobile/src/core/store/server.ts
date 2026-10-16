@@ -63,6 +63,12 @@ interface ServerState {
   nodeErrors: Record<string, NodeError>;
   submitted: Record<string, SubmittedPrompt>;
   modelLists: Record<string, string[]>;
+  /**
+   * Files uploaded to the server's input folder during this session. The
+   * LoadImage/LoadVideo combos in `objectInfo` are a snapshot from connect
+   * time, so a fresh upload is only known to exist through this list.
+   */
+  uploadedInputs: string[];
 
   connect: () => Promise<void>;
   disconnect: () => void;
@@ -70,6 +76,8 @@ interface ServerState {
   refreshQueue: () => Promise<void>;
   refreshHistory: () => Promise<void>;
   refreshModels: (folder: string) => Promise<string[]>;
+  /** Uploads a file to the input folder and returns the name a LoadImage/LoadVideo combo expects. */
+  uploadInput: (file: File | Blob, filename?: string) => Promise<string>;
   queuePrompt: (
     prompt: ApiPrompt,
     workflow: Workflow,
@@ -220,6 +228,7 @@ export const useServerStore = create<ServerState>()((set, get) => {
     nodeErrors: {},
     submitted: {},
     modelLists: {},
+    uploadedInputs: [],
 
     connect: async () => {
       set({ status: 'connecting', lastError: null });
@@ -276,6 +285,13 @@ export const useServerStore = create<ServerState>()((set, get) => {
       } catch {
         return get().modelLists[folder] ?? [];
       }
+    },
+
+    uploadInput: async (file, filename) => {
+      const res = await api.uploadImage(file, filename, true);
+      const name = res.subfolder ? `${res.subfolder}/${res.name}` : res.name;
+      set((s) => ({ uploadedInputs: s.uploadedInputs.includes(name) ? s.uploadedInputs : [...s.uploadedInputs, name] }));
+      return name;
     },
 
     queuePrompt: async (prompt, workflow, meta) => {
@@ -367,6 +383,7 @@ useSettingsStore.subscribe((s, prev) => {
       queueRemaining: 0,
       nodeErrors: {},
       lastError: null,
+      uploadedInputs: [],
     });
     void useServerStore.getState().connect();
   }

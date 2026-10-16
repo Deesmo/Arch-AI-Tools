@@ -3,7 +3,7 @@
  * the Studio parameter form.
  */
 import { useRef, useState } from 'react';
-import { api } from '../core';
+import { api, useServerStore } from '../core';
 import { Icon } from './Icon';
 import { ListPicker } from './ListPicker';
 import { useUiStore } from './ui';
@@ -189,28 +189,33 @@ export function SeedField({
 /**
  * Uploads an image/video to the server's input folder via /upload/image and
  * returns the stored filename (what LoadImage / LoadVideo combos expect).
+ * `missing` marks a value the server does not have (stale template default,
+ * different server): the preview is replaced by an upload prompt.
  */
 export function UploadField({
   value,
   kind,
   onUploaded,
+  missing = false,
 }: {
   value: string;
   kind: 'image' | 'video';
   onUploaded: (filename: string) => void;
+  missing?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const toast = useUiStore((s) => s.toast);
-  const previewUrl = value ? api.viewUrl({ filename: value, subfolder: '', type: 'input' }) : null;
+  const uploadInput = useServerStore((s) => s.uploadInput);
+  const previewUrl = value && !missing ? api.viewUrl({ filename: value, subfolder: '', type: 'input' }) : null;
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     setBusy(true);
     try {
-      const res = await api.uploadImage(file, file.name, true);
-      onUploaded(res.subfolder ? `${res.subfolder}/${res.name}` : res.name);
-      toast(`Uploaded ${res.name}`, 'success');
+      const name = await uploadInput(file, file.name);
+      onUploaded(name);
+      toast(`Uploaded ${name}`, 'success');
     } catch (err) {
       toast(`Upload failed: ${(err as Error).message}`, 'error');
     } finally {
@@ -228,8 +233,15 @@ export function UploadField({
           <img src={previewUrl} alt={value} />
         )
       ) : (
-        <span className="row" style={{ gap: 8 }}>
-          <Icon name="upload" size={20} /> {busy ? 'Uploading…' : `Tap to upload ${kind}`}
+        <span className="row" style={{ gap: 8, flexDirection: 'column', textAlign: 'center' }}>
+          <span className="row" style={{ gap: 8 }}>
+            <Icon name="upload" size={20} /> {busy ? 'Uploading…' : `Tap to upload ${kind}`}
+          </span>
+          {missing && value && (
+            <span className="small" style={{ color: 'var(--warning)' }}>
+              “{value}” is not on this server
+            </span>
+          )}
         </span>
       )}
       <input
