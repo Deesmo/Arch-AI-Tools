@@ -129,7 +129,7 @@ export const NodeView = memo(function NodeView({ node, selected, executing, hasE
                     data-widget={w.name}
                     data-node-id={node.id}
                   >
-                    {!w.options.multiline && <span className="wname">{w.kind === 'control' ? 'control' : w.name}</span>}
+                    {!w.options.multiline && <span className="wname">{w.kind === 'control' ? 'control' : (w.label ?? w.name)}</span>}
                     <span className="wval">{widgetDisplay(w, value)}</span>
                     {w.kind === 'combo' && <span className="arrow">▾</span>}
                   </div>

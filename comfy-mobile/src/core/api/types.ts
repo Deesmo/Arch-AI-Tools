@@ -20,9 +20,24 @@ export interface InputOptions {
   image_upload?: boolean;
   label_on?: string;
   label_off?: string;
-  /** New-style combo: `["COMBO", { options: [...] }]` */
+  /**
+   * New-style combo: `["COMBO", { options: [...] }]`.
+   * For `COMFY_DYNAMICCOMBO_V3` the entries are {@link DynamicComboOption}s.
+   */
   options?: unknown[];
+  /** V3 `extra_dict={"hidden": True}`: kept for API compatibility, never shown. */
+  hidden?: boolean;
   [key: string]: unknown;
+}
+
+/**
+ * One choice of a V3 dynamic combo (`comfy_api/latest/_io.py` DynamicCombo.Option).
+ * Selecting `key` makes the nested `inputs` live; they are addressed by dotted
+ * path in the API prompt (`format` → `format.codec` → `format.codec.encoding`).
+ */
+export interface DynamicComboOption {
+  key: string;
+  inputs: { required?: Record<string, InputSpec>; optional?: Record<string, InputSpec> };
 }
 
 /**

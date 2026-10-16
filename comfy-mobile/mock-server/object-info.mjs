@@ -45,7 +45,37 @@ const FLOAT = (def, min, max, step = 0.01, extra = {}) => ['FLOAT', { default: d
 const STRING = (def = '', extra = {}) => ['STRING', { default: def, ...extra }];
 const BOOL = (def, extra = {}) => ['BOOLEAN', { default: def, ...extra }];
 const COMBO = (values, extra = {}) => [values, extra];
+/** V3 `io.Combo.Input` as emitted by `_io.py` (options may be non-strings, e.g. bit depths). */
+const COMBO_V3 = (options, def, extra = {}) => ['COMBO', { options, default: def, ...extra }];
 const SEED = () => INT(0, 0, 0xffffffffffffffff, 1, { control_after_generate: true, tooltip: 'The random seed used for creating the noise.' });
+
+/**
+ * V3 `io.DynamicCombo` (`COMFY_DYNAMICCOMBO_V3`). `options[].inputs` has the
+ * same `{required, optional}` shape as a node's `input`; only the selected
+ * option's inputs are live and they are addressed by dotted path in the prompt.
+ */
+const DYNAMIC_COMBO = (options, extra = {}) => ['COMFY_DYNAMICCOMBO_V3', { ...extra, options }];
+const DYN_OPTION = (key, required = {}, optional = {}) => ({
+  key,
+  inputs: { ...(Object.keys(required).length ? { required } : {}), ...(Object.keys(optional).length ? { optional } : {}) },
+});
+
+/** Mirrors `_save_video_codec_input()` in comfy_extras/nodes_video.py (ComfyUI 0.38). */
+function saveVideoCodecInput(supported, { hidden = false } = {}) {
+  const encoding = (crfDefault, crfMax, name) =>
+    DYNAMIC_COMBO(
+      [DYN_OPTION('auto'), DYN_OPTION('re-encode', { crf: FLOAT(crfDefault, 0, crfMax, 1, { tooltip: 'Lower values produce higher quality and larger files.' }) })],
+      { display_name: 'encoding mode', tooltip: `Automatic preserves compatible ${name} streams. Re-encode applies custom encoding options.` },
+    );
+  const options = [];
+  if (supported.includes('auto')) options.push(DYN_OPTION('auto'));
+  if (supported.includes('h264')) options.push(DYN_OPTION('h264', {}, { encoding: encoding(18, 51, 'H.264') }));
+  if (supported.includes('av1')) options.push(DYN_OPTION('av1', {}, { encoding: encoding(24, 63, 'AV1') }));
+  return DYNAMIC_COMBO(options, {
+    tooltip: 'The output video codec. Auto preserves a compatible source stream. H.264 and AV1 re-encoding support SDR, HDR (HLG), and HDR PQ.',
+    ...(hidden ? { hidden: true } : {}),
+  });
+}
 
 function def(name, { category, display, desc = '', required = {}, optional = {}, output = [], outputName, outputNode = false, isList = [] }) {
   return {
@@ -166,15 +196,38 @@ const core = {
     required: { images: ['IMAGE'], filename_prefix: STRING('ComfyUI', { tooltip: 'The prefix for the file to save.' }) },
   }),
   PreviewImage: def('PreviewImage', { category: 'image', display: 'Preview Image', outputNode: true, required: { images: ['IMAGE'] } }),
+  // CreateVideo / SaveVideo are V3 nodes (comfy_extras/nodes_video.py, ComfyUI 0.38):
+  // widget order [fps, bit_depth, color_space, codec] and
+  // [filename_prefix, format → format.codec → format.codec.encoding → …].
   CreateVideo: def('CreateVideo', {
-    category: 'image/video', display: 'Create Video', desc: 'Create a video from images.',
+    category: 'video', display: 'Create Video', desc: 'Create a video from images.',
     required: { images: ['IMAGE', { tooltip: 'The images to create a video from.' }], fps: FLOAT(30.0, 1, 120, 1) },
-    optional: { audio: ['AUDIO', { tooltip: 'The audio to add to the video.' }] },
+    optional: {
+      audio: ['AUDIO', { tooltip: 'The audio to add to the video.' }],
+      bit_depth: COMBO_V3(['auto', 8, 10], 'auto', { tooltip: 'Auto uses 8-bit for sRGB and 10-bit for HDR. Explicit 8-bit and 10-bit choices are independent of colorspace.' }),
+      color_space: COMBO_V3(['sRGB', 'HDR', 'HDR PQ'], 'sRGB', { tooltip: 'Colorspace of the input images. HDR selects BT.2020/HLG and HDR PQ selects BT.2020/PQ.' }),
+      codec: COMBO_V3(['none', 'auto', 'h264', 'av1'], 'none', { advanced: true, tooltip: 'Optionally encode the video immediately. None keeps the images in tensor form; Auto uses H.264.' }),
+    },
     output: ['VIDEO'],
   }),
   SaveVideo: def('SaveVideo', {
-    category: 'image/video', display: 'Save Video', desc: 'Saves the input images to your ComfyUI output directory.', outputNode: true,
-    required: { video: ['VIDEO'], filename_prefix: STRING('video/ComfyUI'), format: COMBO(['auto', 'mp4', 'webm', 'mov']), codec: COMBO(['auto', 'h264', 'vp9', 'av1']) },
+    category: 'video', display: 'Save Video', desc: 'Saves the input videos to your ComfyUI output directory.', outputNode: true,
+    required: {
+      video: ['VIDEO', { tooltip: 'The video to save.' }],
+      filename_prefix: STRING('video/ComfyUI', { tooltip: 'The prefix for the file to save. This may include formatting information such as %date:yyyy-MM-dd% or %Empty Latent Image.width% to include values from nodes.' }),
+      format: DYNAMIC_COMBO(
+        [
+          DYN_OPTION('auto', { codec: saveVideoCodecInput(['auto', 'h264', 'av1']) }),
+          DYN_OPTION('mp4', { codec: saveVideoCodecInput(['auto', 'h264', 'av1']) }),
+          DYN_OPTION('mkv', { codec: saveVideoCodecInput(['auto', 'h264', 'av1']) }),
+          DYN_OPTION('webm', { codec: saveVideoCodecInput(['auto', 'av1']) }),
+        ],
+        { tooltip: 'The output container. Auto uses MP4 for Auto/H.264 and WebM for AV1. MP4, MKV, and WebM select a specific container.' },
+      ),
+    },
+    // Legacy top-level codec: kept by the server for old prompts, flagged hidden.
+    optional: { codec: saveVideoCodecInput(['auto', 'h264', 'av1'], { hidden: true }) },
+    output: ['VIDEO'], outputName: ['video'],
   }),
   WanImageToVideo: def('WanImageToVideo', {
     category: 'conditioning/video_models',

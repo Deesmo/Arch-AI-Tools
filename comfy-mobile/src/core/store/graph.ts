@@ -179,7 +179,7 @@ export const useGraphStore = create<GraphState>()((set, get) => {
       ),
     patchNode: (id, patch) => mutate((wf) => updateNode(wf, id, patch)),
     setMode: (id, mode) => mutate((wf) => updateNode(wf, id, { mode })),
-    setWidget: (id, widget, value) => mutate((wf) => setWidgetValue(wf, id, widget, value)),
+    setWidget: (id, widget, value) => mutate((wf) => setWidgetValue(wf, id, widget, value, info())),
     connect: (a, b, c, d) => mutate((wf) => connect(wf, a, b, c, d)),
     disconnectInput: (nodeId, slot) => mutate((wf) => disconnectInput(wf, nodeId, slot)),
     removeLink: (linkId) => mutate((wf) => removeLink(wf, linkId)),

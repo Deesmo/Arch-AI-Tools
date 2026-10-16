@@ -26,7 +26,18 @@ import { defaultWidgetValue, shapeFromDef, virtualNodeShape } from './widgets';
  * serialised slots so the workflow can still be saved/edited.
  */
 export function resolveNode(node: GraphNode, info: ObjectInfo | null): GraphNode {
-  const shape = virtualNodeShape(node.type) ?? (info?.[node.type] ? shapeFromDef(info[node.type]) : null);
+  return resolveNodeWith(node, info, node.widgets_values);
+}
+
+/**
+ * Like {@link resolveNode} but takes the serialised widget values separately,
+ * so callers can re-shape a node from a by-name value map (used when a dynamic
+ * combo changes and its nested widgets must be rebuilt).
+ */
+function resolveNodeWith(node: GraphNode, info: ObjectInfo | null, stored: unknown): GraphNode {
+  const def = info?.[node.type];
+  const virtual = virtualNodeShape(node.type);
+  const shape = virtual ?? (def ? shapeFromDef(def, stored) : null);
   if (!shape) {
     return { ...node, widgets: node.widgets ?? [], missing: !!info, inputs: node.inputs ?? [], outputs: node.outputs ?? [] };
   }
@@ -54,7 +65,8 @@ export function resolveNode(node: GraphNode, info: ObjectInfo | null): GraphNode
     return { ...def, links: existing?.links ?? [], label: existing?.label };
   });
 
-  const widgets_values = alignWidgetValues(node.widgets_values, widgets, shape.widgetValues);
+  // shapeFromDef already merged `stored` into its values; virtual shapes are static defaults.
+  const widgets_values = virtual ? alignWidgetValues(stored, widgets, shape.widgetValues) : shape.widgetValues;
 
   const resolved: GraphNode = {
     ...node,
@@ -174,15 +186,31 @@ export function updateNode(wf: Workflow, nodeId: number, patch: Partial<GraphNod
   };
 }
 
-export function setWidgetValue(wf: Workflow, nodeId: number, widgetName: string, value: unknown): Workflow {
+/**
+ * Sets one widget value. Pass `info` so that changing a dynamic combo
+ * (COMFY_DYNAMICCOMBO_V3) rebuilds the nested widgets of the newly selected
+ * option: values of unrelated widgets are kept by name, stale nested ones are
+ * dropped and the new option's nested inputs start at their defaults.
+ */
+export function setWidgetValue(wf: Workflow, nodeId: number, widgetName: string, value: unknown, info?: ObjectInfo | null): Workflow {
   return {
     ...wf,
     nodes: wf.nodes.map((n) => {
       if (n.id !== nodeId) return n;
-      const idx = (n.widgets ?? []).findIndex((w) => w.name === widgetName);
+      const widgets = n.widgets ?? [];
+      const idx = widgets.findIndex((w) => w.name === widgetName);
       if (idx < 0) return n;
       const widgets_values = [...n.widgets_values];
       widgets_values[idx] = value;
+      const changed = String(value) !== String(n.widgets_values[idx]);
+      if (widgets[idx].options.dynamic && changed && info?.[n.type]) {
+        const byName: Record<string, unknown> = {};
+        const nestedPrefix = `${widgetName}.`;
+        widgets.forEach((w, i) => {
+          if (!w.name.startsWith(nestedPrefix)) byName[w.name] = widgets_values[i];
+        });
+        return resolveNodeWith(n, info, byName);
+      }
       return { ...n, widgets_values };
     }),
   };

@@ -11,13 +11,26 @@ export const NODE_MODE_BYPASS: NodeMode = 4;
 export type WidgetKind = 'combo' | 'number' | 'text' | 'toggle' | 'control';
 
 export interface WidgetDef {
-  /** Input name on the node (e.g. "seed"). For control widgets: "<name>_control". */
+  /**
+   * Input name on the node (e.g. "seed"). For control widgets: "<name>_control".
+   * Inputs nested under a dynamic combo use the server's dotted path
+   * ("format.codec"), which is also the key sent in the API prompt.
+   */
   name: string;
+  /** Short display name (the leaf of a dotted `name`). Defaults to `name`. */
+  label?: string;
   kind: WidgetKind;
   /** The raw input type string: INT / FLOAT / STRING / BOOLEAN / COMBO */
   type: string;
   options: {
     values?: string[];
+    /**
+     * Original combo choices when some are not strings (e.g. CreateVideo
+     * bit_depth `["auto", 8, 10]`), so the prompt can send the server's type.
+     */
+    rawValues?: unknown[];
+    /** COMFY_DYNAMICCOMBO_V3: picking a value changes which nested widgets exist. */
+    dynamic?: boolean;
     min?: number;
     max?: number;
     step?: number;

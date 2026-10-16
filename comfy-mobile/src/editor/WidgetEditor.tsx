@@ -26,7 +26,7 @@ export function WidgetEditor({
       const merged = extra ? [...new Set([...options, ...extra])] : options;
       return (
         <div>
-          <ComboField title={`${node.title ?? node.type} · ${widget.name}`} value={String(value ?? '')} options={merged} onChange={onChange} />
+          <ComboField title={`${node.title ?? node.type} · ${widget.label ?? widget.name}`} value={String(value ?? '')} options={merged} onChange={onChange} />
           {widget.options.imageUpload && (
             <div style={{ marginTop: 8 }}>
               <UploadField value={String(value ?? '')} kind={node.type.toLowerCase().includes('video') ? 'video' : 'image'} onUploaded={onChange} />

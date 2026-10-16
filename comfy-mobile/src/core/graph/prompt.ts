@@ -11,7 +11,7 @@
  */
 import type { ApiPrompt } from '../api/types';
 import { findLink, getWidgetValue, isVirtualNode, nodeTitle } from './model';
-import { NODE_MODE_BYPASS, NODE_MODE_MUTED, type GraphNode, type Workflow } from './types';
+import { NODE_MODE_BYPASS, NODE_MODE_MUTED, type GraphNode, type WidgetDef, type Workflow } from './types';
 
 export type ResolvedOrigin =
   | { kind: 'link'; nodeId: number; slot: number }
@@ -61,6 +61,18 @@ export function isExecutableNode(node: GraphNode): boolean {
   return true;
 }
 
+/**
+ * Combo widgets hold strings for display; when the server declared a
+ * non-string choice (CreateVideo bit_depth `["auto", 8, 10]`) send that
+ * original value, otherwise ComfyUI's combo validation rejects `"8"`.
+ */
+export function promptWidgetValue(widget: WidgetDef, value: unknown): unknown {
+  const raw = widget.options.rawValues;
+  if (widget.kind !== 'combo' || !raw) return value;
+  const match = raw.find((r) => String(r) === String(value));
+  return match === undefined ? value : match;
+}
+
 export function graphToPrompt(wf: Workflow): PromptBuildResult {
   const prompt: ApiPrompt = {};
   const skipped: number[] = [];
@@ -73,10 +85,12 @@ export function graphToPrompt(wf: Workflow): PromptBuildResult {
     }
     const inputs: Record<string, unknown> = {};
 
-    // Widget values (skipping control widgets which are frontend-only)
+    // Widget values (skipping control widgets which are frontend-only).
+    // Nested dynamic-combo widgets are named by dotted path, which is exactly
+    // the key the server expects ("format.codec").
     for (const w of node.widgets ?? []) {
       if (w.kind === 'control') continue;
-      inputs[w.name] = getWidgetValue(node, w.name);
+      inputs[w.name] = promptWidgetValue(w, getWidgetValue(node, w.name));
     }
 
     // Slot inputs (including widgets converted to inputs)

@@ -120,7 +120,7 @@ export function NodeInspector({ nodeId, onClose }: { nodeId: number; onClose: ()
         return (
           <div className="field" key={w.name}>
             <label>
-              {w.name} <span className="mono muted">{w.type}</span>
+              {w.label ?? w.name} <span className="mono muted">{w.type}</span>
             </label>
             <WidgetEditor
               node={node}

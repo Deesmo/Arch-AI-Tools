@@ -41,7 +41,11 @@ functions. Studio never touches the graph editor's components; both are swappabl
 * `Workflow` (`core/graph/types.ts`) mirrors LiteGraph's JSON (`nodes`, `links`, `groups`,
   `extra.ds`), with each node carrying resolved `widgets: WidgetDef[]` derived from the server's
   `/object_info` (`core/graph/widgets.ts`). Unknown node types are kept intact and flagged
-  `missing` so a workflow can still be opened, edited and saved.
+  `missing` so a workflow can still be opened, edited and saved. V3 dynamic combos
+  (`COMFY_DYNAMICCOMBO_V3`, e.g. `SaveVideo.format`) are combos over `options[].key`; the selected
+  option's nested inputs become extra widgets named by dotted path (`format.codec`,
+  `format.codec.encoding.crf`), stored flat after the parent in `widgets_values` and sent under
+  those same keys in the prompt. Changing the parent re-shapes the node (`setWidgetValue(..., info)`).
 * `graphToPrompt()` (`core/graph/prompt.ts`) compiles a `Workflow` into the `/prompt` payload:
   skips virtual nodes (`Note`, `Reroute`, `PrimitiveNode`), drops muted nodes, routes links through
   bypassed nodes by matching slot types (same rule as the ComfyUI frontend), maps widget values and
