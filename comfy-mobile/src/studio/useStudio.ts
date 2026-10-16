@@ -153,6 +153,8 @@ export function useStudio() {
     syncFromGraph,
     randomiseSeed,
     connected: status === 'connected',
+    /** The server's node list has arrived (connected no longer implies it — `/object_info` loads in the background). */
+    nodeListReady: info !== null,
   };
 }
 

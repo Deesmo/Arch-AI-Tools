@@ -1516,3 +1516,101 @@ input.slider {
   width: 20px;
   border-radius: 4px;
 }
+
+/* ---------- Connection: phase line, failure card, node-list banner ---------- */
+.conn-phase {
+  margin: -6px 0 14px;
+  color: var(--descrip-text);
+}
+.conn-failure {
+  text-align: left;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 14px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.conn-report {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 14px;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+  resize: none;
+}
+.nodelist-banner {
+  position: absolute;
+  top: calc(var(--safe-top) + 6px);
+  left: 8px;
+  right: 8px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--comfy-menu-bg);
+  color: var(--fg-color);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  cursor: pointer;
+}
+.nodelist-banner.error {
+  border-color: var(--error-text);
+}
+.nodelist-banner.warn {
+  border-color: var(--warning);
+}
+.nodelist-banner .nodelist-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--accent-2);
+}
+.nodelist-banner.error .nodelist-icon {
+  color: var(--error-text);
+}
+.nodelist-banner.warn .nodelist-icon {
+  color: var(--warning);
+}
+.nodelist-banner .nodelist-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nodelist-banner .nodelist-pct {
+  flex-shrink: 0;
+  color: var(--descrip-text);
+}
+.nodelist-banner .nodelist-retry {
+  flex-shrink: 0;
+  color: var(--accent-2);
+  font-weight: 600;
+  padding: 2px 6px;
+}
+.nodelist-banner .nodelist-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.nodelist-banner .nodelist-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s linear;
+}
+.nodelist-banner .nodelist-bar > span.indeterminate {
+  width: 30%;
+  animation: indeterminate 1.2s infinite ease-in-out;
+}

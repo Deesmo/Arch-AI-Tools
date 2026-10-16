@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   DEFAULT_SERVER_URL,
   diagnoseConnection,
+  nodeListCache,
   normalizeServerUrl,
   problemFix,
   problemTitle,
@@ -153,6 +154,7 @@ export function SettingsScreen() {
             onClick={async () => {
               if (await ask({ title: 'Clear all local data?', message: 'Saved workflows, recipes, settings and the current graph on this device will be erased. Nothing on the server is touched.', confirmLabel: 'Erase', danger: true })) {
                 Object.keys(localStorage).filter((k) => k.startsWith('comfy-mobile.')).forEach((k) => localStorage.removeItem(k));
+                void nodeListCache.clear();
                 toast('Local data cleared — restart the app');
               }
             }}

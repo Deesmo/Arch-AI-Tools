@@ -29,7 +29,7 @@ const MODES: { kinds: TemplateKind[]; label: string; icon: 'video' | 'image' }[]
 
 export function StudioScreen() {
   const studio = useStudio();
-  const { template, templates, values, set, validation, missingInputs, connected, recipe } = studio;
+  const { template, templates, values, set, validation, missingInputs, connected, nodeListReady, recipe } = studio;
   const reviewBeforeQueue = useSettingsStore((s) => s.reviewBeforeQueue);
   const setTab = useUiStore((s) => s.setTab);
   const [picker, setPicker] = useState(false);
@@ -99,7 +99,7 @@ export function StudioScreen() {
             <h3>{template.name}</h3>
             <p>{kindLabel(template.kind)} · {template.engine}</p>
             <div className="meta">
-              {validation.unknown && <span className="badge">not connected</span>}
+              {validation.unknown && <span className="badge">{connected ? 'loading node list…' : 'not connected'}</span>}
               {!validation.unknown && blocked && <span className="badge red">{validation.missingNodes.length} missing node types</span>}
               {!validation.unknown && !blocked && validation.missingModels.length > 0 && <span className="badge amber">{validation.missingModels.length} model files not found</span>}
               {!validation.unknown && !blocked && validation.missingModels.length === 0 && <span className="badge green">ready</span>}
@@ -129,9 +129,9 @@ export function StudioScreen() {
 
       {/* GenerateBar */}
       <div className="generate-bar">
-        <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || blocked || needsUpload || busy} onClick={onGenerate}>
+        <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || !nodeListReady || blocked || needsUpload || busy} onClick={onGenerate}>
           <Icon name="play" size={18} />{' '}
-          {busy ? 'Queuing…' : !connected ? 'Not connected' : needsUpload ? `Upload ${mediaNoun(missingInputs[0].param.type as 'image' | 'video')} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
+          {busy ? 'Queuing…' : !connected ? 'Not connected' : !nodeListReady ? 'Loading node list…' : needsUpload ? `Upload ${mediaNoun(missingInputs[0].param.type as 'image' | 'video')} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
         </button>
         {needsUpload && !blocked && (
           <div className="small" style={{ color: 'var(--warning)' }}>

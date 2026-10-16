@@ -10,6 +10,7 @@ import { LibraryScreen } from './library/LibraryScreen';
 import { ConnectionScreen } from './screens/ConnectionScreen';
 import { GalleryScreen } from './screens/GalleryScreen';
 import { MediaViewer } from './screens/MediaViewer';
+import { NodeListBanner } from './screens/NodeListBanner';
 import { QueueScreen } from './screens/QueueScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { Guide } from './shared/Guide';
@@ -53,14 +54,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reconnect when the app returns to the foreground.
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === 'visible' && useServerStore.getState().status !== 'connected') void connect();
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [connect]);
+  // Foreground / background handling lives in the server store (visibilitychange, pagehide/pageshow, online).
 
   // Once a connection succeeds, drop the offline override so a later failure shows the gate again.
   useEffect(() => {
@@ -82,6 +76,7 @@ export default function App() {
         {tab === 'queue' && <QueueScreen />}
         {tab === 'gallery' && <GalleryScreen />}
         {tab === 'settings' && <SettingsScreen />}
+        {!showGate && <NodeListBanner />}
         {showGate && !guideOpen && (
           <ConnectionScreen
             onContinueOffline={() => {
