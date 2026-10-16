@@ -44,7 +44,8 @@ cd comfy-mobile
 npm install
 
 # Against the real server (default URL is Skytech; change it in Settings)
-npm run dev              # http://localhost:5173, also reachable on your LAN for phone testing
+npm run dev              # http://127.0.0.1:5173 – loopback only (the dev server is not exposed to the LAN)
+npm run dev:lan          # bind all interfaces to open it on a phone over your LAN/tailnet (deliberate opt-in)
 
 # Against the bundled mock ComfyUI (no GPU needed)
 npm run mock             # http://localhost:8188 – recorded /object_info, simulated runs, sample mp4/gif/png

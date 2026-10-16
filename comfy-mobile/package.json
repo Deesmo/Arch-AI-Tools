@@ -5,7 +5,8 @@
   "description": "Private mobile (Capacitor) client for ComfyUI: Video Studio + full node graph editor. Talks only to your own ComfyUI server.",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite --host 127.0.0.1",
+    "dev:lan": "vite --host",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
