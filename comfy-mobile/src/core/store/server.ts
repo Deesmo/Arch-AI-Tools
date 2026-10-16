@@ -349,12 +349,25 @@ export const useServerStore = create<ServerState>()((set, get) => {
   };
 });
 
-/** Reconnect whenever the server URL setting changes. */
+/**
+ * Reconnect whenever the server URL setting changes. Everything learned from
+ * the previous server (object info, queue/history, the last run's preview,
+ * progress, error and node errors) is per-server state and must not survive
+ * the switch, otherwise the UI shows the old server's results against the new one.
+ */
 useSettingsStore.subscribe((s, prev) => {
   if (s.serverUrl !== prev.serverUrl) {
     useServerStore.getState().disconnect();
     useServerStore.getState().clearOutputs();
-    useServerStore.setState({ objectInfo: null, systemStats: null, history: null, queue: null });
+    useServerStore.setState({
+      objectInfo: null,
+      systemStats: null,
+      history: null,
+      queue: null,
+      queueRemaining: 0,
+      nodeErrors: {},
+      lastError: null,
+    });
     void useServerStore.getState().connect();
   }
 });
