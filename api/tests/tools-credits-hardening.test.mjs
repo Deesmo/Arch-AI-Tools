@@ -6,7 +6,7 @@
  *   B (#19)  platform side-effect tools require an account even when x402-paid.
  *   C.2 (#11) x402 in-memory nonce release on failed verify/settle.
  *   C.3 (#11) AI Oracle BYOK: bad user key never falls through to a free
- *             platform-key response.
+ *             platform-key response, and still pays platform overhead.
  *   C.4 (#11) finalizeCharge only charges when the response was delivered.
  *   C.5 (#11) monthly refresh TOPS UP to the free floor — max(current, floor) —
  *             never lowers a purchased balance.
@@ -122,19 +122,33 @@ async function main() {
     assert.ok(x402Src.includes("memNonceCache.delete(nonce)"), "must clear in-memory store");
     assert.ok(!/if \(nonce && redis\) await redis\.del/.test(x402Src), "redis-only cleanup must be gone");
     const count = (x402Src.match(/if \(nonce\) await releaseStoredNonce\(nonce\)/g) || []).length;
-    assert.strictEqual(count, 2, "both verify-fail and settle-fail must release the nonce");
+    assert.strictEqual(count, 3, "accepts-mismatch, verify-fail, and settle-fail must release the nonce");
   });
 
   // ── C.3 (#11): AI Oracle BYOK — no free platform fallback ──────────────────
   console.log("C.3 — AI Oracle BYOK no-free-fallback decision:");
   await test("platform Anthropic provider is gated off whenever any BYOK header is present", () =>
-    assert.ok(/oraclByokAnthropicKey \|\| \(!oracleHasByok && getAnthropic\(\)\)/.test(toolsSrc),
+    assert.ok(/oracleByokAnthropicKey \|\| \(!oracleHasByok && getAnthropic\(\)\)/.test(toolsSrc),
       "platform anthropic must require !oracleHasByok"));
   await test("platform OpenAI provider is gated off whenever any BYOK header is present", () =>
-    assert.ok(/oraclByokOpenaiKey \|\| \(!oracleHasByok \? process\.env\.OPENAI_API_KEY : undefined\)/.test(toolsSrc),
+    assert.ok(/oracleByokOpenaiKey \|\| \(!oracleHasByok \? process\.env\.OPENAI_API_KEY : undefined\)/.test(toolsSrc),
       "platform openai must require !oracleHasByok"));
   await test("response byok flag is per-provider, not the blanket oracleHasByok", () =>
     assert.ok(/\.\.\.\(provider\.byok \? \{ byok: true, byok_provider: providerName \} : \{\}\)/.test(toolsSrc)));
+  await test("BYOK Oracle requests still deduct and report the platform overhead", () => {
+    assert.ok(toolsSrc.includes('const oracleByokHeaders = ["x-anthropic-key", "x-openai-key"] as const;'),
+      "oracle BYOK billable headers must be explicit");
+    assert.ok(/const oracleBillableCost = oracleHasByok\s*\?\s*byokAdjustedCost\(req, oracleCreditCost, oracleByokHeaders\)\s*:\s*oracleCreditCost;/.test(toolsSrc),
+      "oracle must convert BYOK calls to a discounted billable cost");
+    assert.ok(/deductCredits\(req, res, "ai-oracle", oracleBillableCost\)/.test(toolsSrc),
+      "oracle must deduct the billable cost for every authenticated non-x402 call");
+    assert.ok(/credits_used: paid \? 0 : oracleBillableCost/.test(toolsSrc),
+      "oracle success payload must report the actual charged credits");
+    assert.ok(!/if \(!paid && !oracleHasByok\)/.test(toolsSrc),
+      "BYOK must not bypass credit deduction");
+    assert.ok(!/credits_used: oracleHasByok \? 0 : oracleCreditCost/.test(toolsSrc),
+      "BYOK must not report free usage");
+  });
 
   // ── C.4 (#11): finalizeCharge only charges on a delivered response ─────────
   console.log("C.4 — refund/no-charge when response not delivered:");
@@ -198,7 +212,7 @@ async function main() {
     const getIdx = toolsSrc.indexOf('router.get("/:toolName"');
     assert.ok(getIdx > 0, "GET handler missing");
     const getHandler = toolsSrc.slice(getIdx);
-    assert.ok(getHandler.includes("buildPaymentRequired(toolName, price)"), "must build 402 directly");
+    assert.ok(getHandler.includes("buildPaymentRequiredV2(toolName, price)"), "must build 402 directly");
     assert.ok(!getHandler.includes("x402Middleware(toolName)"), "must not route probe through settlement middleware");
     assert.ok(getHandler.includes("!isX402AnonymousTool(toolName)"), "account-required tools stay out of discovery");
   });
