@@ -1,0 +1,125 @@
+/* My Studio tab — additive styles; reuses the app's card/list/badge primitives. */
+
+.ms-empty h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.ms-empty p {
+  margin: 0 0 6px;
+}
+.ms-steps {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.ms-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 2px 10px;
+  color: var(--descrip-text);
+  cursor: pointer;
+}
+
+.ms-sections {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  scrollbar-width: none;
+}
+.ms-sections::-webkit-scrollbar {
+  display: none;
+}
+.ms-sections .chip {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ms-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--descrip-text);
+}
+.ms-search .input {
+  flex: 1;
+}
+
+.ms-hint {
+  margin: 0 2px 10px;
+  line-height: 1.45;
+}
+
+.ms-item {
+  align-items: flex-start;
+}
+.ms-item-title {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 0;
+}
+.ms-text {
+  color: var(--input-text);
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-line;
+}
+.ms-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.ms-tags,
+.ms-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.ms-words-label {
+  font-size: 11px;
+  color: var(--descrip-text);
+  align-self: center;
+  margin-right: 2px;
+}
+
+.ms-stars {
+  color: var(--warning);
+  letter-spacing: 1px;
+}
+.ms-stars .dim {
+  color: var(--border-color);
+}
+
+.ms-kv {
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.ms-disabled {
+  opacity: 0.45;
+}
+
+@keyframes ms-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ms-spin {
+  animation: ms-spin 1s linear infinite;
+}

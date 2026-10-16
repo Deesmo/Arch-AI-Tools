@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import {
+  activeLoraFiles,
   allTemplates,
   applyTemplate,
   bindTriggerWords,
@@ -16,6 +17,8 @@ import {
   missingReferenceInputs,
   modelFoldersFor,
   readTemplateValues,
+  triggerWordsForLora,
+  useContentStore,
   useGraphStore,
   useRecipesStore,
   useServerStore,
@@ -40,6 +43,7 @@ export function useStudio() {
   const status = useServerStore((s) => s.status);
   const activeRecipeId = useRecipesStore((s) => s.activeId);
   const recipe = useRecipesStore((s) => s.items.find((r) => r.id === s.activeId) ?? null);
+  const loraIndex = useContentStore((s) => s.loraIndex);
   const { queueWorkflow } = useQueue();
   const toast = useUiStore((s) => s.toast);
 
@@ -67,12 +71,20 @@ export function useStudio() {
 
   const set = useCallback((key: string, value: unknown) => setValue(template.id, key, value), [setValue, template.id]);
 
-  /** Final positive prompt after recipe trigger words. */
+  /** Trigger words from My Studio content for the LoRAs currently selected (and enabled). */
+  const loraTriggerWords = useMemo(
+    () => activeLoraFiles(template, values).flatMap((file) => triggerWordsForLora(loraIndex, file)),
+    [template, values, loraIndex],
+  );
+
+  /** Final positive prompt after recipe + selected-LoRA trigger words. */
   const finalPrompt = useMemo(() => {
     const p = template.params.find((x) => x.role === 'positive_prompt');
     const text = p ? String(values[p.key] ?? '') : '';
-    return bindTriggerWords(text, recipe && recipe.templateId === template.id ? recipe : null);
-  }, [template, values, recipe]);
+    const active = recipe && recipe.templateId === template.id ? recipe : null;
+    if (!active && !loraTriggerWords.length) return text;
+    return bindTriggerWords(text, { triggerWords: [...(active?.triggerWords ?? []), ...loraTriggerWords], loras: active?.loras ?? [] });
+  }, [template, values, recipe, loraTriggerWords]);
 
   /** Builds the workflow that would be queued right now. */
   const buildWorkflow = useCallback((): Workflow => {
@@ -129,6 +141,7 @@ export function useStudio() {
     missingInputs,
     recipe: recipe && recipe.templateId === template.id ? recipe : null,
     activeRecipeId,
+    loraTriggerWords,
     finalPrompt,
     buildWorkflow,
     generate,

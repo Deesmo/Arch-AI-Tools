@@ -27,6 +27,7 @@ export * from './store/studio';
 export * from './store/loras';
 export * from './recipes/schema';
 export * from './recipes/store';
+export * from './content';
 export * from './connection/diagnose';
 export * from './platform/save';
 export { workflowFromPng } from './utils/png';

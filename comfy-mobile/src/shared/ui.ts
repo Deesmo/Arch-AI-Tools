@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import type { MediaItem } from '../core';
 
-export type Tab = 'studio' | 'graph' | 'queue' | 'gallery' | 'settings';
+export type Tab = 'studio' | 'mystudio' | 'graph' | 'queue' | 'gallery' | 'settings';
 
 export interface Toast {
   id: number;

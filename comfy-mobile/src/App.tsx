@@ -4,7 +4,7 @@
  * canvas viewport and form state survive tab switches.
  */
 import { useEffect, useState } from 'react';
-import { useServerStore, useSettingsStore } from './core';
+import { useContentStore, useServerStore, useSettingsStore } from './core';
 import { EditorScreen } from './editor/EditorScreen';
 import { ConnectionScreen } from './screens/ConnectionScreen';
 import { GalleryScreen } from './screens/GalleryScreen';
@@ -14,10 +14,12 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { Icon, type IconName } from './shared/Icon';
 import { ConfirmDialog, Toasts } from './shared/Overlays';
 import { useUiStore, type Tab } from './shared/ui';
+import { MyStudioScreen } from './studio/mystudio/MyStudioScreen';
 import { StudioScreen } from './studio/StudioScreen';
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'studio', label: 'Studio', icon: 'studio' },
+  { id: 'mystudio', label: 'My Studio', icon: 'star' },
   { id: 'graph', label: 'Graph', icon: 'graph' },
   { id: 'queue', label: 'Queue', icon: 'queue' },
   { id: 'gallery', label: 'Gallery', icon: 'gallery' },
@@ -38,6 +40,7 @@ export default function App() {
   useEffect(() => {
     setTab(defaultMode === 'graph' ? 'graph' : 'studio');
     void connect();
+    void useContentStore.getState().hydrate();
     setBooted(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -56,7 +59,8 @@ export default function App() {
     if (status === 'connected') setOffline(false);
   }, [status]);
 
-  const showGate = booted && status !== 'connected' && !offline && tab !== 'settings';
+  // Settings and My Studio (on-device content) stay reachable without a server.
+  const showGate = booted && status !== 'connected' && !offline && tab !== 'settings' && tab !== 'mystudio';
 
   return (
     <div className="app">
@@ -67,6 +71,7 @@ export default function App() {
         <div style={{ position: 'absolute', inset: 0, display: tab === 'graph' ? 'block' : 'none' }}>
           <EditorScreen />
         </div>
+        {tab === 'mystudio' && <MyStudioScreen />}
         {tab === 'queue' && <QueueScreen />}
         {tab === 'gallery' && <GalleryScreen />}
         {tab === 'settings' && <SettingsScreen />}
