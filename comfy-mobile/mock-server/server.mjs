@@ -10,6 +10,7 @@
  *
  * Implements the subset of the ComfyUI HTTP + WebSocket API the app uses:
  *   GET  /system_stats /object_info /object_info/:t /models /models/:f /queue /history /history/:id /view /prompt /features /embeddings /extensions
+ *   GET  /userdata?dir=workflows&recurse=true[&full_info=true]  /userdata/:file   (served from mock-server/userdata/)
  *   POST /prompt /queue /history /interrupt /upload/image
  *   WS   /ws?clientId=…  status, execution_start, executing, progress, binary preview frames, executed, execution_success|error
  *
@@ -18,8 +19,8 @@
  * produce the bundled fixtures (mp4 / gif / png) in the right history shape.
  */
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync, createReadStream } from 'node:fs';
-import { join, dirname, extname } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, createReadStream } from 'node:fs';
+import { join, dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
@@ -28,6 +29,8 @@ import { buildObjectInfo, MODELS } from './object-info.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const FIX = join(here, 'fixtures');
 const INPUT_DIR = join(here, '.input');
+/** Mirrors ComfyUI's per-user `user/default/` tree; `workflows/` holds what the web UI's "Save" writes. */
+const USERDATA_DIR = resolve(here, 'userdata');
 mkdirSync(INPUT_DIR, { recursive: true });
 
 const PORT = Number(process.env.PORT ?? 8188);
@@ -60,6 +63,26 @@ function json(res, status, body) {
   cors(res);
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body));
+}
+function text(res, status, body) {
+  cors(res);
+  res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end(body);
+}
+/** Resolves a user-data relative path inside USERDATA_DIR, or null when it escapes it. */
+function safeUserdataPath(rel) {
+  const abs = resolve(USERDATA_DIR, rel.replace(/\\/g, '/'));
+  return abs === USERDATA_DIR || abs.startsWith(USERDATA_DIR + sep) ? abs : null;
+}
+function listFiles(dir, recurse) {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (recurse) out.push(...listFiles(abs, true));
+    } else out.push(abs);
+  }
+  return out;
 }
 function readBody(req) {
   return new Promise((resolve) => {
@@ -262,7 +285,33 @@ const server = createServer(async (req, res) => {
       const folder = decodeURIComponent(path.slice('/models/'.length));
       return json(res, 200, MODELS[folder] ?? []);
     }
-    if (req.method === 'GET' && path === '/embeddings') return json(res, 200, []);
+    if (req.method === 'GET' && path === '/embeddings') return json(res, 200, MODELS.embeddings.map((f) => f.replace(/\.[^.]+$/, '')));
+    // User data (app/user_manager.py): GET /userdata?dir=…&recurse=true[&full_info=true] lists files,
+    // GET /userdata/{file} serves one (the whole relative path is a single URL-encoded segment).
+    if (req.method === 'GET' && path === '/userdata') {
+      const dir = url.searchParams.get('dir') ?? '';
+      if (!dir) return text(res, 400, 'Directory not provided');
+      const root = safeUserdataPath(dir);
+      if (!root) return text(res, 403, 'Invalid directory');
+      if (!existsSync(root) || !statSync(root).isDirectory()) return text(res, 404, 'Directory not found');
+      const recurse = url.searchParams.get('recurse') === 'true';
+      const fullInfo = url.searchParams.get('full_info') === 'true';
+      const files = listFiles(root, recurse).map((abs) => {
+        const rel = relative(root, abs).split(sep).join('/');
+        if (!fullInfo) return rel;
+        const st = statSync(abs);
+        return { path: rel, size: st.size, modified: Math.round(st.mtimeMs) };
+      });
+      return json(res, 200, files);
+    }
+    if (req.method === 'GET' && path.startsWith('/userdata/')) {
+      const file = safeUserdataPath(decodeURIComponent(path.slice('/userdata/'.length)));
+      if (!file) return text(res, 403, 'Invalid file');
+      if (!existsSync(file) || !statSync(file).isFile()) return text(res, 404, 'File not found');
+      cors(res);
+      res.writeHead(200, { 'Content-Type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream', 'Content-Disposition': 'attachment', 'X-Content-Type-Options': 'nosniff' });
+      return createReadStream(file).pipe(res);
+    }
     if (req.method === 'GET' && path === '/extensions') return json(res, 200, []);
     if (req.method === 'GET' && path === '/features') return json(res, 200, { supports_preview_metadata: true, max_upload_size: 104857600 });
     if (req.method === 'GET' && path === '/queue') {
@@ -406,6 +455,7 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Mock ComfyUI listening on http://0.0.0.0:${PORT}  (nodes: ${Object.keys(OBJECT_INFO).length}, CORS: ${NO_CORS ? 'OFF' : 'on'}, fail: ${FAIL_EVERY_3RD ? 'every 3rd' : 'off'})`);
+server.listen(PORT, process.env.HOST ?? '0.0.0.0', () => {
+  const addr = server.address();
+  console.log(`Mock ComfyUI listening on http://${addr.address}:${addr.port}  (nodes: ${Object.keys(OBJECT_INFO).length}, CORS: ${NO_CORS ? 'OFF' : 'on'}, fail: ${FAIL_EVERY_3RD ? 'every 3rd' : 'off'})`);
 });

@@ -19,6 +19,7 @@ export function SettingsScreen() {
   const { status, systemStats, objectInfo, lastError, connect, wsState } = useServerStore();
   const toast = useUiStore((s) => s.toast);
   const ask = useUiStore((s) => s.ask);
+  const setGuideOpen = useUiStore((s) => s.setGuideOpen);
   const [url, setUrl] = useState(settings.serverUrl);
   const [diag, setDiag] = useState<ConnectionProblem | null>(null);
   const [testing, setTesting] = useState(false);
@@ -94,6 +95,18 @@ export function SettingsScreen() {
               {objectInfo ? `${Object.keys(objectInfo).length} node types` : ''}
             </div>
           )}
+        </div>
+
+        <div className="section-title">Help</div>
+        <div className="card" style={{ padding: 0 }}>
+          <div className="list-item" onClick={() => setGuideOpen(true)}>
+            <Icon name="help" size={20} />
+            <div className="title">
+              <div>How this works</div>
+              <div className="sub">Studio, Graph, Library and where your models live — the 4-card intro</div>
+            </div>
+            <Icon name="chevron" size={16} />
+          </div>
         </div>
 
         <div className="section-title">Launch</div>

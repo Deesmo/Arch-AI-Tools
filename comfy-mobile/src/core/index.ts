@@ -25,6 +25,8 @@ export * from './store/graph';
 export * from './store/workflows';
 export * from './store/studio';
 export * from './store/loras';
+export * from './store/library';
+export * from './library';
 export * from './recipes/schema';
 export * from './recipes/store';
 export * from './connection/diagnose';

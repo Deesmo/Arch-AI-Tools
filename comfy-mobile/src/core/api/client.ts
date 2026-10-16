@@ -15,6 +15,7 @@ import type {
   QueueResponse,
   SystemStats,
   UploadResponse,
+  UserdataListEntry,
 } from './types';
 
 export class ApiError extends Error {
@@ -81,6 +82,23 @@ export const api = {
   getModels: (folder: string) => request<string[]>(`/models/${encodeURIComponent(folder)}`),
 
   getModelFolders: () => request<string[]>('/models'),
+
+  /**
+   * Lists files under a user-data directory (ComfyUI `app/user_manager.py`,
+   * `GET /api/userdata?dir=…&recurse=true&full_info=true`). Newer servers
+   * return `{path,size,modified}` objects; older ones plain relative paths —
+   * `parseUserdataList` accepts both. 404 means the directory does not exist
+   * yet (e.g. no workflow was ever saved), which callers treat as empty.
+   */
+  listUserdata: (dir: string, recurse = true) =>
+    request<UserdataListEntry[]>(`/api/userdata?dir=${encodeURIComponent(dir)}&recurse=${recurse ? 'true' : 'false'}&full_info=true`),
+
+  /**
+   * Reads one user-data file. The whole relative path is a single URL segment
+   * (`/api/userdata/workflows%2Fmy%20flow.json`). The server sends it as an
+   * attachment; the body is still plain text/JSON.
+   */
+  getUserdata: (path: string) => request<unknown>(`/api/userdata/${encodeURIComponent(path)}`),
 
   getQueue: () => request<QueueResponse>('/queue'),
 

@@ -23,6 +23,8 @@ export interface SettingsState {
   historyLimit: number;
   /** Studio: show the review sheet before queueing. */
   reviewBeforeQueue: boolean;
+  /** First-run walkthrough has been dismissed (re-openable from Settings → "How this works"). */
+  guideSeen: boolean;
   set: (patch: Partial<Omit<SettingsState, 'set'>>) => void;
   reset: () => void;
 }
@@ -40,6 +42,7 @@ const defaults = {
   pollIntervalMs: 0,
   historyLimit: 64,
   reviewBeforeQueue: true,
+  guideSeen: false,
 };
 
 export const useSettingsStore = create<SettingsState>()(

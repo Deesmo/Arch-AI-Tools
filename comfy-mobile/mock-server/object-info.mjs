@@ -32,13 +32,28 @@ export const MODELS = {
     'wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors',
     'wan_cinematic_drone_v2.safetensors',
     'add_detail.safetensors',
+    // A spread of realistic names (with subfolders, like a real models/loras tree) so the
+    // Library search and the Studio LoRA picker have something to chew on offline.
+    ...['wan', 'sdxl', 'sd15', 'characters', 'styles', 'motion'].flatMap((sub) =>
+      ['anime_lineart', 'film_grain_v3', 'golden_hour_light', 'handheld_camera_shake', 'macro_lens', 'neon_city', 'oil_painting', 'pixel_art', 'slow_dolly_in', 'watercolor_wash'].map(
+        (n) => `${sub}/${n}.safetensors`,
+      ),
+    ),
   ],
+  embeddings: ['easynegative.safetensors', 'badhandv4.pt', 'ng_deepnegative_v1_75t.pt'],
+  controlnet: ['control_v11p_sd15_openpose.pth', 'control_v11f1p_sd15_depth.pth', 'controlnet-union-sdxl-1.0.safetensors'],
+  ipadapter: ['ip-adapter-plus_sd15.safetensors', 'ip-adapter_sdxl_vit-h.safetensors'],
+  clip_vision: ['clip_vision_h.safetensors', 'CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors'],
   animatediff_models: ['mm_sd_v15_v2.ckpt'],
-  upscale_models: ['RealESRGAN_x4plus.pth'],
-  embeddings: [],
+  upscale_models: ['RealESRGAN_x4plus.pth', '4x-UltraSharp.pth'],
+  style_models: [],
+  gligen: [],
+  hypernetworks: [],
+  photomaker: [],
+  configs: ['anything_v3.yaml', 'v1-inference.yaml'],
 };
 
-const INPUT_IMAGES = ['example.png', 'sample.png'];
+const INPUT_IMAGES = ['example.png', 'sample.png', 'portrait_ref.png', 'city_street.jpg', 'storyboard_frame_01.png'];
 
 const INT = (def, min, max, step = 1, extra = {}) => ['INT', { default: def, min, max, step, ...extra }];
 const FLOAT = (def, min, max, step = 0.01, extra = {}) => ['FLOAT', { default: def, min, max, step, ...extra }];
@@ -241,7 +256,8 @@ const core = {
   ConditioningCombine: def('ConditioningCombine', { category: 'conditioning', display: 'Conditioning (Combine)', required: { conditioning_1: ['CONDITIONING'], conditioning_2: ['CONDITIONING'] }, output: ['CONDITIONING'] }),
   LatentUpscale: def('LatentUpscale', { category: 'latent', display: 'Upscale Latent', required: { samples: ['LATENT'], upscale_method: COMBO(['nearest-exact', 'bilinear', 'area', 'bicubic', 'bislerp']), width: INT(512, 0, 16384, 8), height: INT(512, 0, 16384, 8), crop: COMBO(['disabled', 'center']) }, output: ['LATENT'] }),
   CLIPSetLastLayer: def('CLIPSetLastLayer', { category: 'conditioning', display: 'CLIP Set Last Layer', required: { clip: ['CLIP'], stop_at_clip_layer: INT(-1, -24, -1) }, output: ['CLIP'] }),
-  CLIPVisionLoader: def('CLIPVisionLoader', { category: 'loaders', display: 'Load CLIP Vision', required: { clip_name: COMBO(['clip_vision_h.safetensors']) }, output: ['CLIP_VISION'] }),
+  CLIPVisionLoader: def('CLIPVisionLoader', { category: 'loaders', display: 'Load CLIP Vision', required: { clip_name: COMBO(MODELS.clip_vision) }, output: ['CLIP_VISION'] }),
+  ControlNetLoader: def('ControlNetLoader', { category: 'loaders', display: 'Load ControlNet Model', required: { control_net_name: COMBO(MODELS.controlnet) }, output: ['CONTROL_NET'] }),
   CLIPVisionEncode: def('CLIPVisionEncode', { category: 'conditioning', display: 'CLIP Vision Encode', required: { clip_vision: ['CLIP_VISION'], image: ['IMAGE'], crop: COMBO(['center', 'none']) }, output: ['CLIP_VISION_OUTPUT'] }),
   LoadVideo: def('LoadVideo', { category: 'image/video', display: 'Load Video', required: { file: COMBO(['sample.mp4'], { video_upload: true }) }, output: ['VIDEO'] }),
   GetVideoComponents: def('GetVideoComponents', { category: 'image/video', display: 'Get Video Components', required: { video: ['VIDEO'] }, output: ['IMAGE', 'AUDIO', 'FLOAT'], outputName: ['images', 'audio', 'fps'] }),

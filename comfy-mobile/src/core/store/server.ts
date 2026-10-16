@@ -384,6 +384,7 @@ useSettingsStore.subscribe((s, prev) => {
       nodeErrors: {},
       lastError: null,
       uploadedInputs: [],
+      modelLists: {},
     });
     void useServerStore.getState().connect();
   }
