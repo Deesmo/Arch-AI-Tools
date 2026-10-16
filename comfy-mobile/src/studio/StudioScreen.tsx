@@ -11,7 +11,7 @@
  * components above to restyle without touching the engine.
  */
 import { useState } from 'react';
-import { useSettingsStore, type TemplateKind } from '../core';
+import { mediaNoun, useSettingsStore, type TemplateKind } from '../core';
 import { Icon } from '../shared/Icon';
 import { useUiStore } from '../shared/ui';
 import { Hint, ParamForm } from './ParamForm';
@@ -131,11 +131,11 @@ export function StudioScreen() {
       <div className="generate-bar">
         <button className="btn primary block" style={{ minHeight: 50, fontSize: 16 }} disabled={!connected || blocked || needsUpload || busy} onClick={onGenerate}>
           <Icon name="play" size={18} />{' '}
-          {busy ? 'Queuing…' : !connected ? 'Not connected' : needsUpload ? `Upload ${missingInputs[0].param.type === 'video' ? 'a video' : 'an image'} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
+          {busy ? 'Queuing…' : !connected ? 'Not connected' : needsUpload ? `Upload ${mediaNoun(missingInputs[0].param.type as 'image' | 'video')} to continue` : `Generate ${template.kind.includes('video') ? 'video' : 'image'}`}
         </button>
         {needsUpload && !blocked && (
           <div className="small" style={{ color: 'var(--warning)' }}>
-            {missingInputs.map((m) => (m.value ? `“${m.value}” is not on this server — upload a ${m.param.type} for ${m.param.label}.` : `${m.param.label}: upload a ${m.param.type} first.`)).join(' ')}
+            {missingInputs.map((m) => (m.value ? `“${m.value}” is not on this server — upload ${mediaNoun(m.param.type as 'image' | 'video')} for ${m.param.label}.` : `${m.param.label}: upload ${mediaNoun(m.param.type as 'image' | 'video')} first.`)).join(' ')}
           </div>
         )}
         {validation.missingModels.length > 0 && !blocked && (

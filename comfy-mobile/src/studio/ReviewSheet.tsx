@@ -5,7 +5,7 @@
  * "pre-render review" UX.
  */
 import { useMemo } from 'react';
-import { graphToPrompt, useSettingsStore } from '../core';
+import { graphToPrompt, mediaNoun, useSettingsStore } from '../core';
 import { Icon } from '../shared/Icon';
 import { Sheet } from '../shared/Sheet';
 import type { StudioModel } from './useStudio';
@@ -82,7 +82,7 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
           <div className="small" style={{ marginTop: 4 }}>
             {missingInputs.map((m) => (
               <div key={m.param.key}>
-                {m.param.label}: {m.value ? <span className="mono">{m.value}</span> : '(none chosen)'} — upload a {m.param.type} in Studio first.
+                {m.param.label}: {m.value ? <span className="mono">{m.value}</span> : '(none chosen)'} — upload {mediaNoun(m.param.type as 'image' | 'video')} in Studio first.
               </div>
             ))}
           </div>

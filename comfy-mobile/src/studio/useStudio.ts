@@ -13,6 +13,7 @@ import {
   bindTriggerWords,
   defaultValues,
   getTemplate,
+  mediaNoun,
   missingReferenceInputs,
   modelFoldersFor,
   readStudioLoras,
@@ -104,7 +105,7 @@ export function useStudio() {
       return null;
     }
     if (missingInputs.length) {
-      toast(`Upload a ${missingInputs[0].param.type} for “${missingInputs[0].param.label}” first`, 'error');
+      toast(`Upload ${mediaNoun(missingInputs[0].param.type as 'image' | 'video')} for “${missingInputs[0].param.label}” first`, 'error');
       return null;
     }
     const wf = buildWorkflow();
