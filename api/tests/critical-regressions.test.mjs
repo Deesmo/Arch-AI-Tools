@@ -93,5 +93,18 @@ test("research-report reports the deducted cost variable, not the stale flat 15"
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
 });
 
+test("ai-oracle BYOK calls charge and report the discounted platform overhead", () => {
+  const start = toolsSrc.indexOf('router.post("/ai-oracle"');
+  assert.ok(start >= 0, "missing ai-oracle route");
+  const end = toolsSrc.indexOf("router.post(", start + 1);
+  const route = toolsSrc.slice(start, end > start ? end : undefined);
+  assert.match(route, /const oracleByokHeaders = \["x-anthropic-key", "x-openai-key"\] as const;/);
+  assert.match(route, /const oracleBillableCost = oracleHasByok\s*\?\s*byokAdjustedCost\(req, oracleCreditCost, oracleByokHeaders\)\s*:\s*oracleCreditCost;/);
+  assert.match(route, /deductCredits\(req, res, "ai-oracle", oracleBillableCost\)/);
+  assert.match(route, /credits_used: paid \? 0 : oracleBillableCost/);
+  assert.ok(!/if \(!paid && !oracleHasByok\)/.test(route), "BYOK must not bypass credit deduction");
+  assert.ok(!/credits_used:\s*oracleHasByok \? 0 : oracleCreditCost/.test(route), "BYOK must not report free usage");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

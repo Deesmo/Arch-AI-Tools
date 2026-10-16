@@ -186,6 +186,12 @@ function hasByokKeys(req: Request, headerNames: readonly string[] = BYOK_HEADER_
 function byokAdjustedCost(req: Request, cost: number, headerNames: readonly string[] = BYOK_HEADER_NAMES): number {
   return hasByokKeys(req, headerNames) ? Math.max(1, Math.ceil(cost * 0.2)) : cost;
 }
+function firstNonEmptyHeader(req: Request, headerName: string): string | undefined {
+  const value = req.headers[headerName];
+  const raw = Array.isArray(value) ? value.find((v) => v.trim().length > 0) : value;
+  const cleaned = typeof raw === "string" ? raw.trim() : "";
+  return cleaned.length > 0 ? cleaned : undefined;
+}
 
 function extractJsonObject(text: string): string | null {
   const cleaned = text.replace(/```json|```/g, "").trim();
@@ -1855,17 +1861,21 @@ router.post("/workflow-agent", ...toolMiddleware("workflow-agent"), async (req: 
 
 router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequest, res: Response): Promise<void> => {
   // ── BYOK: check for user-provided API keys ──
-  const oraclByokAnthropicKey = req.headers["x-anthropic-key"] as string | undefined;
-  const oraclByokOpenaiKey = req.headers["x-openai-key"] as string | undefined;
-  const oracleHasByok = !!(oraclByokAnthropicKey || oraclByokOpenaiKey);
+  const oracleByokHeaders = ["x-anthropic-key", "x-openai-key"] as const;
+  const oracleByokAnthropicKey = firstNonEmptyHeader(req, "x-anthropic-key");
+  const oracleByokOpenaiKey = firstNonEmptyHeader(req, "x-openai-key");
+  const oracleHasByok = !!(oracleByokAnthropicKey || oracleByokOpenaiKey);
 
   const paid = isX402Paid(req);
   // deep mode runs Opus (≈2× the Sonnet-tuned base); standard runs Sonnet (1×).
   const oracleModelForCost = (req.body as { reasoning_depth?: string })?.reasoning_depth === "deep"
     ? "claude-opus-4-6" : "claude-sonnet-4-6";
   const oracleCreditCost = applyModelCost(25, oracleModelForCost);
-  if (!paid && !oracleHasByok) {
-    const ok = await deductCredits(req, res, "ai-oracle", oracleCreditCost);
+  const oracleBillableCost = oracleHasByok
+    ? byokAdjustedCost(req, oracleCreditCost, oracleByokHeaders)
+    : oracleCreditCost;
+  if (!paid) {
+    const ok = await deductCredits(req, res, "ai-oracle", oracleBillableCost);
     if (!ok) return;
   }
   const { question, context: oracleContext, reasoning_depth = "standard" } = req.body as {
@@ -1900,17 +1910,17 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
   // keys for a free response after a bad user key fails.
   const providers: Array<{ name: string; byok: boolean; fn: () => Promise<{ text: string; model: string; usage?: { input_tokens: number; output_tokens: number } }> }> = [];
 
-  if (oraclByokAnthropicKey || (!oracleHasByok && getAnthropic())) {
+  if (oracleByokAnthropicKey || (!oracleHasByok && getAnthropic())) {
     const oracleModel = effectiveDepth === "deep" ? "claude-opus-4-6" : "claude-sonnet-4-6";
-    const anthKey = oraclByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
+    const anthKey = oracleByokAnthropicKey || process.env.ANTHROPIC_API_KEY!;
     providers.push({
       name: "anthropic",
-      byok: !!oraclByokAnthropicKey,
+      byok: !!oracleByokAnthropicKey,
       fn: async () => {
         const userContent = oracleContext
           ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
           : question;
-        if (oraclByokAnthropicKey) {
+        if (oracleByokAnthropicKey) {
           const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anthKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: oracleModel, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: "user", content: userContent }] }) });
           const d = await r.json() as any;
           if (!r.ok) throw new Error(d?.error?.message || `Anthropic BYOK error ${r.status}`);
@@ -1924,11 +1934,11 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
     });
   }
 
-  const openaiKey = oraclByokOpenaiKey || (!oracleHasByok ? process.env.OPENAI_API_KEY : undefined);
+  const openaiKey = oracleByokOpenaiKey || (!oracleHasByok ? process.env.OPENAI_API_KEY : undefined);
   if (openaiKey) {
     providers.push({
       name: "openai",
-      byok: !!oraclByokOpenaiKey,
+      byok: !!oracleByokOpenaiKey,
       fn: async () => {
         const userContent = oracleContext
           ? `Context:\n${oracleContext.slice(0, 8000)}\n\nQuestion:\n${question}`
@@ -1990,7 +2000,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
         processed_at: new Date().toISOString(),
         arch_tools_version: "1.9.0",
         ...(provider.byok ? { byok: true, byok_provider: providerName } : {}),
-        credits_used: oracleHasByok ? 0 : oracleCreditCost,
+        credits_used: paid ? 0 : oracleBillableCost,
         request_id: reqId(),
       });
       return;
