@@ -29,6 +29,13 @@ const scanSrc = process.argv.includes('--src');
 
 /** The only real network endpoint the app knows about by default. */
 const DEFAULT_SERVER = 'http://100.103.142.118:8188';
+/**
+ * Second default endpoint: the My Studio content bundle served by the Mac mini
+ * over Tailscale (tools/export_video_studio.py --serve). User-configurable in
+ * My Studio → Source; a CGNAT (100.64/10) address, never routable off-tailnet.
+ */
+const DEFAULT_CONTENT_SOURCE = 'http://100.89.112.7:8152/bundle.json';
+const ALLOWED_DEFAULTS = [DEFAULT_SERVER, DEFAULT_CONTENT_SOURCE];
 
 /**
  * Inert strings: namespaces, URNs and spec/license URLs that appear as
@@ -120,7 +127,7 @@ function scanFile(file) {
   const urlRe = /\b(?:https?|wss?):\/\/[^\s"'`<>()\\,;]+/g;
   for (const m of text.matchAll(urlRe)) {
     const url = m[0].replace(/[.)\]]+$/, '');
-    if (url.startsWith(DEFAULT_SERVER)) continue;
+    if (ALLOWED_DEFAULTS.some((d) => url.startsWith(d))) continue;
     // `http://${x}` is the scheme prefix added to whatever the user typed in
     // Settings (normalizeServerUrl) — a dynamic user-supplied host, not a literal.
     if (/^(?:https?|wss?):\/\/\$\{/.test(url)) {
@@ -139,7 +146,7 @@ function scanFile(file) {
   const refRe = /(?:<script[^>]+src|<link[^>]+href|@import\s+(?:url\()?|url\()\s*=?\s*["']?([^"')\s>]+)/gi;
   for (const m of text.matchAll(refRe)) {
     const target = m[1];
-    if (/^(?:[a-z]+:)?\/\//i.test(target) && !target.startsWith(DEFAULT_SERVER)) {
+    if (/^(?:[a-z]+:)?\/\//i.test(target) && !ALLOWED_DEFAULTS.some((d) => target.startsWith(d))) {
       findings.push(`${rel}: external resource reference ${target}`);
     }
   }
@@ -201,6 +208,7 @@ if (existsSync(nm)) {
 // ---- report ----------------------------------------------------------------
 console.log(`Privacy audit · scanned ${distFiles.length} files in dist/${scanSrc ? ' + src/' : ''}`);
 console.log(`Allowed server: ${DEFAULT_SERVER} (user-configurable in Settings)`);
+console.log(`Allowed content source: ${DEFAULT_CONTENT_SOURCE} (user-configurable in My Studio → Source)`);
 if (seen.size) {
   console.log('\nInert literals found (namespaces / docs links in library code — never fetched):');
   for (const [url, files] of seen) console.log(`  ${url}  ← ${[...new Set(files)].join(', ')}`);
