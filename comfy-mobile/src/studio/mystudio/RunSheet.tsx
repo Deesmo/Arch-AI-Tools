@@ -13,6 +13,7 @@ import {
   GALLERY_COLUMNS,
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
+  absoluteStudioUrl,
   applyStudioRunEdits,
   galleryWindow,
   loadStudioWorkflowFile,
@@ -20,6 +21,9 @@ import {
   patchStudioRunFile,
   peekStudioGallery,
   primeStudioGallery,
+  safeImageType,
+  safeUploadName,
+  studioPhotoStatus,
   studioRunEdits,
   useServerStore,
   type StudioGalleryImage,
@@ -153,10 +157,14 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       const json = await loadStudioWorkflowFile(card.workflowFile);
       let imageName: string | null = null;
       if (picked && imageWritable) {
-        const res = await fetch(picked.file, { cache: 'no-store', credentials: 'omit' });
+        const url = absoluteStudioUrl(picked.file);
+        if (!/^https?:\/\//i.test(url)) throw new Error(GALLERY_NOT_IN_BUILD);
+        const res = await fetch(url, { cache: 'no-store', credentials: 'omit' });
         if (!res.ok) throw new Error(GALLERY_NOT_IN_BUILD);
         const blob = await res.blob();
-        imageName = await uploadInput(blob, picked.name);
+        const name = safeUploadName(picked.name);
+        const file = new File([blob], name, { type: safeImageType(blob.type) });
+        imageName = await uploadInput(file, name);
       }
       const edits = studioRunEdits({
         words: prompt,
@@ -268,13 +276,12 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         <button type="button" className="btn block ms-run-photo" onClick={() => setGalleryOpen(true)}>
           New photo
         </button>
-        <p className="ms-run-keep">{picked ? `Using ${picked.name} instead of the card's image.` : "Keeping the card's image."}</p>
-        {picked && (
+        <p className="ms-run-keep">{studioPhotoStatus(picked && imageWritable ? picked.name : null, imageWritable)}</p>
+        {picked && imageWritable && (
           <button type="button" className="btn ghost ms-run-keep-btn" onClick={() => setPicked(null)}>
             Keep the card's image
           </button>
         )}
-        {!imageWritable && <p className="field-hint">This photo stays as saved in the workflow.</p>}
         {galleryOpen && galleryNote && <p className="ms-run-note">{galleryNote}</p>}
         {galleryOpen && !images && !galleryNote && <p className="ms-run-note">Loading gallery…</p>}
         {galleryOpen && images && <GalleryGrid images={images} picked={picked} onPick={setPicked} />}

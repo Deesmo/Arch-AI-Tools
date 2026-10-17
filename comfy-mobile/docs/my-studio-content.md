@@ -204,10 +204,11 @@ stays open and shows the error instead of sitting on Queuing.
 
 `/studio-thumbs/gallery.json` is loaded once when My Studio opens and kept in
 memory. New photo opens that grid immediately and does not fetch it again.
-Only the pictures in the gallery viewport are decoded. Tapping one uploads
-that file to ComfyUI and sets the card's image input. It does not open the
-camera roll. If `gallery.json` is missing, the sheet says the gallery is not
-in this build.
+Only the pictures in the gallery viewport are decoded. Tapping one fetches
+that file from an absolute page URL, uploads it to ComfyUI, and sets the
+card's image input. It does not open the camera roll. The sheet shows one
+photo line. If `gallery.json` is missing, the sheet says the gallery is not
+in this build. A failed post shows the server's text.
 
 A UI graph, when a card still has one, is still converted with the app's
 existing queue path, subgraph expansion included. On a UI graph, Run sets

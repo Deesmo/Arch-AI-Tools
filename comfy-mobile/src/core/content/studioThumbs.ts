@@ -96,6 +96,35 @@ export function studioThumbUrl(path: string | null | undefined): string | null {
   return encoded ? `${STUDIO_THUMBS_ROOT}${encoded}` : null;
 }
 
+/**
+ * A same-origin studio path as an absolute URL.
+ * iPhone Safari throws "The string did not match the expected pattern" from
+ * `fetch` / `new Request` when the string is only a path.
+ */
+export function absoluteStudioUrl(path: string, origin?: string): string {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) return path;
+  const rooted = path.startsWith('/') ? path : `/${path}`;
+  const host =
+    origin ??
+    (typeof location !== 'undefined' && typeof location.origin === 'string' && location.origin && location.origin !== 'null'
+      ? location.origin
+      : '');
+  return host ? `${host}${rooted}` : rooted;
+}
+
+/** A filename Safari will accept in a multipart upload. */
+export function safeUploadName(name: string): string {
+  const base = name.split(/[/\\]/).filter(Boolean).pop() ?? 'image.png';
+  const clean = base.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^\.+$/, '');
+  return clean || 'image.png';
+}
+
+/** Blob types like `image/png; charset=utf-8` fail Safari's MIME check. */
+export function safeImageType(type: string): string {
+  const base = type.split(';')[0]?.trim().toLowerCase() ?? '';
+  return /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/.test(base) ? base : 'image/png';
+}
+
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 }

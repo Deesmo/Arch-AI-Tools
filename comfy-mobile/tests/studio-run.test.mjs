@@ -6,7 +6,7 @@ import './browser-stubs.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildObjectInfo } from '../mock-server/object-info.mjs';
-import { parseStudioThumbIndex } from '../src/core/content/studioThumbs.ts';
+import { absoluteStudioUrl, parseStudioThumbIndex, safeImageType, safeUploadName } from '../src/core/content/studioThumbs.ts';
 import {
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
@@ -19,6 +19,7 @@ import {
   peekStudioGallery,
   primeStudioGallery,
   resetStudioGallerySession,
+  studioPhotoStatus,
   studioRunEdits,
 } from '../src/core/content/studioRun.ts';
 import { visibleQueueItems } from '../src/screens/queueList.ts';
@@ -265,7 +266,7 @@ test('loadStudioWorkflowFile fetches the same-origin workflow and fails closed',
   };
   const body = await loadStudioWorkflowFile('runs/night.json', fetchImpl);
   assert.deepEqual(body, { nodes: [] });
-  assert.equal(calls[0].url, '/studio-thumbs/runs/night.json');
+  assert.equal(calls[0].url, 'http://localhost:5173/studio-thumbs/runs/night.json');
   assert.equal(calls[0].init.credentials, 'omit');
   assert.equal(calls[0].init.cache, 'no-store');
   await assert.rejects(() => loadStudioWorkflowFile('runs/missing.json', fetchImpl), { message: SETTINGS_NOT_IN_BUILD });
@@ -385,6 +386,20 @@ test('gallery.json is fetched once per session and only the on-screen window is 
   assert.ok(mid.end - mid.start <= 18);
   assert.ok(mid.end < 2730);
   resetStudioGallerySession();
+});
+
+test('a gallery photo is fetched from an absolute URL and the sheet shows one photo line', () => {
+  assert.equal(
+    absoluteStudioUrl('/studio-thumbs/gallery/copies_start_261015_141131_c4392a.png', 'http://phone.local:8152'),
+    'http://phone.local:8152/studio-thumbs/gallery/copies_start_261015_141131_c4392a.png',
+  );
+  assert.equal(absoluteStudioUrl('http://phone.local/studio-thumbs/a.png', 'http://other'), 'http://phone.local/studio-thumbs/a.png');
+  assert.equal(safeUploadName('copies/copies_start_261015_141131_c4392a.png'), 'copies_start_261015_141131_c4392a.png');
+  assert.equal(safeImageType('image/png; charset=utf-8'), 'image/png');
+  assert.equal(safeImageType('not a type'), 'image/png');
+  assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', true), "Using copies_start_261015_141131_c4392a.png instead of the card's image.");
+  assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', false), "This photo stays as saved in the workflow.");
+  assert.equal(studioPhotoStatus(null, true), "Keeping the card's image.");
 });
 
 test('an accepted prompt stays visible on the live queue before refresh', () => {

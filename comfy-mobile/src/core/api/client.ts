@@ -85,8 +85,17 @@ function withDeadline(outer: AbortSignal | null | undefined, timeoutMs: number) 
   };
 }
 
+/** `baseUrl()` plus a path, always `http(s)://…`. A bare path makes Safari reject the request. */
+export function absoluteServerUrl(path: string): string {
+  const base = baseUrl();
+  const rooted = path.startsWith('/') ? path : `/${path}`;
+  const url = `${base}${rooted}`;
+  if (!/^https?:\/\//i.test(url)) throw new Error(`ComfyUI server address is not a full URL (${base || 'empty'})`);
+  return url;
+}
+
 async function request<T>(path: string, init?: RequestOptions): Promise<T> {
-  const url = `${baseUrl()}${path}`;
+  const url = absoluteServerUrl(path);
   const { timeoutMs = 0, signal, ...rest } = init ?? {};
   const deadline = withDeadline(signal, timeoutMs);
   let res: Response;
@@ -145,7 +154,7 @@ export interface LargeFetchOptions {
  * `/object_info`, which on a server with many custom node packs is tens of MB.
  */
 async function fetchLargeJson<T>(path: string, opts: LargeFetchOptions = {}): Promise<T> {
-  const url = `${baseUrl()}${path}`;
+  const url = absoluteServerUrl(path);
   const { headersTimeoutMs = 15_000, stallTimeoutMs = 30_000 } = opts;
   const deadline = withDeadline(opts.signal, headersTimeoutMs);
   let res: Response;

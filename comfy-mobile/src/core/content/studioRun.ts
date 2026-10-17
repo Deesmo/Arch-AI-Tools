@@ -8,7 +8,7 @@
  */
 import type { ApiPrompt } from '../api/types';
 import type { GraphNode, Workflow } from '../graph/types';
-import { STUDIO_THUMBS_ROOT, studioThumbUrl } from './studioThumbs';
+import { STUDIO_THUMBS_ROOT, absoluteStudioUrl, studioThumbUrl } from './studioThumbs';
 
 export const SETTINGS_NOT_IN_BUILD = "This card's settings are not in the build.";
 
@@ -333,6 +333,13 @@ export function parseStudioGallery(raw: unknown): StudioGalleryImage[] {
 /** How many columns the run-sheet gallery draws. */
 export const GALLERY_COLUMNS = 3;
 
+/** One line under New photo. A card that cannot take a new image does not also claim the pick is in use. */
+export function studioPhotoStatus(pickedName: string | null, imageWritable: boolean): string {
+  if (!imageWritable) return "This photo stays as saved in the workflow.";
+  if (pickedName) return `Using ${pickedName} instead of the card's image.`;
+  return "Keeping the card's image.";
+}
+
 /**
  * Indexes of gallery entries whose pictures should be decoded.
  * `cell` is the row height in px. Only the rows inside the scroller, plus one
@@ -390,8 +397,9 @@ export async function loadStudioGallery(fetchImpl: typeof fetch = fetch): Promis
 
 /** GET `/studio-thumbs/<workflowFile>`. An unsafe path or a failed fetch throws. */
 export async function loadStudioWorkflowFile(workflowFile: string, fetchImpl: typeof fetch = fetch): Promise<unknown> {
-  const url = studioThumbUrl(workflowFile);
-  if (!url?.startsWith(STUDIO_THUMBS_ROOT)) throw new Error(SETTINGS_NOT_IN_BUILD);
+  const path = studioThumbUrl(workflowFile);
+  if (!path?.startsWith(STUDIO_THUMBS_ROOT)) throw new Error(SETTINGS_NOT_IN_BUILD);
+  const url = absoluteStudioUrl(path);
   const res = await fetchImpl(url, { cache: 'no-store', credentials: 'omit' });
   if (!res.ok) throw new Error(SETTINGS_NOT_IN_BUILD);
   return res.json();
