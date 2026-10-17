@@ -422,3 +422,33 @@
   margin-top: 4px;
   padding-left: 0;
 }
+.ms-run-result {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  max-height: 6.5em;
+  overflow-y: auto;
+}
+.ms-run-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.ms-run-gallery button {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+}
+.ms-run-gallery button.is-picked {
+  border-color: var(--descrip-text, #8ab4ff);
+}
+.ms-run-gallery img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}

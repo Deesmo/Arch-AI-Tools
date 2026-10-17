@@ -1,17 +1,25 @@
 /**
- * Run a copy or workflow card. The sheet keeps the card's preview, prefills
- * the prompt, and lets Brad swap the photo. Queue goes through the app's
- * existing path (subgraph expansion included). A new photo uses the existing
- * ComfyUI image upload. Nothing else in the workflow file is rewritten.
+ * Run a copy or workflow card.
+ *
+ * When the workflow file is a ComfyUI API prompt, Run posts that object
+ * through the existing queue path. The only writes are the prompt text, when
+ * it was edited, and the image input, when a gallery photo was chosen.
+ * Nothing else is rebuilt or removed. The sheet stays open and shows Queued
+ * or the server's error text.
  */
 import { useEffect, useState } from 'react';
 import {
+  CARD_CANNOT_BE_BUILT,
+  GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
   applyStudioRunEdits,
+  loadStudioGallery,
   loadStudioWorkflowFile,
   parseWorkflow,
   patchStudioRunFile,
+  studioRunEdits,
   useServerStore,
+  type StudioGalleryImage,
   type StudioThumbCopy,
   type StudioThumbWorkflow,
 } from '../../core';
@@ -28,60 +36,85 @@ type RunCard = StudioThumbCopy | StudioThumbWorkflow;
 
 export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
+  const execution = useServerStore((s) => s.execution);
   const uploadInput = useServerStore((s) => s.uploadInput);
   const { queueWorkflow, queueApiPrompt } = useQueue();
   const toast = useUiStore((s) => s.toast);
   const setTab = useUiStore((s) => s.setTab);
   const [prompt, setPrompt] = useState(card.prompt);
-  const [file, setFile] = useState<File | null>(null);
-  const [localUrl, setLocalUrl] = useState<string | null>(null);
+  const [picked, setPicked] = useState<StudioGalleryImage | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [gallery, setGallery] = useState<StudioGalleryImage[] | null>(null);
+  const [galleryNote, setGalleryNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [queuedId, setQueuedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!file) {
-      setLocalUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setLocalUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    if (!queuedId || execution.promptId !== queuedId) return;
+    if (execution.status === 'error' && execution.error?.message) setResult(execution.error.message);
+  }, [execution, queuedId]);
 
   const connected = status === 'connected';
   const canQueue = !!card.workflowFile;
   const promptWritable = card.promptNodeId != null && !!card.promptField;
   const imageWritable = card.imageNodeId != null && !!card.imageField;
 
+  const openGallery = () => {
+    setGalleryOpen(true);
+    if (gallery) return;
+    setGalleryNote(null);
+    void loadStudioGallery()
+      .then((images) => {
+        if (!images.length) setGalleryNote(GALLERY_NOT_IN_BUILD);
+        else setGallery(images);
+      })
+      .catch((err: unknown) => {
+        setGalleryNote(err instanceof Error && err.message ? err.message : GALLERY_NOT_IN_BUILD);
+      });
+  };
+
+  const showResult = (message: string) => {
+    setResult(message);
+    toast(message, message === 'Queued' ? 'success' : 'error');
+  };
+
   const run = async () => {
     if (!card.workflowFile || busy) return;
     if (!connected) {
-      toast('Not connected to a ComfyUI server', 'error');
+      showResult('Not connected to a ComfyUI server');
       return;
     }
     setBusy(true);
+    setResult(null);
     try {
       const json = await loadStudioWorkflowFile(card.workflowFile);
-      let uploaded: string | null = null;
-      if (file && imageWritable) uploaded = await uploadInput(file, file.name);
-      const edits = {
-        prompt: promptWritable ? { nodeId: card.promptNodeId!, field: card.promptField!, value: prompt } : null,
-        image: uploaded && imageWritable ? { nodeId: card.imageNodeId!, field: card.imageField!, value: uploaded } : null,
-      };
+      let imageName: string | null = null;
+      if (picked && imageWritable) {
+        const res = await fetch(picked.file, { cache: 'no-store', credentials: 'omit' });
+        if (!res.ok) throw new Error(GALLERY_NOT_IN_BUILD);
+        const blob = await res.blob();
+        imageName = await uploadInput(blob, picked.name);
+      }
+      const edits = studioRunEdits({
+        words: prompt,
+        savedWords: card.prompt,
+        promptNodeId: card.promptNodeId,
+        promptField: card.promptField,
+        imageName,
+        imageNodeId: card.imageNodeId,
+        imageField: card.imageField,
+      });
       const patched = patchStudioRunFile(json, edits);
       if (patched.format === 'unknown') {
-        toast("Couldn't read this card's workflow", 'error');
+        showResult("Couldn't read this card's workflow");
         return;
       }
       if (patched.format === 'api') {
-        if (patched.missed.length) {
-          toast(`Couldn't change the ${patched.missed.join(' and ')} on this card`, 'error');
-          return;
-        }
-        const id = await queueApiPrompt(patched.prompt, { source: 'studio' });
-        if (id) {
-          onClose();
-          setTab('queue');
-        }
+        // A missed edit leaves that saved input. The rest of the prompt is posted whole.
+        const queued = await queueApiPrompt(patched.prompt, { source: 'studio' });
+        if (queued.ok && queued.promptId) setQueuedId(queued.promptId);
+        setResult(queued.message);
         return;
       }
       // A refreshing node list must not block Run. A cached list is used when
@@ -94,13 +127,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
           image: patched.missed.includes('image') ? edits.image : null,
         });
         if (fallback.missed.length) {
-          toast(`Couldn't change the ${fallback.missed.join(' and ')} on this card`, 'error');
+          showResult(`Couldn't change the ${fallback.missed.join(' and ')} on this card`);
           return;
         }
         wf = fallback.workflow;
       } else {
-        // Named values are already on the file. This lines up a resolved widget
-        // the converter addresses by name.
         wf = applyStudioRunEdits(wf, edits).workflow;
       }
       const id = await queueWorkflow(wf, { source: 'studio' });
@@ -109,7 +140,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         setTab('queue');
       }
     } catch (err) {
-      toast(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD, 'error');
+      showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
     } finally {
       setBusy(false);
     }
@@ -123,9 +154,16 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       portal
       footer={
         canQueue ? (
-          <button type="button" className="btn primary block ms-run-go" disabled={busy} onClick={() => void run()}>
-            {busy ? 'Queuing…' : 'Run'}
-          </button>
+          <>
+            {result && (
+              <p className={`ms-run-result${result === 'Queued' ? '' : ' error-text'}`} role="status">
+                {result}
+              </p>
+            )}
+            <button type="button" className="btn primary block ms-run-go" disabled={busy} onClick={() => void run()}>
+              {busy ? 'Queuing…' : 'Run'}
+            </button>
+          </>
         ) : undefined
       }
     >
@@ -135,15 +173,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         </div>
       ) : preview?.kind === 'image' ? (
         <div className="ms-run-preview">
-          <img src={localUrl ?? preview.src} alt="" />
-        </div>
-      ) : localUrl ? (
-        <div className="ms-run-preview">
-          <img src={localUrl} alt="" />
+          <img src={preview.src} alt="" />
         </div>
       ) : null}
 
-      {!canQueue && <p className="ms-run-note">{SETTINGS_NOT_IN_BUILD}</p>}
+      {!canQueue && <p className="ms-run-note">{CARD_CANNOT_BE_BUILT}</p>}
       {canQueue && !connected && <p className="ms-run-note">Not connected to a ComfyUI server</p>}
 
       <div className="field">
@@ -168,27 +202,34 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
 
       <div className="field">
         <div className="field-label">Photo</div>
-        <div className="ms-run-file">
-          <label className="btn block ms-run-photo">
-            New photo
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const next = e.target.files?.[0] ?? null;
-                setFile(next);
-                e.target.value = '';
-              }}
-            />
-          </label>
-        </div>
-        <p className="ms-run-keep">{file ? `Using ${file.name} instead of the card's image.` : "Keeping the card's image."}</p>
-        {file && (
-          <button type="button" className="btn ghost ms-run-keep-btn" onClick={() => setFile(null)}>
+        <button type="button" className="btn block ms-run-photo" onClick={openGallery}>
+          New photo
+        </button>
+        <p className="ms-run-keep">{picked ? `Using ${picked.name} instead of the card's image.` : "Keeping the card's image."}</p>
+        {picked && (
+          <button type="button" className="btn ghost ms-run-keep-btn" onClick={() => setPicked(null)}>
             Keep the card's image
           </button>
         )}
         {!imageWritable && <p className="field-hint">This photo stays as saved in the workflow.</p>}
+        {galleryOpen && galleryNote && <p className="ms-run-note">{galleryNote}</p>}
+        {galleryOpen && !gallery && !galleryNote && <p className="ms-run-note">Loading gallery…</p>}
+        {galleryOpen && gallery && (
+          <div className="ms-run-gallery" role="listbox" aria-label="Gallery">
+            {gallery.map((image) => (
+              <button
+                type="button"
+                key={image.file}
+                role="option"
+                aria-selected={picked?.file === image.file}
+                className={picked?.file === image.file ? 'is-picked' : undefined}
+                onClick={() => setPicked(image)}
+              >
+                <img src={image.thumb} alt={image.name} />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </Sheet>
   );

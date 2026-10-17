@@ -42,27 +42,33 @@ export function useQueue() {
   );
 
   /**
-   * An API-format file is already the prompt ComfyUI runs. Same submit as
-   * `queueWorkflow` (connection check, `/prompt`, toasts). No graph conversion,
-   * because that would rebuild every input.
+   * Posts an API prompt as given. Same `/prompt` call as `queueWorkflow`.
+   * Does not rebuild nodes or inputs — a UI-graph conversion drops fields
+   * ComfyUI still requires, such as timeline_data and builder_state.
+   * `message` is "Queued" or the server's error text.
    */
   const queueApiPrompt = useCallback(
-    async (prompt: ApiPrompt, meta: { source: 'studio' | 'graph'; templateId?: string }) => {
+    async (
+      prompt: ApiPrompt,
+      meta: { source: 'studio' | 'graph'; templateId?: string },
+    ): Promise<{ ok: boolean; promptId: string | null; message: string }> => {
       if (status !== 'connected') {
-        toast('Not connected to a ComfyUI server', 'error');
-        return null;
+        const message = 'Not connected to a ComfyUI server';
+        toast(message, 'error');
+        return { ok: false, promptId: null, message };
       }
       if (Object.keys(prompt).length === 0) {
-        toast('Nothing to queue — the graph has no executable nodes', 'error');
-        return null;
+        const message = 'Nothing to queue — the graph has no executable nodes';
+        toast(message, 'error');
+        return { ok: false, promptId: null, message };
       }
       const res = await queuePrompt(prompt, emptyWorkflow(), meta);
       if (!res.ok) {
         toast(res.message, 'error');
-        return null;
+        return { ok: false, promptId: null, message: res.message };
       }
       toast('Queued', 'success');
-      return res.promptId;
+      return { ok: true, promptId: res.promptId, message: 'Queued' };
     },
     [queuePrompt, status, toast],
   );

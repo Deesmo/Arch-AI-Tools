@@ -12,10 +12,44 @@ import { STUDIO_THUMBS_ROOT, studioThumbUrl } from './studioThumbs';
 
 export const SETTINGS_NOT_IN_BUILD = "This card's settings are not in the build.";
 
+/** A card whose index row has no workflow file. */
+export const CARD_CANNOT_BE_BUILT = 'This card cannot be built.';
+
+/** `/studio-thumbs/gallery.json` is missing or is not a list of pictures. */
+export const GALLERY_NOT_IN_BUILD = 'The gallery is not in this build.';
+
+export const STUDIO_GALLERY = '/studio-thumbs/gallery.json';
+
 export interface StudioWidgetEdit {
   nodeId: number;
   field: string;
   value: string;
+}
+
+/**
+ * The only writes Run is allowed to make on an API prompt.
+ * Words are written when the text differs from the card and both the node id
+ * and field are set. A photo is written only after one was chosen and uploaded.
+ * Anything else stays as it was saved in the file.
+ */
+export function studioRunEdits(args: {
+  words: string;
+  savedWords: string;
+  promptNodeId: number | null;
+  promptField: string | null;
+  imageName: string | null;
+  imageNodeId: number | null;
+  imageField: string | null;
+}): { prompt: StudioWidgetEdit | null; image: StudioWidgetEdit | null } {
+  const prompt =
+    args.words !== args.savedWords && args.promptNodeId != null && !!args.promptField
+      ? { nodeId: args.promptNodeId, field: args.promptField, value: args.words }
+      : null;
+  const image =
+    args.imageName && args.imageNodeId != null && !!args.imageField
+      ? { nodeId: args.imageNodeId, field: args.imageField, value: args.imageName }
+      : null;
+  return { prompt, image };
 }
 
 function patchNode(node: GraphNode, edit: StudioWidgetEdit): GraphNode | null {
@@ -239,11 +273,75 @@ export function patchStudioRunFile(
         missed.push(key);
         continue;
       }
+      // One field. Every other input on this node, including objects such as
+      // timeline_data and builder_state, stays on the object that gets posted.
       inputs[edit.field] = edit.value;
     }
     return { format: 'api', prompt: copy as ApiPrompt, missed };
   }
   return { format: 'unknown', missed: requested };
+}
+
+export interface StudioGalleryImage {
+  /** Same-origin URL under `/studio-thumbs/`. */
+  thumb: string;
+  /** Same-origin URL of the file to upload. */
+  file: string;
+  /** Filename sent to ComfyUI's image upload. */
+  name: string;
+}
+
+function galleryList(raw: unknown): unknown[] | null {
+  if (Array.isArray(raw)) return raw;
+  const root = asRecord(raw);
+  if (!root) return null;
+  for (const key of ['images', 'gallery', 'items', 'files']) {
+    if (Array.isArray(root[key])) return root[key];
+  }
+  return null;
+}
+
+function uploadName(relative: string): string {
+  const base = relative.split('/').filter(Boolean).pop() ?? 'image.png';
+  try {
+    return decodeURIComponent(base);
+  } catch {
+    return base;
+  }
+}
+
+/**
+ * `gallery.json` is a list of `{ thumb, file }` paths relative to
+ * `/studio-thumbs/`. Absolute URLs and `..` are dropped. A missing thumb
+ * uses the file itself so the row can still be tapped.
+ */
+export function parseStudioGallery(raw: unknown): StudioGalleryImage[] {
+  const list = galleryList(raw);
+  if (!list) return [];
+  const out: StudioGalleryImage[] = [];
+  for (const item of list) {
+    const row = asRecord(item);
+    if (!row || typeof row.file !== 'string') continue;
+    const file = studioThumbUrl(row.file);
+    if (!file) continue;
+    const thumb = (typeof row.thumb === 'string' ? studioThumbUrl(row.thumb) : null) ?? file;
+    out.push({ thumb, file, name: uploadName(row.file) });
+  }
+  return out;
+}
+
+/** GET `/studio-thumbs/gallery.json`. A missing or unreadable file throws. */
+export async function loadStudioGallery(fetchImpl: typeof fetch = fetch): Promise<StudioGalleryImage[]> {
+  const res = await fetchImpl(STUDIO_GALLERY, { cache: 'no-store', credentials: 'omit' });
+  if (!res.ok) throw new Error(GALLERY_NOT_IN_BUILD);
+  let raw: unknown;
+  try {
+    raw = await res.json();
+  } catch {
+    throw new Error(GALLERY_NOT_IN_BUILD);
+  }
+  if (!galleryList(raw)) throw new Error(GALLERY_NOT_IN_BUILD);
+  return parseStudioGallery(raw);
 }
 
 /** GET `/studio-thumbs/<workflowFile>`. An unsafe path or a failed fetch throws. */

@@ -7,7 +7,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildObjectInfo } from '../mock-server/object-info.mjs';
 import { parseStudioThumbIndex } from '../src/core/content/studioThumbs.ts';
-import { SETTINGS_NOT_IN_BUILD, applyStudioRunEdits, loadStudioWorkflowFile, patchStudioRunFile } from '../src/core/content/studioRun.ts';
+import {
+  GALLERY_NOT_IN_BUILD,
+  SETTINGS_NOT_IN_BUILD,
+  applyStudioRunEdits,
+  loadStudioGallery,
+  loadStudioWorkflowFile,
+  parseStudioGallery,
+  patchStudioRunFile,
+  studioRunEdits,
+} from '../src/core/content/studioRun.ts';
 import { graphToPrompt } from '../src/core/graph/prompt.ts';
 import { parseWorkflow } from '../src/core/graph/serialize.ts';
 
@@ -257,4 +266,91 @@ test('loadStudioWorkflowFile fetches the same-origin workflow and fails closed',
   await assert.rejects(() => loadStudioWorkflowFile('runs/missing.json', fetchImpl), { message: SETTINGS_NOT_IN_BUILD });
   await assert.rejects(() => loadStudioWorkflowFile('https://other.example/w.json', fetchImpl), { message: SETTINGS_NOT_IN_BUILD });
   assert.equal(calls.length, 2);
+});
+
+test('an API prompt keeps every input except the edited words and chosen photo', () => {
+  const timeline = { tracks: [{ id: 'a', frames: [1, 2] }] };
+  const builder = { version: 3, nodes: { x: true } };
+  const raw = {
+    12: {
+      class_type: 'MiniMaxH3Director',
+      inputs: { text: 'saved words', timeline_data: timeline, builder_state: builder, clip: ['4', 1] },
+    },
+    9: {
+      class_type: 'DaSiWa_EnhancedVideoCombine',
+      inputs: { images: ['12', 0], frame_rate: 16, extra: { keep: true } },
+    },
+  };
+  const untouched = studioRunEdits({
+    words: 'saved words',
+    savedWords: 'saved words',
+    promptNodeId: 12,
+    promptField: 'text',
+    imageName: null,
+    imageNodeId: 2,
+    imageField: 'image',
+  });
+  assert.deepEqual(untouched, { prompt: null, image: null });
+  const same = patchStudioRunFile(raw, untouched);
+  assert.equal(same.format, 'api');
+  assert.deepEqual(same.prompt, raw);
+
+  const words = studioRunEdits({
+    words: 'a night drive',
+    savedWords: 'saved words',
+    promptNodeId: 12,
+    promptField: 'text',
+    imageName: 'shot.png',
+    imageNodeId: 9,
+    imageField: 'images',
+  });
+  const patched = patchStudioRunFile(raw, words);
+  assert.equal(patched.format, 'api');
+  assert.deepEqual(Object.keys(patched.prompt).sort(), ['12', '9']);
+  assert.equal(patched.prompt['12'].inputs.text, 'a night drive');
+  assert.deepEqual(patched.prompt['12'].inputs.timeline_data, timeline);
+  assert.deepEqual(patched.prompt['12'].inputs.builder_state, builder);
+  assert.deepEqual(patched.prompt['12'].inputs.clip, ['4', 1]);
+  assert.equal(patched.prompt['12'].class_type, 'MiniMaxH3Director');
+  assert.deepEqual(patched.prompt['9'].inputs.extra, { keep: true });
+  assert.equal(patched.prompt['9'].inputs.frame_rate, 16);
+  assert.equal(patched.prompt['9'].inputs.images, 'shot.png');
+  assert.deepEqual(raw['12'].inputs.timeline_data, timeline);
+  assert.equal(raw['12'].inputs.text, 'saved words');
+
+  const missed = patchStudioRunFile(raw, { prompt: { nodeId: 99, field: 'text', value: 'nope' } });
+  assert.deepEqual(missed.missed, ['prompt']);
+  assert.deepEqual(missed.prompt, raw);
+  assert.equal(Object.keys(missed.prompt).length, 2);
+});
+
+test('gallery.json is a same-origin list of thumb and file', async () => {
+  const parsed = parseStudioGallery([
+    { thumb: 'gallery/thumbs/night.webp', file: 'gallery/night.png' },
+    { thumb: 'https://other.example/a.webp', file: 'gallery/../secret.png' },
+    { file: 'gallery/only.png' },
+  ]);
+  assert.deepEqual(parsed, [
+    { thumb: '/studio-thumbs/gallery/thumbs/night.webp', file: '/studio-thumbs/gallery/night.png', name: 'night.png' },
+    { thumb: '/studio-thumbs/gallery/only.png', file: '/studio-thumbs/gallery/only.png', name: 'only.png' },
+  ]);
+  const wrapped = parseStudioGallery({ images: [{ thumb: 'gallery/a.webp', file: 'gallery/a.png' }] });
+  assert.equal(wrapped[0].name, 'a.png');
+
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    if (String(url).endsWith('missing')) return { ok: false, status: 404, json: async () => ({}) };
+    return { ok: true, json: async () => [{ thumb: 'gallery/t.webp', file: 'gallery/t.png' }] };
+  };
+  const images = await loadStudioGallery(fetchImpl);
+  assert.equal(images[0].file, '/studio-thumbs/gallery/t.png');
+  assert.equal(calls[0].url, '/studio-thumbs/gallery.json');
+  assert.equal(calls[0].init.credentials, 'omit');
+  assert.equal(calls[0].init.cache, 'no-store');
+  await assert.rejects(() => loadStudioGallery(async () => ({ ok: false, status: 404, json: async () => ({}) })), { message: GALLERY_NOT_IN_BUILD });
+  await assert.rejects(
+    () => loadStudioGallery(async () => ({ ok: true, json: async () => ({ not: 'a list' }) })),
+    { message: GALLERY_NOT_IN_BUILD },
+  );
 });

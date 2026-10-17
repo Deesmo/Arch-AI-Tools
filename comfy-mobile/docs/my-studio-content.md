@@ -187,18 +187,30 @@ My Studio has three sections, all from `/studio-thumbs/index.json`:
 
 The Mac adds `workflowFile`, `prompt`, `promptNodeId`, `promptField`,
 `imageNodeId`, and `imageField` on copy and workflow rows, and puts the
-workflow JSON under `/studio-thumbs/runs/`. A null `workflowFile` tells the
-sheet the card's settings are not in this build. A null node id leaves that
-box on screen and does not overwrite that part of the graph. If the phone is
+workflow JSON under `/studio-thumbs/runs/`. Those files are the flat ComfyUI
+API prompt Video Studio submits: each node id maps to `class_type` and
+`inputs`, subgraphs already expanded. A null `workflowFile` tells the sheet
+this card cannot be built, and Run is not offered. A null node id leaves that
+box on screen and does not overwrite that part of the prompt. If the phone is
 not connected, the sheet says so and does not submit.
 
-The workflow file is either a UI graph or an API prompt. On a UI graph, Run
-sets `widgets_values_named[promptField]` when that key exists. If it does not,
-and the node is a text widget (including PixaromaText), Run replaces that
-string in `widgets_values` and leaves every other widget alone. On an API
-prompt, Run sets `inputs[promptField]`, and `inputs[imageField]` only when a
-new photo was picked. A UI graph is still converted with the app's existing
-queue path, subgraph expansion included.
+Run posts that API prompt through the existing queue path. It does not rebuild
+the graph. The prompt text is written only when the words were edited and
+`promptNodeId` / `promptField` are set. A new photo is written only when one
+was chosen and `imageNodeId` / `imageField` are set. Every other input stays,
+including objects such as `timeline_data` and `builder_state`. The sheet stays
+open and shows Queued, or the same server error text the Queue shows.
+
+New photo opens `/studio-thumbs/gallery.json`, a list of `{ thumb, file }`
+paths relative to `/studio-thumbs/`. Tapping one uploads that file to ComfyUI
+and sets the card's image input. It does not open the camera roll. If
+`gallery.json` is missing, the sheet says the gallery is not in this build.
+
+A UI graph, when a card still has one, is still converted with the app's
+existing queue path, subgraph expansion included. On a UI graph, Run sets
+`widgets_values_named[promptField]` when that key exists. If it does not, and
+the node is a text widget (including PixaromaText), Run replaces that string
+in `widgets_values` and leaves every other widget alone.
 
 The Gallery tab is unchanged: this app's ComfyUI renders, with confirm-to-delete.
 It does not import Video Studio's old image or video libraries.
