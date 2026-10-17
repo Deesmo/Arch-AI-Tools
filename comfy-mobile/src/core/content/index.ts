@@ -7,5 +7,4 @@ export * from './schema';
 export * from './triggers';
 export * from './apply';
 export * from './store';
-export * from './videoStudio';
-export * from './studioMedia';
+export * from './studioThumbs';

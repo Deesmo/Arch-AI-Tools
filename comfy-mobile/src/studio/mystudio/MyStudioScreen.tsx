@@ -1,180 +1,136 @@
 /**
- * "My Studio" — Brad's own Video Studio content on the phone.
+ * My Studio — pictures that shipped with this page.
  *
- *   header      refresh · Source (URL / file / PIN / forget)
- *   status      what is loaded, from where, how old — or an empty state
- *   sections    Copy cards · Recipes · LoRA Lab · Workflows · Presets · Clips · More (bundle)
- *   search      filters the open section
- *
- * Data: `useContentStore` (bundle cached on-device) + `useStudioMediaStore`
- * (LoRA / workflow / copy-card thumbnails read straight from Video Studio on
- * the Mac, PIN-gated). Video Studio's own image/video libraries are not
- * shown here — the Gallery tab is this app's ComfyUI outputs.
- * Actions: `useMyStudio`.
+ * Loads `/studio-thumbs/index.json` and the files it names. No other host,
+ * no PIN, no cookie.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { bundleIsEmpty, useContentStore, useStudioMediaStore } from '../../core';
+import { MISSING_PICTURES, loadStudioThumbs, type StudioThumbCatalog } from '../../core';
 import { Icon } from '../../shared/Icon';
-import { SourceSheet } from './SourceSheet';
-import { StudioGate } from './PinGate';
-import { VideosSection } from './Media';
-import { CopyCardsSection, LoraLabSection, MoreSection, PresetsSection, RecipesSection, WorkflowsSection } from './sections';
-import { useMyStudio } from './useMyStudio';
+import { CopyCard, LoraCard, WorkflowCard } from './ThumbCards';
 import './mystudio.css';
 
-type Section = 'copy' | 'recipes' | 'loras' | 'workflows' | 'presets' | 'clips' | 'more';
+type Section = 'copies' | 'loras' | 'workflows';
 
-const SECTIONS: { id: Section; label: string; count: (c: Record<string, number>) => number }[] = [
-  { id: 'copy', label: 'Copy cards', count: (c) => c.copyCards ?? 0 },
-  { id: 'recipes', label: 'Recipes', count: (c) => c.recipes ?? 0 },
-  { id: 'loras', label: 'LoRA Lab', count: (c) => c.loras ?? 0 },
-  { id: 'workflows', label: 'Workflows', count: (c) => c.workflows ?? 0 },
-  { id: 'presets', label: 'Presets', count: (c) => c.presets ?? 0 },
-  { id: 'clips', label: 'Clips', count: (c) => c.videos ?? 0 },
-  { id: 'more', label: 'More', count: (c) => (c.characters ?? 0) + (c.assets ?? 0) + (c.raw ?? 0) },
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: 'copies', label: 'Copy cards' },
+  { id: 'loras', label: 'LoRAs' },
+  { id: 'workflows', label: 'Workflows' },
 ];
 
-/** Sections whose cards carry Video Studio thumbnails, so the PIN gate matters there. */
-const STUDIO_THUMB_SECTIONS = new Set<Section>(['copy', 'loras', 'workflows']);
-
-function ago(ms: number | null): string {
-  if (!ms) return '';
-  const m = Math.round((Date.now() - ms) / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m} min ago`;
-  const h = Math.round(m / 60);
-  if (h < 48) return `${h} h ago`;
-  return `${Math.round(h / 24)} d ago`;
+function useStudioThumbs() {
+  const [status, setStatus] = useState<'loading' | 'missing' | 'ready'>('loading');
+  const [catalog, setCatalog] = useState<StudioThumbCatalog | null>(null);
+  useEffect(() => {
+    let live = true;
+    void loadStudioThumbs().then((result) => {
+      if (!live) return;
+      if (!result.ok) setStatus('missing');
+      else {
+        setCatalog(result.catalog);
+        setStatus('ready');
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return { status, catalog };
 }
 
+const hit = (q: string, fields: (string | undefined | null)[]) => {
+  const n = q.trim().toLowerCase();
+  return !n || fields.some((f) => !!f && f.toLowerCase().includes(n));
+};
+
 export function MyStudioScreen() {
-  const bundle = useContentStore((s) => s.bundle);
-  const status = useContentStore((s) => s.status);
-  const error = useContentStore((s) => s.error);
-  const loadedAt = useContentStore((s) => s.loadedAt);
-  const origin = useContentStore((s) => s.origin);
-  const hydrated = useContentStore((s) => s.hydrated);
-  const refresh = useContentStore((s) => s.refresh);
-  const hydrate = useContentStore((s) => s.hydrate);
-  const studioHydrate = useStudioMediaStore((s) => s.hydrate);
-  const loadCards = useStudioMediaStore((s) => s.loadCards);
-  const cardsStatus = useStudioMediaStore((s) => s.cardsStatus);
-  const cardsError = useStudioMediaStore((s) => s.cardsError);
-  const cardsErrorKind = useStudioMediaStore((s) => s.cardsErrorKind);
-  const cardsLoadedAt = useStudioMediaStore((s) => s.cardsLoadedAt);
-  const cardCounts = useStudioMediaStore((s) => s.cards.counts);
-  const locked = useStudioMediaStore((s) => s.locked);
-  const actions = useMyStudio();
-  const [section, setSection] = useState<Section>('copy');
+  const { status, catalog } = useStudioThumbs();
+  const [section, setSection] = useState<Section>('copies');
   const [q, setQ] = useState('');
-  const [source, setSource] = useState(false);
 
-  useEffect(() => {
-    void hydrate();
-    void studioHydrate().then(() => loadCards());
-  }, [hydrate, studioHydrate, loadCards]);
-
-  // First visit with nothing cached: try the Mac once, quietly.
-  useEffect(() => {
-    if (hydrated && !bundle && status === 'idle') void refresh();
-  }, [hydrated, bundle, status, refresh]);
-
-  const counts = bundle?.counts ?? {};
-  const empty = bundleIsEmpty(bundle);
-  const visible = useMemo(() => SECTIONS.filter((s) => (s.id === 'more' || s.id === 'clips' ? s.count(counts) > 0 : true)), [counts]);
-  const previews = (counts.visuals ?? 0) + (counts.videos ?? 0);
-  const studioPreviews = cardCounts.loras + cardCounts.workflows + cardCounts.copies;
-  // Video Studio could not be read and we have nothing cached from it: say so (with the PIN field) above the cards.
-  const showGate = STUDIO_THUMB_SECTIONS.has(section) && (cardsErrorKind === 'pin' || (cardsStatus === 'error' && !cardsLoadedAt));
-  const refreshAll = () => {
-    void refresh();
-    void loadCards(true);
+  const counts = {
+    copies: catalog?.copies.length ?? 0,
+    loras: catalog?.loras.length ?? 0,
+    workflows: catalog?.workflows.length ?? 0,
   };
+
+  const copies = useMemo(
+    () => (catalog?.copies ?? []).filter((c) => hit(q, [c.name, c.model, c.author, c.duration, c.civitaiId])),
+    [catalog, q],
+  );
+  const loras = useMemo(
+    () => (catalog?.loras ?? []).filter((c) => hit(q, [c.name, c.file, c.trigger, c.model, c.author, c.civitaiId])),
+    [catalog, q],
+  );
+  const workflows = useMemo(
+    () => (catalog?.workflows ?? []).filter((c) => hit(q, [c.name, c.model, c.author, c.civitaiId])),
+    [catalog, q],
+  );
+
+  const label = SECTIONS.find((s) => s.id === section)?.label.toLowerCase() ?? '';
 
   return (
     <div className="screen">
       <div className="screen-header">
         <h1>My Studio</h1>
-        <button className="icon-btn" aria-label="Refresh from Mac" title="Refresh from Mac" disabled={status === 'loading'} onClick={refreshAll}>
-          <Icon name="refresh" className={status === 'loading' || cardsStatus === 'loading' ? 'ms-spin' : undefined} />
-        </button>
-        <button className="btn sm" onClick={() => setSource(true)}>
-          <Icon name={locked ? 'lock' : 'settings'} size={14} /> Source
-        </button>
       </div>
-
       <div className="screen-body">
-        {empty ? (
-          <div className="card ms-empty">
-            <h3>Your Video Studio content, on the phone</h3>
-            <p className="small">
-              Copy cards, author recipes with trigger words, your rated LoRAs, saved workflows and presets — exported from the Mac mini and kept on the tailnet. Card thumbnails come straight from Video Studio.
-            </p>
-            {status === 'loading' && <p className="small muted">Fetching from the Mac…</p>}
-            {error && <p className="small" style={{ color: 'var(--warning)' }}>{error}</p>}
-            <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn primary" style={{ flex: 1 }} disabled={status === 'loading'} onClick={() => void refresh()}>
-                <Icon name="refresh" size={16} /> Fetch from Mac
-              </button>
-              <button className="btn" style={{ flex: 1 }} onClick={() => setSource(true)}>
-                <Icon name="upload" size={16} /> Import file
-              </button>
-            </div>
-            <div className="ms-steps small muted">
-              <div>On the Mac mini, in the repo:</div>
-              <div className="mono">python3 comfy-mobile/tools/export_video_studio.py</div>
-              <div className="mono">python3 comfy-mobile/tools/export_video_studio.py --serve</div>
-            </div>
-            {cardsErrorKind === 'pin' && <StudioGate kind="pin" message={cardsError} />}
-          </div>
-        ) : (
+        {status === 'loading' && <p className="small muted">Loading…</p>}
+        {status === 'missing' && <p className="ms-missing">{MISSING_PICTURES}</p>}
+        {status === 'ready' && catalog && (
           <>
             <div className="ms-sections">
-              {visible.map((s) => {
-                const n = s.count(counts);
-                return (
-                  <button key={s.id} className={`chip${section === s.id ? ' active' : ''}`} onClick={() => setSection(s.id)}>
-                    {s.label} <span className="muted">{n.toLocaleString()}</span>
-                  </button>
-                );
-              })}
+              {SECTIONS.map((s) => (
+                <button key={s.id} className={`chip${section === s.id ? ' active' : ''}`} onClick={() => setSection(s.id)}>
+                  {s.label} <span className="muted">{counts[s.id].toLocaleString()}</span>
+                </button>
+              ))}
             </div>
-
-            <div className="ms-status small" onClick={() => setSource(true)}>
-              <span className={`conn-dot ${error || locked ? 'busy' : 'ok'}`} />
-              <span className="ellipsis">
-                {origin === 'file' ? 'From file' : 'From Mac'} · {ago(loadedAt)}
-                {bundle?.exportedAt ? ` · exported ${new Date(bundle.exportedAt).toLocaleDateString()}` : ''}
-                {studioPreviews ? ` · ${studioPreviews.toLocaleString()} Video Studio thumbnails` : previews ? ` · ${previews} preview${previews === 1 ? '' : 's'}` : ''}
-                {locked ? ' · PIN needed' : error ? ' · refresh failed' : ''}
-              </span>
-              <Icon name="chevron" size={14} />
-            </div>
-
             <div className="ms-search">
               <Icon name="search" size={16} />
-              <input className="input" placeholder={`Search ${visible.find((s) => s.id === section)?.label.toLowerCase() ?? ''}…`} value={q} onChange={(e) => setQ(e.target.value)} />
+              <input className="input" placeholder={`Search ${label}…`} value={q} onChange={(e) => setQ(e.target.value)} />
               {q && (
                 <button className="icon-btn" aria-label="Clear search" onClick={() => setQ('')}>
                   <Icon name="close" size={16} />
                 </button>
               )}
             </div>
-
-            {showGate && <StudioGate kind={cardsErrorKind} message={cardsError} onRetry={() => void loadCards(true)} />}
-
-            {bundle && section === 'copy' && <CopyCardsSection bundle={bundle} q={q} actions={actions} />}
-            {bundle && section === 'recipes' && <RecipesSection bundle={bundle} q={q} actions={actions} />}
-            {bundle && section === 'loras' && <LoraLabSection bundle={bundle} q={q} actions={actions} />}
-            {bundle && section === 'workflows' && <WorkflowsSection bundle={bundle} q={q} actions={actions} />}
-            {bundle && section === 'presets' && <PresetsSection bundle={bundle} q={q} actions={actions} />}
-            {bundle && section === 'clips' && <VideosSection bundle={bundle} q={q} />}
-            {bundle && section === 'more' && <MoreSection bundle={bundle} q={q} actions={actions} />}
+            {section === 'copies' && (
+              copies.length ? (
+                <div className="ms-copy-list">
+                  {copies.map((c, i) => (
+                    <CopyCard key={`${c.name}-${i}`} card={c} />
+                  ))}
+                </div>
+              ) : (
+                <div className="empty">{q ? `No copy cards match “${q}”.` : 'No copy cards in this build.'}</div>
+              )
+            )}
+            {section === 'loras' && (
+              loras.length ? (
+                <div className="card" style={{ padding: 0 }}>
+                  {loras.map((c, i) => (
+                    <LoraCard key={`${c.file || c.name}-${i}`} card={c} />
+                  ))}
+                </div>
+              ) : (
+                <div className="empty">{q ? `No LoRAs match “${q}”.` : 'No LoRAs in this build.'}</div>
+              )
+            )}
+            {section === 'workflows' && (
+              workflows.length ? (
+                <div className="card" style={{ padding: 0 }}>
+                  {workflows.map((c, i) => (
+                    <WorkflowCard key={`${c.name}-${i}`} card={c} />
+                  ))}
+                </div>
+              ) : (
+                <div className="empty">{q ? `No workflows match “${q}”.` : 'No workflows in this build.'}</div>
+              )
+            )}
           </>
         )}
       </div>
-
-      {source && <SourceSheet onClose={() => setSource(false)} />}
     </div>
   );
 }

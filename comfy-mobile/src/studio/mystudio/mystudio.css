@@ -295,27 +295,57 @@
   display: none;
 }
 
-/* ---- Video Studio PIN gate ------------------------------------------------- */
+/* ---- same-origin picture cards -------------------------------------------- */
 
-.ms-gate {
+.ms-missing {
+  margin: 12px 2px;
+  color: var(--input-text);
+}
+
+.ms-copy-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 12px;
 }
-.ms-gate p {
-  margin: 0;
+.ms-copy-card {
+  padding: 0;
+  overflow: hidden;
 }
-.ms-pin {
+.ms-copy-video,
+.ms-copy-still {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #000;
+}
+.ms-copy-extras {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 8px 0;
 }
-.ms-pin .input {
-  flex: 1;
-  min-width: 140px;
+.ms-copy-extras img,
+.ms-copy-extras video {
+  width: 112px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #000;
+  flex-shrink: 0;
 }
-.ms-pin-error {
-  flex-basis: 100%;
+.ms-copy-meta {
+  padding: 8px 12px 12px;
+}
+.ms-star {
+  color: var(--warning);
+  margin-left: 6px;
+}
+.ms-thumb-lg {
+  width: 72px;
+  height: 72px;
+}
+.ms-thumb-lg .ms-thumb-ph {
+  position: absolute;
+  inset: 0;
 }

@@ -33,10 +33,7 @@ export interface MediaRef {
   /** Still frame for a video, relative path. */
   poster?: string;
   label?: string;
-  /**
-   * Runtime only — never read from a bundle. Set when the media comes from the
-   * Video Studio server (`videoStudio.ts`) rather than the bundle's `/media/`.
-   */
+  /** Runtime only — never read from a bundle. */
   url?: string;
   posterUrl?: string;
 }

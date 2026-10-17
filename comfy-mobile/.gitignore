@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .vite/
+# Pictures are copied on the Mac into public/studio-thumbs. Do not commit them.
+public/studio-thumbs/**
+!public/studio-thumbs/.gitkeep
 ios/
 android/
 *.local

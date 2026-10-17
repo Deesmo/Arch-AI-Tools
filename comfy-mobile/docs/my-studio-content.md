@@ -18,12 +18,10 @@ python3 ~/path/to/Arch-AI-Tools/comfy-mobile/tools/export_video_studio.py
 python3 ~/path/to/Arch-AI-Tools/comfy-mobile/tools/export_video_studio.py --serve
 ```
 
-Then in the app: **My Studio → Fetch from Mac**. The default source URL is
-`http://100.89.112.7:8152/bundle.json` (Mac mini Tailscale IP, port 8152) and
-can be changed under **My Studio → Source**.
-
-Re-run step 1 whenever the Video Studio content changes; the app re-fetches
-on the refresh button (and once automatically when it has nothing cached).
+The phone does not fetch that file. **My Studio** reads only
+`/studio-thumbs/index.json` (and the files it names) from the same origin as
+the page. The Mac copies the real pictures into `public/studio-thumbs/`
+before it serves the phone. Those files are not committed.
 
 ## What the exporter does
 
@@ -118,40 +116,32 @@ only (`http://100.89.112.7:8152/media/...`); there are no CDNs or external
 hosts. A file-imported bundle still uses the configured Source URL for
 previews, and shows a labelled placeholder when it cannot load them.
 
-## Video Studio thumbnails (live from 8140)
+## Pictures in the page (`/studio-thumbs/`)
 
-Video Studio on the Mac already serves the card pictures, and the phone
-reads them straight from `http://100.89.112.7:8140` (tailnet; **My Studio →
-Source → Video Studio URL**). No proxy, no bridge, nothing copied into the
-bundle or git:
+My Studio loads one document, `GET /studio-thumbs/index.json`, with
+`credentials: 'omit'`. Every path in it is relative to `/studio-thumbs/`.
+Absolute URLs and `..` are dropped. There is no PIN and no call to Video
+Studio.
 
-| Route | Used for |
-|---|---|
-| `GET /api/guide-data` (+ `GET /config/lora_cards.json` when present) | Every LoRA card → `/lora-previews/<file>`, matched by file name (1,323 previews) |
-| `GET /api/workflows/cards` | Every workflow: card `thumb` plus its `examples` strip (the multiple pictures) → `/workflow-card-media/wf_<id>.<ext>` |
-| `GET /api/copies/cards` | Every copy card: `poster` and `clip` → `/copy-previews/<id>.jpg` and `.mp4` |
+```json
+{
+  "loras": [{ "name": "", "file": "", "thumb": "", "trigger": "", "rating": 0 }],
+  "workflows": [{ "name": "", "thumb": "", "examples": [] }],
+  "copies": [{ "name": "", "poster": "", "preview": "", "examples": [] }]
+}
+```
 
-`<img>`/`<video>` point at the 8140 URLs; model-site thumbnail URLs in any
-payload are ignored. The three documents are fetched together, cached in
-IndexedDB, and refreshed on the next launch.
+Optional fields when present: `model`, `author`, `duration`, a Civitai id,
+and `favorite` (or `favourite`) which draws a star. A workflow may have
+`"thumb": null`; the card then uses the first still example.
 
-Video Studio's own **image and video libraries are not imported**. New
-pictures and clips are made in this app, so they live in this app's Gallery
-(see below).
+Copy cards play `preview` (or the first example) inline, muted and looping.
+Other examples stay on the card. LoRA and workflow cards show their thumbnail
+image. If `index.json` is not in the build, the tab is one line: "pictures
+are not in this build."
 
-**PIN.** 8140 gates every off-loopback request with `401 {"error":"pin
-required"}`; a client unlocks with `POST /pin {"pin"}` and gets a `vs_pin`
-cookie. The phone does this itself: every `fetch()` to 8140 uses
-`credentials: 'include'`, so the browser stores the cookie and replays it on
-the JSON routes and on the `<img>`/`<video>` loads (same site, other port).
-My Studio shows **"Video Studio wants your PIN"** with a field the first
-time; the PIN is stored on the device only (settings store), is sent only to
-`POST /pin`, and is replayed once when the cookie dies (Video Studio
-restarted). It is never logged, never written to a file, never in the bundle,
-and there is no PIN file on the Mac. 8140 must answer the phone's origin with
-`Access-Control-Allow-Origin: <origin>` and
-`Access-Control-Allow-Credentials: true`; a page served over https cannot
-load http 8140 (mixed content) — use the http dev/tailnet page.
+Video Studio's own image and video libraries are not imported. New pictures
+and clips made in this app live in the Gallery (see below).
 
 ## This app's Gallery and permanent delete
 
@@ -182,31 +172,13 @@ bundle, or one produced by hand, still loads.
 
 ## How it shows up in the app
 
-- **Every card shows its thumbnail**; a card without one gets a labelled
-  placeholder (initials + kind), never a blank row. Tap the thumbnail to open
-  the record's example images and inline-playing videos.
-- **Copy cards** – tap to append to the prompt; the title opens Replace / Add.
-- **Recipes** – *Use* maps author settings onto the current template, selects
-  matching LoRA files on the server (and switches their toggles on), saves a
-  local recipe and jumps to Studio. Trigger words of any selected LoRA are
-  injected into the final prompt automatically (`useStudio.loraTriggerWords`).
-- **LoRA Lab** – adapter cards with ratings; *On server* filter matches by file
-  name against `/object_info`. Ratings, notes and trigger words are mirrored
-  into the existing LoRA picker store. A rating you edit locally is never
-  overwritten by a later fetch.
-- **Workflows** – UI-format workflows open in Graph or save to the library;
-  API-format workflows are run-only (posted straight to `/prompt`).
-- **Presets** – tap to apply values (optionally with the prompt).
-- **Videos** – example clips under `videos/` not tied to a card, grouped by
-  folder; tap a tile to play it in place.
-- **More** – characters (tap to insert), asset lists, unclassified raw sources.
+My Studio has three sections, all from `/studio-thumbs/index.json`:
 
-## No Tailscale on the phone?
+- **Copy cards** — the preview plays inline, muted and looping. Extra examples
+  sit on the card. Name, and model / author / duration when the index has them.
+  A favorite draws a star.
+- **LoRAs** — thumbnail, name, trigger, rating.
+- **Workflows** — thumbnail (or the first still example when `thumb` is null).
 
-**My Studio → Source → Import file** loads a `bundle.json` from the device
-(AirDrop / Files). Everything is cached in IndexedDB (localStorage fallback)
-so the tab works offline afterwards.
-
-If the app is served over `https://` and the Mac serves plain `http://`, the
-browser blocks the fetch (mixed content); use the file import or serve the
-app over `http://` on the tailnet.
+The Gallery tab is unchanged: this app's ComfyUI renders, with confirm-to-delete.
+It does not import Video Studio's old image or video libraries.
