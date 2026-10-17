@@ -15,6 +15,9 @@ What it does
     JSON), presets, characters, assets (names + metadata only, never media)
   * anything it cannot classify is kept verbatim under `raw`, keyed by the
     source path, so nothing is lost
+  * attaches thumbnails / example images + videos to kept records as RELATIVE
+    PATHS (a field named thumb/preview/poster/example/image/video…, or a media
+    file with the same name stem); --serve exposes them read-only at /media/
   * writes ONE file: ~/comfy-mobile-content/bundle.json (+ digest.txt)
   * prints a counts summary and a schema-only digest (keys and types, never
     values) that is safe to paste back for debugging
@@ -44,11 +47,12 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from urllib.parse import unquote
 
 EXPORTER_NAME = "export_video_studio.py"
-EXPORTER_VERSION = "1.1.0"
+EXPORTER_VERSION = "1.2.0"
 SCHEMA = "comfy-mobile-content"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 OUT_DIR = Path.home() / "comfy-mobile-content"
 DEFAULT_ROOT = Path.home() / "archon-staging" / "video-studio"
@@ -990,16 +994,291 @@ def to_asset(rec: Dict[str, Any], source: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Media (thumbnails / example images + videos)
+#
+# Media bytes never enter the bundle. The exporter only records relative paths
+# inside the Video Studio tree, and only for media clearly tied to a KEPT
+# record: a field named thumb/thumbnail/preview/poster/cover/image/video/
+# example(s)…, or a file whose name stem matches the record's file / name.
+# `--serve` exposes those files read-only at /media/<path>.
+# ---------------------------------------------------------------------------
+
+IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif", ".bmp"}
+VIDEO_EXT = {".mp4", ".m4v", ".mov", ".webm", ".mkv"}
+MEDIA_SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "env", "backups", "backup", ".bak", ".cache", "cache", "caches"}
+# Internal QA trees in the live app (read-only inventory): never surfaced in My Studio.
+MEDIA_QA_DIRS = {"qc", "reviews", "evidence", "audits", "tests", "tmp_claude", "report_assets", "mobile-ui-shots", "h3_recipe_guard", "output", "tmp"}
+MEDIA_QA_DIR_RE = re.compile(r"^verify-\d{6,}", re.I)
+# Known homes in the Video Studio tree (relative, forward slashes)
+RECIPE_THUMB_DIR = "data/reference_recipes"       # 590 .jpg — one per recipe, matched by file stem
+VIDEO_DIRS = ("videos",)                           # videos/ + videos/burst — example .mp4s
+THUMB_KEYS = ("thumb", "thumbnail", "thumb_url", "thumbnail_url", "thumb_path", "preview", "preview_url", "preview_image", "preview_path",
+              "poster", "poster_url", "cover", "cover_image", "cover_url", "image", "image_url", "image_path", "example_image", "icon",
+              "reference", "reference_image", "reference_path")
+EXAMPLE_KEYS = ("examples", "example", "example_url", "example_video", "example_videos", "example_images", "images", "videos", "video",
+                "video_url", "video_path", "samples", "sample", "sample_video", "media", "gallery", "previews", "clips", "clip", "demo", "demo_video")
+MEDIA_MARK_RE = re.compile(r"[._-]?(thumb(nail)?s?|preview|poster|cover|example|sample|frame|still|demo|ref(erence)?)\d*$", re.I)
+THUMB_MARK_RE = re.compile(r"[._-](thumb(nail)?|poster|cover|preview|still|ref(erence)?)\d*$", re.I)
+MEDIA_INDEX_MAX = 250000
+
+
+def norm_stem(name: str) -> str:
+    """`Part_01-thumb.PNG` → `part_01`: case-folded stem without media-role suffixes."""
+    s = name.replace("\\", "/").split("/")[-1]
+    s = re.sub(r"\.[A-Za-z0-9]{1,12}$", "", s).lower()
+    for _ in range(3):
+        s2 = MEDIA_MARK_RE.sub("", s)
+        if s2 == s:
+            break
+        s = s2
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    return s
+
+
+def slug_stem(name: Any) -> Optional[str]:
+    if not isinstance(name, str):
+        return None
+    s = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return s if len(s) >= 4 else None
+
+
+def is_qa_dir(name: str) -> bool:
+    n = name.lower()
+    return n in MEDIA_QA_DIRS or bool(MEDIA_QA_DIR_RE.match(n))
+
+
+class MediaIndex:
+    """All image/video files under the root (minus QA/backup trees), by relative path, basename, stem and directory."""
+
+    def __init__(self, root: Path):
+        self.root = root
+        self.paths: Dict[str, str] = {}             # lowercase rel → rel
+        self.by_base: Dict[str, List[str]] = {}     # lowercase basename → [rel]
+        self.by_stem: Dict[str, List[str]] = {}     # norm_stem → [rel]
+        self.by_dir: Dict[str, List[str]] = {}      # lowercase dir → [rel]
+        self.count = 0
+        self.truncated = False
+        self.used: set = set()                      # rels attached to some record
+
+    def build(self) -> "MediaIndex":
+        for dirpath, dirnames, filenames in os.walk(self.root):
+            dirnames[:] = sorted(d for d in dirnames if d.lower() not in MEDIA_SKIP_DIRS and not is_qa_dir(d)
+                                 and not SKIP_NAME_RE.search(d) and not d.startswith("."))
+            for fn in filenames:
+                ext = os.path.splitext(fn)[1].lower()
+                if ext not in IMAGE_EXT and ext not in VIDEO_EXT:
+                    continue
+                if SKIP_NAME_RE.search(fn) or fn.startswith("."):
+                    continue
+                p = Path(dirpath) / fn
+                if p.is_symlink():
+                    continue
+                rel = str(p.relative_to(self.root)).replace(os.sep, "/")
+                self.paths[rel.lower()] = rel
+                self.by_base.setdefault(fn.lower(), []).append(rel)
+                stem = norm_stem(fn)
+                if len(stem) >= 4:
+                    self.by_stem.setdefault(stem, []).append(rel)
+                self.by_dir.setdefault(os.path.dirname(rel).lower(), []).append(rel)
+                self.count += 1
+                if self.count >= MEDIA_INDEX_MAX:
+                    self.truncated = True
+                    return self
+        for lst in self.by_stem.values():
+            lst.sort()
+        return self
+
+    @staticmethod
+    def kind(rel: str) -> Optional[str]:
+        ext = os.path.splitext(rel)[1].lower()
+        return "image" if ext in IMAGE_EXT else "video" if ext in VIDEO_EXT else None
+
+    def resolve(self, value: Any) -> Optional[str]:
+        """A path / URL / `/static/...` reference → relative path of an existing media file, else None."""
+        if not isinstance(value, str) or not value.strip():
+            return None
+        v = value.strip()
+        if re.match(r"^[a-z][a-z0-9+.-]*:", v, re.I):
+            if not v.lower().startswith(("http://", "https://")):
+                return None
+            rest = v.split("://", 1)[1]
+            v = rest.split("/", 1)[1] if "/" in rest else ""
+        v = v.split("?", 1)[0].split("#", 1)[0].replace("\\", "/")
+        try:
+            v = unquote(v)
+        except Exception:
+            pass
+        v = v.lstrip("/")
+        if not v or self.kind(v) is None:
+            return None
+        for c in (v, "static/" + v, re.sub(r"^static/", "", v)):
+            hit = self.paths.get(c.lower())
+            if hit:
+                return hit
+        hits = self.by_base.get(v.split("/")[-1].lower()) or []
+        return hits[0] if len(hits) == 1 else None
+
+    def stem_matches(self, stems: Iterable[str]) -> List[str]:
+        out: List[str] = []
+        for s in stems:
+            for rel in self.by_stem.get(s, []):
+                if rel not in out:
+                    out.append(rel)
+        return out
+
+    def beside(self, source_rel: str) -> List[str]:
+        """Images that sit beside a data file and share its stem (`config/foo.json` ↔ `config/foo.png`, `config/foo_2.jpg`)."""
+        d = os.path.dirname(source_rel).lower()
+        stem = norm_stem(os.path.basename(source_rel))
+        if len(stem) < 4:
+            return []
+        out: List[str] = []
+        for rel in self.by_dir.get(d, []):
+            s = norm_stem(os.path.basename(rel))
+            if s == stem or s.startswith(stem + "_"):
+                out.append(rel)
+        return sorted(out)
+
+    def unmatched_videos(self) -> List[str]:
+        """Example videos under videos/ that no record claimed (→ the Videos section)."""
+        out: List[str] = []
+        for rel in self.paths.values():
+            top = rel.split("/")[0].lower()
+            if top in VIDEO_DIRS and self.kind(rel) == "video" and rel not in self.used:
+                out.append(rel)
+        return sorted(out)
+
+    def poster_for(self, video_rel: str) -> Optional[str]:
+        """Still for a video: same path with an image extension, else the recipe
+        thumbnail, else a thumb-marked / same-directory image with the same stem."""
+        base = os.path.splitext(video_rel)[0].lower()
+        vdir = os.path.dirname(video_rel).lower()
+
+        def rank(cand: str) -> Tuple[int, str]:
+            name = os.path.splitext(os.path.basename(cand))[0]
+            if os.path.splitext(cand)[0].lower() == base:
+                return (0, cand)
+            if cand.lower().startswith(RECIPE_THUMB_DIR + "/"):
+                return (1, cand)
+            if THUMB_MARK_RE.search(name):
+                return (2, cand)
+            if os.path.dirname(cand).lower() == vdir:
+                return (3, cand)
+            return (4, cand)
+
+        images = [c for c in self.by_stem.get(norm_stem(os.path.basename(video_rel)), []) if self.kind(c) == "image"]
+        return min(images, key=rank) if images else None
+
+
+def _media_values(v: Any) -> List[Any]:
+    if isinstance(v, str):
+        return [v]
+    if isinstance(v, list):
+        out: List[Any] = []
+        for x in v:
+            out.extend(_media_values(x))
+        return out
+    if isinstance(v, dict):
+        for k in ("path", "url", "src", "file", "href", "video", "image", "poster"):
+            if isinstance(v.get(k), str):
+                return [v[k]]
+    return []
+
+
+def attach_media(out: Dict[str, Any], rec: Optional[Dict[str, Any]], stems: Iterable[str], index: MediaIndex, max_examples: int,
+                 stats: Dict[str, int], beside: Iterable[str] = (), section: str = "") -> None:
+    """Fill `thumb` + `examples` on a kept record.
+
+    Order of trust: fields on the record (thumb/preview/poster/… → thumb,
+    example(s)/video(s)/… → examples); then media files whose stem matches the
+    record's file / name (`data/reference_recipes/<stem>.jpg` is the preferred
+    thumb for recipes); then images sitting beside the record's source file.
+    """
+    thumb_cands: List[str] = []
+    others: List[str] = []
+    seen: set = set()
+
+    def add(rel: Optional[str], as_thumb: bool) -> None:
+        if not rel or rel in seen:
+            return
+        seen.add(rel)
+        if index.kind(rel) == "image" and as_thumb:
+            thumb_cands.append(rel)
+        else:
+            others.append(rel)
+
+    if rec:
+        for k in THUMB_KEYS:
+            for v in _media_values(rec.get(k)):
+                rel = index.resolve(v)
+                stats["refs"] += 1
+                if rel is None:
+                    stats["unresolved"] += 1
+                add(rel, True)
+        for k in EXAMPLE_KEYS:
+            for v in _media_values(rec.get(k)):
+                rel = index.resolve(v)
+                stats["refs"] += 1
+                if rel is None:
+                    stats["unresolved"] += 1
+                add(rel, False)
+    for rel in index.stem_matches(s for s in stems if s):
+        name = os.path.splitext(rel.split("/")[-1])[0]
+        in_recipe_dir = rel.lower().startswith(RECIPE_THUMB_DIR + "/")
+        add(rel, bool(THUMB_MARK_RE.search(name)) or (in_recipe_dir and section in ("recipes", "loras")))
+    for rel in beside:
+        add(rel, False)
+
+    def rank(rel: str) -> Tuple[int, int, str]:
+        return (0 if rel.lower().startswith(RECIPE_THUMB_DIR + "/") else 1, len(rel), rel)
+
+    images = [r for r in others if index.kind(r) == "image"]
+    videos = [r for r in others if index.kind(r) == "video"]
+    thumb = (sorted(thumb_cands, key=rank) or sorted(images, key=rank) or [None])[0]
+    examples: List[Dict[str, Any]] = []
+    for rel in videos:
+        poster = index.poster_for(rel)
+        examples.append({"path": rel, "kind": "video", "poster": poster if poster in seen or poster else None})
+    for rel in sorted(thumb_cands, key=rank) + sorted(images, key=rank):
+        if rel != thumb:
+            examples.append({"path": rel, "kind": "image"})
+    if thumb is None and videos:
+        thumb = next((e["poster"] for e in examples if e.get("poster")), None)
+    examples = examples[:max_examples]
+    out["thumb"] = thumb
+    out["examples"] = [{k: v for k, v in e.items() if v is not None} for e in examples]
+    for rel in [thumb] + [e["path"] for e in examples] + [e.get("poster") for e in examples]:
+        if rel:
+            index.used.add(rel)
+    if thumb:
+        stats["thumbs"] += 1
+    stats["examples"] += len(examples)
+    if thumb or examples:
+        stats["records"] += 1
+
+
+def video_record(rel: str, index: MediaIndex) -> Dict[str, Any]:
+    name = os.path.splitext(os.path.basename(rel))[0]
+    return {
+        "id": new_id("video"), "source": rel, "name": re.sub(r"[_\-]+", " ", name).strip() or name,
+        "path": rel, "kind": "video", "poster": index.poster_for(rel), "folder": os.path.dirname(rel),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Bundle assembly
 # ---------------------------------------------------------------------------
 
 class Bundle:
-    def __init__(self, root: Path, raw_budget: int = 8 * 1024 * 1024):
+    def __init__(self, root: Path, raw_budget: int = 8 * 1024 * 1024, media: Optional[MediaIndex] = None, max_examples: int = 6):
         self.root = root
-        self.data: Dict[str, Any] = {k: [] for k in SECTIONS}
+        self.data: Dict[str, Any] = {k: [] for k in SECTIONS + ("videos",)}
         self.raw: Dict[str, Any] = {}
         self.raw_budget = raw_budget
         self.raw_bytes = 0
+        self.media = media if media is not None else MediaIndex(root)
+        self.max_examples = max_examples
+        self.media_stats: Dict[str, int] = {"records": 0, "thumbs": 0, "examples": 0, "refs": 0, "unresolved": 0}
         self.skipped: List[Dict[str, str]] = []
         self.digest: List[Dict[str, Any]] = []
         self.lora_index: Dict[str, Dict[str, Any]] = {}
@@ -1032,18 +1311,33 @@ class Bundle:
             cur["source"] += " | " + card["source"]
         if MODEL_FILE_RE.search(card["file"]) and not MODEL_FILE_RE.search(cur["file"]):
             cur["file"] = card["file"]
+        if card.get("thumb") and (not cur.get("thumb") or prefer):
+            cur["thumb"] = card["thumb"]
+        have = {e["path"] for e in cur.get("examples", [])}
+        for e in card.get("examples", []):
+            if e["path"] not in have and len(cur.setdefault("examples", [])) < self.max_examples:
+                cur["examples"].append(e)
+                have.add(e["path"])
 
     def add_workflow(self, wf: Dict[str, Any]) -> None:
         """De-duplicate identical workflows (the tree has .bak copies and the
         same graph embedded in JS); keep the best-described copy."""
         sig = json.dumps(wf["workflow"], sort_keys=True)[:4000] + str(wf["nodeCount"])
-        score = (0 if "#offset_" in wf["name"] else 2) + (1 if wf.get("notes") else 0) + (1 if wf.get("tags") else 0)
+        score = (0 if "#offset_" in wf["name"] else 2) + (1 if wf.get("notes") else 0) + (1 if wf.get("tags") else 0) + (1 if wf.get("thumb") else 0)
         cur = self.workflow_sigs.get(sig)
         if cur is None:
             self.workflow_sigs[sig] = (score, wf)
             self.data["workflows"].append(wf)
             return
-        if score > cur[0]:
+        keep, drop = (wf, cur[1]) if score > cur[0] else (cur[1], wf)
+        # visuals from either copy survive the de-dupe
+        if not keep.get("thumb") and drop.get("thumb"):
+            keep["thumb"] = drop["thumb"]
+        have = {e["path"] for e in keep.get("examples", [])}
+        for e in drop.get("examples", []):
+            if e["path"] not in have and len(keep.setdefault("examples", [])) < self.max_examples:
+                keep["examples"].append(e)
+        if keep is wf:
             idx = self.data["workflows"].index(cur[1])
             self.data["workflows"][idx] = wf
             self.workflow_sigs[sig] = (score, wf)
@@ -1053,34 +1347,51 @@ class Bundle:
         counts: Dict[str, int] = {}
         unknown: List[Tuple[Dict[str, Any], str]] = []
         lora_prefer = hint == "loras"
-        for rec, sub in iter_records(data, rel, hint):
+        source_rel = rel.split("#")[0].split("::")[0]
+        file_stem = norm_stem(source_rel)
+        records = list(iter_records(data, rel, hint))
+        # images beside the source file belong to it only when it describes ONE thing;
+        # a 25-record part-docs file must not spray its neighbour onto every card
+        beside = self.media.beside(source_rel) if len(records) <= 1 else []
+        for rec, sub in records:
             section = record_kind(rec, hint)
             out: Optional[Dict[str, Any]] = None
+            media_kw = {"index": self.media, "max_examples": self.max_examples, "stats": self.media_stats, "beside": beside, "section": section}
             if section == "copyCards":
                 out = to_copy_card(rec, sub)
+                if out:
+                    attach_media(out, rec, [slug_stem(out["title"])], **media_kw)
             elif section == "recipes":
                 out = to_recipe(rec, sub)
-                # a recipe about a LoRA file also feeds the LoRA Lab (trigger words)
+                stems = [norm_stem(l["file"]) for l in out["loras"]] + [slug_stem(out["name"])]
+                attach_media(out, rec, stems, **media_kw)
+                # a recipe about a LoRA file also feeds the LoRA Lab (trigger words + the same visuals)
                 for f in lora_files_in(rec):
                     card = to_lora(dict(rec, file=f), sub)
                     if card:
+                        card["thumb"], card["examples"] = out["thumb"], list(out["examples"])
                         self.add_lora(card, prefer=False)
             elif section == "loras":
                 out = to_lora(rec, sub)
                 if out:
+                    attach_media(out, rec, [norm_stem(out["file"]), slug_stem(out.get("name"))], **media_kw)
                     self.add_lora(out, prefer=lora_prefer)
                     counts["loras"] = counts.get("loras", 0) + 1
                     out = None
             elif section == "workflows":
                 out = to_workflow(rec, sub)
                 if out:
+                    wf_rec = rec if out["workflow"] is not rec else None
+                    attach_media(out, wf_rec, [file_stem if out["workflow"] is rec else slug_stem(out["name"])], **media_kw)
                     self.add_workflow(out)
                     counts["workflows"] = counts.get("workflows", 0) + 1
                     out = None
             elif section == "presets":
                 out = to_preset(rec, sub)
+                attach_media(out, rec, [slug_stem(out["name"])], **media_kw)
             elif section == "characters":
                 out = to_character(rec, sub)
+                attach_media(out, rec, [slug_stem(out["name"])] + [norm_stem(f) for f in out["loras"]], **media_kw)
             elif section == "assets":
                 out = to_asset(rec, sub)
             if out is not None:
@@ -1106,10 +1417,16 @@ class Bundle:
             self.raw[rel] = entry
         self.digest.append({"source": rel, "kind": kind, "shape": shape(data), "classified": counts, "unclassified": len(unknown)})
 
+    def finish_videos(self) -> None:
+        """Example videos under videos/ that no record claimed become the Videos section."""
+        self.data["videos"] = [video_record(rel, self.media) for rel in self.media.unmatched_videos()]
+
     def to_json(self, host: Optional[str]) -> Dict[str, Any]:
         counts = {k: len(v) for k, v in self.data.items()}
         counts["raw"] = len(self.raw)
         counts["skipped"] = len(self.skipped)
+        counts["visuals"] = sum(1 for k in SECTIONS if k != "assets" for r in self.data[k] if r.get("thumb") or r.get("examples"))
+        counts["mediaFiles"] = self.media.count
         out: Dict[str, Any] = {
             "schema": SCHEMA, "version": SCHEMA_VERSION,
             "exportedAt": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
@@ -1146,8 +1463,13 @@ def walk(root: Path, max_bytes: int, include_dirs: set) -> Iterable[Path]:
             yield p
 
 
-def export(root: Path, max_mb: float, raw_all: bool, raw_max_kb: int, include_dirs: set, verbose: bool, raw_total_mb: float = 8.0) -> Bundle:
-    bundle = Bundle(root, raw_budget=int(raw_total_mb * 1024 * 1024))
+def export(root: Path, max_mb: float, raw_all: bool, raw_max_kb: int, include_dirs: set, verbose: bool, raw_total_mb: float = 8.0,
+           max_examples: int = 6) -> Bundle:
+    t_media = time.time()
+    media = MediaIndex(root).build()
+    if verbose:
+        log("  indexed %d media files (%.0f ms)%s" % (media.count, (time.time() - t_media) * 1000, " — index cap reached" if media.truncated else ""))
+    bundle = Bundle(root, raw_budget=int(raw_total_mb * 1024 * 1024), media=media, max_examples=max_examples)
     max_bytes = int(max_mb * 1024 * 1024)
     raw_max = raw_max_kb * 1024
     for p in walk(root, max_bytes, include_dirs):
@@ -1194,6 +1516,7 @@ def export(root: Path, max_mb: float, raw_all: bool, raw_max_kb: int, include_di
             continue
         if verbose:
             log("  read %s (%.0f ms)" % (rel, (time.time() - t0) * 1000))
+    bundle.finish_videos()
     return bundle
 
 
@@ -1257,7 +1580,42 @@ def write_outputs(result: Dict[str, Any], digest: str, dry_run: bool) -> Tuple[P
 # --serve: plain http.server with CORS, tailnet-facing, no directory escapes
 # ---------------------------------------------------------------------------
 
+MEDIA_ROUTE = "/media/"
+MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif",
+               ".avif": "image/avif", ".bmp": "image/bmp", ".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime",
+               ".webm": "video/webm", ".mkv": "video/x-matroska"}
+
+
+def resolve_media_request(media_root: Optional[Path], url_path: str) -> Optional[Path]:
+    """`/media/<rel>` → file under media_root, or None. Jailed: the resolved real
+    path must stay inside the root, only image/video extensions are served, and
+    hidden / backup / QA-tree names are refused. Nothing else is reachable."""
+    if media_root is None or not url_path.startswith(MEDIA_ROUTE):
+        return None
+    rel = unquote(url_path[len(MEDIA_ROUTE):].split("?", 1)[0])
+    if not rel or "\\" in rel or "\x00" in rel:
+        return None
+    parts = rel.split("/")
+    if any(p in ("", ".", "..") or p.startswith(".") or SKIP_NAME_RE.search(p) for p in parts):
+        return None
+    # the same trees the index skips (QA / backups / caches) are not reachable either
+    if any(p.lower() in MEDIA_SKIP_DIRS or is_qa_dir(p) for p in parts[:-1]):
+        return None
+    if os.path.splitext(parts[-1])[1].lower() not in MEDIA_TYPES:
+        return None
+    root_real = os.path.realpath(str(media_root))
+    target = os.path.realpath(os.path.join(root_real, *parts))
+    if os.path.commonpath([root_real, target]) != root_real:
+        return None
+    p = Path(target)
+    if not p.is_file():
+        return None
+    return p
+
+
 class ContentHandler(SimpleHTTPRequestHandler):
+    media_root: Optional[Path] = None
+
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
@@ -1269,20 +1627,89 @@ class ContentHandler(SimpleHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
+    def do_HEAD(self) -> None:
+        if self.path.startswith(MEDIA_ROUTE):
+            self._media(head=True)
+        else:
+            super().do_HEAD()
+
+    def do_GET(self) -> None:
+        if self.path.startswith(MEDIA_ROUTE):
+            self._media(head=False)
+        else:
+            super().do_GET()
+
+    def _media(self, head: bool) -> None:
+        """Read-only media file with HTTP range support (Safari needs 206 for <video>)."""
+        p = resolve_media_request(self.media_root, self.path)
+        if p is None:
+            self.send_error(404, "Not found")
+            return
+        size = p.stat().st_size
+        ctype = MEDIA_TYPES[p.suffix.lower()]
+        start, end = 0, size - 1
+        rng = self.headers.get("Range")
+        partial_resp = False
+        if rng and rng.startswith("bytes="):
+            m = re.match(r"bytes=(\d*)-(\d*)$", rng.strip())
+            if m and (m.group(1) or m.group(2)):
+                if m.group(1):
+                    start = int(m.group(1))
+                    end = int(m.group(2)) if m.group(2) else size - 1
+                else:  # suffix range: last N bytes
+                    start = max(0, size - int(m.group(2)))
+                end = min(end, size - 1)
+                if start > end or start >= size:
+                    self.send_response(416)
+                    self.send_header("Content-Range", "bytes */%d" % size)
+                    self.end_headers()
+                    return
+                partial_resp = True
+        length = end - start + 1
+        self.send_response(206 if partial_resp else 200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(length))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if partial_resp:
+            self.send_header("Content-Range", "bytes %d-%d/%d" % (start, end, size))
+        self.end_headers()
+        if head:
+            return
+        with open(str(p), "rb") as f:
+            f.seek(start)
+            remaining = length
+            while remaining > 0:
+                chunk = f.read(min(1 << 16, remaining))
+                if not chunk:
+                    break
+                try:
+                    self.wfile.write(chunk)
+                except (BrokenPipeError, ConnectionResetError):
+                    return
+                remaining -= len(chunk)
+
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stdout.write("%s %s %s\n" % (time.strftime("%H:%M:%S"), self.client_address[0], fmt % args))
         sys.stdout.flush()
 
 
-def serve(port: int) -> None:
+def make_server(port: int, media_root: Optional[Path], host: str = "0.0.0.0") -> ThreadingHTTPServer:
+    handler_cls = type("BoundContentHandler", (ContentHandler,), {"media_root": media_root})
+    handler = partial(handler_cls, directory=str(OUT_DIR))
+    return ThreadingHTTPServer((host, port), handler)
+
+
+def serve(port: int, media_root: Optional[Path] = None) -> None:
     OUT_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     if not (OUT_DIR / "bundle.json").exists():
         log("warning: %s/bundle.json does not exist yet — run the export first" % OUT_DIR)
-    handler = partial(ContentHandler, directory=str(OUT_DIR))
-    httpd = ThreadingHTTPServer(("0.0.0.0", port), handler)
+    httpd = make_server(port, media_root)
     ip = tailnet_ip()
     print("Serving %s on 0.0.0.0:%d (CORS *, no-store)" % (OUT_DIR, port))
     print("  phone URL: http://%s:%d/bundle.json" % (ip or "<this-mac-tailnet-ip>", port))
+    if media_root is not None:
+        print("  media:     http://%s:%d/media/<path>  →  %s (read-only, images/videos only, jailed)" % (ip or "<this-mac-tailnet-ip>", port, media_root))
     print("  Ctrl-C to stop")
     try:
         httpd.serve_forever()
@@ -1297,11 +1724,12 @@ def serve(port: int) -> None:
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", default=str(DEFAULT_ROOT), help="Video Studio tree (default: %(default)s)")
-    ap.add_argument("--serve", action="store_true", help="serve ~/comfy-mobile-content on 0.0.0.0:PORT and exit on Ctrl-C")
+    ap.add_argument("--serve", action="store_true", help="serve ~/comfy-mobile-content (+ /media/ from --root, read-only) on 0.0.0.0:PORT; Ctrl-C to stop")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT, help="port for --serve (default: %(default)s)")
     ap.add_argument("--max-file-mb", type=float, default=25.0, help="skip data files bigger than this (default: %(default)s)")
     ap.add_argument("--raw-max-kb", type=int, default=256, help="per-source cap for verbatim `raw` data (default: %(default)s)")
     ap.add_argument("--raw-total-mb", type=float, default=8.0, help="total budget for verbatim `raw` data; beyond it only shapes are kept (default: %(default)s)")
+    ap.add_argument("--max-examples", type=int, default=6, help="example images/videos kept per record (default: %(default)s)")
     ap.add_argument("--raw-all", action="store_true", help="keep every parsed source under `raw`, not just unclassified ones")
     ap.add_argument("--include-dir", action="append", default=[], help="also descend into a normally-skipped dir name (e.g. jobs)")
     ap.add_argument("--dry-run", action="store_true", help="print the summary/digest, write nothing")
@@ -1309,17 +1737,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("-v", "--verbose", action="store_true", help="log every file read")
     args = ap.parse_args(argv)
 
-    if args.serve:
-        serve(args.port)
-        return 0
-
     root = Path(os.path.expanduser(args.root)).resolve()
     if not root.is_dir():
         log("error: %s is not a directory" % root)
         return 2
 
+    if args.serve:
+        serve(args.port, media_root=root)
+        return 0
+
     t0 = time.time()
-    bundle = export(root, args.max_file_mb, args.raw_all, args.raw_max_kb, {d.lower() for d in args.include_dir}, args.verbose, args.raw_total_mb)
+    bundle = export(root, args.max_file_mb, args.raw_all, args.raw_max_kb, {d.lower() for d in args.include_dir}, args.verbose, args.raw_total_mb, args.max_examples)
     result = bundle.to_json(socket.gethostname())
     digest = format_digest(bundle, result)
     bundle_path, digest_path = write_outputs(result, digest, args.dry_run)
@@ -1333,6 +1761,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     print("  presets     %d" % result["counts"]["presets"])
     print("  characters  %d" % result["counts"]["characters"])
     print("  assets      %d" % result["counts"]["assets"])
+    print("  videos      %d  (unmatched example clips under videos/)" % result["counts"]["videos"])
+    ms = bundle.media_stats
+    print("  visuals     %d records  (thumbs %d, examples %d; %d media files indexed, %d of %d field refs unresolved)"
+          % (result["counts"]["visuals"], ms["thumbs"], ms["examples"], result["counts"]["mediaFiles"], ms["unresolved"], ms["refs"]))
     with_data = sum(1 for r in result["raw"].values() if r.get("data") is not None)
     print("  raw sources %d  (%d with data, %.1f MB; the rest shape-only) · skipped %d · %d sources read · %.1f s"
           % (result["counts"]["raw"], with_data, bundle.raw_bytes / 1024 / 1024, result["counts"]["skipped"], len(bundle.digest), time.time() - t0))
