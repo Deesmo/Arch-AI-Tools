@@ -1010,7 +1010,10 @@ MEDIA_SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "env"
 MEDIA_QA_DIRS = {"qc", "reviews", "evidence", "audits", "tests", "tmp_claude", "report_assets", "mobile-ui-shots", "h3_recipe_guard", "output", "tmp"}
 MEDIA_QA_DIR_RE = re.compile(r"^verify-\d{6,}", re.I)
 # Known homes in the Video Studio tree (relative, forward slashes)
-RECIPE_THUMB_DIR = "data/reference_recipes"       # 590 .jpg — one per recipe, matched by file stem
+RECIPE_THUMB_DIR = "data/reference_recipes"       # 590 .jpg: `<jobId>_start.jpg` + `<jobId>_scene_NN.jpg` beside `<jobId>.json`
+REFERENCE_RECIPE_RE = re.compile(r"^data/reference_recipes/([^/]+)\.json$", re.I)
+# A short, human name for a job card (never prompt text); falls back to the job id.
+K_SHORT_NAME = ("name", "title", "label", "display_name", "displayName", "scene_name", "recipe_name", "project_name", "project", "job_name")
 VIDEO_DIRS = ("videos",)                           # videos/ + videos/burst — example .mp4s
 THUMB_KEYS = ("thumb", "thumbnail", "thumb_url", "thumbnail_url", "thumb_path", "preview", "preview_url", "preview_image", "preview_path",
               "poster", "poster_url", "cover", "cover_image", "cover_url", "image", "image_url", "image_path", "example_image", "icon",
@@ -1040,6 +1043,17 @@ def slug_stem(name: Any) -> Optional[str]:
         return None
     s = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
     return s if len(s) >= 4 else None
+
+
+def short_name(rec: Dict[str, Any], fallback: str) -> str:
+    """A short label field (≤ 80 chars, one line) or the fallback — never a prompt."""
+    for k in K_SHORT_NAME:
+        v = rec.get(k)
+        if isinstance(v, (str, int)) and str(v).strip():
+            t = " ".join(str(v).split())
+            if len(t) <= 80:
+                return t
+    return fallback
 
 
 def is_qa_dir(name: str) -> bool:
@@ -1138,6 +1152,24 @@ class MediaIndex:
             if s == stem or s.startswith(stem + "_"):
                 out.append(rel)
         return sorted(out)
+
+    def job_media(self, job_id: str, rel_dir: str) -> Tuple[Optional[str], List[str]]:
+        """`<jobId>_start.<img>` and `<jobId>_scene_NN.<img>` (sorted) beside a job json."""
+        prefix = job_id.lower() + "_"
+        start: Optional[str] = None
+        scenes: List[Tuple[Tuple[int, ...], str]] = []
+        for rel in self.by_dir.get(rel_dir.lower(), []):
+            low = os.path.basename(rel).lower()
+            if not low.startswith(prefix) or self.kind(rel) != "image":
+                continue
+            role = os.path.splitext(low)[0][len(prefix):]
+            if role == "start":
+                if start is None or rel < start:
+                    start = rel
+            elif role.startswith("scene"):
+                scenes.append((tuple(int(n) for n in re.findall(r"\d+", role)), rel))
+        scenes.sort()
+        return start, [rel for _, rel in scenes]
 
     def unmatched_videos(self) -> List[str]:
         """Example videos under videos/ that no record claimed (→ the Videos section)."""
@@ -1342,12 +1374,45 @@ class Bundle:
             self.data["workflows"][idx] = wf
             self.workflow_sigs[sig] = (score, wf)
 
+    def ingest_reference_recipe(self, rel: str, job_id: str, data: Any) -> None:
+        """`data/reference_recipes/<jobId>.json` is one job: ONE card per file.
+
+        The sidecar holds 6–20 keyframe records that carry `created_at`; the
+        generic path would split them and drop every one as job-like, so no
+        card appeared and the sibling `<jobId>_start.jpg` / `_scene_NN.jpg`
+        never attached. Thumb = `_start`, examples = the scenes, sorted, capped.
+        """
+        top = data if isinstance(data, dict) else {}
+        card = to_recipe(top, rel)
+        card["name"] = short_name(top, job_id)
+        card["kind"] = card.get("kind") or "reference"
+        if "reference" not in card["tags"]:
+            card["tags"].append("reference")
+        frames = sum(len(v) for v in (top.values() if top else [data]) if isinstance(v, list) and v and all(isinstance(x, dict) for x in v))
+        if frames:
+            card["notes"] = ("%s · " % card["notes"] if card.get("notes") else "") + "%d keyframes" % frames
+        start, scenes = self.media.job_media(job_id, RECIPE_THUMB_DIR)
+        card["thumb"] = start
+        card["examples"] = [{"path": p, "kind": "image"} for p in scenes[:self.max_examples]]
+        self.media.used.update([p for p in [start] + scenes[:self.max_examples] if p])
+        if start:
+            self.media_stats["thumbs"] += 1
+        self.media_stats["examples"] += len(card["examples"])
+        if start or card["examples"]:
+            self.media_stats["records"] += 1
+        self.data["recipes"].append(card)
+        self.digest.append({"source": rel, "kind": "json", "shape": shape(data), "classified": {"recipes": 1}, "unclassified": 0})
+
     def ingest(self, rel: str, kind: str, data: Any, hint: Optional[str], raw_all: bool, raw_max_bytes: int) -> None:
         data = redact(data)
         counts: Dict[str, int] = {}
         unknown: List[Tuple[Dict[str, Any], str]] = []
         lora_prefer = hint == "loras"
         source_rel = rel.split("#")[0].split("::")[0]
+        job = REFERENCE_RECIPE_RE.match(source_rel)
+        if job and kind == "json":
+            self.ingest_reference_recipe(rel, job.group(1), data)
+            return
         file_stem = norm_stem(source_rel)
         records = list(iter_records(data, rel, hint))
         # images beside the source file belong to it only when it describes ONE thing;

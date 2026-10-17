@@ -67,6 +67,16 @@ def build_tree(root: Path) -> None:
     (root / "data" / "reference_recipes" / "part_01.jpg").write_bytes(tiny_png())   # recipe thumb by stem (wins over other stills)
     (root / "data" / "reference_recipes" / "part_03.jpg").write_bytes(tiny_png())   # the only image for part_03
     (root / "data" / "reference_recipes" / "orphan_recipe.jpg").write_bytes(tiny_png())  # no recipe → nowhere
+    # the live layout: `<jobId>.json` sidecar (6–20 keyframe records with created_at) + `<jobId>_start.jpg` + `<jobId>_scene_NN.jpg`
+    job = {"job_id": "job_7f3a", "name": "Harbor dawn", "status": "done", "created_at": "2026-07-01T06:00:00", "engine": "wan",
+           "keyframes": [{"scene": i, "prompt": "keyframe %d" % i, "created_at": "2026-07-01T06:%02d:00" % i, "steps": 20, "cfg": 3.5} for i in range(1, 9)]}
+    (root / "data" / "reference_recipes" / "job_7f3a.json").write_text(json.dumps(job))
+    (root / "data" / "reference_recipes" / "job_7f3a_start.jpg").write_bytes(tiny_png())
+    (root / "data" / "reference_recipes" / "job_7f3a_scene_10.jpg").write_bytes(tiny_png())    # numeric order, not lexical
+    (root / "data" / "reference_recipes" / "job_7f3a_scene_01.jpg").write_bytes(tiny_png())
+    (root / "data" / "reference_recipes" / "job_7f3a_scene_02.jpg").write_bytes(tiny_png())
+    (root / "data" / "reference_recipes" / "job_0c21.json").write_text(json.dumps(                # no name field, no images → id, placeholder
+        [{"scene": i, "prompt": "kf %d" % i, "created_at": "2026-07-02"} for i in range(6)]))
     (root / "static" / "thumbs" / "part_01.jpg").write_bytes(tiny_png())              # same stem as the LoRA file
     (root / "static" / "thumbs" / "part_01_thumb.png").write_bytes(tiny_png())        # thumb-marked still → example
     (root / "videos" / "part_01.mp4").write_bytes(tiny_mp4())                         # stem → recipe/LoRA example
@@ -204,7 +214,7 @@ class TightClassifier(unittest.TestCase):
 
     def test_real_content_is_classified(self) -> None:
         c = self.result["counts"]
-        self.assertEqual(c["recipes"], 25, self.sources("recipes"))
+        self.assertEqual(c["recipes"], 25 + 2, self.sources("recipes"))         # 25 part docs + 2 reference-recipe jobs
         self.assertEqual(c["copyCards"], 3, self.sources("copyCards"))
         self.assertEqual(c["presets"], 2, self.sources("presets"))
         self.assertEqual(c["characters"], 2, self.sources("characters"))
@@ -298,7 +308,7 @@ class TightClassifier(unittest.TestCase):
             self.assertFalse(p.startswith(qa), "%s surfaced QA media %s" % (section, p))
         self.assertFalse(any(rel.startswith(qa) for rel in self.bundle.media.paths.values()))
         # 12 QA dirs × 3 files are not indexed; the counted files are exactly the real ones
-        self.assertEqual(self.result["counts"]["mediaFiles"], 27)
+        self.assertEqual(self.result["counts"]["mediaFiles"], 31)
         # a QA still with a matching stem never beats the real one
         self.assertEqual(self.by_file("copyCards", "title", "Golden hour")["thumb"], "config/golden_hour.png")
 
@@ -319,6 +329,36 @@ class TightClassifier(unittest.TestCase):
         card = self.by_file("loras", "file", "part_01.safetensors")
         self.assertEqual(card["thumb"], "data/reference_recipes/part_01.jpg")
         self.assertIn("videos/part_01.mp4", [e["path"] for e in card["examples"]])
+
+    def test_reference_recipe_job_is_one_card_with_start_thumb_and_scene_examples(self) -> None:
+        job = self.by_file("recipes", "source", "data/reference_recipes/job_7f3a.json")
+        self.assertEqual(job["name"], "Harbor dawn")                                 # short name field, never the prompt
+        self.assertEqual(job["thumb"], "data/reference_recipes/job_7f3a_start.jpg")
+        self.assertEqual([e["path"] for e in job["examples"]],
+                         ["data/reference_recipes/job_7f3a_scene_01.jpg", "data/reference_recipes/job_7f3a_scene_02.jpg",
+                          "data/reference_recipes/job_7f3a_scene_10.jpg"])
+        self.assertEqual(job["kind"], "reference")
+        self.assertIn("reference", job["tags"])
+        self.assertIn("8 keyframes", job["notes"])
+        self.assertEqual(job["engine"], "wan")
+        # not split: no keyframe became its own record anywhere, and nothing landed in raw
+        self.assertEqual(sum(1 for r in self.result["recipes"] if r["source"].startswith("data/reference_recipes/job_7f3a")), 1)
+        self.assertNotIn("data/reference_recipes/job_7f3a.json", self.result["raw"])
+        for section in ex.SECTIONS:
+            for r in self.result[section]:
+                self.assertFalse(r["source"].startswith("data/reference_recipes/job_7f3a.json."), r["source"])
+        # a job without a name field or images: id as title, placeholder in the app
+        bare = self.by_file("recipes", "source", "data/reference_recipes/job_0c21.json")
+        self.assertEqual(bare["name"], "job_0c21")
+        self.assertIsNone(bare["thumb"])
+        self.assertEqual(bare["examples"], [])
+        self.assertIn("6 keyframes", bare["notes"])
+        # why the special path exists: the tight classifier (rightly) drops keyframe rows as job-like
+        self.assertEqual(ex.record_kind({"scene": 1, "prompt": "x", "created_at": "2026", "steps": 20, "cfg": 3.5}, "recipes"), "unknown")
+        # scene images are claimed: not loose, not attached to any other card
+        for section, p in self.all_media_paths():
+            if p.startswith("data/reference_recipes/job_7f3a"):
+                self.assertEqual(section, "recipes")
 
     def test_thumb_by_field_including_video_studio_urls(self) -> None:
         drone = self.by_file("loras", "file", "drone_v2.safetensors")

@@ -79,14 +79,22 @@ record. Order of trust, per record:
    `http://<mac>:8140/static/...` URLs — they are mapped back onto files in
    the tree. External URLs (Civitai etc.) are dropped and counted as
    unresolved.
-2. **Same file stem.** `data/reference_recipes/<stem>.jpg` is *the* recipe
-   thumbnail (590 of them in the live tree) and is preferred for recipes and
-   LoRA cards. Other same-stem files whose name carries a thumb marker
+2. **Same file stem.** Same-stem files whose name carries a thumb marker
    (`_thumb`, `_poster`, `_cover`, `_preview`, `_still`, `_ref`) become the
    thumb; remaining same-stem images and videos become examples.
 3. **Beside the source file** (`config/foo.json` ↔ `config/foo.png`,
    `config/foo_2.jpg`) — only when that file describes a single record, so a
    25-record part-docs file never sprays one still onto every card.
+
+**`data/reference_recipes/<jobId>.json`** is special: each sidecar is one
+job (6–20 keyframe records carrying `created_at`, which the tight classifier
+would otherwise drop as job-like). The exporter emits **one recipe card per
+file**, never splits it: title from a short name field (`name`, `title`,
+`label`, `display_name`, `scene_name`, …, ≤ 80 chars) or else the job id;
+thumb = sibling `<jobId>_start.jpg`; examples = sibling
+`<jobId>_scene_NN.jpg`, numerically sorted, capped. Tagged `reference`, with
+the keyframe count in the notes. This is the only path with a layout rule;
+every other file goes through the tight classifier unchanged.
 
 `videos/**` clips attach by stem to a workflow/recipe when the name matches;
 everything left over is listed in the **Videos** section (grouped by folder),
