@@ -13,7 +13,7 @@
  */
 
 export const CONTENT_SCHEMA = 'comfy-mobile-content' as const;
-export const CONTENT_SCHEMA_VERSION = 1;
+export const CONTENT_SCHEMA_VERSION = 2;
 
 /** Where the phone fetches the bundle from by default (Mac mini over Tailscale). */
 export const DEFAULT_CONTENT_SOURCE_URL = 'http://100.89.112.7:8152/bundle.json';
@@ -25,8 +25,24 @@ export interface Sourced {
   source: string;
 }
 
+/** One example image/video that lives inside the Video Studio tree on the Mac. */
+export interface MediaRef {
+  /** Path relative to the Video Studio root (served by the exporter at `/media/<path>`). */
+  path: string;
+  kind: 'image' | 'video';
+  /** Still frame for a video, relative path. */
+  poster?: string;
+  label?: string;
+}
+
+/** Optional visuals every card may carry. Paths are relative to the Video Studio root; never URLs. */
+export interface Visual {
+  thumb?: string;
+  examples: MediaRef[];
+}
+
 /** A reusable prompt snippet ("copy card" in Video Studio). */
-export interface CopyCard extends Sourced {
+export interface CopyCard extends Sourced, Visual {
   title: string;
   /** Positive prompt text to insert. */
   text: string;
@@ -47,7 +63,7 @@ export interface RecipeLoraRef {
  * Author recipe / "part": how a model author says their LoRA or checkpoint
  * should be used — trigger (trained) words plus recommended settings.
  */
-export interface StudioRecipe extends Sourced {
+export interface StudioRecipe extends Sourced, Visual {
   name: string;
   /** `trained_words` on Civitai parts. Injected into the prompt when applied. */
   triggerWords: string[];
@@ -67,7 +83,7 @@ export interface StudioRecipe extends Sourced {
 }
 
 /** Brad's LoRA "adapter card": rating + trigger words + notes for one file. */
-export interface LoraCard extends Sourced {
+export interface LoraCard extends Sourced, Visual {
   /** File name (basename). Matched case-insensitively against /models/loras. */
   file: string;
   name?: string;
@@ -89,7 +105,7 @@ export interface LoraCard extends Sourced {
 
 export type WorkflowFormat = 'ui' | 'api' | 'unknown';
 
-export interface BundledWorkflow extends Sourced {
+export interface BundledWorkflow extends Sourced, Visual {
   name: string;
   /** `ui` = LiteGraph JSON (opens in Graph mode); `api` = /prompt payload (run as-is). */
   format: WorkflowFormat;
@@ -101,7 +117,7 @@ export interface BundledWorkflow extends Sourced {
 }
 
 /** Saved Studio/Create settings ("preset"). */
-export interface ContentPreset extends Sourced {
+export interface ContentPreset extends Sourced, Visual {
   name: string;
   engine?: string;
   values: Record<string, unknown>;
@@ -111,13 +127,25 @@ export interface ContentPreset extends Sourced {
   tags: string[];
 }
 
-export interface CharacterCard extends Sourced {
+export interface CharacterCard extends Sourced, Visual {
   name: string;
   description?: string;
   triggerWords: string[];
   loras: string[];
   tags: string[];
   attributes: Record<string, unknown>;
+}
+
+/** An example clip under `videos/` that no card claimed — listed in the Videos section. */
+export interface BundledVideo extends Sourced {
+  name: string;
+  /** Relative path to the .mp4 inside the Video Studio tree. */
+  path: string;
+  kind: 'video';
+  /** Still frame, relative path. */
+  poster?: string;
+  /** Directory it lives in (`videos`, `videos/burst`). */
+  folder: string;
 }
 
 /** Asset list entry — names and metadata only, never media bytes. */
@@ -152,14 +180,17 @@ export interface ContentBundle {
   presets: ContentPreset[];
   characters: CharacterCard[];
   assets: AssetEntry[];
+  videos: BundledVideo[];
   raw: Record<string, RawEntry>;
   /** Files that were seen but skipped (too big, binary, unparsable) — paths only. */
   skipped: { source: string; reason: string }[];
   counts: Record<string, number>;
 }
 
-export type BundleSection = 'copyCards' | 'recipes' | 'loras' | 'workflows' | 'presets' | 'characters' | 'assets';
-export const BUNDLE_SECTIONS: BundleSection[] = ['copyCards', 'recipes', 'loras', 'workflows', 'presets', 'characters', 'assets'];
+export type BundleSection = 'copyCards' | 'recipes' | 'loras' | 'workflows' | 'presets' | 'characters' | 'assets' | 'videos';
+export const BUNDLE_SECTIONS: BundleSection[] = ['copyCards', 'recipes', 'loras', 'workflows', 'presets', 'characters', 'assets', 'videos'];
+/** Sections whose records carry `thumb` / `examples`. */
+export const VISUAL_SECTIONS = ['copyCards', 'recipes', 'loras', 'workflows', 'presets', 'characters'] as const;
 
 export function emptyBundle(): ContentBundle {
   return {
@@ -174,6 +205,7 @@ export function emptyBundle(): ContentBundle {
     presets: [],
     characters: [],
     assets: [],
+    videos: [],
     raw: {},
     skipped: [],
     counts: {},
@@ -233,6 +265,83 @@ function civitai(v: unknown): StudioRecipe['civitai'] {
   if (!isObj(v)) return undefined;
   const out = { modelId: v.modelId ?? v.model_id, versionId: v.versionId ?? v.version_id, url: optStr(v.url) } as NonNullable<StudioRecipe['civitai']>;
   return out.modelId !== undefined || out.versionId !== undefined || out.url ? out : undefined;
+}
+
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|avif|bmp)$/i;
+const VIDEO_EXT = /\.(mp4|m4v|mov|webm|mkv)$/i;
+
+/**
+ * A media path is kept only when it is a plain relative path inside the
+ * Video Studio tree: no scheme, no leading slash, no `..`, no backslashes.
+ */
+export function mediaPath(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const p = v.trim().replace(/^\.\//, '');
+  if (!p || p.length > 512) return undefined;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(p) || p.startsWith('/') || p.startsWith('\\') || p.includes('\\')) return undefined;
+  if (p.split('/').some((seg) => seg === '..' || seg === '')) return undefined;
+  if (!IMAGE_EXT.test(p) && !VIDEO_EXT.test(p)) return undefined;
+  return p;
+}
+
+export function mediaKind(path: string): MediaRef['kind'] | undefined {
+  if (IMAGE_EXT.test(path)) return 'image';
+  if (VIDEO_EXT.test(path)) return 'video';
+  return undefined;
+}
+
+function mediaRef(v: unknown): MediaRef | null {
+  const x = isObj(v) ? v : { path: v };
+  const path = mediaPath(x.path ?? x.file ?? x.src);
+  if (!path) return null;
+  const kind = mediaKind(path);
+  if (!kind) return null;
+  const poster = kind === 'video' ? mediaPath(x.poster ?? x.thumb) : undefined;
+  return { path, kind, poster: poster && mediaKind(poster) === 'image' ? poster : undefined, label: optStr(x.label) };
+}
+
+/** `thumb` + `examples` of a record; a thumb that is really a video becomes an example instead. */
+function visual(x: Record<string, unknown>): Visual {
+  const examples: MediaRef[] = [];
+  const seen = new Set<string>();
+  const push = (m: MediaRef | null) => {
+    if (m && !seen.has(m.path)) {
+      seen.add(m.path);
+      examples.push(m);
+    }
+  };
+  if (Array.isArray(x.examples)) x.examples.forEach((e) => push(mediaRef(e)));
+  let thumb = mediaPath(x.thumb ?? x.thumbnail);
+  if (thumb && mediaKind(thumb) !== 'image') {
+    push(mediaRef(thumb));
+    thumb = undefined;
+  }
+  if (!thumb) thumb = examples.find((e) => e.kind === 'image')?.path ?? examples.find((e) => e.poster)?.poster;
+  return { thumb, examples: examples.slice(0, 12) };
+}
+
+/**
+ * URL the phone loads a media path from: `/media/<path>` on the content server
+ * that served `bundle.json`. Returns null when there is no URL source (file import).
+ */
+export function contentMediaUrl(sourceUrl: string | null | undefined, path: string | undefined): string | null {
+  if (!sourceUrl || !path) return null;
+  try {
+    const u = new URL(sourceUrl);
+    const parts = u.pathname.split('/');
+    parts.pop();
+    const base = parts.join('/');
+    return `${u.origin}${base}/media/${path.split('/').map(encodeURIComponent).join('/')}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Number of records in a bundle that carry a thumb or at least one example. */
+export function countVisuals(b: ContentBundle): number {
+  let n = 0;
+  for (const k of VISUAL_SECTIONS) for (const r of b[k]) if (r.thumb || r.examples.length) n++;
+  return n;
 }
 
 function list<T>(v: unknown, map: (x: Record<string, unknown>, i: number) => T | null): T[] {
@@ -300,6 +409,7 @@ export function normaliseBundle(input: unknown): ContentBundle {
       category: optStr(x.category),
       tags: words(x.tags),
       notes: optStr(x.notes),
+      ...visual(x),
     };
   });
 
@@ -318,6 +428,7 @@ export function normaliseBundle(input: unknown): ContentBundle {
     civitai: civitai(x.civitai),
     notes: optStr(x.notes),
     tags: words(x.tags),
+    ...visual(x),
   }));
 
   b.loras = list(raw.loras, (x, i) => {
@@ -339,6 +450,7 @@ export function normaliseBundle(input: unknown): ContentBundle {
       tags: words(x.tags),
       civitai: civitai(x.civitai),
       extra: obj(x.extra),
+      ...visual(x),
     };
   });
 
@@ -356,6 +468,7 @@ export function normaliseBundle(input: unknown): ContentBundle {
       engine: optStr(x.engine),
       notes: optStr(x.notes),
       tags: words(x.tags),
+      ...visual(x),
     };
   });
 
@@ -369,6 +482,7 @@ export function normaliseBundle(input: unknown): ContentBundle {
     negativePrompt: optStr(x.negativePrompt),
     notes: optStr(x.notes),
     tags: words(x.tags),
+    ...visual(x),
   }));
 
   b.characters = list(raw.characters, (x, i) => ({
@@ -380,6 +494,7 @@ export function normaliseBundle(input: unknown): ContentBundle {
     loras: words(x.loras),
     tags: words(x.tags),
     attributes: obj(x.attributes),
+    ...visual(x),
   }));
 
   b.assets = list(raw.assets, (x, i) => ({
@@ -391,6 +506,22 @@ export function normaliseBundle(input: unknown): ContentBundle {
     tags: words(x.tags),
     meta: obj(x.meta),
   }));
+
+  b.videos = list(raw.videos, (x, i) => {
+    const path = mediaPath(x.path ?? x.file);
+    if (!path || mediaKind(path) !== 'video') return null;
+    const poster = mediaPath(x.poster);
+    const folder = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+    return {
+      id: idOf(x, 'video', i),
+      source: str(x.source, path),
+      name: str(x.name, path.slice(folder ? folder.length + 1 : 0).replace(/\.[a-z0-9]+$/i, '')),
+      path,
+      kind: 'video',
+      poster: poster && mediaKind(poster) === 'image' ? poster : undefined,
+      folder: optStr(x.folder) ?? folder,
+    };
+  });
 
   if (isObj(raw.raw)) {
     for (const [k, v] of Object.entries(raw.raw)) {
@@ -408,6 +539,7 @@ export function countBundle(b: ContentBundle): Record<string, number> {
   for (const k of BUNDLE_SECTIONS) counts[k] = b[k].length;
   counts.raw = Object.keys(b.raw).length;
   counts.skipped = b.skipped.length;
+  counts.visuals = countVisuals(b);
   return counts;
 }
 

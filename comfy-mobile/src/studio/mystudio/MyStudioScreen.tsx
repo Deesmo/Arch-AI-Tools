@@ -3,7 +3,7 @@
  *
  *   header      refresh · Source (URL / file / forget)
  *   status      what is loaded, from where, how old — or an empty state
- *   sections    Copy cards · Recipes · LoRA Lab · Workflows · Presets · More
+ *   sections    Copy cards · Recipes · LoRA Lab · Workflows · Presets · Videos · More
  *   search      filters the open section
  *
  * Data: `useContentStore` (bundle cached on-device). Actions: `useMyStudio`.
@@ -12,11 +12,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { bundleIsEmpty, useContentStore } from '../../core';
 import { Icon } from '../../shared/Icon';
 import { SourceSheet } from './SourceSheet';
+import { VideosSection } from './Media';
 import { CopyCardsSection, LoraLabSection, MoreSection, PresetsSection, RecipesSection, WorkflowsSection } from './sections';
 import { useMyStudio } from './useMyStudio';
 import './mystudio.css';
 
-type Section = 'copy' | 'recipes' | 'loras' | 'workflows' | 'presets' | 'more';
+type Section = 'copy' | 'recipes' | 'loras' | 'workflows' | 'presets' | 'videos' | 'more';
 
 const SECTIONS: { id: Section; label: string; count: (c: Record<string, number>) => number }[] = [
   { id: 'copy', label: 'Copy cards', count: (c) => c.copyCards ?? 0 },
@@ -24,6 +25,7 @@ const SECTIONS: { id: Section; label: string; count: (c: Record<string, number>)
   { id: 'loras', label: 'LoRA Lab', count: (c) => c.loras ?? 0 },
   { id: 'workflows', label: 'Workflows', count: (c) => c.workflows ?? 0 },
   { id: 'presets', label: 'Presets', count: (c) => c.presets ?? 0 },
+  { id: 'videos', label: 'Videos', count: (c) => c.videos ?? 0 },
   { id: 'more', label: 'More', count: (c) => (c.characters ?? 0) + (c.assets ?? 0) + (c.raw ?? 0) },
 ];
 
@@ -62,7 +64,8 @@ export function MyStudioScreen() {
 
   const counts = bundle?.counts ?? {};
   const empty = bundleIsEmpty(bundle);
-  const visible = useMemo(() => SECTIONS.filter((s) => s.id === 'more' ? s.count(counts) > 0 : true), [counts]);
+  const visible = useMemo(() => SECTIONS.filter((s) => (s.id === 'more' || s.id === 'videos' ? s.count(counts) > 0 : true)), [counts]);
+  const previews = (counts.visuals ?? 0) + (counts.videos ?? 0);
 
   return (
     <div className="screen">
@@ -106,6 +109,7 @@ export function MyStudioScreen() {
               <span className="ellipsis">
                 {origin === 'file' ? 'From file' : 'From Mac'} · {ago(loadedAt)}
                 {bundle?.exportedAt ? ` · exported ${new Date(bundle.exportedAt).toLocaleDateString()}` : ''}
+                {previews ? ` · ${previews} preview${previews === 1 ? '' : 's'}` : ''}
                 {error ? ` · refresh failed` : ''}
               </span>
               <Icon name="chevron" size={14} />
@@ -134,6 +138,7 @@ export function MyStudioScreen() {
             {bundle && section === 'loras' && <LoraLabSection bundle={bundle} q={q} actions={actions} />}
             {bundle && section === 'workflows' && <WorkflowsSection bundle={bundle} q={q} actions={actions} />}
             {bundle && section === 'presets' && <PresetsSection bundle={bundle} q={q} actions={actions} />}
+            {bundle && section === 'videos' && <VideosSection bundle={bundle} q={q} />}
             {bundle && section === 'more' && <MoreSection bundle={bundle} q={q} actions={actions} />}
           </>
         )}

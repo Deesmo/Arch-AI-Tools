@@ -1,11 +1,12 @@
 /**
- * The five My Studio lists. Each takes the search string + shared actions.
+ * The My Studio lists (Videos lives in Media.tsx). Each takes the search string + shared actions.
  * Labels use Brad's words: Copy cards, Recipes, LoRA Lab, Workflows, Presets.
  */
 import { useMemo, useState } from 'react';
-import { prettyName, summariseSettings, useContentStore, type BundledWorkflow, type ContentBundle, type CopyCard, type LoraIndexEntry, type StudioRecipe } from '../../core';
+import { prettyName, summariseSettings, useContentStore, type BundledWorkflow, type ContentBundle, type CopyCard, type LoraIndexEntry, type StudioRecipe, type Visual } from '../../core';
 import { Icon } from '../../shared/Icon';
 import { Sheet } from '../../shared/Sheet';
+import { ExamplesGrid, MediaSheet, Thumb, hasMedia } from './Media';
 import type { MyStudioActions } from './useMyStudio';
 
 const has = (hay: string | undefined | null, needle: string) => !!hay && hay.toLowerCase().includes(needle);
@@ -55,6 +56,7 @@ function Empty({ what, q }: { what: string; q: string }) {
 
 export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
   const [open, setOpen] = useState<CopyCard | null>(null);
+  const [media, setMedia] = useState<CopyCard | null>(null);
   const needle = q.toLowerCase();
   const items = useMemo(() => bundle.copyCards.filter((c) => anyHas([c.title, c.text, c.category, ...c.tags], needle)), [bundle, needle]);
   const groups = useMemo(() => {
@@ -76,6 +78,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
           <div className="card" style={{ padding: 0 }}>
             {cards.map((c) => (
               <div key={c.id} className="list-item ms-item" onClick={() => actions.insertCopy(c)}>
+                <Thumb visual={c} kind="Copy card" label={c.title} onOpen={() => setMedia(c)} />
                 <div className="title">
                   <div className="ms-item-title" onClick={(e) => { e.stopPropagation(); setOpen(c); }}>{c.title}</div>
                   <div className="ms-text">{c.text}</div>
@@ -102,6 +105,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
             </div>
           }
         >
+          {hasMedia(open) && <ExamplesGrid visual={open} />}
           <div className="card ms-pre">{open.text}</div>
           {open.negative && (
             <>
@@ -113,6 +117,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
           <p className="muted small mono">{open.source}</p>
         </Sheet>
       )}
+      {media && <MediaSheet title={media.title} visual={media} onClose={() => setMedia(null)} />}
     </>
   );
 }
@@ -121,6 +126,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
 
 export function RecipesSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
   const [open, setOpen] = useState<StudioRecipe | null>(null);
+  const [media, setMedia] = useState<StudioRecipe | null>(null);
   const needle = q.toLowerCase();
   const items = useMemo(
     () => bundle.recipes.filter((r) => anyHas([r.name, r.engine, r.baseModel, r.kind, r.notes, ...r.triggerWords, ...r.loras.map((l) => l.file), ...r.tags], needle)),
@@ -138,6 +144,7 @@ export function RecipesSection({ bundle, q, actions }: { bundle: ContentBundle; 
           const anyMissing = onServer.some((f) => !f) && r.loras.length > 0;
           return (
             <div key={r.id} className="list-item ms-item" onClick={() => setOpen(r)}>
+              <Thumb visual={r} kind="Recipe" label={prettyName(r.name)} onOpen={() => setMedia(r)} />
               <div className="title">
                 <div className="ms-item-title">
                   {prettyName(r.name)}
@@ -172,6 +179,7 @@ export function RecipesSection({ bundle, q, actions }: { bundle: ContentBundle; 
             </div>
           }
         >
+          {hasMedia(open) && <ExamplesGrid visual={open} />}
           <Words words={open.triggerWords} />
           {open.loras.length > 0 && (
             <>
@@ -215,8 +223,15 @@ export function RecipesSection({ bundle, q, actions }: { bundle: ContentBundle; 
           </p>
         </Sheet>
       )}
+      {media && <MediaSheet title={prettyName(media.name)} visual={media} onClose={() => setMedia(null)} />}
     </>
   );
+}
+
+/** A LoRA's visuals: its own card first, else the first recipe about it that has any. */
+function loraVisual(e: LoraIndexEntry): Visual | undefined {
+  if (hasMedia(e.card)) return e.card;
+  return e.recipes.find(hasMedia) ?? e.card;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +241,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
   const [onlyRated, setOnlyRated] = useState(false);
   const [choose, setChoose] = useState<string | null>(null);
   const [open, setOpen] = useState<LoraIndexEntry | null>(null);
+  const [media, setMedia] = useState<LoraIndexEntry | null>(null);
   const needle = q.toLowerCase();
   const byKey = useContentStore((s) => s.loraIndex.byKey);
   const index = useMemo(() => Object.values(byKey), [byKey]);
@@ -261,6 +277,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
           const sf = actions.serverFileFor(e.key);
           return (
             <div key={e.key} className="list-item ms-item" onClick={() => pick(e.card?.file ?? e.key)}>
+              <Thumb visual={loraVisual(e)} kind="LoRA" label={e.card?.name ?? prettyName(e.key)} onOpen={() => setMedia(e)} />
               <div className="title">
                 <div className="ms-item-title ellipsis" onClick={(ev) => { ev.stopPropagation(); setOpen(e); }}>
                   {e.card?.name ?? prettyName(e.key)}
@@ -303,6 +320,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
           onClose={() => setOpen(null)}
           footer={<button className="btn primary block" onClick={() => { setOpen(null); pick(open.card?.file ?? open.key); }}>Use this LoRA</button>}
         >
+          {hasMedia(loraVisual(open)) && <ExamplesGrid visual={loraVisual(open)!} />}
           <div className="row" style={{ marginBottom: 8 }}>
             <Stars rating={open.rating} />
             {open.card?.strength !== undefined && <span className="badge">strength {open.card.strength}</span>}
@@ -345,6 +363,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
           </p>
         </Sheet>
       )}
+      {media && loraVisual(media) && <MediaSheet title={media.card?.name ?? prettyName(media.key)} visual={loraVisual(media)!} onClose={() => setMedia(null)} />}
     </>
   );
 }
@@ -353,6 +372,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
 
 export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
   const [open, setOpen] = useState<BundledWorkflow | null>(null);
+  const [media, setMedia] = useState<BundledWorkflow | null>(null);
   const needle = q.toLowerCase();
   const items = useMemo(() => bundle.workflows.filter((w) => anyHas([w.name, w.engine, w.notes, w.format, ...w.tags], needle)), [bundle, needle]);
   if (!items.length) return <Empty what="workflows" q={q} />;
@@ -362,7 +382,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
       <div className="card" style={{ padding: 0 }}>
         {items.map((w) => (
           <div key={w.id} className="list-item ms-item" onClick={() => (w.format === 'ui' ? actions.openWorkflow(w) : setOpen(w))}>
-            <Icon name="graph" size={20} />
+            <Thumb visual={w} kind="Workflow" label={prettyName(w.name)} onOpen={() => setMedia(w)} />
             <div className="title">
               <div className="ms-item-title ellipsis">{prettyName(w.name)}</div>
               <div className="sub">
@@ -381,6 +401,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
       </div>
       {open && (
         <Sheet title={prettyName(open.name)} onClose={() => setOpen(null)}>
+          {hasMedia(open) && <ExamplesGrid visual={open} />}
           <div className="card" style={{ padding: 0 }}>
             <div className={`list-item${open.format !== 'ui' ? ' ms-disabled' : ''}`} onClick={() => { actions.openWorkflow(open); setOpen(null); }}>
               <Icon name="graph" size={20} />
@@ -398,6 +419,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
           <p className="muted small mono" style={{ marginTop: 10 }}>{open.format} · {open.nodeCount} nodes · {open.source}</p>
         </Sheet>
       )}
+      {media && <MediaSheet title={prettyName(media.name)} visual={media} onClose={() => setMedia(null)} />}
     </>
   );
 }
@@ -405,6 +427,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
 // ---------------------------------------------------------------------------
 
 export function PresetsSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
+  const [media, setMedia] = useState<ContentBundle['presets'][number] | null>(null);
   const needle = q.toLowerCase();
   const items = useMemo(() => bundle.presets.filter((p) => anyHas([p.name, p.engine, p.notes, p.prompt, ...p.tags], needle)), [bundle, needle]);
   if (!items.length) return <Empty what="presets" q={q} />;
@@ -414,6 +437,7 @@ export function PresetsSection({ bundle, q, actions }: { bundle: ContentBundle; 
       <div className="card" style={{ padding: 0 }}>
         {items.map((p) => (
           <div key={p.id} className="list-item ms-item" onClick={() => actions.applyPreset(p, false)}>
+            <Thumb visual={p} kind="Preset" label={p.name} onOpen={() => setMedia(p)} />
             <div className="title">
               <div className="ms-item-title">
                 {p.name}
@@ -428,6 +452,7 @@ export function PresetsSection({ bundle, q, actions }: { bundle: ContentBundle; 
           </div>
         ))}
       </div>
+      {media && <MediaSheet title={media.name} visual={media} onClose={() => setMedia(null)} />}
     </>
   );
 }
@@ -435,6 +460,7 @@ export function PresetsSection({ bundle, q, actions }: { bundle: ContentBundle; 
 // ---------------------------------------------------------------------------
 
 export function MoreSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
+  const [media, setMedia] = useState<ContentBundle['characters'][number] | null>(null);
   const needle = q.toLowerCase();
   const chars = bundle.characters.filter((c) => anyHas([c.name, c.description, ...c.tags, ...c.triggerWords], needle));
   const assets = bundle.assets.filter((a) => anyHas([a.name, a.kind, a.path, ...a.tags], needle));
@@ -450,8 +476,9 @@ export function MoreSection({ bundle, q, actions }: { bundle: ContentBundle; q: 
               <div
                 key={c.id}
                 className="list-item ms-item"
-                onClick={() => actions.insertCopy({ id: c.id, source: c.source, title: c.name, text: [...c.triggerWords, c.description ?? ''].filter(Boolean).join(', '), tags: c.tags })}
+                onClick={() => actions.insertCopy({ id: c.id, source: c.source, title: c.name, text: [...c.triggerWords, c.description ?? ''].filter(Boolean).join(', '), tags: c.tags, thumb: c.thumb, examples: c.examples })}
               >
+                <Thumb visual={c} kind="Character" label={c.name} onOpen={() => setMedia(c)} />
                 <div className="title">
                   <div className="ms-item-title">{c.name}</div>
                   {c.description && <div className="ms-text small">{c.description}</div>}
@@ -508,6 +535,7 @@ export function MoreSection({ bundle, q, actions }: { bundle: ContentBundle; q: 
           </div>
         </>
       )}
+      {media && <MediaSheet title={media.name} visual={media} onClose={() => setMedia(null)} />}
     </>
   );
 }

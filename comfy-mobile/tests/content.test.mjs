@@ -6,7 +6,7 @@
 import './browser-stubs.mjs';
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { normaliseBundle, ContentBundleError, detectWorkflowFormat, words } from '../src/core/content/schema.ts';
+import { normaliseBundle, ContentBundleError, contentMediaUrl, countVisuals, detectWorkflowFormat, mediaPath, words } from '../src/core/content/schema.ts';
 import { buildLoraIndex, loraKey, matchServerLoras, triggerWordsForLora } from '../src/core/content/triggers.ts';
 import { activeLoraFiles, joinPrompt, loraSlotsFor, mapSettingsToTemplate } from '../src/core/content/apply.ts';
 import { normalizeContentUrl, useContentStore } from '../src/core/content/store.ts';
@@ -64,7 +64,8 @@ test('normaliseBundle tolerates loose input and drops unusable records', () => {
   assert.equal(b.workflows[1].nodeCount, 1);
   assert.equal(b.presets[0].values.cfg, 1);
   assert.equal(Object.keys(b.raw).length, 1);
-  assert.deepEqual(b.counts, { copyCards: 1, recipes: 1, loras: 2, workflows: 2, presets: 1, characters: 0, assets: 0, raw: 1, skipped: 1 });
+  assert.deepEqual(b.counts, { copyCards: 1, recipes: 1, loras: 2, workflows: 2, presets: 1, characters: 0, assets: 0, videos: 0, raw: 1, skipped: 1, visuals: 0 });
+  for (const c of [...b.copyCards, ...b.recipes, ...b.loras, ...b.workflows, ...b.presets]) assert.deepEqual(c.examples, [], 'visuals default to none');
 });
 
 test('normaliseBundle rejects non-bundles but accepts section-only objects', () => {
@@ -73,6 +74,55 @@ test('normaliseBundle rejects non-bundles but accepts section-only objects', () 
   const b = normaliseBundle({ copyCards: [{ text: 'x' }] });
   assert.equal(b.copyCards[0].title, 'x');
   assert.equal(b.copyCards[0].id, 'copy-0');
+});
+
+test('mediaPath keeps only plain relative image/video paths inside the tree', () => {
+  assert.equal(mediaPath('data/reference_recipes/part_01.jpg'), 'data/reference_recipes/part_01.jpg');
+  assert.equal(mediaPath('./videos/burst/clip.mp4'), 'videos/burst/clip.mp4');
+  for (const bad of ['/etc/passwd.png', 'http://evil/x.png', 'https://cdn/x.jpg', 'data:image/png;base64,AAAA.png', '../secret.png', 'a/../b.png',
+    'a//b.png', 'C:\\x\\y.png', 'a\\b.png', 'config/card.json', 'videos/clip', '', 42, null, 'x'.repeat(600) + '.png']) {
+    assert.equal(mediaPath(bad), undefined, String(bad));
+  }
+});
+
+test('visuals: thumb/examples are normalised, a video thumb becomes an example, videos section is kept', () => {
+  const b = normaliseBundle({
+    copyCards: [
+      { text: 'a', thumb: 'config/a.png', examples: [{ path: 'videos/a.mp4', kind: 'video', poster: 'config/a.png' }, 'config/a_2.jpg', { path: 'http://x/y.png' }, { path: '../z.png' }] },
+      { text: 'b', thumbnail: 'videos/b.mp4' },
+      { text: 'c', examples: [{ path: 'videos/c.mp4', poster: 'videos/c.jpg' }] },
+      { text: 'd' },
+    ],
+    videos: [
+      { path: 'videos/burst/burst_0001.mp4', poster: 'videos/burst/burst_0001.jpg' },
+      { path: 'videos/showreel.mp4', name: 'Showreel', folder: 'videos' },
+      { path: 'config/not_a_video.png' },
+      { path: '/abs/clip.mp4' },
+    ],
+  });
+  const [a, bb, c, d] = b.copyCards;
+  assert.equal(a.thumb, 'config/a.png');
+  assert.deepEqual(a.examples.map((e) => [e.path, e.kind, e.poster]), [['videos/a.mp4', 'video', 'config/a.png'], ['config/a_2.jpg', 'image', undefined]]);
+  assert.equal(bb.thumb, undefined, 'a video is never a thumb');
+  assert.deepEqual(bb.examples, [{ path: 'videos/b.mp4', kind: 'video', poster: undefined, label: undefined }]);
+  assert.equal(c.thumb, 'videos/c.jpg', 'falls back to the first poster');
+  assert.equal(d.thumb, undefined);
+  assert.deepEqual(d.examples, []);
+  assert.equal(countVisuals(b), 3);
+  assert.equal(b.counts.visuals, 3);
+  assert.equal(b.videos.length, 2);
+  assert.deepEqual(b.videos[0], { id: 'video-0', source: 'videos/burst/burst_0001.mp4', name: 'burst_0001', path: 'videos/burst/burst_0001.mp4', kind: 'video', poster: 'videos/burst/burst_0001.jpg', folder: 'videos/burst' });
+  assert.equal(b.videos[1].name, 'Showreel');
+  assert.equal(b.videos[1].folder, 'videos');
+  assert.equal(b.counts.videos, 2);
+});
+
+test('contentMediaUrl points at /media/ next to bundle.json and nowhere else', () => {
+  assert.equal(contentMediaUrl('http://100.89.112.7:8152/bundle.json', 'data/reference_recipes/part 01.jpg'), 'http://100.89.112.7:8152/media/data/reference_recipes/part%2001.jpg');
+  assert.equal(contentMediaUrl('http://mac:8152/exports/bundle.json', 'videos/a.mp4'), 'http://mac:8152/exports/media/videos/a.mp4');
+  assert.equal(contentMediaUrl(null, 'videos/a.mp4'), null);
+  assert.equal(contentMediaUrl('http://mac:8152/bundle.json', undefined), null);
+  assert.equal(contentMediaUrl('not a url', 'videos/a.mp4'), null);
 });
 
 test('words() splits lists only when they look like lists', () => {

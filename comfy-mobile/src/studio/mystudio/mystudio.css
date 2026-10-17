@@ -123,3 +123,174 @@
 .ms-spin {
   animation: ms-spin 1s linear infinite;
 }
+
+/* ---- visuals: thumbnails, media sheet, Videos grid ------------------------ */
+
+.ms-thumb {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--comfy-input-bg);
+  border: 1px solid var(--border-color);
+}
+.ms-thumb.openable {
+  cursor: pointer;
+}
+.ms-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ms-thumb-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--descrip-text);
+  background: repeating-linear-gradient(135deg, var(--comfy-input-bg) 0 6px, var(--comfy-menu-secondary-bg) 6px 12px);
+  text-align: center;
+  padding: 2px;
+}
+.ms-thumb-ph-ini {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--input-text);
+  letter-spacing: 0.5px;
+}
+.ms-thumb-ph-kind {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1;
+}
+.ms-thumb-play,
+.ms-thumb-count {
+  position: absolute;
+  bottom: 3px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+.ms-thumb-play {
+  left: 3px;
+}
+.ms-thumb-count {
+  right: 3px;
+}
+
+.ms-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ms-media {
+  margin: 0;
+  min-width: 0;
+}
+.ms-media img,
+.ms-media video {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #000;
+  display: block;
+}
+.ms-media video {
+  aspect-ratio: 16 / 9;
+}
+.ms-media-grid .ms-media:has(video) {
+  grid-column: 1 / -1;
+}
+.ms-media figcaption {
+  margin-top: 3px;
+}
+.ms-media-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 96px;
+  padding: 10px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--descrip-text);
+  text-align: center;
+}
+.ms-media-missing .mono {
+  max-width: 100%;
+}
+
+.ms-video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ms-video-tile {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--comfy-input-bg);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+.ms-video-tile.playing {
+  grid-column: 1 / -1;
+  aspect-ratio: 16 / 9;
+  cursor: default;
+}
+.ms-video-tile img,
+.ms-video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+.ms-video-tile .ms-thumb-ph {
+  position: absolute;
+  inset: 0;
+}
+.ms-video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.ms-video-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  pointer-events: none;
+}
+.ms-video-tile.playing .ms-video-name {
+  display: none;
+}
