@@ -172,6 +172,14 @@ interface ServerState {
   deleteQueueItem: (id: string) => Promise<void>;
   clearQueue: () => Promise<void>;
   deleteHistoryItem: (id: string) => Promise<void>;
+  /**
+   * Deletes a finished run from ComfyUI's history (`POST /history {"delete"}`),
+   * which removes every output of that run from the Gallery on all devices.
+   * Unlike `deleteHistoryItem` it reports the server's refusal instead of
+   * swallowing it. ComfyUI core has no route that unlinks output files, so
+   * the bytes stay in the server's output folder.
+   */
+  deleteRun: (promptId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   clearHistory: () => Promise<void>;
   clearNodeErrors: () => void;
   clearOutputs: () => void;
@@ -603,6 +611,21 @@ export const useServerStore = create<ServerState>()((set, get) => {
     deleteHistoryItem: async (id) => {
       await api.deleteHistoryItems([id]).catch(() => undefined);
       await get().refreshHistory();
+    },
+    deleteRun: async (promptId) => {
+      try {
+        await api.deleteHistoryItems([promptId]);
+      } catch (err) {
+        return { ok: false, error: describeError(err) };
+      }
+      // Drop it locally right away; the refresh confirms against the server.
+      set((s) => {
+        if (!s.history || !(promptId in s.history)) return {};
+        const { [promptId]: _gone, ...rest } = s.history;
+        return { history: rest };
+      });
+      await get().refreshHistory();
+      return { ok: true };
     },
     clearHistory: async () => {
       await api.clearHistory().catch(() => undefined);

@@ -1,9 +1,15 @@
-/** Gallery of all outputs in server history, videos first, with a fullscreen viewer. */
-import { useEffect, useMemo, useState } from 'react';
+/**
+ * Gallery of this app's ComfyUI outputs (everything in server history),
+ * videos first, with a fullscreen viewer. Each tile has a bin control:
+ * confirm, then the run is deleted from ComfyUI's history (see
+ * `useDeleteOutput`). Video Studio's old libraries are not shown here.
+ */
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { historyOrder, mediaFromHistoryEntry, useServerStore, type MediaItem } from '../core';
 import { Icon } from '../shared/Icon';
 import { MediaView, kindLabel } from '../shared/MediaView';
 import { useUiStore } from '../shared/ui';
+import { useDeleteOutput } from '../shared/useDeleteOutput';
 
 type Filter = 'all' | 'video' | 'image';
 
@@ -12,7 +18,9 @@ export function GalleryScreen() {
   const status = useServerStore((s) => s.status);
   const refreshHistory = useServerStore((s) => s.refreshHistory);
   const openViewer = useUiStore((s) => s.openViewer);
+  const confirmAndDelete = useDeleteOutput();
   const [filter, setFilter] = useState<Filter>('all');
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'connected') void refreshHistory();
@@ -27,6 +35,17 @@ export function GalleryScreen() {
     if (filter === 'image') return all.filter((m) => m.kind === 'image' && !m.animated);
     return all;
   }, [history, filter]);
+
+  const onDelete = async (e: MouseEvent, m: MediaItem) => {
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(m.url);
+    try {
+      await confirmAndDelete(m);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   return (
     <div className="screen">
@@ -51,6 +70,11 @@ export function GalleryScreen() {
             <div className="media-tile" key={`${m.url}-${i}`} onClick={() => openViewer(items, i)}>
               <MediaView item={m} cover autoPlay={m.kind === 'video'} />
               <span className="kind">{kindLabel(m)}</span>
+              {m.promptId && (
+                <button type="button" className="tile-delete" aria-label={`Delete ${m.ref.filename}`} title="Delete" disabled={deleting === m.url} onClick={(e) => void onDelete(e, m)}>
+                  <Icon name="trash" size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>
