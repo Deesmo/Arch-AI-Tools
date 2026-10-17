@@ -81,6 +81,11 @@ export interface GraphNode {
   outputs: NodeOutputSlot[];
   properties: Record<string, unknown>;
   widgets_values: unknown[];
+  /**
+   * ComfyUI frontend's name→value map, when the file has one.
+   * Widget lookup prefers this over the positional list.
+   */
+  widgets_values_named?: Record<string, unknown>;
   color?: string;
   bgcolor?: string;
   /**

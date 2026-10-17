@@ -99,6 +99,11 @@ function looksLikeApiPrompt(obj: Record<string, unknown>): boolean {
   return vals.length > 0 && vals.every((v) => v && typeof v === 'object' && 'class_type' in (v as object));
 }
 
+function namedWidgetMap(v: unknown): Record<string, unknown> | undefined {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  return { ...(v as Record<string, unknown>) };
+}
+
 function num(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 }
@@ -144,6 +149,7 @@ function normaliseNode(raw: unknown, index: number): GraphNode {
       : [],
     properties: (n.properties as Record<string, unknown>) ?? {},
     widgets_values: (n.widgets_values as unknown[]) ?? [],
+    widgets_values_named: namedWidgetMap(n.widgets_values_named),
     color: typeof n.color === 'string' ? n.color : undefined,
     bgcolor: typeof n.bgcolor === 'string' ? n.bgcolor : undefined,
   };
@@ -236,6 +242,7 @@ function exportNode(n: GraphNode): Record<string, unknown> {
     properties: rest.properties ?? {},
     widgets_values: rest.widgets_values,
   };
+  if (rest.widgets_values_named) out.widgets_values_named = rest.widgets_values_named;
   if (rest.title) out.title = rest.title;
   if (rest.color) out.color = rest.color;
   if (rest.bgcolor) out.bgcolor = rest.bgcolor;

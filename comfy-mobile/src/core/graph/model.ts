@@ -37,7 +37,7 @@ export function resolveNode(node: GraphNode, info: ObjectInfo | null): GraphNode
 function resolveNodeWith(node: GraphNode, info: ObjectInfo | null, stored: unknown): GraphNode {
   const def = info?.[node.type];
   const virtual = virtualNodeShape(node.type);
-  const shape = virtual ?? (def ? shapeFromDef(def, stored) : null);
+  const shape = virtual ?? (def ? shapeFromDef(def, stored, node.widgets_values_named) : null);
   if (!shape) {
     return { ...node, widgets: node.widgets ?? [], missing: !!info, inputs: node.inputs ?? [], outputs: node.outputs ?? [] };
   }

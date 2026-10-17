@@ -191,5 +191,13 @@ sheet the card's settings are not in this build. A null node id leaves that
 box on screen and does not overwrite that part of the graph. If the phone is
 not connected, the sheet says so and does not submit.
 
+The workflow file is either a UI graph or an API prompt. On a UI graph, Run
+sets `widgets_values_named[promptField]` when that key exists. If it does not,
+and the node is a text widget (including PixaromaText), Run replaces that
+string in `widgets_values` and leaves every other widget alone. On an API
+prompt, Run sets `inputs[promptField]`, and `inputs[imageField]` only when a
+new photo was picked. A UI graph is still converted with the app's existing
+queue path, subgraph expansion included.
+
 The Gallery tab is unchanged: this app's ComfyUI renders, with confirm-to-delete.
 It does not import Video Studio's old image or video libraries.

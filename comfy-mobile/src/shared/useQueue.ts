@@ -5,7 +5,7 @@
  * Workflows ("Run").
  */
 import { useCallback } from 'react';
-import { graphToPrompt, unexpandedMessage, useGraphStore, useServerStore, type Workflow } from '../core';
+import { emptyWorkflow, graphToPrompt, unexpandedMessage, useGraphStore, useServerStore, type ApiPrompt, type Workflow } from '../core';
 import { useUiStore } from './ui';
 
 export function useQueue() {
@@ -41,6 +41,32 @@ export function useQueue() {
     [queuePrompt, status, toast],
   );
 
+  /**
+   * An API-format file is already the prompt ComfyUI runs. Same submit as
+   * `queueWorkflow` (connection check, `/prompt`, toasts). No graph conversion,
+   * because that would rebuild every input.
+   */
+  const queueApiPrompt = useCallback(
+    async (prompt: ApiPrompt, meta: { source: 'studio' | 'graph'; templateId?: string }) => {
+      if (status !== 'connected') {
+        toast('Not connected to a ComfyUI server', 'error');
+        return null;
+      }
+      if (Object.keys(prompt).length === 0) {
+        toast('Nothing to queue — the graph has no executable nodes', 'error');
+        return null;
+      }
+      const res = await queuePrompt(prompt, emptyWorkflow(), meta);
+      if (!res.ok) {
+        toast(res.message, 'error');
+        return null;
+      }
+      toast('Queued', 'success');
+      return res.promptId;
+    },
+    [queuePrompt, status, toast],
+  );
+
   /** Queue the graph currently open in Graph mode. */
   const queueCurrentGraph = useCallback(async () => {
     const g = useGraphStore.getState();
@@ -49,5 +75,5 @@ export function useQueue() {
     return id;
   }, [queueWorkflow]);
 
-  return { queueWorkflow, queueCurrentGraph };
+  return { queueWorkflow, queueCurrentGraph, queueApiPrompt };
 }

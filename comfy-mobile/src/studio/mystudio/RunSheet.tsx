@@ -10,6 +10,7 @@ import {
   applyStudioRunEdits,
   loadStudioWorkflowFile,
   parseWorkflow,
+  patchStudioRunFile,
   useServerStore,
   type StudioThumbCopy,
   type StudioThumbWorkflow,
@@ -28,7 +29,7 @@ type RunCard = StudioThumbCopy | StudioThumbWorkflow;
 export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
   const uploadInput = useServerStore((s) => s.uploadInput);
-  const { queueWorkflow } = useQueue();
+  const { queueWorkflow, queueApiPrompt } = useQueue();
   const toast = useUiStore((s) => s.toast);
   const setTab = useUiStore((s) => s.setTab);
   const [prompt, setPrompt] = useState(card.prompt);
@@ -54,26 +55,54 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
   const run = async () => {
     if (!card.workflowFile || busy) return;
     if (!connected) return;
-    const info = useServerStore.getState().objectInfo;
-    if (!info) {
-      toast('The server node list is still loading', 'error');
-      return;
-    }
     setBusy(true);
     try {
       const json = await loadStudioWorkflowFile(card.workflowFile);
-      const parsed = parseWorkflow(json, info);
       let uploaded: string | null = null;
       if (file && imageWritable) uploaded = await uploadInput(file, file.name);
-      const applied = applyStudioRunEdits(parsed, {
+      const edits = {
         prompt: promptWritable ? { nodeId: card.promptNodeId!, field: card.promptField!, value: prompt } : null,
         image: uploaded && imageWritable ? { nodeId: card.imageNodeId!, field: card.imageField!, value: uploaded } : null,
-      });
-      if (applied.missed.length) {
-        toast(`Couldn't change the ${applied.missed.join(' and ')} on this card`, 'error');
+      };
+      const patched = patchStudioRunFile(json, edits);
+      if (patched.format === 'unknown') {
+        toast("Couldn't read this card's workflow", 'error');
         return;
       }
-      const id = await queueWorkflow(applied.workflow, { source: 'studio' });
+      if (patched.format === 'api') {
+        if (patched.missed.length) {
+          toast(`Couldn't change the ${patched.missed.join(' and ')} on this card`, 'error');
+          return;
+        }
+        const id = await queueApiPrompt(patched.prompt, { source: 'studio' });
+        if (id) {
+          onClose();
+          setTab('queue');
+        }
+        return;
+      }
+      const info = useServerStore.getState().objectInfo;
+      if (!info) {
+        toast('The server node list is still loading', 'error');
+        return;
+      }
+      let wf = parseWorkflow(patched.workflow, info);
+      if (patched.missed.length) {
+        const fallback = applyStudioRunEdits(wf, {
+          prompt: patched.missed.includes('prompt') ? edits.prompt : null,
+          image: patched.missed.includes('image') ? edits.image : null,
+        });
+        if (fallback.missed.length) {
+          toast(`Couldn't change the ${fallback.missed.join(' and ')} on this card`, 'error');
+          return;
+        }
+        wf = fallback.workflow;
+      } else {
+        // Named values are already on the file. This lines up a resolved widget
+        // the converter addresses by name.
+        wf = applyStudioRunEdits(wf, edits).workflow;
+      }
+      const id = await queueWorkflow(wf, { source: 'studio' });
       if (id) {
         onClose();
         setTab('queue');

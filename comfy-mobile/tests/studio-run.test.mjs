@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildObjectInfo } from '../mock-server/object-info.mjs';
 import { parseStudioThumbIndex } from '../src/core/content/studioThumbs.ts';
-import { SETTINGS_NOT_IN_BUILD, applyStudioRunEdits, loadStudioWorkflowFile } from '../src/core/content/studioRun.ts';
+import { SETTINGS_NOT_IN_BUILD, applyStudioRunEdits, loadStudioWorkflowFile, patchStudioRunFile } from '../src/core/content/studioRun.ts';
 import { graphToPrompt } from '../src/core/graph/prompt.ts';
 import { parseWorkflow } from '../src/core/graph/serialize.ts';
 
@@ -141,6 +141,105 @@ test('a prompt node inside a subgraph is updated when the root has no match', ()
   assert.equal(graphToPrompt(workflow).prompt['10:8'].inputs.text, 'from the sheet');
   assert.equal(workflow.nodes.find((n) => n.id === 1).widgets_values[0], 'old prompt');
   assert.equal(workflow.nodes.find((n) => n.id === 3).widgets_values[0], 111);
+});
+
+test('UI graph sets widgets_values_named and leaves every other widget', () => {
+  const raw = {
+    nodes: [
+      {
+        id: 1,
+        type: 'CLIPTextEncode',
+        widgets_values: ['stale positional', false],
+        widgets_values_named: { text: 'from named', dynamic_prompts: false },
+      },
+      node(3, 'KSampler', [111, 'fixed', 20, 8, 'euler', 'normal', 1]),
+    ],
+  };
+  raw.nodes[1].widgets_values_named = { seed: 111, steps: 20 };
+  const patched = patchStudioRunFile(raw, {
+    prompt: { nodeId: 1, field: 'text', value: 'a night drive' },
+  });
+  assert.equal(patched.format, 'ui');
+  const promptNode = patched.workflow.nodes.find((n) => n.id === 1);
+  assert.equal(promptNode.widgets_values_named.text, 'a night drive');
+  assert.equal(promptNode.widgets_values_named.dynamic_prompts, false);
+  assert.equal(promptNode.widgets_values[1], false);
+  const sampler = patched.workflow.nodes.find((n) => n.id === 3);
+  assert.equal(sampler.widgets_values_named.seed, 111);
+  assert.equal(sampler.widgets_values[1], 'fixed');
+
+  const wf = parseWorkflow(patched.workflow, info);
+  const { prompt } = graphToPrompt(wf);
+  assert.equal(prompt['1'].inputs.text, 'a night drive');
+  assert.equal(prompt['3'].inputs.seed, 111);
+  assert.equal(raw.nodes[0].widgets_values_named.text, 'from named');
+});
+
+test('PixaromaText replaces the string widget and leaves the other value', () => {
+  const pix = {
+    ...info,
+    PixaromaText: {
+      input: { required: { text: ['STRING', { multiline: true }], dynamic_prompts: ['BOOLEAN', { default: false }] } },
+      input_order: { required: ['text', 'dynamic_prompts'] },
+      output: ['STRING'],
+      output_is_list: [false],
+      output_name: ['STRING'],
+      name: 'PixaromaText',
+      display_name: 'Text Pixaroma',
+      description: '',
+      python_module: 'custom_nodes.PixaromaText',
+      category: 'pixaroma',
+      output_node: false,
+    },
+  };
+  const raw = {
+    nodes: [
+      {
+        id: 4,
+        type: 'PixaromaText',
+        inputs: [{ name: 'text', type: 'STRING', widget: { name: 'text' }, link: null }],
+        widgets_values: ['saved words', false],
+      },
+      node(3, 'KSampler', [111, 'fixed', 20, 8, 'euler', 'normal', 1]),
+    ],
+  };
+  const patched = patchStudioRunFile(raw, {
+    prompt: { nodeId: 4, field: 'text', value: 'new words' },
+  });
+  assert.equal(patched.format, 'ui');
+  const text = patched.workflow.nodes.find((n) => n.id === 4);
+  assert.deepEqual(text.widgets_values, ['new words', false]);
+  assert.equal(patched.workflow.nodes.find((n) => n.id === 3).widgets_values[0], 111);
+  const { prompt } = graphToPrompt(parseWorkflow(patched.workflow, pix));
+  assert.equal(prompt['4'].inputs.text, 'new words');
+  assert.equal(prompt['4'].inputs.dynamic_prompts, false);
+  assert.equal(prompt['3'].inputs.seed, 111);
+});
+
+test('API prompt sets the prompt input and the image input only when a photo was picked', () => {
+  const raw = {
+    6: { class_type: 'CLIPTextEncode', inputs: { text: 'old', clip: ['4', 1] } },
+    2: { class_type: 'LoadImage', inputs: { image: 'card.png' } },
+    3: { class_type: 'KSampler', inputs: { seed: 111, steps: 20, sampler_name: 'euler' } },
+  };
+  const wordsOnly = patchStudioRunFile(raw, {
+    prompt: { nodeId: 6, field: 'text', value: 'a night drive' },
+    image: null,
+  });
+  assert.equal(wordsOnly.format, 'api');
+  assert.deepEqual(wordsOnly.missed, []);
+  assert.equal(wordsOnly.prompt['6'].inputs.text, 'a night drive');
+  assert.deepEqual(wordsOnly.prompt['6'].inputs.clip, ['4', 1]);
+  assert.equal(wordsOnly.prompt['2'].inputs.image, 'card.png');
+  assert.equal(wordsOnly.prompt['3'].inputs.seed, 111);
+
+  const withPhoto = patchStudioRunFile(raw, {
+    prompt: { nodeId: 6, field: 'text', value: 'a night drive' },
+    image: { nodeId: 2, field: 'image', value: 'uploaded.png' },
+  });
+  assert.equal(withPhoto.prompt['2'].inputs.image, 'uploaded.png');
+  assert.equal(withPhoto.prompt['3'].inputs.sampler_name, 'euler');
+  assert.equal(raw['2'].inputs.image, 'card.png');
 });
 
 test('loadStudioWorkflowFile fetches the same-origin workflow and fails closed', async () => {
