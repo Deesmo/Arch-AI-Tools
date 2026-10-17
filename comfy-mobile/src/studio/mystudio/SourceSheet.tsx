@@ -3,21 +3,38 @@
  * file picked on the device. Also shows what is loaded and lets Brad forget it.
  */
 import { useRef, useState } from 'react';
-import { DEFAULT_CONTENT_SOURCE_URL, useContentStore } from '../../core';
+import { DEFAULT_CONTENT_SOURCE_URL, DEFAULT_VIDEO_STUDIO_URL, clearStudioMediaCache, useContentStore, useStudioMediaStore } from '../../core';
 import { Icon } from '../../shared/Icon';
 import { Sheet } from '../../shared/Sheet';
 import { useUiStore } from '../../shared/ui';
+import { PinField } from './PinGate';
 
 export function SourceSheet({ onClose }: { onClose: () => void }) {
   const { sourceUrl, setSourceUrl, refresh, importFile, clear, status, error, bundle, loadedAt, origin } = useContentStore();
+  const studio = useStudioMediaStore();
   const toast = useUiStore((s) => s.toast);
   const ask = useUiStore((s) => s.ask);
   const [url, setUrl] = useState(sourceUrl);
+  const [vsUrl, setVsUrl] = useState(studio.baseUrl);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const apply = () => {
     setSourceUrl(url);
     setUrl(useContentStore.getState().sourceUrl);
+  };
+
+  const applyVs = () => {
+    studio.setBaseUrl(vsUrl);
+    setVsUrl(useStudioMediaStore.getState().baseUrl);
+  };
+
+  const checkVs = async () => {
+    applyVs();
+    const ok = await useStudioMediaStore.getState().loadCards(true);
+    const s = useStudioMediaStore.getState();
+    if (ok) toast(`Video Studio: ${s.cards.counts.loras} LoRA previews · ${s.cards.counts.workflows} workflow cards · ${s.cards.counts.copies} copy cards`, 'success');
+    else if (s.cardsErrorKind === 'pin') toast('Video Studio wants your PIN', 'error');
+    else toast(s.cardsError ?? 'Could not read Video Studio', 'error');
   };
 
   const fetchNow = async () => {
@@ -58,6 +75,47 @@ export function SourceSheet({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
+      <div className="section-title">Video Studio thumbnails</div>
+      <div className="card">
+        <div className="field">
+          <label>Video Studio URL</label>
+          <input className="input mono" value={vsUrl} onChange={(e) => setVsUrl(e.target.value)} onBlur={applyVs} inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder={DEFAULT_VIDEO_STUDIO_URL} />
+          <div className="field-hint">
+            LoRA, workflow and copy-card thumbnails are read straight from Video Studio on the Mac (port 8140, tailnet). Pictures stream from there; nothing is copied into the bundle. Video Studio's own image and video libraries are not imported — the Gallery tab is this app's outputs.
+          </div>
+        </div>
+        <div className="field">
+          <label>PIN {studio.pin ? <span className="badge green">saved on this phone</span> : <span className="badge amber">not set</span>}</label>
+          <PinField compact />
+          {studio.unlockError && <div className="small error-text" style={{ marginTop: 6 }}>{studio.unlockError}</div>}
+          <div className="field-hint">Stored only on this device and sent only to Video Studio's <span className="kbd">/pin</span> to unlock it. Never logged, never in the bundle.</div>
+        </div>
+        <div className="row">
+          <button className="btn primary" style={{ flex: 1 }} onClick={() => void checkVs()} disabled={studio.cardsStatus === 'loading'}>
+            <Icon name="refresh" size={16} /> {studio.cardsStatus === 'loading' ? 'Checking…' : 'Check Video Studio'}
+          </button>
+          <button className="btn" onClick={() => { setVsUrl(DEFAULT_VIDEO_STUDIO_URL); studio.setBaseUrl(DEFAULT_VIDEO_STUDIO_URL); }}>Reset</button>
+          {studio.pin && (
+            <button className="btn" onClick={() => { studio.forgetPin(); toast('PIN forgotten'); }}>Forget PIN</button>
+          )}
+        </div>
+        {studio.cardsLoadedAt && (
+          <div className="small muted" style={{ marginTop: 8 }}>
+            {studio.cards.counts.loras} LoRA previews · {studio.cards.counts.workflows} workflow cards · {studio.cards.counts.copies} copy cards · {new Date(studio.cardsLoadedAt).toLocaleTimeString()}
+          </div>
+        )}
+        {studio.cardsError && studio.cardsErrorKind !== 'pin' && (
+          <div className="card" style={{ marginTop: 10, borderColor: 'var(--warning)' }}>
+            <div className="small" style={{ color: 'var(--warning)' }}>{studio.cardsError}</div>
+          </div>
+        )}
+        {studio.cardsErrorKind === 'pin' && (
+          <div className="card" style={{ marginTop: 10, borderColor: 'var(--warning)' }}>
+            <div className="small" style={{ color: 'var(--warning)' }}>Video Studio wants your PIN — enter it above.</div>
+          </div>
+        )}
+      </div>
+
       <div className="section-title">From a file</div>
       <div className="card">
         <button className="btn block" onClick={() => fileRef.current?.click()}>
@@ -86,6 +144,7 @@ export function SourceSheet({ onClose }: { onClose: () => void }) {
             onClick={async () => {
               if (await ask({ title: 'Forget the loaded bundle?', message: 'Removes the cached copy from this device. Your LoRA ratings already copied into the picker stay. Fetch or import again any time.', confirmLabel: 'Forget', danger: true })) {
                 await clear();
+                await clearStudioMediaCache();
                 toast('Bundle removed from this device');
               }
             }}
@@ -101,7 +160,7 @@ export function SourceSheet({ onClose }: { onClose: () => void }) {
         <div>python3 comfy-mobile/tools/export_video_studio.py</div>
         <div>python3 comfy-mobile/tools/export_video_studio.py --serve</div>
       </div>
-      <p className="muted small">The first command reads ~/archon-staging/video-studio and writes only ~/comfy-mobile-content/bundle.json. The second serves that folder on port 8152 for this app.</p>
+      <p className="muted small">The first command reads ~/archon-staging/video-studio and writes only ~/comfy-mobile-content/bundle.json. The second serves that folder on port 8152 for this app. Thumbnails come from Video Studio itself on port 8140.</p>
     </Sheet>
   );
 }

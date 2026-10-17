@@ -35,7 +35,14 @@ const DEFAULT_SERVER = 'http://100.103.142.118:8188';
  * My Studio → Source; a CGNAT (100.64/10) address, never routable off-tailnet.
  */
 const DEFAULT_CONTENT_SOURCE = 'http://100.89.112.7:8152/bundle.json';
-const ALLOWED_DEFAULTS = [DEFAULT_SERVER, DEFAULT_CONTENT_SOURCE];
+/**
+ * Third default endpoint: Video Studio itself on the same Mac (tailnet, port
+ * 8140) for the live galleries and card previews. PIN-gated (`POST /pin`,
+ * `vs_pin` cookie); the PIN lives only on the device. User-configurable in
+ * My Studio → Source.
+ */
+const DEFAULT_VIDEO_STUDIO = 'http://100.89.112.7:8140';
+const ALLOWED_DEFAULTS = [DEFAULT_SERVER, DEFAULT_CONTENT_SOURCE, DEFAULT_VIDEO_STUDIO];
 
 /**
  * Inert strings: namespaces, URNs and spec/license URLs that appear as
@@ -209,6 +216,7 @@ if (existsSync(nm)) {
 console.log(`Privacy audit · scanned ${distFiles.length} files in dist/${scanSrc ? ' + src/' : ''}`);
 console.log(`Allowed server: ${DEFAULT_SERVER} (user-configurable in Settings)`);
 console.log(`Allowed content source: ${DEFAULT_CONTENT_SOURCE} (user-configurable in My Studio → Source)`);
+console.log(`Allowed Video Studio: ${DEFAULT_VIDEO_STUDIO} (same Mac, PIN-gated; user-configurable in My Studio → Source)`);
 if (seen.size) {
   console.log('\nInert literals found (namespaces / docs links in library code — never fetched):');
   for (const [url, files] of seen) console.log(`  ${url}  ← ${[...new Set(files)].join(', ')}`);

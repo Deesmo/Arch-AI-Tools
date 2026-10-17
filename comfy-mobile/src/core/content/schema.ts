@@ -33,12 +33,20 @@ export interface MediaRef {
   /** Still frame for a video, relative path. */
   poster?: string;
   label?: string;
+  /**
+   * Runtime only — never read from a bundle. Set when the media comes from the
+   * Video Studio server (`videoStudio.ts`) rather than the bundle's `/media/`.
+   */
+  url?: string;
+  posterUrl?: string;
 }
 
 /** Optional visuals every card may carry. Paths are relative to the Video Studio root; never URLs. */
 export interface Visual {
   thumb?: string;
   examples: MediaRef[];
+  /** Runtime only — Video Studio thumbnail URL merged in at render time; never read from a bundle. */
+  thumbUrl?: string;
 }
 
 /** A reusable prompt snippet ("copy card" in Video Studio). */

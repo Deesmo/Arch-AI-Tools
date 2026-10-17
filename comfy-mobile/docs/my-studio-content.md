@@ -118,6 +118,57 @@ only (`http://100.89.112.7:8152/media/...`); there are no CDNs or external
 hosts. A file-imported bundle still uses the configured Source URL for
 previews, and shows a labelled placeholder when it cannot load them.
 
+## Video Studio thumbnails (live from 8140)
+
+Video Studio on the Mac already serves the card pictures, and the phone
+reads them straight from `http://100.89.112.7:8140` (tailnet; **My Studio →
+Source → Video Studio URL**). No proxy, no bridge, nothing copied into the
+bundle or git:
+
+| Route | Used for |
+|---|---|
+| `GET /api/guide-data` (+ `GET /config/lora_cards.json` when present) | Every LoRA card → `/lora-previews/<file>`, matched by file name (1,323 previews) |
+| `GET /api/workflows/cards` | Every workflow: card `thumb` plus its `examples` strip (the multiple pictures) → `/workflow-card-media/wf_<id>.<ext>` |
+| `GET /api/copies/cards` | Every copy card: `poster` and `clip` → `/copy-previews/<id>.jpg` and `.mp4` |
+
+`<img>`/`<video>` point at the 8140 URLs; model-site thumbnail URLs in any
+payload are ignored. The three documents are fetched together, cached in
+IndexedDB, and refreshed on the next launch.
+
+Video Studio's own **image and video libraries are not imported**. New
+pictures and clips are made in this app, so they live in this app's Gallery
+(see below).
+
+**PIN.** 8140 gates every off-loopback request with `401 {"error":"pin
+required"}`; a client unlocks with `POST /pin {"pin"}` and gets a `vs_pin`
+cookie. The phone does this itself: every `fetch()` to 8140 uses
+`credentials: 'include'`, so the browser stores the cookie and replays it on
+the JSON routes and on the `<img>`/`<video>` loads (same site, other port).
+My Studio shows **"Video Studio wants your PIN"** with a field the first
+time; the PIN is stored on the device only (settings store), is sent only to
+`POST /pin`, and is replayed once when the cookie dies (Video Studio
+restarted). It is never logged, never written to a file, never in the bundle,
+and there is no PIN file on the Mac. 8140 must answer the phone's origin with
+`Access-Control-Allow-Origin: <origin>` and
+`Access-Control-Allow-Credentials: true`; a page served over https cannot
+load http 8140 (mixed content) — use the http dev/tailnet page.
+
+## This app's Gallery and permanent delete
+
+The **Gallery** tab lists this app's own ComfyUI outputs (from `/history`),
+not the old Video Studio libraries. Each tile and the full-size viewer have a
+bin control; the confirm sheet's **Delete forever** removes that run through
+ComfyUI itself — `POST /history {"delete": [prompt_id]}` — so it disappears
+from the Gallery on every device and from ComfyUI's history. Nothing is
+hidden client-side and there is no hidden-items list. Only on a 2xx does the
+item leave the grid; a failure keeps it with the server's error text.
+
+ComfyUI core has no route that unlinks an output file (`/history` delete
+removes the run record; the opt-in Assets API soft-deletes a reference, not
+the file), so the confirm text says plainly that the bytes stay in the
+server's output folder until it is cleaned up there. LoRA, workflow and copy
+cards have no delete control.
+
 ## Bundle schema
 
 Defined in `src/core/content/schema.ts` (`comfy-mobile-content`, version 2).

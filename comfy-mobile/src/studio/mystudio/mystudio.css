@@ -294,3 +294,28 @@
 .ms-video-tile.playing .ms-video-name {
   display: none;
 }
+
+/* ---- Video Studio PIN gate ------------------------------------------------- */
+
+.ms-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ms-gate p {
+  margin: 0;
+}
+.ms-pin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.ms-pin .input {
+  flex: 1;
+  min-width: 140px;
+}
+.ms-pin-error {
+  flex-basis: 100%;
+}

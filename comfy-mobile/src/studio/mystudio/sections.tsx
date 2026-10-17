@@ -8,6 +8,7 @@ import { Icon } from '../../shared/Icon';
 import { Sheet } from '../../shared/Sheet';
 import { ExamplesGrid, MediaSheet, Thumb, hasMedia } from './Media';
 import type { MyStudioActions } from './useMyStudio';
+import { useStudioVisuals } from './useStudioVisuals';
 
 const has = (hay: string | undefined | null, needle: string) => !!hay && hay.toLowerCase().includes(needle);
 const anyHas = (fields: (string | undefined | null)[], needle: string) => !needle || fields.some((f) => has(f, needle));
@@ -57,6 +58,7 @@ function Empty({ what, q }: { what: string; q: string }) {
 export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
   const [open, setOpen] = useState<CopyCard | null>(null);
   const [media, setMedia] = useState<CopyCard | null>(null);
+  const studio = useStudioVisuals();
   const needle = q.toLowerCase();
   const items = useMemo(() => bundle.copyCards.filter((c) => anyHas([c.title, c.text, c.category, ...c.tags], needle)), [bundle, needle]);
   const groups = useMemo(() => {
@@ -78,7 +80,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
           <div className="card" style={{ padding: 0 }}>
             {cards.map((c) => (
               <div key={c.id} className="list-item ms-item" onClick={() => actions.insertCopy(c)}>
-                <Thumb visual={c} kind="Copy card" label={c.title} onOpen={() => setMedia(c)} />
+                <Thumb visual={studio.forCopy(c)} kind="Copy card" label={c.title} onOpen={() => setMedia(c)} />
                 <div className="title">
                   <div className="ms-item-title" onClick={(e) => { e.stopPropagation(); setOpen(c); }}>{c.title}</div>
                   <div className="ms-text">{c.text}</div>
@@ -105,7 +107,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
             </div>
           }
         >
-          {hasMedia(open) && <ExamplesGrid visual={open} />}
+          {hasMedia(studio.forCopy(open)) && <ExamplesGrid visual={studio.forCopy(open)} autoPlayFirstVideo />}
           <div className="card ms-pre">{open.text}</div>
           {open.negative && (
             <>
@@ -117,7 +119,7 @@ export function CopyCardsSection({ bundle, q, actions }: { bundle: ContentBundle
           <p className="muted small mono">{open.source}</p>
         </Sheet>
       )}
-      {media && <MediaSheet title={media.title} visual={media} onClose={() => setMedia(null)} />}
+      {media && <MediaSheet title={media.title} visual={studio.forCopy(media)} onClose={() => setMedia(null)} />}
     </>
   );
 }
@@ -245,6 +247,8 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
   const needle = q.toLowerCase();
   const byKey = useContentStore((s) => s.loraIndex.byKey);
   const index = useMemo(() => Object.values(byKey), [byKey]);
+  const studio = useStudioVisuals();
+  const visualOf = (e: LoraIndexEntry) => studio.forLora(e, loraVisual(e));
   void bundle;
 
   const items = useMemo(
@@ -265,7 +269,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
   return (
     <>
       <p className="muted small ms-hint">
-        Your rated LoRAs. {actions.serverLoras ? `${actions.serverMatch.matched} of ${index.length} are in models/loras on this server.` : 'Connect to see which are on the server.'} Tap one to put it in the current template’s LoRA slot (or its LoRA stack).
+        Your rated LoRAs. {actions.serverLoras ? `${actions.serverMatch.matched} of ${index.length} are in models/loras on this server.` : 'Connect to see which are on the server.'}{studio.counts.loras ? ` ${studio.counts.loras} previews from Video Studio.` : ''} Tap one to put it in the current template’s LoRA slot (or its LoRA stack).
       </p>
       <div className="chips" style={{ marginBottom: 8 }}>
         <button className={`chip${onlyServer ? ' active' : ''}`} onClick={() => setOnlyServer((v) => !v)}>On server</button>
@@ -277,7 +281,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
           const sf = actions.serverFileFor(e.key);
           return (
             <div key={e.key} className="list-item ms-item" onClick={() => pick(e.card?.file ?? e.key)}>
-              <Thumb visual={loraVisual(e)} kind="LoRA" label={e.card?.name ?? prettyName(e.key)} onOpen={() => setMedia(e)} />
+              <Thumb visual={visualOf(e)} kind="LoRA" label={e.card?.name ?? prettyName(e.key)} onOpen={() => setMedia(e)} />
               <div className="title">
                 <div className="ms-item-title ellipsis" onClick={(ev) => { ev.stopPropagation(); setOpen(e); }}>
                   {e.card?.name ?? prettyName(e.key)}
@@ -320,7 +324,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
           onClose={() => setOpen(null)}
           footer={<button className="btn primary block" onClick={() => { setOpen(null); pick(open.card?.file ?? open.key); }}>Use this LoRA</button>}
         >
-          {hasMedia(loraVisual(open)) && <ExamplesGrid visual={loraVisual(open)!} />}
+          {hasMedia(visualOf(open)) && <ExamplesGrid visual={visualOf(open)!} />}
           <div className="row" style={{ marginBottom: 8 }}>
             <Stars rating={open.rating} />
             {open.card?.strength !== undefined && <span className="badge">strength {open.card.strength}</span>}
@@ -363,7 +367,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
           </p>
         </Sheet>
       )}
-      {media && loraVisual(media) && <MediaSheet title={media.card?.name ?? prettyName(media.key)} visual={loraVisual(media)!} onClose={() => setMedia(null)} />}
+      {media && visualOf(media) && <MediaSheet title={media.card?.name ?? prettyName(media.key)} visual={visualOf(media)!} onClose={() => setMedia(null)} />}
     </>
   );
 }
@@ -373,6 +377,7 @@ export function LoraLabSection({ bundle, q, actions }: { bundle: ContentBundle; 
 export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle; q: string; actions: MyStudioActions }) {
   const [open, setOpen] = useState<BundledWorkflow | null>(null);
   const [media, setMedia] = useState<BundledWorkflow | null>(null);
+  const studio = useStudioVisuals();
   const needle = q.toLowerCase();
   const items = useMemo(() => bundle.workflows.filter((w) => anyHas([w.name, w.engine, w.notes, w.format, ...w.tags], needle)), [bundle, needle]);
   if (!items.length) return <Empty what="workflows" q={q} />;
@@ -382,7 +387,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
       <div className="card" style={{ padding: 0 }}>
         {items.map((w) => (
           <div key={w.id} className="list-item ms-item" onClick={() => (w.format === 'ui' ? actions.openWorkflow(w) : setOpen(w))}>
-            <Thumb visual={w} kind="Workflow" label={prettyName(w.name)} onOpen={() => setMedia(w)} />
+            <Thumb visual={studio.forWorkflow(w)} kind="Workflow" label={prettyName(w.name)} onOpen={() => setMedia(w)} />
             <div className="title">
               <div className="ms-item-title ellipsis">{prettyName(w.name)}</div>
               <div className="sub">
@@ -401,7 +406,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
       </div>
       {open && (
         <Sheet title={prettyName(open.name)} onClose={() => setOpen(null)}>
-          {hasMedia(open) && <ExamplesGrid visual={open} />}
+          {hasMedia(studio.forWorkflow(open)) && <ExamplesGrid visual={studio.forWorkflow(open)} />}
           <div className="card" style={{ padding: 0 }}>
             <div className={`list-item${open.format !== 'ui' ? ' ms-disabled' : ''}`} onClick={() => { actions.openWorkflow(open); setOpen(null); }}>
               <Icon name="graph" size={20} />
@@ -419,7 +424,7 @@ export function WorkflowsSection({ bundle, q, actions }: { bundle: ContentBundle
           <p className="muted small mono" style={{ marginTop: 10 }}>{open.format} · {open.nodeCount} nodes · {open.source}</p>
         </Sheet>
       )}
-      {media && <MediaSheet title={prettyName(media.name)} visual={media} onClose={() => setMedia(null)} />}
+      {media && <MediaSheet title={prettyName(media.name)} visual={studio.forWorkflow(media)} onClose={() => setMedia(null)} />}
     </>
   );
 }

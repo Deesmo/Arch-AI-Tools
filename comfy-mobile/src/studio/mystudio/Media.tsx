@@ -18,7 +18,7 @@ export function useMediaUrl(): (path: string | undefined | null) => string | nul
   return useCallback((path) => contentMediaUrl(sourceUrl, path ?? undefined), [sourceUrl]);
 }
 
-export const hasMedia = (v: Visual | undefined | null): boolean => !!v && (!!v.thumb || v.examples.length > 0);
+export const hasMedia = (v: Visual | undefined | null): boolean => !!v && (!!v.thumb || !!v.thumbUrl || v.examples.length > 0);
 
 /** Short label for the placeholder, e.g. "Copy card". */
 export type ThumbKind = 'Copy card' | 'Recipe' | 'LoRA' | 'Workflow' | 'Preset' | 'Character' | 'Video';
@@ -39,8 +39,10 @@ function Placeholder({ kind, label, icon }: { kind: ThumbKind; label?: string; i
  */
 export function Thumb({ visual, kind, label, size = 56, onOpen }: { visual: Visual | undefined | null; kind: ThumbKind; label?: string; size?: number; onOpen?: () => void }) {
   const url = useMediaUrl();
-  const [broken, setBroken] = useState(false);
-  const src = !broken ? url(visual?.thumb) : null;
+  const [broken, setBroken] = useState<string | null>(null);
+  // Video Studio thumb first; if it fails, the bundle's own /media/ thumb; then the placeholder.
+  const candidates = [visual?.thumbUrl ?? null, url(visual?.thumb)].filter((u): u is string => !!u);
+  const src = candidates.find((u) => u !== broken) ?? null;
   const examples = visual?.examples ?? [];
   const videos = examples.filter((e) => e.kind === 'video').length;
   const openable = hasMedia(visual) && !!onOpen;
@@ -57,7 +59,7 @@ export function Thumb({ visual, kind, label, size = 56, onOpen }: { visual: Visu
       aria-label={openable ? `Open ${examples.length || 1} preview${examples.length === 1 ? '' : 's'}` : undefined}
       onClick={open}
     >
-      {src ? <img src={src} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} /> : <Placeholder kind={kind} label={label} />}
+      {src ? <img key={src} src={src} alt="" loading="lazy" decoding="async" onError={() => setBroken(src)} /> : <Placeholder kind={kind} label={label} />}
       {videos > 0 && (
         <span className="ms-thumb-play" aria-hidden>
           <Icon name="play" size={10} />
@@ -71,7 +73,8 @@ export function Thumb({ visual, kind, label, size = 56, onOpen }: { visual: Visu
 function MediaItem({ item, autoPlay }: { item: MediaRef; autoPlay?: boolean }) {
   const url = useMediaUrl();
   const [broken, setBroken] = useState(false);
-  const src = url(item.path);
+  const src = item.url ?? url(item.path);
+  const poster = item.posterUrl ?? url(item.poster);
   if (!src || broken) {
     return (
       <div className="ms-media ms-media-missing">
@@ -84,7 +87,7 @@ function MediaItem({ item, autoPlay }: { item: MediaRef; autoPlay?: boolean }) {
   return (
     <figure className="ms-media">
       {item.kind === 'video' ? (
-        <video src={src} poster={url(item.poster) ?? undefined} controls playsInline preload="metadata" autoPlay={autoPlay} onError={() => setBroken(true)} />
+        <video src={src} poster={poster ?? undefined} controls playsInline preload="metadata" autoPlay={autoPlay} onError={() => setBroken(true)} />
       ) : (
         <img src={src} alt={item.label ?? ''} loading="lazy" decoding="async" onError={() => setBroken(true)} />
       )}
@@ -97,7 +100,8 @@ function MediaItem({ item, autoPlay }: { item: MediaRef; autoPlay?: boolean }) {
 export function ExamplesGrid({ visual, autoPlayFirstVideo }: { visual: Visual; autoPlayFirstVideo?: boolean }) {
   const items = useMemo(() => {
     const list = [...visual.examples];
-    if (visual.thumb && !list.some((e) => e.path === visual.thumb)) list.unshift({ path: visual.thumb, kind: 'image' });
+    if (visual.thumbUrl && !list.some((e) => e.url === visual.thumbUrl)) list.unshift({ path: visual.thumbUrl, kind: 'image', url: visual.thumbUrl, label: 'thumbnail' });
+    if (visual.thumb && !list.some((e) => e.path === visual.thumb)) list.push({ path: visual.thumb, kind: 'image' });
     return list;
   }, [visual]);
   if (!items.length) return null;
@@ -128,7 +132,7 @@ export function MediaSheet({ title, visual, onClose, footer }: { title: string; 
 
 // ---------------------------------------------------------------------------
 
-/** Example clips under `videos/` that no card claimed. Tap a tile to play it in place. */
+/** Example clips under `videos/` in the bundle that no card claimed ("Clips"). Tap a tile to play it in place. */
 export function VideosSection({ bundle, q }: { bundle: ContentBundle; q: string }) {
   const url = useMediaUrl();
   const [playing, setPlaying] = useState<string | null>(null);
@@ -139,10 +143,10 @@ export function VideosSection({ bundle, q }: { bundle: ContentBundle; q: string 
     for (const v of items) (m.get(v.folder) ?? m.set(v.folder, []).get(v.folder)!).push(v);
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [items]);
-  if (!items.length) return <div className="empty">{q ? `No videos match “${q}”.` : 'No videos in this bundle.'}</div>;
+  if (!items.length) return <div className="empty">{q ? `No clips match “${q}”.` : 'No clips in this bundle.'}</div>;
   return (
     <>
-      <p className="muted small ms-hint">Example clips from Video Studio that are not tied to a card. Tap to play; they stream from the Mac.</p>
+      <p className="muted small ms-hint">Example clips found next to the bundle's data files that are not tied to a card. Tap to play; they stream from the Mac. The full Video Studio video gallery is under <strong>Videos</strong>.</p>
       {groups.map(([folder, vids]) => (
         <div key={folder}>
           <div className="section-title">{folder || 'videos'} <span className="muted">{vids.length}</span></div>
