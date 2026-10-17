@@ -4,19 +4,22 @@
  * When the workflow file is a ComfyUI API prompt, Run posts that object
  * through the existing queue path. The only writes are the prompt text, when
  * it was edited, and the image input, when a gallery photo was chosen.
- * Nothing else is rebuilt or removed. The sheet stays open and shows Queued
- * or the server's error text.
+ * Nothing else is rebuilt or removed. An accepted job opens the Queue on the
+ * live list. A failed or timed-out post stays here and shows the error.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   CARD_CANNOT_BE_BUILT,
+  GALLERY_COLUMNS,
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
   applyStudioRunEdits,
-  loadStudioGallery,
+  galleryWindow,
   loadStudioWorkflowFile,
   parseWorkflow,
   patchStudioRunFile,
+  peekStudioGallery,
+  primeStudioGallery,
   studioRunEdits,
   useServerStore,
   type StudioGalleryImage,
@@ -27,6 +30,8 @@ import { Sheet } from '../../shared/Sheet';
 import { useQueue } from '../../shared/useQueue';
 import { useUiStore } from '../../shared/ui';
 
+const GALLERY_VIEW_H = 240;
+
 export type RunPreview =
   | { kind: 'video'; src: string; poster: string | null }
   | { kind: 'image'; src: string }
@@ -34,45 +39,101 @@ export type RunPreview =
 
 type RunCard = StudioThumbCopy | StudioThumbWorkflow;
 
+function GalleryGrid({ images, picked, onPick }: { images: StudioGalleryImage[]; picked: StudioGalleryImage | null; onPick: (image: StudioGalleryImage) => void }) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [stride, setStride] = useState(96);
+  const [size, setSize] = useState(90);
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const measure = () => {
+      const gap = 6;
+      const width = el.clientWidth;
+      if (width <= 0) return;
+      const next = (width - gap * (GALLERY_COLUMNS - 1)) / GALLERY_COLUMNS;
+      setSize(next);
+      setStride(next + gap);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const { start, end } = galleryWindow(images.length, scrollTop, GALLERY_VIEW_H, stride, GALLERY_COLUMNS);
+  const slice = images.slice(start, end);
+  const rows = Math.ceil(images.length / GALLERY_COLUMNS);
+  const totalH = Math.max(size, rows * stride - 6);
+
+  return (
+    <div
+      className="ms-run-gallery"
+      ref={scroller}
+      role="listbox"
+      aria-label="Gallery"
+      onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+    >
+      <div className="ms-run-gallery-canvas" style={{ height: totalH }}>
+        {slice.map((image, i) => {
+          const index = start + i;
+          const row = Math.floor(index / GALLERY_COLUMNS);
+          const col = index % GALLERY_COLUMNS;
+          return (
+            <button
+              type="button"
+              key={image.file}
+              role="option"
+              aria-selected={picked?.file === image.file}
+              className={picked?.file === image.file ? 'is-picked' : undefined}
+              style={{ top: row * stride, left: col * stride, width: size, height: size }}
+              onClick={() => onPick(image)}
+            >
+              <img src={image.thumb} alt={image.name} decoding="async" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
-  const execution = useServerStore((s) => s.execution);
   const uploadInput = useServerStore((s) => s.uploadInput);
   const { queueWorkflow, queueApiPrompt } = useQueue();
   const toast = useUiStore((s) => s.toast);
-  const setTab = useUiStore((s) => s.setTab);
+  const focusQueuedRun = useUiStore((s) => s.focusQueuedRun);
   const [prompt, setPrompt] = useState(card.prompt);
   const [picked, setPicked] = useState<StudioGalleryImage | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [gallery, setGallery] = useState<StudioGalleryImage[] | null>(null);
+  const [images, setImages] = useState<StudioGalleryImage[] | null>(() => peekStudioGallery());
   const [galleryNote, setGalleryNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const [queuedId, setQueuedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!queuedId || execution.promptId !== queuedId) return;
-    if (execution.status === 'error' && execution.error?.message) setResult(execution.error.message);
-  }, [execution, queuedId]);
+    if (images) return;
+    let live = true;
+    void primeStudioGallery()
+      .then((list) => {
+        if (!live) return;
+        if (!list.length) setGalleryNote(GALLERY_NOT_IN_BUILD);
+        else setImages(list);
+      })
+      .catch((err: unknown) => {
+        if (live) setGalleryNote(err instanceof Error && err.message ? err.message : GALLERY_NOT_IN_BUILD);
+      });
+    return () => {
+      live = false;
+    };
+  }, [images]);
 
   const connected = status === 'connected';
   const canQueue = !!card.workflowFile;
   const promptWritable = card.promptNodeId != null && !!card.promptField;
   const imageWritable = card.imageNodeId != null && !!card.imageField;
-
-  const openGallery = () => {
-    setGalleryOpen(true);
-    if (gallery) return;
-    setGalleryNote(null);
-    void loadStudioGallery()
-      .then((images) => {
-        if (!images.length) setGalleryNote(GALLERY_NOT_IN_BUILD);
-        else setGallery(images);
-      })
-      .catch((err: unknown) => {
-        setGalleryNote(err instanceof Error && err.message ? err.message : GALLERY_NOT_IN_BUILD);
-      });
-  };
 
   const showResult = (message: string) => {
     setResult(message);
@@ -87,6 +148,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     }
     setBusy(true);
     setResult(null);
+    let accepted: string | null = null;
     try {
       const json = await loadStudioWorkflowFile(card.workflowFile);
       let imageName: string | null = null;
@@ -113,10 +175,9 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       if (patched.format === 'api') {
         // A missed edit leaves that saved input. The rest of the prompt is posted whole.
         const queued = await queueApiPrompt(patched.prompt, { source: 'studio' });
-        if (queued.ok && queued.promptId) setQueuedId(queued.promptId);
-        setResult(queued.message);
-        return;
-      }
+        if (queued.ok && queued.promptId) accepted = queued.promptId;
+        else setResult(queued.message);
+      } else {
       // A refreshing node list must not block Run. A cached list is used when
       // one is already loaded; otherwise the existing converter runs without it.
       const info = useServerStore.getState().objectInfo;
@@ -135,14 +196,16 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         wf = applyStudioRunEdits(wf, edits).workflow;
       }
       const id = await queueWorkflow(wf, { source: 'studio' });
-      if (id) {
-        onClose();
-        setTab('queue');
+      if (id) accepted = id;
       }
     } catch (err) {
       showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
     } finally {
       setBusy(false);
+    }
+    if (accepted) {
+      onClose();
+      focusQueuedRun(accepted);
     }
   };
 
@@ -202,7 +265,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
 
       <div className="field">
         <div className="field-label">Photo</div>
-        <button type="button" className="btn block ms-run-photo" onClick={openGallery}>
+        <button type="button" className="btn block ms-run-photo" onClick={() => setGalleryOpen(true)}>
           New photo
         </button>
         <p className="ms-run-keep">{picked ? `Using ${picked.name} instead of the card's image.` : "Keeping the card's image."}</p>
@@ -213,23 +276,8 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         )}
         {!imageWritable && <p className="field-hint">This photo stays as saved in the workflow.</p>}
         {galleryOpen && galleryNote && <p className="ms-run-note">{galleryNote}</p>}
-        {galleryOpen && !gallery && !galleryNote && <p className="ms-run-note">Loading gallery…</p>}
-        {galleryOpen && gallery && (
-          <div className="ms-run-gallery" role="listbox" aria-label="Gallery">
-            {gallery.map((image) => (
-              <button
-                type="button"
-                key={image.file}
-                role="option"
-                aria-selected={picked?.file === image.file}
-                className={picked?.file === image.file ? 'is-picked' : undefined}
-                onClick={() => setPicked(image)}
-              >
-                <img src={image.thumb} alt={image.name} />
-              </button>
-            ))}
-          </div>
-        )}
+        {galleryOpen && !images && !galleryNote && <p className="ms-run-note">Loading gallery…</p>}
+        {galleryOpen && images && <GalleryGrid images={images} picked={picked} onPick={setPicked} />}
       </div>
     </Sheet>
   );

@@ -11,12 +11,17 @@ import {
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
   applyStudioRunEdits,
+  galleryWindow,
   loadStudioGallery,
   loadStudioWorkflowFile,
   parseStudioGallery,
   patchStudioRunFile,
+  peekStudioGallery,
+  primeStudioGallery,
+  resetStudioGallerySession,
   studioRunEdits,
 } from '../src/core/content/studioRun.ts';
+import { visibleQueueItems } from '../src/screens/queueList.ts';
 import { graphToPrompt } from '../src/core/graph/prompt.ts';
 import { parseWorkflow } from '../src/core/graph/serialize.ts';
 
@@ -353,4 +358,43 @@ test('gallery.json is a same-origin list of thumb and file', async () => {
     () => loadStudioGallery(async () => ({ ok: true, json: async () => ({ not: 'a list' }) })),
     { message: GALLERY_NOT_IN_BUILD },
   );
+});
+
+test('gallery.json is fetched once per session and only the on-screen window is decoded', async () => {
+  resetStudioGallerySession();
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    const images = Array.from({ length: 2730 }, (_, i) => ({ thumb: `g/t${i}.webp`, file: `g/${i}.png` }));
+    return { ok: true, json: async () => images };
+  };
+  const first = await primeStudioGallery(fetchImpl);
+  const second = await primeStudioGallery(async () => {
+    calls += 1;
+    throw new Error('refetch');
+  });
+  assert.equal(calls, 1);
+  assert.equal(first, second);
+  assert.equal(peekStudioGallery()?.length, 2730);
+  const top = galleryWindow(2730, 0, 240, 96, 3);
+  assert.equal(top.start, 0);
+  assert.ok(top.end <= 15);
+  assert.ok(top.end >= 9);
+  const mid = galleryWindow(2730, 10000, 240, 96, 3);
+  assert.ok(mid.start > 100);
+  assert.ok(mid.end - mid.start <= 18);
+  assert.ok(mid.end < 2730);
+  resetStudioGallerySession();
+});
+
+test('an accepted prompt stays visible on the live queue before refresh', () => {
+  const running = [[1, 'running-id', {}, {}, []]];
+  const pending = [[2, 'pending-id', {}, {}, []]];
+  const withFocus = visibleQueueItems(running, pending, 'new-id');
+  assert.equal(withFocus[0].placeholder, true);
+  assert.equal(withFocus[0].item[1], 'new-id');
+  assert.equal(withFocus.length, 3);
+  const landed = visibleQueueItems(running, [[3, 'new-id', {}, {}, []]], 'new-id');
+  assert.equal(landed.some((row) => row.placeholder), false);
+  assert.equal(landed.filter((row) => row.item[1] === 'new-id').length, 1);
 });

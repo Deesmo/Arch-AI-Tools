@@ -10,6 +10,7 @@ import {
   cardImage,
   copyMainClip,
   loadStudioThumbs,
+  primeStudioGallery,
   studioThumbUrl,
   type StudioThumbCatalog,
   type StudioThumbCopy,
@@ -31,6 +32,9 @@ const SECTIONS: { id: Section; label: string }[] = [
 function useStudioThumbs() {
   const [status, setStatus] = useState<'loading' | 'missing' | 'ready'>('loading');
   const [catalog, setCatalog] = useState<StudioThumbCatalog | null>(null);
+  useEffect(() => {
+    void primeStudioGallery();
+  }, []);
   useEffect(() => {
     let live = true;
     void loadStudioThumbs().then((result) => {

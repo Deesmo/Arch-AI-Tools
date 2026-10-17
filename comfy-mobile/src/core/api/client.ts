@@ -265,10 +265,12 @@ export const api = {
   getHistory: (maxItems = 64) => request<History>(`/history?max_items=${maxItems}`, { timeoutMs: 30_000 }),
 
   /** Submits an API prompt. Resolves to the prompt id; rejects with ApiError
-   *  whose `body` is a PromptErrorResponse when validation fails (400). */
-  queuePrompt: (prompt: ApiPrompt, clientId: string, workflow?: unknown, front = false) =>
+   *  whose `body` is a PromptErrorResponse when validation fails (400).
+   *  `timeoutMs` aborts when no response headers arrive (0 waits forever). */
+  queuePrompt: (prompt: ApiPrompt, clientId: string, workflow?: unknown, front = false, timeoutMs = 0) =>
     request<PromptResponse>('/prompt', {
       method: 'POST',
+      timeoutMs,
       body: JSON.stringify({
         prompt,
         client_id: clientId,

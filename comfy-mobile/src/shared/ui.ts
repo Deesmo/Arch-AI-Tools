@@ -26,7 +26,11 @@ interface UiState {
   workflowsOpen: boolean;
   /** First-run walkthrough / Settings → "How this works". */
   guideOpen: boolean;
+  /** Prompt id to show on the live queue list after a successful Run. */
+  queueFocusId: string | null;
   setTab: (tab: Tab) => void;
+  /** Open the Queue tab on the live list, with this prompt id visible. */
+  focusQueuedRun: (promptId: string) => void;
   setGuideOpen: (open: boolean) => void;
   toast: (text: string, kind?: Toast['kind']) => void;
   dismissToast: (id: number) => void;
@@ -41,12 +45,14 @@ let toastId = 0;
 
 export const useUiStore = create<UiState>()((set, get) => ({
   tab: 'studio',
+  queueFocusId: null,
   toasts: [],
   confirm: null,
   viewer: null,
   workflowsOpen: false,
   guideOpen: false,
   setTab: (tab) => set({ tab }),
+  focusQueuedRun: (promptId) => set({ tab: 'queue', queueFocusId: promptId }),
   setGuideOpen: (guideOpen) => set({ guideOpen }),
   toast: (text, kind = 'info') => {
     const id = ++toastId;

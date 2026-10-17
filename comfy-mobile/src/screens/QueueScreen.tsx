@@ -15,13 +15,19 @@ import {
 import { Icon } from '../shared/Icon';
 import { MediaView, kindLabel } from '../shared/MediaView';
 import { useUiStore } from '../shared/ui';
+import { visibleQueueItems } from './queueList';
 
 export function QueueScreen() {
   const { queue, history, execution, refreshQueue, refreshHistory, interrupt, deleteQueueItem, clearQueue, deleteHistoryItem, clearHistory, status } = useServerStore();
   const info = useServerStore((s) => s.objectInfo);
   const load = useGraphStore((s) => s.load);
   const { toast, ask, setTab, openViewer } = useUiStore();
-  const [tab, setTabLocal] = useState<'queue' | 'history'>('history');
+  const focusId = useUiStore((s) => s.queueFocusId);
+  const [tab, setTabLocal] = useState<'queue' | 'history'>(focusId ? 'queue' : 'history');
+
+  useEffect(() => {
+    if (focusId) setTabLocal('queue');
+  }, [focusId]);
 
   useEffect(() => {
     if (status === 'connected') {
@@ -33,6 +39,8 @@ export function QueueScreen() {
   const historyList = useMemo(() => Object.entries(history ?? {}).sort(historyOrder), [history]);
   const running = queue?.queue_running ?? [];
   const pending = queue?.queue_pending ?? [];
+  const queueRows = useMemo(() => visibleQueueItems(running, pending, focusId), [running, pending, focusId]);
+  const runningIds = useMemo(() => new Set(running.map((item) => item[1])), [running]);
 
   const openWorkflow = (entry: HistoryEntry, name: string) => {
     const wf = entry.prompt?.[3]?.extra_pnginfo?.workflow;
@@ -46,6 +54,11 @@ export function QueueScreen() {
   };
 
   const progressPct = execution.progress && execution.progress.max > 0 ? Math.round((execution.progress.value / execution.progress.max) * 100) : null;
+
+  useEffect(() => {
+    if (!focusId || tab !== 'queue') return;
+    document.getElementById(`queue-item-${focusId}`)?.scrollIntoView({ block: 'nearest' });
+  }, [focusId, tab, queueRows]);
 
   return (
     <div className="screen">
@@ -92,7 +105,7 @@ export function QueueScreen() {
               </div>
             )}
             <div className="section-title">
-              Pending ({pending.length})
+              Pending ({pending.length + queueRows.filter((row) => row.placeholder).length})
               {pending.length > 0 && (
                 <button className="btn sm" onClick={async () => { if (await ask({ title: 'Clear pending queue?', confirmLabel: 'Clear', danger: true })) await clearQueue(); }}>
                   Clear
@@ -100,15 +113,15 @@ export function QueueScreen() {
               )}
             </div>
             <div className="card" style={{ padding: 0 }}>
-              {pending.length === 0 && running.length === 0 && <div className="empty">Queue is empty</div>}
-              {[...running, ...pending].map((item) => (
-                <div className="list-item" key={item[1]} style={{ cursor: 'default' }}>
-                  <span className={`conn-dot ${running.includes(item) ? 'busy' : ''}`} />
+              {queueRows.length === 0 && <div className="empty">Queue is empty</div>}
+              {queueRows.map(({ item, placeholder }) => (
+                <div className="list-item" key={item[1]} id={`queue-item-${item[1]}`} style={{ cursor: 'default', background: item[1] === focusId ? 'rgba(138, 180, 255, 0.14)' : undefined }}>
+                  <span className={`conn-dot ${runningIds.has(item[1]) || placeholder ? 'busy' : ''}`} />
                   <div className="title">
-                    <div>#{item[0]} {running.includes(item) ? '(running)' : ''}</div>
+                    <div>{placeholder ? 'Queued' : `#${item[0]}${runningIds.has(item[1]) ? ' (running)' : ''}`}</div>
                     <div className="sub mono">{item[1]}</div>
                   </div>
-                  <button className="icon-btn" aria-label="Cancel" onClick={() => (running.includes(item) ? void interrupt() : void deleteQueueItem(item[1]))}>
+                  <button className="icon-btn" aria-label="Cancel" onClick={() => (runningIds.has(item[1]) ? void interrupt() : void deleteQueueItem(item[1]))}>
                     <Icon name="close" size={18} />
                   </button>
                 </div>

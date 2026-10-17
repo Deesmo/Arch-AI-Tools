@@ -198,13 +198,16 @@ Run posts that API prompt through the existing queue path. It does not rebuild
 the graph. The prompt text is written only when the words were edited and
 `promptNodeId` / `promptField` are set. A new photo is written only when one
 was chosen and `imageNodeId` / `imageField` are set. Every other input stays,
-including objects such as `timeline_data` and `builder_state`. The sheet stays
-open and shows Queued, or the same server error text the Queue shows.
+including objects such as `timeline_data` and `builder_state`. An accepted post opens the Queue on the live list, with that prompt id
+visible. If the post fails or does not answer within 30 seconds, the sheet
+stays open and shows the error instead of sitting on Queuing.
 
-New photo opens `/studio-thumbs/gallery.json`, a list of `{ thumb, file }`
-paths relative to `/studio-thumbs/`. Tapping one uploads that file to ComfyUI
-and sets the card's image input. It does not open the camera roll. If
-`gallery.json` is missing, the sheet says the gallery is not in this build.
+`/studio-thumbs/gallery.json` is loaded once when My Studio opens and kept in
+memory. New photo opens that grid immediately and does not fetch it again.
+Only the pictures in the gallery viewport are decoded. Tapping one uploads
+that file to ComfyUI and sets the card's image input. It does not open the
+camera roll. If `gallery.json` is missing, the sheet says the gallery is not
+in this build.
 
 A UI graph, when a card still has one, is still converted with the app's
 existing queue path, subgraph expansion included. On a UI graph, Run sets

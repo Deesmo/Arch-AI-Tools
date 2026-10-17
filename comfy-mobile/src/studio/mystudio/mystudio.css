@@ -431,12 +431,17 @@
   overflow-y: auto;
 }
 .ms-run-gallery {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  position: relative;
+  height: 240px;
   margin-top: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ms-run-gallery-canvas {
+  position: relative;
 }
 .ms-run-gallery button {
+  position: absolute;
   padding: 0;
   border: 2px solid transparent;
   border-radius: 6px;
@@ -449,6 +454,6 @@
 .ms-run-gallery img {
   display: block;
   width: 100%;
-  aspect-ratio: 1;
+  height: 100%;
   object-fit: cover;
 }

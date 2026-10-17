@@ -166,7 +166,7 @@ interface ServerState {
   queuePrompt: (
     prompt: ApiPrompt,
     workflow: Workflow,
-    meta: { source: 'studio' | 'graph'; templateId?: string },
+    meta: { source: 'studio' | 'graph'; templateId?: string; timeoutMs?: number },
   ) => Promise<{ ok: true; promptId: string } | { ok: false; message: string; nodeErrors: Record<string, NodeError> }>;
   interrupt: () => Promise<void>;
   deleteQueueItem: (id: string) => Promise<void>;
@@ -558,7 +558,7 @@ export const useServerStore = create<ServerState>()((set, get) => {
       set({ nodeErrors: {} });
       const exported = exportWorkflow(workflow);
       try {
-        const res = await api.queuePrompt(prompt, get().clientId, exported);
+        const res = await api.queuePrompt(prompt, get().clientId, exported, false, meta.timeoutMs);
         set((s) => ({
           submitted: {
             ...s.submitted,

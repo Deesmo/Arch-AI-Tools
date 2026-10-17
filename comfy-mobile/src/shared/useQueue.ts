@@ -62,7 +62,7 @@ export function useQueue() {
         toast(message, 'error');
         return { ok: false, promptId: null, message };
       }
-      const res = await queuePrompt(prompt, emptyWorkflow(), meta);
+      const res = await queuePrompt(prompt, emptyWorkflow(), { ...meta, timeoutMs: 30_000 });
       if (!res.ok) {
         toast(res.message, 'error');
         return { ok: false, promptId: null, message: res.message };

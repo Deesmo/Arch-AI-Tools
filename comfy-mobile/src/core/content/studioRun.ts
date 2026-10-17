@@ -330,6 +330,50 @@ export function parseStudioGallery(raw: unknown): StudioGalleryImage[] {
   return out;
 }
 
+/** How many columns the run-sheet gallery draws. */
+export const GALLERY_COLUMNS = 3;
+
+/**
+ * Indexes of gallery entries whose pictures should be decoded.
+ * `cell` is the row height in px. Only the rows inside the scroller, plus one
+ * row of overscan, are returned — the other 2700 stay as JSON.
+ */
+export function galleryWindow(count: number, scrollTop: number, viewHeight: number, cell: number, columns = GALLERY_COLUMNS): { start: number; end: number } {
+  if (count <= 0 || cell <= 0 || columns <= 0) return { start: 0, end: 0 };
+  const rows = Math.ceil(count / columns);
+  const startRow = Math.max(0, Math.floor(scrollTop / cell) - 1);
+  const endRow = Math.min(rows, Math.ceil((scrollTop + viewHeight) / cell) + 1);
+  return { start: startRow * columns, end: Math.min(count, endRow * columns) };
+}
+
+let gallerySession: Promise<StudioGalleryImage[]> | null = null;
+let galleryReady: StudioGalleryImage[] | null = null;
+
+/** Pictures already parsed this session, or null while the one fetch is still out. */
+export function peekStudioGallery(): StudioGalleryImage[] | null {
+  return galleryReady;
+}
+
+/**
+ * Loads `/studio-thumbs/gallery.json` once per page session.
+ * Later calls share that promise and do not fetch again.
+ */
+export function primeStudioGallery(fetchImpl: typeof fetch = fetch): Promise<StudioGalleryImage[]> {
+  if (!gallerySession) {
+    gallerySession = loadStudioGallery(fetchImpl).then((images) => {
+      galleryReady = images;
+      return images;
+    });
+  }
+  return gallerySession;
+}
+
+/** Test hook. The phone keeps the gallery for the whole session. */
+export function resetStudioGallerySession(): void {
+  gallerySession = null;
+  galleryReady = null;
+}
+
 /** GET `/studio-thumbs/gallery.json`. A missing or unreadable file throws. */
 export async function loadStudioGallery(fetchImpl: typeof fetch = fetch): Promise<StudioGalleryImage[]> {
   const res = await fetchImpl(STUDIO_GALLERY, { cache: 'no-store', credentials: 'omit' });
