@@ -30,14 +30,25 @@ export interface StudioThumbLora extends StudioThumbFields {
   favorite: boolean;
 }
 
-export interface StudioThumbWorkflow extends StudioThumbFields {
+/** Fields the Mac adds so a card can be queued without opening the graph. */
+export interface StudioRunFields {
+  /** Path relative to `/studio-thumbs/`, or null when this card has no workflow in the build. */
+  workflowFile: string | null;
+  prompt: string;
+  promptNodeId: number | null;
+  promptField: string | null;
+  imageNodeId: number | null;
+  imageField: string | null;
+}
+
+export interface StudioThumbWorkflow extends StudioThumbFields, StudioRunFields {
   name: string;
   thumb: string | null;
   examples: string[];
   favorite: boolean;
 }
 
-export interface StudioThumbCopy extends StudioThumbFields {
+export interface StudioThumbCopy extends StudioThumbFields, StudioRunFields {
   name: string;
   poster: string | null;
   preview: string | null;
@@ -134,6 +145,47 @@ function pathList(v: unknown): string[] {
   return out;
 }
 
+function nodeIdOf(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isInteger(v)) return v;
+  if (typeof v === 'string' && /^-?\d+$/.test(v.trim())) return Number(v.trim());
+  return null;
+}
+
+function fieldName(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t || null;
+}
+
+/** A workflow path that stays under `/studio-thumbs/`, stored relative to that root. */
+function workflowFileOf(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const url = studioThumbUrl(v);
+  if (!url?.startsWith(STUDIO_THUMBS_ROOT)) return null;
+  return url
+    .slice(STUDIO_THUMBS_ROOT.length)
+    .split('/')
+    .map((seg) => {
+      try {
+        return decodeURIComponent(seg);
+      } catch {
+        return seg;
+      }
+    })
+    .join('/');
+}
+
+function runFields(o: Record<string, unknown>): StudioRunFields {
+  return {
+    workflowFile: workflowFileOf(o.workflowFile),
+    prompt: typeof o.prompt === 'string' ? o.prompt : '',
+    promptNodeId: nodeIdOf(o.promptNodeId),
+    promptField: fieldName(o.promptField),
+    imageNodeId: nodeIdOf(o.imageNodeId),
+    imageField: fieldName(o.imageField),
+  };
+}
+
 function extras(o: Record<string, unknown>): StudioThumbFields {
   const model = text(o.model);
   const author = text(o.author);
@@ -182,6 +234,7 @@ export function parseStudioThumbIndex(data: unknown): StudioThumbCatalog {
       examples: pathList(o.examples),
       favorite: favoriteOf(o),
       ...extras(o),
+      ...runFields(o),
     });
   }
   const copies: StudioThumbCopy[] = [];
@@ -197,6 +250,7 @@ export function parseStudioThumbIndex(data: unknown): StudioThumbCatalog {
       examples: pathList(o.examples),
       favorite: favoriteOf(o),
       ...extras(o),
+      ...runFields(o),
     });
   }
   return { loras, workflows, copies };

@@ -349,3 +349,35 @@
   position: absolute;
   inset: 0;
 }
+
+.ms-copy-card.is-runnable,
+.ms-item.is-runnable {
+  cursor: pointer;
+}
+
+.ms-run-preview {
+  margin: 0 0 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #000;
+}
+.ms-run-preview video,
+.ms-run-preview img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  background: #000;
+}
+.ms-run-note {
+  margin: 0 0 12px;
+}
+.ms-run-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ms-run-file input[type='file'] {
+  display: none;
+}

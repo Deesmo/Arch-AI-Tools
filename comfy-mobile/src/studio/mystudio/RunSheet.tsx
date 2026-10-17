@@ -1,0 +1,160 @@
+/**
+ * Run a copy or workflow card. The sheet keeps the card's preview, prefills
+ * the prompt, and lets Brad swap the photo. Queue goes through the app's
+ * existing path (subgraph expansion included). A new photo uses the existing
+ * ComfyUI image upload. Nothing else in the workflow file is rewritten.
+ */
+import { useEffect, useState } from 'react';
+import {
+  SETTINGS_NOT_IN_BUILD,
+  applyStudioRunEdits,
+  loadStudioWorkflowFile,
+  parseWorkflow,
+  useServerStore,
+  type StudioThumbCopy,
+  type StudioThumbWorkflow,
+} from '../../core';
+import { Sheet } from '../../shared/Sheet';
+import { useQueue } from '../../shared/useQueue';
+import { useUiStore } from '../../shared/ui';
+
+export type RunPreview =
+  | { kind: 'video'; src: string; poster: string | null }
+  | { kind: 'image'; src: string }
+  | null;
+
+type RunCard = StudioThumbCopy | StudioThumbWorkflow;
+
+export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
+  const status = useServerStore((s) => s.status);
+  const uploadInput = useServerStore((s) => s.uploadInput);
+  const { queueWorkflow } = useQueue();
+  const toast = useUiStore((s) => s.toast);
+  const setTab = useUiStore((s) => s.setTab);
+  const [prompt, setPrompt] = useState(card.prompt);
+  const [file, setFile] = useState<File | null>(null);
+  const [localUrl, setLocalUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!file) {
+      setLocalUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setLocalUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const connected = status === 'connected';
+  const canQueue = !!card.workflowFile;
+  const promptWritable = card.promptNodeId != null && !!card.promptField;
+  const imageWritable = card.imageNodeId != null && !!card.imageField;
+
+  const run = async () => {
+    if (!card.workflowFile || busy) return;
+    if (!connected) return;
+    const info = useServerStore.getState().objectInfo;
+    if (!info) {
+      toast('The server node list is still loading', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const json = await loadStudioWorkflowFile(card.workflowFile);
+      const parsed = parseWorkflow(json, info);
+      let uploaded: string | null = null;
+      if (file && imageWritable) uploaded = await uploadInput(file, file.name);
+      const applied = applyStudioRunEdits(parsed, {
+        prompt: promptWritable ? { nodeId: card.promptNodeId!, field: card.promptField!, value: prompt } : null,
+        image: uploaded && imageWritable ? { nodeId: card.imageNodeId!, field: card.imageField!, value: uploaded } : null,
+      });
+      if (applied.missed.length) {
+        toast(`Couldn't change the ${applied.missed.join(' and ')} on this card`, 'error');
+        return;
+      }
+      const id = await queueWorkflow(applied.workflow, { source: 'studio' });
+      if (id) {
+        onClose();
+        setTab('queue');
+      }
+    } catch (err) {
+      toast(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Sheet
+      title={card.name}
+      onClose={onClose}
+      footer={
+        canQueue ? (
+          <button className="btn primary block" disabled={!connected || busy} onClick={() => void run()}>
+            {busy ? 'Queuing…' : 'Run'}
+          </button>
+        ) : undefined
+      }
+    >
+      {preview?.kind === 'video' ? (
+        <div className="ms-run-preview">
+          <video src={preview.src} poster={preview.poster ?? undefined} muted loop playsInline autoPlay />
+        </div>
+      ) : preview?.kind === 'image' ? (
+        <div className="ms-run-preview">
+          <img src={localUrl ?? preview.src} alt="" />
+        </div>
+      ) : localUrl ? (
+        <div className="ms-run-preview">
+          <img src={localUrl} alt="" />
+        </div>
+      ) : null}
+
+      {!canQueue && <p className="ms-run-note">{SETTINGS_NOT_IN_BUILD}</p>}
+      {canQueue && !connected && <p className="ms-run-note">Not connected to a ComfyUI server</p>}
+
+      <div className="field">
+        <label className="field-label" htmlFor="ms-run-prompt">
+          Prompt
+        </label>
+        <textarea
+          id="ms-run-prompt"
+          className="textarea"
+          rows={5}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
+        {!promptWritable && <p className="field-hint">This prompt stays as saved in the workflow.</p>}
+      </div>
+
+      <div className="field">
+        <div className="field-label">Photo</div>
+        <div className="ms-run-file">
+          <label className="btn sm">
+            {file ? 'Change photo' : 'New photo'}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const next = e.target.files?.[0] ?? null;
+                setFile(next);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          {file ? (
+            <button type="button" className="btn sm ghost" onClick={() => setFile(null)}>
+              Keep the card's image
+            </button>
+          ) : (
+            <span className="sub">Keeping the card's image.</span>
+          )}
+        </div>
+        {file && <div className="sub ellipsis">{file.name}</div>}
+        {!imageWritable && <p className="field-hint">This photo stays as saved in the workflow.</p>}
+      </div>
+    </Sheet>
+  );
+}

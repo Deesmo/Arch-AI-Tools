@@ -71,7 +71,7 @@ function InlineClip({ src, poster, label }: { src: string; poster: string | null
 function ExampleStrip({ urls }: { urls: string[] }) {
   if (!urls.length) return null;
   return (
-    <div className="ms-copy-extras">
+    <div className="ms-copy-extras" onClick={(e) => e.stopPropagation()}>
       {urls.map((src) =>
         isVideoPath(src) ? (
           <video key={src} src={src} muted playsInline preload="none" controls aria-label="Example" />
@@ -83,12 +83,27 @@ function ExampleStrip({ urls }: { urls: string[] }) {
   );
 }
 
-export function CopyCard({ card }: { card: StudioThumbCopy }) {
+export function CopyCard({ card, onOpen }: { card: StudioThumbCopy; onOpen?: () => void }) {
   const clip = copyMainClip(card);
   const extras = copyExtras(card);
   const posterOnly = !clip && studioThumbUrl(card.poster);
   return (
-    <article className="card ms-copy-card">
+    <article
+      className={`card ms-copy-card${onOpen ? ' is-runnable' : ''}`}
+      onClick={onOpen}
+      onKeyDown={
+        onOpen
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpen();
+              }
+            }
+          : undefined
+      }
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+    >
       {clip ? (
         <InlineClip src={clip.src} poster={clip.poster} label={card.name} />
       ) : posterOnly ? (
@@ -146,9 +161,24 @@ export function LoraCard({ card }: { card: StudioThumbLora }) {
   );
 }
 
-export function WorkflowCard({ card }: { card: StudioThumbWorkflow }) {
+export function WorkflowCard({ card, onOpen }: { card: StudioThumbWorkflow; onOpen?: () => void }) {
   return (
-    <div className="list-item ms-item">
+    <div
+      className={`list-item ms-item${onOpen ? ' is-runnable' : ''}`}
+      onClick={onOpen}
+      onKeyDown={
+        onOpen
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpen();
+              }
+            }
+          : undefined
+      }
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+    >
       <Still src={cardImage(card.thumb, card.examples)} label={card.name} />
       <div className="title">
         <div className="ms-item-title">

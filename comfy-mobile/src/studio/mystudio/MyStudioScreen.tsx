@@ -5,8 +5,18 @@
  * no PIN, no cookie.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { MISSING_PICTURES, loadStudioThumbs, type StudioThumbCatalog } from '../../core';
+import {
+  MISSING_PICTURES,
+  cardImage,
+  copyMainClip,
+  loadStudioThumbs,
+  studioThumbUrl,
+  type StudioThumbCatalog,
+  type StudioThumbCopy,
+  type StudioThumbWorkflow,
+} from '../../core';
 import { Icon } from '../../shared/Icon';
+import { RunSheet, type RunPreview } from './RunSheet';
 import { CopyCard, LoraCard, WorkflowCard } from './ThumbCards';
 import './mystudio.css';
 
@@ -38,6 +48,18 @@ function useStudioThumbs() {
   return { status, catalog };
 }
 
+function copyPreview(card: StudioThumbCopy): RunPreview {
+  const clip = copyMainClip(card);
+  if (clip) return { kind: 'video', src: clip.src, poster: clip.poster };
+  const still = studioThumbUrl(card.poster);
+  return still ? { kind: 'image', src: still } : null;
+}
+
+function workflowPreview(card: StudioThumbWorkflow): RunPreview {
+  const src = cardImage(card.thumb, card.examples);
+  return src ? { kind: 'image', src } : null;
+}
+
 const hit = (q: string, fields: (string | undefined | null)[]) => {
   const n = q.trim().toLowerCase();
   return !n || fields.some((f) => !!f && f.toLowerCase().includes(n));
@@ -47,6 +69,7 @@ export function MyStudioScreen() {
   const { status, catalog } = useStudioThumbs();
   const [section, setSection] = useState<Section>('copies');
   const [q, setQ] = useState('');
+  const [run, setRun] = useState<{ card: StudioThumbCopy | StudioThumbWorkflow; preview: RunPreview } | null>(null);
 
   const counts = {
     copies: catalog?.copies.length ?? 0,
@@ -55,7 +78,7 @@ export function MyStudioScreen() {
   };
 
   const copies = useMemo(
-    () => (catalog?.copies ?? []).filter((c) => hit(q, [c.name, c.model, c.author, c.duration, c.civitaiId])),
+    () => (catalog?.copies ?? []).filter((c) => hit(q, [c.name, c.prompt, c.model, c.author, c.duration, c.civitaiId])),
     [catalog, q],
   );
   const loras = useMemo(
@@ -63,7 +86,7 @@ export function MyStudioScreen() {
     [catalog, q],
   );
   const workflows = useMemo(
-    () => (catalog?.workflows ?? []).filter((c) => hit(q, [c.name, c.model, c.author, c.civitaiId])),
+    () => (catalog?.workflows ?? []).filter((c) => hit(q, [c.name, c.prompt, c.model, c.author, c.civitaiId])),
     [catalog, q],
   );
 
@@ -99,7 +122,7 @@ export function MyStudioScreen() {
               copies.length ? (
                 <div className="ms-copy-list">
                   {copies.map((c, i) => (
-                    <CopyCard key={`${c.name}-${i}`} card={c} />
+                    <CopyCard key={`${c.name}-${i}`} card={c} onOpen={() => setRun({ card: c, preview: copyPreview(c) })} />
                   ))}
                 </div>
               ) : (
@@ -121,7 +144,7 @@ export function MyStudioScreen() {
               workflows.length ? (
                 <div className="card" style={{ padding: 0 }}>
                   {workflows.map((c, i) => (
-                    <WorkflowCard key={`${c.name}-${i}`} card={c} />
+                    <WorkflowCard key={`${c.name}-${i}`} card={c} onOpen={() => setRun({ card: c, preview: workflowPreview(c) })} />
                   ))}
                 </div>
               ) : (
@@ -131,6 +154,7 @@ export function MyStudioScreen() {
           </>
         )}
       </div>
+      {run && <RunSheet card={run.card} preview={run.preview} onClose={() => setRun(null)} />}
     </div>
   );
 }

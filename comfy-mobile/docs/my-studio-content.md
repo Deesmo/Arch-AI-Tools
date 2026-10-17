@@ -176,9 +176,20 @@ My Studio has three sections, all from `/studio-thumbs/index.json`:
 
 - **Copy cards** — the preview plays inline, muted and looping. Extra examples
   sit on the card. Name, and model / author / duration when the index has them.
-  A favorite draws a star.
-- **LoRAs** — thumbnail, name, trigger, rating.
+  A favorite draws a star. Tapping the card opens a run sheet: the preview stays,
+  the prompt is prefilled, and a new photo is optional. Run queues that card's
+  workflow through the connected ComfyUI server. Every other setting stays as
+  it is in the workflow file.
+- **LoRAs** — thumbnail, name, trigger, rating. Browsing only.
 - **Workflows** — thumbnail (or the first still example when `thumb` is null).
+  Tapping one opens the same run sheet as a copy card.
+
+The Mac adds `workflowFile`, `prompt`, `promptNodeId`, `promptField`,
+`imageNodeId`, and `imageField` on copy and workflow rows, and puts the
+workflow JSON under `/studio-thumbs/runs/`. A null `workflowFile` tells the
+sheet the card's settings are not in this build. A null node id leaves that
+box on screen and does not overwrite that part of the graph. If the phone is
+not connected, the sheet says so and does not submit.
 
 The Gallery tab is unchanged: this app's ComfyUI renders, with confirm-to-delete.
 It does not import Video Studio's old image or video libraries.
