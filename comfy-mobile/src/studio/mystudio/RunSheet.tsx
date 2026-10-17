@@ -54,7 +54,10 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
 
   const run = async () => {
     if (!card.workflowFile || busy) return;
-    if (!connected) return;
+    if (!connected) {
+      toast('Not connected to a ComfyUI server', 'error');
+      return;
+    }
     setBusy(true);
     try {
       const json = await loadStudioWorkflowFile(card.workflowFile);
@@ -81,11 +84,9 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         }
         return;
       }
+      // A refreshing node list must not block Run. A cached list is used when
+      // one is already loaded; otherwise the existing converter runs without it.
       const info = useServerStore.getState().objectInfo;
-      if (!info) {
-        toast('The server node list is still loading', 'error');
-        return;
-      }
       let wf = parseWorkflow(patched.workflow, info);
       if (patched.missed.length) {
         const fallback = applyStudioRunEdits(wf, {
@@ -118,9 +119,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     <Sheet
       title={card.name}
       onClose={onClose}
+      className="ms-run-sheet"
+      portal
       footer={
         canQueue ? (
-          <button className="btn primary block" disabled={!connected || busy} onClick={() => void run()}>
+          <button type="button" className="btn primary block ms-run-go" disabled={busy} onClick={() => void run()}>
             {busy ? 'Queuing…' : 'Run'}
           </button>
         ) : undefined
@@ -149,10 +152,16 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         </label>
         <textarea
           id="ms-run-prompt"
-          className="textarea"
+          className="textarea ms-run-prompt"
           rows={5}
           value={prompt}
+          inputMode="text"
+          enterKeyHint="done"
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
           onChange={(e) => setPrompt(e.target.value)}
+          onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
         />
         {!promptWritable && <p className="field-hint">This prompt stays as saved in the workflow.</p>}
       </div>
@@ -160,12 +169,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       <div className="field">
         <div className="field-label">Photo</div>
         <div className="ms-run-file">
-          <label className="btn sm">
-            {file ? 'Change photo' : 'New photo'}
+          <label className="btn block ms-run-photo">
+            New photo
             <input
               type="file"
               accept="image/*"
-              hidden
               onChange={(e) => {
                 const next = e.target.files?.[0] ?? null;
                 setFile(next);
@@ -173,15 +181,13 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
               }}
             />
           </label>
-          {file ? (
-            <button type="button" className="btn sm ghost" onClick={() => setFile(null)}>
-              Keep the card's image
-            </button>
-          ) : (
-            <span className="sub">Keeping the card's image.</span>
-          )}
         </div>
-        {file && <div className="sub ellipsis">{file.name}</div>}
+        <p className="ms-run-keep">{file ? `Using ${file.name} instead of the card's image.` : "Keeping the card's image."}</p>
+        {file && (
+          <button type="button" className="btn ghost ms-run-keep-btn" onClick={() => setFile(null)}>
+            Keep the card's image
+          </button>
+        )}
         {!imageWritable && <p className="field-hint">This photo stays as saved in the workflow.</p>}
       </div>
     </Sheet>

@@ -177,9 +177,10 @@ My Studio has three sections, all from `/studio-thumbs/index.json`:
 - **Copy cards** — the preview plays inline, muted and looping. Extra examples
   sit on the card. Name, and model / author / duration when the index has them.
   A favorite draws a star. Tapping the card opens a run sheet: the preview stays,
-  the prompt is prefilled, and a new photo is optional. Run queues that card's
-  workflow through the connected ComfyUI server. Every other setting stays as
-  it is in the workflow file.
+  the prompt is a text field prefilled from the card, and New photo is optional.
+  Run stays on screen above the tab bar. It queues that card's workflow through
+  the connected ComfyUI server without waiting for the node list. Every other
+  setting stays as it is in the workflow file.
 - **LoRAs** — thumbnail, name, trigger, rating. Browsing only.
 - **Workflows** — thumbnail (or the first still example when `thumb` is null).
   Tapping one opens the same run sheet as a copy card.

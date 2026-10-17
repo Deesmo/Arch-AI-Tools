@@ -381,3 +381,44 @@
 .ms-run-file input[type='file'] {
   display: none;
 }
+
+/* The phone page clips sheets inside the scrolling screen, so this one is
+   portaled and parked above the tab bar and the node-list banner. */
+.sheet.ms-run-sheet {
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--nodelist-banner-h, 0px));
+  max-height: calc(100vh - var(--tabbar-h) - var(--safe-bottom) - var(--nodelist-banner-h, 0px) - var(--safe-top) - 12px);
+  max-height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - var(--nodelist-banner-h, 0px) - var(--safe-top) - 12px);
+  padding-bottom: 0;
+  overflow: hidden;
+  z-index: 52;
+}
+.sheet.ms-run-sheet .sheet-body {
+  overflow-y: auto;
+}
+.sheet.ms-run-sheet .sheet-footer {
+  background: var(--comfy-menu-bg);
+  padding-bottom: 12px;
+}
+.ms-run-go {
+  min-height: 54px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.ms-run-prompt {
+  font-size: 16px;
+  min-height: 132px;
+}
+.ms-run-photo {
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.ms-run-keep {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--fg-color);
+}
+.ms-run-keep-btn {
+  margin-top: 4px;
+  padding-left: 0;
+}
