@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 EXPORTER_NAME = "export_video_studio.py"
-EXPORTER_VERSION = "1.0.0"
+EXPORTER_VERSION = "1.1.0"
 SCHEMA = "comfy-mobile-content"
 SCHEMA_VERSION = 1
 
@@ -68,7 +68,7 @@ SKIP_DIRS = {
 }
 DATA_EXT = {".json", ".jsonl", ".ndjson", ".yaml", ".yml", ".db", ".sqlite", ".sqlite3", ".py", ".js", ".txt", ".md"}
 # .txt/.md are only read when their NAME looks like content (see TEXT_NAME_HINTS)
-TEXT_NAME_HINTS = ("copy", "prompt", "recipe", "trigger", "preset", "character", "snippet")
+TEXT_NAME_HINTS = ("copy_card", "copycard", "copy-card", "copies", "copy_cards", "snippet", "prompt_library", "prompt-library")
 MEDIA_EXT = {
     ".mp4", ".mov", ".mkv", ".webm", ".gif", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".heic",
     ".wav", ".mp3", ".m4a", ".flac", ".ogg", ".safetensors", ".ckpt", ".pt", ".pth", ".gguf", ".bin",
@@ -80,15 +80,17 @@ SECRET_KEY_RE = re.compile(r"(pass(word|wd)?|secret|token|api[_-]?key|authorizat
 SECRET_VALUE_RE = re.compile(r"\b(sk-[A-Za-z0-9_-]{16,}|rp_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|xox[abp]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|hf_[A-Za-z0-9]{20,}|tskey-[A-Za-z0-9-]{10,})\b")
 MODEL_FILE_RE = re.compile(r"\.(safetensors|pt|pth|ckpt|gguf|bin|lora)$", re.I)
 
-# path tokens → section hint (first match wins; order matters)
+# Explicit file-name tokens → section hint (first match wins; order matters).
+# Only the last two path components are consulted (parent dir + file / table /
+# variable name), so a deep `static/assets/...` tree does not hint every file.
 PATH_HINTS: List[Tuple[str, Tuple[str, ...]]] = [
-    ("copyCards", ("copy_card", "copycard", "copy-card", "copies", "copy_cards", "snippet", "prompt_library", "prompt-library", "prompts")),
-    ("recipes", ("recipe", "part_doc", "workflow_part", "parts", "author", "trained")),
-    ("loras", ("adapter", "lora", "benched")),
+    ("copyCards", ("copy_card", "copycard", "copy-card", "copies", "copy_cards", "snippet", "prompt_library", "prompt-library")),
+    ("recipes", ("recipe", "part_doc", "workflow_part", "trained_words", "trained")),
+    ("loras", ("adapter_card", "adapter", "lora", "benched")),
     ("presets", ("preset",)),
-    ("characters", ("character", "persona", "cast", "talent")),
-    ("assets", ("asset", "vault", "inventory")),
-    ("workflows", ("workflow", "graph", "pipeline")),
+    ("characters", ("character", "persona", "cast")),
+    ("assets", ("asset_index", "asset_list", "asset_manifest", "assets.json", "inventory", "vault")),
+    ("workflows", ("workflow", "pipeline")),
 ]
 
 # record-key aliases
@@ -117,6 +119,15 @@ SETTINGS_LIKE = {"steps", "cfg", "cfg_scale", "guidance", "width", "height", "fr
 CHARACTER_LIKE = {"appearance", "age", "hair", "eyes", "outfit", "personality", "voice", "backstory", "gender", "ethnicity", "body", "look"}
 ASSET_LIKE = {"size", "bytes", "mime", "mimetype", "duration", "width", "height", "sha256", "md5", "mtime", "url", "thumbnail"}
 LETTER_GRADES = {"S": 5, "A+": 5, "A": 5, "A-": 4.5, "B+": 4, "B": 4, "B-": 3.5, "C+": 3, "C": 3, "C-": 2.5, "D": 2, "E": 1, "F": 1}
+
+# Strong signals. A record is promoted out of `raw` only on one of these (or an
+# explicit file-name hint); generic prompt/settings/path fields are not enough.
+STRONG_TRIGGER_KEYS = {"trained_words", "trainedwords", "trigger_words", "triggerwords", "triggers", "activation_text", "activation_words"}
+STRONG_SETTINGS_KEYS = {"author_settings", "authorsettings", "recommended_settings", "recommendedsettings", "author_params", "author_defaults"}
+STRONG_RATING_KEYS = {"rating", "brad_rating", "bradrating", "stars", "verdict_score", "grade"}
+# Job / log / status records are never content, whatever else they carry.
+JOBLIKE_KEYS = {"status", "state", "created_at", "updated_at", "started_at", "finished_at", "completed_at", "job_id", "prompt_id",
+                "timestamp", "ts", "progress", "error", "traceback", "pid", "exit_code", "elapsed", "duration_ms", "queue", "outputs", "output_path"}
 
 
 def log(msg: str) -> None:
@@ -520,7 +531,8 @@ def workflow_format(d: Any) -> Optional[str]:
 
 
 def path_hint(rel: str) -> Optional[str]:
-    low = rel.lower()
+    """Section hint from the explicit file name (last two path components only)."""
+    low = "/".join(rel.lower().replace("\\", "/").split("/")[-2:])
     for section, tokens in PATH_HINTS:
         if any(t in low for t in tokens):
             return section
@@ -665,52 +677,66 @@ def civitai_of(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def record_kind(rec: Dict[str, Any], hint: Optional[str]) -> str:
-    """Decide which section a record belongs to. Hint = path-derived guess."""
+    """Decide which section a record belongs to, or "unknown" (→ `raw`).
+
+    Tight on purpose: the real tree holds thousands of generic JSON objects
+    (job records, UI state, manifests) that carry `prompt` / `steps` / `path`
+    fields. Only strong signals promote a record:
+      workflows   a node graph (UI or API format)
+      loras       a model file + rating / bench / favourite / civitai id, or an
+                  explicit adapter-card file with a rating
+      recipes     trained_words / trigger_words or author_settings (+ a LoRA
+                  file or a recipe/part_doc file name)
+      copyCards, presets, characters, assets
+                  only from explicitly named files, and only records that
+                  carry the section's defining field
+    Everything else stays in `raw` (shape always listed in the digest).
+    """
     keys = {str(k).lower() for k in rec.keys()}
     if workflow_format(rec):
         return "workflows"
     for k in K_WORKFLOW:
         if workflow_format(rec.get(k)):
             return "workflows"
-    has_triggers = any(k.lower() in keys for k in K_TRIGGERS)
-    has_settings = any(k.lower() in keys for k in K_SETTINGS if k.lower() not in ("values", "params", "parameters"))
-    files = lora_files_in(rec)
-    has_rating = any(k.lower() in keys for k in K_RATING)
-    has_bench = any(k.lower() in keys for k in K_BENCHED) or any(k.lower() in keys for k in K_FAV)
-    has_text = any(k.lower() in keys for k in K_TEXT)
-    settings_keys = keys & SETTINGS_LIKE
 
-    if hint == "loras" and (files or has_rating):
-        return "loras"
-    if hint == "recipes" and (has_triggers or has_settings or files):
+    strong_trig = bool(keys & STRONG_TRIGGER_KEYS)
+    strong_settings = bool(keys & STRONG_SETTINGS_KEYS)
+    strong_rating = bool(keys & STRONG_RATING_KEYS)
+    bench = bool(keys & {k.lower() for k in K_BENCHED}) or bool(keys & {k.lower() for k in K_FAV})
+    files = lora_files_in(rec)
+    civ = civitai_of(rec) is not None
+    has_text = bool(keys & {k.lower() for k in K_TEXT})
+
+    # job / status / log rows never become content, even under a hinted file name
+    if keys & JOBLIKE_KEYS and not (strong_trig or strong_rating or strong_settings):
+        return "unknown"
+
+    # Explicit recipe / part-doc / cast files win over the generic LoRA-card rule
+    if hint == "recipes" and files and (strong_trig or strong_settings or civ):
         return "recipes"
+    if hint == "characters" and ("name" in keys or "character" in keys) and (keys & CHARACTER_LIKE or has_text or strong_trig or files):
+        return "characters"
+    # LoRA adapter cards: a model file plus an opinion about it
+    if files and (strong_rating or bench or civ):
+        return "loras"
+    if hint == "loras" and (strong_rating or bench) and (files or keys & {"name", "title", "label", "_key"}):
+        return "loras"
+
+    # Author recipes: trained/trigger words or author settings
+    if strong_trig and (files or strong_settings or civ or hint == "recipes"):
+        return "recipes"
+    if strong_settings and (files or civ or hint == "recipes"):
+        return "recipes"
+    if hint == "recipes" and files and (civ or keys & {k.lower() for k in K_SETTINGS} or len(keys & SETTINGS_LIKE) >= 2):
+        return "recipes"
+
+    # Sections that exist only under an explicit file name
     if hint == "copyCards" and has_text:
         return "copyCards"
-    if hint == "characters":
-        return "characters"
-    if hint == "assets":
+    if hint == "presets" and (strong_settings or keys & {k.lower() for k in K_SETTINGS} or len(keys & SETTINGS_LIKE) >= 2):
+        return "presets"
+    if hint == "assets" and keys & {"path", "file", "filename", "relpath", "url"}:
         return "assets"
-    if hint == "presets" and (settings_keys or has_settings or "values" in keys):
-        return "presets"
-    # shape-based fallbacks
-    if files and (has_rating or has_bench):
-        return "loras"
-    if has_triggers or has_settings:
-        return "recipes"
-    if files and not has_text:
-        return "loras"
-    if keys & CHARACTER_LIKE and ("name" in keys or "character" in keys):
-        return "characters"
-    if has_text and len(settings_keys) >= 2:
-        return "presets"
-    if has_text:
-        return "copyCards"
-    if len(settings_keys) >= 2:
-        return "presets"
-    if ("path" in keys or "filename" in keys or "file" in keys) and (keys & ASSET_LIKE):
-        return "assets"
-    if hint == "assets" or hint == "characters":
-        return hint
     return "unknown"
 
 
@@ -968,10 +994,12 @@ def to_asset(rec: Dict[str, Any], source: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 class Bundle:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, raw_budget: int = 8 * 1024 * 1024):
         self.root = root
         self.data: Dict[str, Any] = {k: [] for k in SECTIONS}
         self.raw: Dict[str, Any] = {}
+        self.raw_budget = raw_budget
+        self.raw_bytes = 0
         self.skipped: List[Dict[str, str]] = []
         self.digest: List[Dict[str, Any]] = []
         self.lora_index: Dict[str, Dict[str, Any]] = {}
@@ -1036,7 +1064,6 @@ class Bundle:
                 for f in lora_files_in(rec):
                     card = to_lora(dict(rec, file=f), sub)
                     if card:
-                        card["rating"] = card["rating"] if lora_prefer else card["rating"]
                         self.add_lora(card, prefer=False)
             elif section == "loras":
                 out = to_lora(rec, sub)
@@ -1067,11 +1094,15 @@ class Bundle:
             payload = data if total == 0 or raw_all else [dict(r, _source=s) for r, s in unknown]
             encoded = json.dumps(payload, default=str)
             entry: Dict[str, Any] = {"source": rel, "kind": kind, "shape": shape(payload)}
-            if len(encoded) <= raw_max_bytes:
-                entry["data"] = payload
-            else:
+            if len(encoded) > raw_max_bytes:
                 entry["data"] = None
-                entry["truncated"] = "%d bytes > raw cap" % len(encoded)
+                entry["truncated"] = "%d bytes > per-source raw cap" % len(encoded)
+            elif self.raw_bytes + len(encoded) > self.raw_budget:
+                entry["data"] = None
+                entry["truncated"] = "%d bytes > total raw budget" % len(encoded)
+            else:
+                entry["data"] = payload
+                self.raw_bytes += len(encoded)
             self.raw[rel] = entry
         self.digest.append({"source": rel, "kind": kind, "shape": shape(data), "classified": counts, "unclassified": len(unknown)})
 
@@ -1115,8 +1146,8 @@ def walk(root: Path, max_bytes: int, include_dirs: set) -> Iterable[Path]:
             yield p
 
 
-def export(root: Path, max_mb: float, raw_all: bool, raw_max_kb: int, include_dirs: set, verbose: bool) -> Bundle:
-    bundle = Bundle(root)
+def export(root: Path, max_mb: float, raw_all: bool, raw_max_kb: int, include_dirs: set, verbose: bool, raw_total_mb: float = 8.0) -> Bundle:
+    bundle = Bundle(root, raw_budget=int(raw_total_mb * 1024 * 1024))
     max_bytes = int(max_mb * 1024 * 1024)
     raw_max = raw_max_kb * 1024
     for p in walk(root, max_bytes, include_dirs):
@@ -1269,7 +1300,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--serve", action="store_true", help="serve ~/comfy-mobile-content on 0.0.0.0:PORT and exit on Ctrl-C")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT, help="port for --serve (default: %(default)s)")
     ap.add_argument("--max-file-mb", type=float, default=25.0, help="skip data files bigger than this (default: %(default)s)")
-    ap.add_argument("--raw-max-kb", type=int, default=1024, help="per-source cap for verbatim `raw` data (default: %(default)s)")
+    ap.add_argument("--raw-max-kb", type=int, default=256, help="per-source cap for verbatim `raw` data (default: %(default)s)")
+    ap.add_argument("--raw-total-mb", type=float, default=8.0, help="total budget for verbatim `raw` data; beyond it only shapes are kept (default: %(default)s)")
     ap.add_argument("--raw-all", action="store_true", help="keep every parsed source under `raw`, not just unclassified ones")
     ap.add_argument("--include-dir", action="append", default=[], help="also descend into a normally-skipped dir name (e.g. jobs)")
     ap.add_argument("--dry-run", action="store_true", help="print the summary/digest, write nothing")
@@ -1287,7 +1319,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     t0 = time.time()
-    bundle = export(root, args.max_file_mb, args.raw_all, args.raw_max_kb, {d.lower() for d in args.include_dir}, args.verbose)
+    bundle = export(root, args.max_file_mb, args.raw_all, args.raw_max_kb, {d.lower() for d in args.include_dir}, args.verbose, args.raw_total_mb)
     result = bundle.to_json(socket.gethostname())
     digest = format_digest(bundle, result)
     bundle_path, digest_path = write_outputs(result, digest, args.dry_run)
@@ -1301,7 +1333,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     print("  presets     %d" % result["counts"]["presets"])
     print("  characters  %d" % result["counts"]["characters"])
     print("  assets      %d" % result["counts"]["assets"])
-    print("  raw sources %d · skipped %d · %d sources read · %.1f s" % (result["counts"]["raw"], result["counts"]["skipped"], len(bundle.digest), time.time() - t0))
+    with_data = sum(1 for r in result["raw"].values() if r.get("data") is not None)
+    print("  raw sources %d  (%d with data, %.1f MB; the rest shape-only) · skipped %d · %d sources read · %.1f s"
+          % (result["counts"]["raw"], with_data, bundle.raw_bytes / 1024 / 1024, result["counts"]["skipped"], len(bundle.digest), time.time() - t0))
     if args.dry_run:
         print("  (dry run — nothing written)")
     else:

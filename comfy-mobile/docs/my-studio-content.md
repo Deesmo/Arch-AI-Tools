@@ -39,6 +39,18 @@ on the refresh button (and once automatically when it has nothing cached).
 - Redacts anything that looks like a secret (keys named `*token*`,
   `*secret*`, `*api_key*`, `password`, …; values starting with `sk-`, `ghp_`,
   `hf_`, `tskey-`, `AKIA`, …) before it reaches the bundle.
+- **Classifies on strong signals only.** A record becomes a recipe only on
+  `trained_words` / `trigger_words` / `author_settings`; a LoRA card only on a
+  model file plus a rating / bench / favourite / Civitai id (or an explicit
+  `adapter_cards` file); copy cards, presets, characters and assets only from
+  explicitly named files (`copy_cards`, `preset`, `cast`/`character`,
+  `assets.json`/`inventory`/`vault`). Job records, UI state, model indexes and
+  static manifests stay in `raw` no matter what prompt/steps/path fields
+  they carry. `tools/test_export_video_studio.py` pins this down with a
+  decoy-heavy fixture (`npm run test:exporter`).
+- `raw` is budgeted: 256 KB per source and 8 MB in total by default
+  (`--raw-max-kb`, `--raw-total-mb`); beyond that only the shape is kept, so
+  the bundle stays phone-sized while the digest still lists every source.
 - Writes only `~/comfy-mobile-content/bundle.json` and `digest.txt`
   (atomically). Nothing is written anywhere else.
 - Prints a counts summary and a **schema-only digest** (key names and types,
