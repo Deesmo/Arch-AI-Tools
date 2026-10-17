@@ -5,7 +5,7 @@
  * Workflows ("Run").
  */
 import { useCallback } from 'react';
-import { graphToPrompt, useGraphStore, useServerStore, type Workflow } from '../core';
+import { graphToPrompt, unexpandedMessage, useGraphStore, useServerStore, type Workflow } from '../core';
 import { useUiStore } from './ui';
 
 export function useQueue() {
@@ -19,7 +19,13 @@ export function useQueue() {
         toast('Not connected to a ComfyUI server', 'error');
         return null;
       }
-      const { prompt } = graphToPrompt(workflow);
+      const { prompt, unexpanded } = graphToPrompt(workflow);
+      if (unexpanded.length > 0) {
+        // Never post a graph with an unexpanded subgraph: the server would
+        // reject it with a bare node id (KeyError('117')) instead of a name.
+        toast(unexpandedMessage(unexpanded), 'error');
+        return null;
+      }
       if (Object.keys(prompt).length === 0) {
         toast('Nothing to queue — the graph has no executable nodes', 'error');
         return null;

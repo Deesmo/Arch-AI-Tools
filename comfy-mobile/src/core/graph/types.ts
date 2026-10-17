@@ -102,6 +102,37 @@ export interface GraphGroup {
   font_size?: number;
 }
 
+/** One boundary slot of a subgraph definition (`definitions.subgraphs[].inputs/outputs`). */
+export interface SubgraphSlot {
+  id?: string;
+  name: string;
+  type: string;
+  /** Inner link ids attached to this boundary slot. */
+  linkIds: number[];
+  label?: string;
+}
+
+/**
+ * A subgraph definition as the ComfyUI frontend serialises it under
+ * `definitions.subgraphs`. Instances are ordinary nodes whose `type` is the
+ * definition's UUID. Inside, links from node `-10` come from the subgraph's
+ * inputs and links to node `-20` feed its outputs.
+ */
+export interface SubgraphDefinition {
+  id: string;
+  name: string;
+  nodes: GraphNode[];
+  links: GraphLink[];
+  inputs: SubgraphSlot[];
+  outputs: SubgraphSlot[];
+  /** Everything else, kept verbatim for export (state, config, groups, widgets, …). */
+  rest: Record<string, unknown>;
+}
+
+export const SUBGRAPH_INPUT_NODE_ID = -10;
+export const SUBGRAPH_OUTPUT_NODE_ID = -20;
+export const SUBGRAPH_TYPE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface Workflow {
   last_node_id: number;
   last_link_id: number;
@@ -111,6 +142,8 @@ export interface Workflow {
   config: Record<string, unknown>;
   extra: Record<string, unknown>;
   version: number;
+  /** Subgraph definitions referenced by instance nodes (frontend schema ≥ 1.0). */
+  definitions?: { subgraphs: SubgraphDefinition[] };
 }
 
 export function emptyWorkflow(): Workflow {

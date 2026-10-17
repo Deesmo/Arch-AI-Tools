@@ -5,7 +5,7 @@
  * "pre-render review" UX.
  */
 import { useMemo } from 'react';
-import { graphToPrompt, mediaNoun, useSettingsStore } from '../core';
+import { graphToPrompt, mediaNoun, unexpandedMessage, useSettingsStore } from '../core';
 import { Icon } from '../shared/Icon';
 import { Sheet } from '../shared/Sheet';
 import type { StudioModel } from './useStudio';
@@ -14,10 +14,10 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
   const { template, values, validation, missingInputs, finalPrompt, recipe } = studio;
   const setSettings = useSettingsStore((s) => s.set);
   const wf = useMemo(() => studio.buildWorkflow(), [studio]);
-  const { prompt } = useMemo(() => graphToPrompt(wf), [wf]);
+  const { prompt, unexpanded } = useMemo(() => graphToPrompt(wf), [wf]);
 
   const keyParams = template.params.filter((p) => p.role && !['positive_prompt', 'negative_prompt', 'reference_image', 'reference_video'].includes(p.role));
-  const blocked = validation.missingNodes.length > 0 || missingInputs.length > 0;
+  const blocked = validation.missingNodes.length > 0 || missingInputs.length > 0 || unexpanded.length > 0;
 
   return (
     <Sheet
@@ -79,6 +79,11 @@ export function ReviewSheet({ studio, onConfirm, onClose }: { studio: StudioMode
         <div className="card" style={{ borderColor: 'var(--error-text)', marginBottom: 10 }}>
           <strong className="error-text">Cannot run: missing node types on server</strong>
           <div className="small mono" style={{ marginTop: 4 }}>{validation.missingNodes.join(', ')}</div>
+        </div>
+      )}
+      {unexpanded.length > 0 && (
+        <div className="card" style={{ borderColor: 'var(--error-text)', marginBottom: 10 }}>
+          <strong className="error-text">{unexpandedMessage(unexpanded)}</strong>
         </div>
       )}
       {missingInputs.length > 0 && (
