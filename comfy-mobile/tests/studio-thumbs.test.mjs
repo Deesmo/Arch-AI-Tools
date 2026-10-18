@@ -78,6 +78,15 @@ test('parseStudioThumbIndex keeps the catalog shape and optional fields', () => 
   assert.equal(MISSING_PICTURES, 'pictures are not in this build.');
 });
 
+test('a copy with no name still shows, labeled by its Civitai id', () => {
+  const cat = parseStudioThumbIndex({
+    copies: [{ name: '', civitaiId: '145118654', workflowFile: 'runs/c-145118654.json', prompt: 'keep' }],
+  });
+  assert.equal(cat.copies.length, 1);
+  assert.equal(cat.copies[0].name, '145118654');
+  assert.equal(cat.copies[0].workflowFile, 'runs/c-145118654.json');
+});
+
 test('copy cards play preview, else the first example; extras omit the playing clip', () => {
   const cat = parseStudioThumbIndex(sample);
   const main = copyMainClip(cat.copies[0]);

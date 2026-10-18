@@ -278,7 +278,7 @@ export function parseStudioThumbIndex(data: unknown): StudioThumbCatalog {
   for (const item of Array.isArray(root.copies) ? root.copies : []) {
     const o = asRecord(item);
     if (!o) continue;
-    const name = text(o.name) ?? text(o.title);
+    const name = text(o.name) ?? text(o.title) ?? text(o.civitaiId) ?? workflowFileOf(o.workflowFile);
     if (!name) continue;
     copies.push({
       name,
