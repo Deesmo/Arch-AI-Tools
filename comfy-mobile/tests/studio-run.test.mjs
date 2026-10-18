@@ -7,7 +7,9 @@ import { fakeLocation } from './browser-stubs.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildObjectInfo } from '../mock-server/object-info.mjs';
+import { absoluteServerUrl, api } from '../src/core/api/client.ts';
 import { absoluteStudioUrl, parseStudioThumbIndex, safeImageType, safeUploadName } from '../src/core/content/studioThumbs.ts';
+import { useSettingsStore } from '../src/core/store/settings.ts';
 import {
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
@@ -470,6 +472,35 @@ test('a saved API prompt with angle brackets posts to an absolute URL', async ()
   } finally {
     globalThis.URL = OriginalURL;
     fakeLocation.origin = previousOrigin;
+  }
+});
+
+test('Run posts to the node-list server when the saved address has no scheme', async () => {
+  const saved = useSettingsStore.getState().serverUrl;
+  useSettingsStore.getState().set({ serverUrl: '100.103.142.118:8188' });
+  const calls = [];
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), method: init.method ?? 'GET', body: init.body });
+    return new Response(JSON.stringify({ prompt_id: 'accepted', number: 1, node_errors: {} }), { status: 200 });
+  };
+  try {
+    assert.equal(absoluteServerUrl('/object_info'), 'http://100.103.142.118:8188/object_info');
+    assert.equal(absoluteServerUrl('/prompt'), 'http://100.103.142.118:8188/prompt');
+    const res = await api.queuePrompt(
+      { 6: { class_type: 'CLIPTextEncode', inputs: { text: '<Picture 1> standing in the doorway' } } },
+      'phone',
+    );
+    assert.equal(res.prompt_id, 'accepted');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].method, 'POST');
+    assert.equal(calls[0].url, 'http://100.103.142.118:8188/prompt');
+    const posted = JSON.parse(calls[0].body);
+    assert.equal(posted.prompt['6'].inputs.text, '<Picture 1> standing in the doorway');
+    assert.equal(calls[0].url.includes('<'), false);
+  } finally {
+    globalThis.fetch = previousFetch;
+    useSettingsStore.getState().set({ serverUrl: saved });
   }
 });
 

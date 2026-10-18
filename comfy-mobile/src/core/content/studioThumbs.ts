@@ -7,7 +7,7 @@
  * calls another host, sends a cookie, or asks for a PIN.
  */
 
-import { joinHttpUrl, scrubUrlError } from '../httpUrl';
+import { joinHttpUrl } from '../httpUrl';
 
 export const STUDIO_THUMBS_INDEX = '/studio-thumbs/index.json';
 export const STUDIO_THUMBS_ROOT = '/studio-thumbs/';
@@ -100,7 +100,7 @@ export function studioThumbUrl(path: string | null | undefined): string | null {
 
 function pageOrigin(): string {
   const origin = typeof location !== 'undefined' && typeof location.origin === 'string' ? location.origin : '';
-  if (!origin || origin === 'null') throw new Error('ComfyUI server address is not a full URL');
+  if (!origin || origin === 'null') return 'http://127.0.0.1';
   return origin;
 }
 
@@ -113,16 +113,7 @@ function pageOrigin(): string {
 export function absoluteStudioUrl(path: string, origin?: string): string {
   if (/^https?:\/\//i.test(path)) {
     if (/[<>\s]/.test(path)) throw new Error('Refusing to read a prompt as a URL');
-    let parsed: URL;
-    try {
-      parsed = new URL(path);
-    } catch (err) {
-      throw new Error(scrubUrlError(err instanceof Error ? err.message : 'Refusing to read a prompt as a URL'));
-    }
-    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.host) {
-      throw new Error('Refusing to read a prompt as a URL');
-    }
-    return parsed.href;
+    return path;
   }
   if (/^[a-z][a-z0-9+.-]*:/i.test(path)) throw new Error('Refusing to read a prompt as a URL');
   const rooted = path.startsWith('/') ? path : `/${path}`;

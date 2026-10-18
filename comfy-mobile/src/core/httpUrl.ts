@@ -34,22 +34,12 @@ export function httpBase(input: string): string {
 
 /**
  * Join a server or page origin with a path.
- * `path` must already be a rooted path (`/prompt`, `/studio-thumbs/...`).
- * The prompt text is not a path and is refused before `new URL`.
+ * A saved address with no scheme (`100.103.142.118:8188`) becomes
+ * `http://100.103.142.118:8188`. Prompt text is not a path. `new URL` is not used.
  */
 export function joinHttpUrl(base: string, path: string): string {
   if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') || /[<>\s\\]/.test(path)) {
     throw new Error('Refusing to read a prompt as a URL');
   }
-  const url = `${httpBase(base)}${path}`;
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch (err) {
-    throw new Error(scrubUrlError(err instanceof Error ? err.message : 'ComfyUI address is not a full URL'));
-  }
-  if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.host) {
-    throw new Error('ComfyUI server address is not a full URL');
-  }
-  return parsed.href;
+  return `${httpBase(base)}${path}`;
 }

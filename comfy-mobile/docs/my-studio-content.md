@@ -194,8 +194,10 @@ this card cannot be built, and Run is not offered. A null node id leaves that
 box on screen and does not overwrite that part of the prompt. If the phone is
 not connected, the sheet says so and does not submit.
 
-Run posts that API prompt through the existing queue path. The workflow file
-and the `/prompt` post are absolute `http(s)` URLs. Prompt words, including
+Run posts that API prompt through the existing queue path. The post uses the
+same base as the node-list fetch. A saved address with no scheme, such as
+`100.103.142.118:8188`, is prefixed with `http://` and posted to
+`http://100.103.142.118:8188/prompt`. Prompt words, including
 angle brackets such as `<Picture 1>`, are JSON in the body and are not parsed
 as a URL. It does not rebuild
 the graph. The prompt text is written only when the words were edited and

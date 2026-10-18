@@ -4,7 +4,6 @@
  * All methods take the base URL from the settings store at call time so
  * changing the server in Settings takes effect immediately.
  */
-import { joinHttpUrl } from '../httpUrl';
 import { useSettingsStore } from '../store/settings';
 import type {
   ApiPrompt,
@@ -86,12 +85,12 @@ function withDeadline(outer: AbortSignal | null | undefined, timeoutMs: number) 
 }
 
 /**
- * `baseUrl()` plus a path. The result is always `http(s)://…`.
- * A relative path, a bare host, or prompt text is not given to `new URL`.
+ * Same base the node-list fetch uses (`baseUrl()`, which prefixes `http://`
+ * when the saved address has no scheme) plus a path. No URL parser and no refusal.
  */
 export function absoluteServerUrl(path: string): string {
   const rooted = path.startsWith('/') ? path : `/${path}`;
-  return joinHttpUrl(baseUrl(), rooted);
+  return `${baseUrl()}${rooted}`;
 }
 
 async function request<T>(path: string, init?: RequestOptions): Promise<T> {

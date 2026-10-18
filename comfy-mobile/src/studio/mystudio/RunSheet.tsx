@@ -23,7 +23,6 @@ import {
   primeStudioGallery,
   safeImageType,
   safeUploadName,
-  scrubUrlError,
   studioPhotoStatus,
   studioRunEdits,
   useServerStore,
@@ -128,7 +127,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         else setImages(list);
       })
       .catch((err: unknown) => {
-        if (live) setGalleryNote(scrubUrlError(err instanceof Error && err.message ? err.message : GALLERY_NOT_IN_BUILD));
+        if (live) setGalleryNote(err instanceof Error && err.message ? err.message : GALLERY_NOT_IN_BUILD);
       });
     return () => {
       live = false;
@@ -185,7 +184,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         // A missed edit leaves that saved input. The rest of the prompt is posted whole.
         const queued = await queueApiPrompt(patched.prompt, { source: 'studio' });
         if (queued.ok && queued.promptId) accepted = queued.promptId;
-        else setResult(scrubUrlError(queued.message));
+        else setResult(queued.message);
       } else {
       // A refreshing node list must not block Run. A cached list is used when
       // one is already loaded; otherwise the existing converter runs without it.
@@ -208,7 +207,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       if (id) accepted = id;
       }
     } catch (err) {
-      showResult(scrubUrlError(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD));
+      showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
     } finally {
       setBusy(false);
     }
