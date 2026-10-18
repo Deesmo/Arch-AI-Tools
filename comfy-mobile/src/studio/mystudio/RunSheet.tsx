@@ -23,7 +23,7 @@ import {
   safeUploadName,
   studioPhotoStatus,
   studioRunEdits,
-  submitSavedStudioPrompt,
+  runStudioCard,
   useServerStore,
   useSettingsStore,
   type StudioGalleryImage,
@@ -165,7 +165,9 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         const file = new File([blob], name, { type: safeImageType(blob.type) });
         imageName = await uploadInput(file, name);
       }
-      const edits = studioRunEdits({
+      const submitted = await runStudioCard({
+        workflowFile: card.workflowFile,
+        serverUrl: useSettingsStore.getState().serverUrl,
         words: prompt,
         savedWords: card.prompt,
         promptNodeId: card.promptNodeId,
@@ -173,15 +175,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         imageName,
         imageNodeId: card.imageNodeId,
         imageField: card.imageField,
-      });
-      // Same submit the test runs: absolute workflow fetch, then one POST.
-      // Prompt words stay in the JSON body.
-      const submitted = await submitSavedStudioPrompt({
-        workflowFile: card.workflowFile,
-        serverUrl: useSettingsStore.getState().serverUrl,
         clientId: useServerStore.getState().clientId,
-        edits,
-        timeoutMs: 30_000,
       });
       if (submitted.format === 'unknown') {
         showResult("Couldn't read this card's workflow");
@@ -191,6 +185,15 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         if (submitted.promptId) accepted = submitted.promptId;
         else setResult('The server did not return a prompt id.');
       } else {
+      const edits = studioRunEdits({
+        words: prompt,
+        savedWords: card.prompt,
+        promptNodeId: card.promptNodeId,
+        promptField: card.promptField,
+        imageName,
+        imageNodeId: card.imageNodeId,
+        imageField: card.imageField,
+      });
       // A refreshing node list must not block Run. A cached list is used when
       // one is already loaded; otherwise the existing converter runs without it.
       const info = useServerStore.getState().objectInfo;

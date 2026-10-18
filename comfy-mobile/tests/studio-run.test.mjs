@@ -22,6 +22,7 @@ import {
   peekStudioGallery,
   primeStudioGallery,
   resetStudioGallerySession,
+  runStudioCard,
   scrubUrlError,
   studioPhotoStatus,
   studioRunEdits,
@@ -33,6 +34,11 @@ import { graphToPrompt } from '../src/core/graph/prompt.ts';
 import { parseWorkflow } from '../src/core/graph/serialize.ts';
 
 const info = buildObjectInfo();
+
+function postedJson(body) {
+  const text = typeof body === 'string' ? body : new TextDecoder().decode(body);
+  return JSON.parse(text);
+}
 const SUB = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
 function node(id, type, widgets_values) {
@@ -458,7 +464,7 @@ test('a saved API prompt with angle brackets posts to an absolute URL', async ()
     assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
     assert.equal(calls[1].url, result.postUrl);
     assert.equal(calls[1].method, 'POST');
-    const posted = JSON.parse(calls[1].body);
+    const posted = postedJson(calls[1].body);
     assert.equal(posted.prompt['6'].inputs.text, words);
     assert.equal(posted.prompt['2'].inputs.image, 'card.png');
     assert.equal(result.promptId, 'accepted');
@@ -522,11 +528,90 @@ test('submit builds only the prompt URL and an absolute workflow fetch', async (
     assert.equal(calls[1].method, 'POST');
     assert.equal(calls[1].url, 'http://100.103.142.118:8188/prompt');
     assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
-    const posted = JSON.parse(calls[1].body);
+    const posted = postedJson(calls[1].body);
     assert.equal(posted.prompt['6'].inputs.text, words);
     assert.equal(calls[1].url.includes('<'), false);
     assert.equal(built.some((value) => value.includes('<') || value.includes('Picture') || value === '100.103.142.118:8188' || value === '/prompt'), false);
     assert.equal(/did not match the expected pattern/.test(result.body), false);
+  } finally {
+    globalThis.URL = OriginalURL;
+    fakeLocation.origin = previousOrigin;
+  }
+});
+
+test('the Run button submit does not throw the Safari URL error', async () => {
+  const words = '<Picture 1> standing in the doorway';
+  const saved = {
+    6: { class_type: 'CLIPTextEncode', inputs: { text: words } },
+  };
+  const OriginalURL = globalThis.URL;
+  const built = [];
+  globalThis.URL = class extends OriginalURL {
+    constructor(input, base) {
+      const value = String(input);
+      built.push(value);
+      if (/[<>]/.test(value) || !/^https?:\/\//i.test(value)) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
+      if (base === undefined) super(value);
+      else super(value, base);
+    }
+  };
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const target = String(url);
+    const strings = [target];
+    if (typeof init.body === 'string') strings.push(init.body);
+    if (init.headers && typeof init.headers === 'object') {
+      for (const [name, value] of Object.entries(init.headers)) strings.push(String(name), String(value));
+    }
+    for (const value of strings) {
+      if (/[<>]/.test(value) || (value === target && !/^https?:\/\//i.test(value))) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
+    }
+    const req = new Request(target, {
+      method: init.method,
+      headers: init.headers,
+      body: init.body,
+      signal: init.signal,
+      cache: init.cache,
+      credentials: init.credentials,
+    });
+    calls.push({ url: req.url, method: req.method, body: init.body });
+    if (req.method === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(JSON.stringify(saved), { status: 200 });
+  };
+  const previousOrigin = fakeLocation.origin;
+  fakeLocation.origin = 'http://phone.local:8152';
+  try {
+    const result = await runStudioCard({
+      workflowFile: 'runs/copy.json',
+      serverUrl: '100.103.142.118:8188',
+      words,
+      savedWords: words,
+      promptNodeId: 6,
+      promptField: 'text',
+      imageName: null,
+      imageNodeId: null,
+      imageField: null,
+      fetchImpl,
+      clientId: 'phone',
+    });
+    assert.equal(result.format, 'api');
+    assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
+    assert.deepEqual(calls.map((call) => call.url), [
+      'http://phone.local:8152/studio-thumbs/runs/copy.json',
+      'http://100.103.142.118:8188/prompt',
+    ]);
+    assert.equal(calls[1].method, 'POST');
+    assert.notEqual(typeof calls[1].body, 'string');
+    const posted = postedJson(calls[1].body);
+    assert.equal(posted.prompt['6'].inputs.text, words);
+    assert.equal(built.some((value) => /[<>]/.test(value) || value === '100.103.142.118:8188'), false);
+    assert.equal(/did not match the expected pattern/.test(JSON.stringify(result)), false);
   } finally {
     globalThis.URL = OriginalURL;
     fakeLocation.origin = previousOrigin;
@@ -553,7 +638,7 @@ test('Run posts to the node-list server when the saved address has no scheme', a
     assert.equal(calls.length, 1);
     assert.equal(calls[0].method, 'POST');
     assert.equal(calls[0].url, 'http://100.103.142.118:8188/prompt');
-    const posted = JSON.parse(calls[0].body);
+    const posted = postedJson(calls[0].body);
     assert.equal(posted.prompt['6'].inputs.text, '<Picture 1> standing in the doorway');
     assert.equal(calls[0].url.includes('<'), false);
   } finally {

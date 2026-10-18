@@ -444,6 +444,9 @@ export async function submitSavedStudioPrompt(args: {
     prompt: patched.prompt,
     client_id: args.clientId ?? '',
   });
+  // WebKit's Request throws "The string did not match the expected pattern"
+  // when a string argument contains "<Picture 1>". The JSON stays the body,
+  // but it is bytes, not a string the URL parser can see.
   const timeoutMs = args.timeoutMs ?? 0;
   const ctrl = new AbortController();
   const timer = timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
@@ -452,7 +455,7 @@ export async function submitSavedStudioPrompt(args: {
     const init: RequestInit = {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body,
+      body: new TextEncoder().encode(body),
     };
     if (timeoutMs > 0) init.signal = ctrl.signal;
     res = await fetchImpl(postUrl, init);
@@ -474,6 +477,46 @@ export async function submitSavedStudioPrompt(args: {
     promptId = '';
   }
   return { format: 'api', postUrl, body, promptId };
+}
+
+/**
+ * What the Run button calls. A relative workflow path is joined to the page
+ * origin. An API prompt is posted as JSON bytes to the saved server.
+ * Prompt words stay in that JSON. They are not a string passed to Request.
+ */
+export async function runStudioCard(args: {
+  workflowFile: string;
+  serverUrl: string;
+  words: string;
+  savedWords: string;
+  promptNodeId: number | null;
+  promptField: string | null;
+  imageName: string | null;
+  imageNodeId: number | null;
+  imageField: string | null;
+  clientId?: string;
+  pageOrigin?: string;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+}): Promise<StudioSubmitResult> {
+  const edits = studioRunEdits({
+    words: args.words,
+    savedWords: args.savedWords,
+    promptNodeId: args.promptNodeId,
+    promptField: args.promptField,
+    imageName: args.imageName,
+    imageNodeId: args.imageNodeId,
+    imageField: args.imageField,
+  });
+  return submitSavedStudioPrompt({
+    workflowFile: args.workflowFile,
+    serverUrl: args.serverUrl,
+    pageOrigin: args.pageOrigin,
+    fetchImpl: args.fetchImpl,
+    clientId: args.clientId,
+    edits,
+    timeoutMs: args.timeoutMs ?? 30_000,
+  });
 }
 
 function promptErrorText(text: string, status: number): string {

@@ -199,8 +199,8 @@ workflow path is joined to the page origin before it is fetched. The post
 uses the same base as the node-list fetch. A saved address with no scheme,
 such as `100.103.142.118:8188`, is prefixed with `http://` and posted to
 `http://100.103.142.118:8188/prompt`. Prompt words, including
-angle brackets such as `<Picture 1>`, are a JSON field and are not parsed
-as a URL. It does not rebuild
+angle brackets such as `<Picture 1>`, are a JSON field sent as bytes.
+They are not a string argument to `Request`. It does not rebuild
 the graph. The prompt text is written only when the words were edited and
 `promptNodeId` / `promptField` are set. A new photo is written only when one
 was chosen and `imageNodeId` / `imageField` are set. Every other input stays,

@@ -279,12 +279,14 @@ export const api = {
     request<PromptResponse>('/prompt', {
       method: 'POST',
       timeoutMs,
-      body: JSON.stringify({
+      // Bytes, not a string. WebKit's Request throws if a string argument
+      // contains angle brackets such as "<Picture 1>".
+      body: new TextEncoder().encode(JSON.stringify({
         prompt,
         client_id: clientId,
         front: front || undefined,
         extra_data: workflow ? { extra_pnginfo: { workflow } } : undefined,
-      }),
+      })),
     }),
 
   interrupt: () => request<unknown>('/interrupt', { method: 'POST' }),
