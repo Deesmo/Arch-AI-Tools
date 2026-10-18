@@ -22,6 +22,69 @@ export const CARD_CANNOT_BE_BUILT = 'This card cannot be built.';
 /** `/studio-thumbs/gallery.json` is missing or is not a list of pictures. */
 export const GALLERY_NOT_IN_BUILD = 'The gallery is not in this build.';
 
+/** The saved job file is not JSON we can read, including after bare NaN is lifted out. */
+export const JOB_FILE_UNREADABLE = "This card's job file is unreadable.";
+
+/**
+ * Stands in for a bare NaN while the file is a JavaScript value.
+ * JSON.stringify escapes the leading NUL, so the quoted form cannot collide
+ * with the word NaN inside a prompt string.
+ */
+const NAN_SENTINEL = '\u0000__COMFY_BARE_NAN__\u0000';
+
+/** Bare `NaN` tokens outside JSON strings become the sentinel string. Quoted text is left alone. */
+export function encodeBareNan(text: string): string {
+  const quoted = JSON.stringify(NAN_SENTINEL);
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      out += c;
+      if (c === '\\' && i + 1 < text.length) {
+        out += text[i + 1];
+        i += 1;
+        continue;
+      }
+      if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') {
+      inString = true;
+      out += c;
+      continue;
+    }
+    if (text.startsWith('NaN', i) && bareNanAt(text, i)) {
+      out += quoted;
+      i += 2;
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
+function bareNanAt(text: string, i: number): boolean {
+  const prev = i > 0 ? text[i - 1] : '';
+  const next = i + 3 < text.length ? text[i + 3] : '';
+  return !/[A-Za-z0-9_]/.test(prev) && !/[A-Za-z0-9_]/.test(next);
+}
+
+/** Parse a job file. Bare NaN is kept as a sentinel so JSON.parse can run. */
+export function parseJobFile(text: string): unknown {
+  try {
+    return JSON.parse(encodeBareNan(text.replace(/^\uFEFF/, '')));
+  } catch (err) {
+    if (err instanceof Error && err.message === JOB_FILE_UNREADABLE) throw err;
+    throw new Error(JOB_FILE_UNREADABLE);
+  }
+}
+
+/** JSON text with the sentinel written back as bare NaN, the form ComfyUI accepts. */
+export function stringifyJobFile(value: unknown): string {
+  return JSON.stringify(value).split(JSON.stringify(NAN_SENTINEL)).join('NaN');
+}
+
 export const STUDIO_GALLERY = '/studio-thumbs/gallery.json';
 
 export interface StudioWidgetEdit {
@@ -410,7 +473,15 @@ export async function loadStudioWorkflowFile(
   const url = absoluteStudioUrl(path, origin);
   const res = await fetchImpl(url, { cache: 'no-store', credentials: 'omit' });
   if (!res.ok) throw new Error(SETTINGS_NOT_IN_BUILD);
-  return res.json();
+  // WebKit's response.json() throws "The string did not match the expected
+  // pattern." on bare NaN. Python wrote those tokens; they stay in the file.
+  let text: string;
+  try {
+    text = await res.text();
+  } catch {
+    throw new Error(JOB_FILE_UNREADABLE);
+  }
+  return parseJobFile(text);
 }
 
 export type StudioSubmitResult =
@@ -441,7 +512,7 @@ export async function submitSavedStudioPrompt(args: {
   if (patched.format !== 'api') return { format: 'unknown', missed: patched.missed };
   const host = args.serverUrl.trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/+$/, '');
   const postUrl = `http://${host}/prompt`;
-  const payload = JSON.stringify({
+  const payload = stringifyJobFile({
     prompt: patched.prompt,
     client_id: args.clientId ?? '',
   });

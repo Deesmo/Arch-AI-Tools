@@ -12,6 +12,7 @@ import { absoluteStudioUrl, parseStudioThumbIndex, safeImageType, safeUploadName
 import { useSettingsStore } from '../src/core/store/settings.ts';
 import {
   GALLERY_NOT_IN_BUILD,
+  JOB_FILE_UNREADABLE,
   SETTINGS_NOT_IN_BUILD,
   applyStudioRunEdits,
   galleryWindow,
@@ -273,8 +274,8 @@ test('loadStudioWorkflowFile fetches the same-origin workflow and fails closed',
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url, init });
-    if (url.endsWith('missing.json')) return { ok: false, status: 404, json: async () => ({}) };
-    return { ok: true, json: async () => ({ nodes: [] }) };
+    if (url.endsWith('missing.json')) return { ok: false, status: 404, text: async () => '' };
+    return { ok: true, text: async () => JSON.stringify({ nodes: [] }) };
   };
   const body = await loadStudioWorkflowFile('runs/night.json', fetchImpl);
   assert.deepEqual(body, { nodes: [] });
@@ -734,6 +735,85 @@ test('URL rejects a bare host and runStudioCard still posts', async () => {
     globalThis.Request = OriginalRequest;
     fakeLocation.origin = previousOrigin;
   }
+});
+
+test('a job file with bare NaN posts NaN and leaves the word NaN in the prompt', async () => {
+  const words = 'standing in a NaN doorway';
+  const file = `{"6":{"class_type":"CLIPTextEncode","inputs":{"text":${JSON.stringify(words)},"changed":[NaN]}}}`;
+  let jsonCalls = 0;
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const target = String(url);
+    calls.push({ url: target, method: init.method ?? 'GET', body: init.body });
+    if ((init.method ?? 'GET') === 'POST') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ prompt_id: 'accepted' }),
+        json() {
+          jsonCalls += 1;
+          throw new TypeError('The string did not match the expected pattern.');
+        },
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      text: async () => file,
+      json() {
+        jsonCalls += 1;
+        throw new TypeError('The string did not match the expected pattern.');
+      },
+    };
+  };
+  const result = await runStudioCard({
+    workflowFile: 'runs/c-145117818.json',
+    serverUrl: '100.103.142.118:8188',
+    words,
+    savedWords: words,
+    promptNodeId: 6,
+    promptField: 'text',
+    imageName: null,
+    imageNodeId: null,
+    imageField: null,
+    fetchImpl,
+    clientId: 'phone',
+    pageOrigin: 'http://phone.local:8152',
+  });
+  assert.equal(jsonCalls, 0);
+  assert.equal(result.format, 'api');
+  assert.equal(result.promptId, 'accepted');
+  assert.notEqual(typeof calls[1].body, 'string');
+  const posted = new TextDecoder().decode(calls[1].body);
+  assert.match(posted, /"changed":\[NaN\]/);
+  assert.match(posted, /"text":"standing in a NaN doorway"/);
+  assert.equal(posted.includes('__COMFY_BARE_NAN__'), false);
+  assert.equal(/did not match the expected pattern/.test(posted), false);
+  await assert.rejects(
+    () => runStudioCard({
+      workflowFile: 'runs/c-145117818.json',
+      serverUrl: '100.103.142.118:8188',
+      words,
+      savedWords: words,
+      promptNodeId: null,
+      promptField: null,
+      imageName: null,
+      imageNodeId: null,
+      imageField: null,
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        text: async () => '{',
+        json() {
+          jsonCalls += 1;
+          throw new TypeError('The string did not match the expected pattern.');
+        },
+      }),
+      pageOrigin: 'http://phone.local:8152',
+    }),
+    { message: JOB_FILE_UNREADABLE },
+  );
+  assert.equal(jsonCalls, 0);
 });
 
 test('an accepted prompt stays visible on the live queue before refresh', () => {
