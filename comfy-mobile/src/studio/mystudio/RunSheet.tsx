@@ -16,16 +16,16 @@ import {
   absoluteStudioUrl,
   applyStudioRunEdits,
   galleryWindow,
-  loadStudioWorkflowFile,
   parseWorkflow,
-  patchStudioRunFile,
   peekStudioGallery,
   primeStudioGallery,
   safeImageType,
   safeUploadName,
   studioPhotoStatus,
   studioRunEdits,
+  submitSavedStudioPrompt,
   useServerStore,
+  useSettingsStore,
   type StudioGalleryImage,
   type StudioThumbCopy,
   type StudioThumbWorkflow,
@@ -106,7 +106,7 @@ function GalleryGrid({ images, picked, onPick }: { images: StudioGalleryImage[];
 export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
   const uploadInput = useServerStore((s) => s.uploadInput);
-  const { queueWorkflow, queueApiPrompt } = useQueue();
+  const { queueWorkflow } = useQueue();
   const toast = useUiStore((s) => s.toast);
   const focusQueuedRun = useUiStore((s) => s.focusQueuedRun);
   const [prompt, setPrompt] = useState(card.prompt);
@@ -154,7 +154,6 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     setResult(null);
     let accepted: string | null = null;
     try {
-      const json = await loadStudioWorkflowFile(card.workflowFile);
       let imageName: string | null = null;
       if (picked && imageWritable) {
         const url = absoluteStudioUrl(picked.file);
@@ -175,25 +174,31 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         imageNodeId: card.imageNodeId,
         imageField: card.imageField,
       });
-      const patched = patchStudioRunFile(json, edits);
-      if (patched.format === 'unknown') {
+      // Same submit the test runs: absolute workflow fetch, then one POST.
+      // Prompt words stay in the JSON body.
+      const submitted = await submitSavedStudioPrompt({
+        workflowFile: card.workflowFile,
+        serverUrl: useSettingsStore.getState().serverUrl,
+        clientId: useServerStore.getState().clientId,
+        edits,
+        timeoutMs: 30_000,
+      });
+      if (submitted.format === 'unknown') {
         showResult("Couldn't read this card's workflow");
         return;
       }
-      if (patched.format === 'api') {
-        // A missed edit leaves that saved input. The rest of the prompt is posted whole.
-        const queued = await queueApiPrompt(patched.prompt, { source: 'studio' });
-        if (queued.ok && queued.promptId) accepted = queued.promptId;
-        else setResult(queued.message);
+      if (submitted.format === 'api') {
+        if (submitted.promptId) accepted = submitted.promptId;
+        else setResult('The server did not return a prompt id.');
       } else {
       // A refreshing node list must not block Run. A cached list is used when
       // one is already loaded; otherwise the existing converter runs without it.
       const info = useServerStore.getState().objectInfo;
-      let wf = parseWorkflow(patched.workflow, info);
-      if (patched.missed.length) {
+      let wf = parseWorkflow(submitted.workflow, info);
+      if (submitted.missed.length) {
         const fallback = applyStudioRunEdits(wf, {
-          prompt: patched.missed.includes('prompt') ? edits.prompt : null,
-          image: patched.missed.includes('image') ? edits.image : null,
+          prompt: submitted.missed.includes('prompt') ? edits.prompt : null,
+          image: submitted.missed.includes('image') ? edits.image : null,
         });
         if (fallback.missed.length) {
           showResult(`Couldn't change the ${fallback.missed.join(' and ')} on this card`);
@@ -212,6 +217,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       setBusy(false);
     }
     if (accepted) {
+      void useServerStore.getState().refreshQueue();
       onClose();
       focusQueuedRun(accepted);
     }

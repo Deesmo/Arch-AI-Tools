@@ -6,9 +6,10 @@
  * The file is either a UI graph (`{ nodes: [...] }`) or an API prompt
  * (`{ "<id>": { class_type, inputs } }`).
  */
+import { normalizeServerUrl } from '../api/client';
 import type { ApiPrompt } from '../api/types';
 import type { GraphNode, Workflow } from '../graph/types';
-import { joinHttpUrl, scrubUrlError } from '../httpUrl';
+import { scrubUrlError } from '../httpUrl';
 import { STUDIO_THUMBS_ROOT, absoluteStudioUrl, studioThumbUrl } from './studioThumbs';
 
 export { scrubUrlError };
@@ -412,9 +413,17 @@ export async function loadStudioWorkflowFile(
   return res.json();
 }
 
+export type StudioSubmitResult =
+  | { format: 'api'; postUrl: string; body: string; promptId: string }
+  | { format: 'ui'; workflow: unknown; missed: Array<'prompt' | 'image'> }
+  | { format: 'unknown'; missed: Array<'prompt' | 'image'> };
+
 /**
- * Loads a saved API prompt from a relative workflow path and posts it as JSON.
- * The prompt string, including angle brackets, is the body. It is not a URL.
+ * Loads a saved workflow from a relative path joined to an explicit page base,
+ * then posts an API prompt as JSON.
+ * The prompt string, including angle brackets, is a JSON field. It is not a URL.
+ * `serverUrl` is the saved address, scheme or not. The post uses the same
+ * `normalizeServerUrl` the node-list fetch uses.
  */
 export async function submitSavedStudioPrompt(args: {
   workflowFile: string;
@@ -422,30 +431,41 @@ export async function submitSavedStudioPrompt(args: {
   pageOrigin?: string;
   fetchImpl?: typeof fetch;
   clientId?: string;
-}): Promise<{ postUrl: string; body: string; promptId: string }> {
+  edits?: { prompt?: StudioWidgetEdit | null; image?: StudioWidgetEdit | null };
+  timeoutMs?: number;
+}): Promise<StudioSubmitResult> {
   const fetchImpl = args.fetchImpl ?? fetch;
   const json = await loadStudioWorkflowFile(args.workflowFile, fetchImpl, args.pageOrigin);
-  const patched = patchStudioRunFile(json, { prompt: null, image: null });
-  if (patched.format !== 'api') throw new Error("Couldn't read this card's workflow");
-  const postUrl = joinHttpUrl(args.serverUrl, '/prompt');
+  const patched = patchStudioRunFile(json, args.edits ?? { prompt: null, image: null });
+  if (patched.format === 'ui') return { format: 'ui', workflow: patched.workflow, missed: patched.missed };
+  if (patched.format !== 'api') return { format: 'unknown', missed: patched.missed };
+  const postUrl = `${normalizeServerUrl(args.serverUrl)}/prompt`;
   const body = JSON.stringify({
     prompt: patched.prompt,
     client_id: args.clientId ?? '',
   });
+  const timeoutMs = args.timeoutMs ?? 0;
+  const ctrl = new AbortController();
+  const timer = timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
   let res: Response;
   try {
-    res = await fetchImpl(postUrl, {
+    const init: RequestInit = {
       method: 'POST',
-      cache: 'no-store',
-      credentials: 'omit',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body,
-    });
+    };
+    if (timeoutMs > 0) init.signal = ctrl.signal;
+    res = await fetchImpl(postUrl, init);
   } catch (err) {
-    throw new Error(scrubUrlError(err instanceof Error ? err.message : 'Could not reach ComfyUI'));
+    if (timeoutMs > 0 && ctrl.signal.aborted) {
+      throw new Error(`No response from ${postUrl} within ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   const text = await res.text();
-  if (!res.ok) throw new Error(scrubUrlError(text.trim() || `POST /prompt failed (${res.status})`));
+  if (!res.ok) throw new Error(promptErrorText(text, res.status));
   let promptId = '';
   try {
     const data = JSON.parse(text) as { prompt_id?: string };
@@ -453,5 +473,21 @@ export async function submitSavedStudioPrompt(args: {
   } catch {
     promptId = '';
   }
-  return { postUrl, body, promptId };
+  return { format: 'api', postUrl, body, promptId };
+}
+
+function promptErrorText(text: string, status: number): string {
+  const fallback = text.trim() || `POST /prompt failed (${status})`;
+  try {
+    const data = JSON.parse(text) as {
+      error?: { message?: string };
+      node_errors?: Record<string, { errors?: { message?: string; details?: string }[] }>;
+    };
+    const first = Object.values(data.node_errors ?? {})[0]?.errors?.[0];
+    if (first?.message) return `${first.message}${first.details ? ` — ${first.details}` : ''}`;
+    if (data.error?.message) return data.error.message;
+  } catch {
+    /* the body is already the message */
+  }
+  return fallback;
 }

@@ -475,6 +475,64 @@ test('a saved API prompt with angle brackets posts to an absolute URL', async ()
   }
 });
 
+test('submit builds only the prompt URL and an absolute workflow fetch', async () => {
+  const words = '<Picture 1> standing in the doorway';
+  const saved = {
+    6: { class_type: 'CLIPTextEncode', inputs: { text: words } },
+  };
+  const OriginalURL = globalThis.URL;
+  const built = [];
+  globalThis.URL = class extends OriginalURL {
+    constructor(input, base) {
+      const value = String(input);
+      built.push(value);
+      if (/[<>]/.test(value) || !/^https?:\/\//i.test(value)) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
+      if (base === undefined) super(value);
+      else super(value, base);
+    }
+  };
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    new URL(String(url));
+    calls.push({ url: String(url), method: init.method ?? 'GET', body: init.body });
+    if ((init.method ?? 'GET') === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(JSON.stringify(saved), { status: 200 });
+  };
+  const previousOrigin = fakeLocation.origin;
+  fakeLocation.origin = 'http://phone.local:8152';
+  try {
+    const result = await submitSavedStudioPrompt({
+      workflowFile: 'runs/copy.json',
+      serverUrl: '100.103.142.118:8188',
+      fetchImpl,
+      clientId: 'phone',
+    });
+    assert.equal(result.format, 'api');
+    assert.deepEqual(built, [
+      'http://phone.local:8152/studio-thumbs/runs/copy.json',
+      'http://100.103.142.118:8188/prompt',
+    ]);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].method, 'GET');
+    assert.equal(calls[0].url, 'http://phone.local:8152/studio-thumbs/runs/copy.json');
+    assert.equal(calls[1].method, 'POST');
+    assert.equal(calls[1].url, 'http://100.103.142.118:8188/prompt');
+    assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
+    const posted = JSON.parse(calls[1].body);
+    assert.equal(posted.prompt['6'].inputs.text, words);
+    assert.equal(calls[1].url.includes('<'), false);
+    assert.equal(built.some((value) => value.includes('<') || value.includes('Picture') || value === '100.103.142.118:8188' || value === '/prompt'), false);
+    assert.equal(/did not match the expected pattern/.test(result.body), false);
+  } finally {
+    globalThis.URL = OriginalURL;
+    fakeLocation.origin = previousOrigin;
+  }
+});
+
 test('Run posts to the node-list server when the saved address has no scheme', async () => {
   const saved = useSettingsStore.getState().serverUrl;
   useSettingsStore.getState().set({ serverUrl: '100.103.142.118:8188' });
