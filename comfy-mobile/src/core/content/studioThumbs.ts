@@ -7,6 +7,8 @@
  * calls another host, sends a cookie, or asks for a PIN.
  */
 
+import { joinHttpUrl, scrubUrlError } from '../httpUrl';
+
 export const STUDIO_THUMBS_INDEX = '/studio-thumbs/index.json';
 export const STUDIO_THUMBS_ROOT = '/studio-thumbs/';
 
@@ -96,20 +98,35 @@ export function studioThumbUrl(path: string | null | undefined): string | null {
   return encoded ? `${STUDIO_THUMBS_ROOT}${encoded}` : null;
 }
 
+function pageOrigin(): string {
+  const origin = typeof location !== 'undefined' && typeof location.origin === 'string' ? location.origin : '';
+  if (!origin || origin === 'null') throw new Error('ComfyUI server address is not a full URL');
+  return origin;
+}
+
 /**
- * A same-origin studio path as an absolute URL.
+ * A same-origin studio path as an absolute http(s) URL.
  * iPhone Safari throws "The string did not match the expected pattern" from
- * `fetch` / `new Request` when the string is only a path.
+ * `fetch` / `new Request` when the string is only a path. Prompt text is refused
+ * before it can reach `new URL`.
  */
 export function absoluteStudioUrl(path: string, origin?: string): string {
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) return path;
+  if (/^https?:\/\//i.test(path)) {
+    if (/[<>\s]/.test(path)) throw new Error('Refusing to read a prompt as a URL');
+    let parsed: URL;
+    try {
+      parsed = new URL(path);
+    } catch (err) {
+      throw new Error(scrubUrlError(err instanceof Error ? err.message : 'Refusing to read a prompt as a URL'));
+    }
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.host) {
+      throw new Error('Refusing to read a prompt as a URL');
+    }
+    return parsed.href;
+  }
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) throw new Error('Refusing to read a prompt as a URL');
   const rooted = path.startsWith('/') ? path : `/${path}`;
-  const host =
-    origin ??
-    (typeof location !== 'undefined' && typeof location.origin === 'string' && location.origin && location.origin !== 'null'
-      ? location.origin
-      : '');
-  return host ? `${host}${rooted}` : rooted;
+  return joinHttpUrl(origin ?? pageOrigin(), rooted);
 }
 
 /** A filename Safari will accept in a multipart upload. */
@@ -294,7 +311,7 @@ export type StudioThumbsResult = { ok: true; catalog: StudioThumbCatalog } | { o
 /** GET the index. A missing file, a bad body, or an empty catalog is `missing`. */
 export async function loadStudioThumbs(fetchImpl: typeof fetch = fetch): Promise<StudioThumbsResult> {
   try {
-    const res = await fetchImpl(STUDIO_THUMBS_INDEX, { cache: 'no-store', credentials: 'omit' });
+    const res = await fetchImpl(absoluteStudioUrl(STUDIO_THUMBS_INDEX), { cache: 'no-store', credentials: 'omit' });
     if (!res.ok) return { ok: false, missing: true };
     const catalog = parseStudioThumbIndex(await res.json());
     if (!catalogHasPictures(catalog)) return { ok: false, missing: true };

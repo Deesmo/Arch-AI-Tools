@@ -8,7 +8,10 @@
  */
 import type { ApiPrompt } from '../api/types';
 import type { GraphNode, Workflow } from '../graph/types';
+import { joinHttpUrl, scrubUrlError } from '../httpUrl';
 import { STUDIO_THUMBS_ROOT, absoluteStudioUrl, studioThumbUrl } from './studioThumbs';
+
+export { scrubUrlError };
 
 export const SETTINGS_NOT_IN_BUILD = "This card's settings are not in the build.";
 
@@ -383,7 +386,7 @@ export function resetStudioGallerySession(): void {
 
 /** GET `/studio-thumbs/gallery.json`. A missing or unreadable file throws. */
 export async function loadStudioGallery(fetchImpl: typeof fetch = fetch): Promise<StudioGalleryImage[]> {
-  const res = await fetchImpl(STUDIO_GALLERY, { cache: 'no-store', credentials: 'omit' });
+  const res = await fetchImpl(absoluteStudioUrl(STUDIO_GALLERY), { cache: 'no-store', credentials: 'omit' });
   if (!res.ok) throw new Error(GALLERY_NOT_IN_BUILD);
   let raw: unknown;
   try {
@@ -396,11 +399,59 @@ export async function loadStudioGallery(fetchImpl: typeof fetch = fetch): Promis
 }
 
 /** GET `/studio-thumbs/<workflowFile>`. An unsafe path or a failed fetch throws. */
-export async function loadStudioWorkflowFile(workflowFile: string, fetchImpl: typeof fetch = fetch): Promise<unknown> {
+export async function loadStudioWorkflowFile(
+  workflowFile: string,
+  fetchImpl: typeof fetch = fetch,
+  origin?: string,
+): Promise<unknown> {
   const path = studioThumbUrl(workflowFile);
   if (!path?.startsWith(STUDIO_THUMBS_ROOT)) throw new Error(SETTINGS_NOT_IN_BUILD);
-  const url = absoluteStudioUrl(path);
+  const url = absoluteStudioUrl(path, origin);
   const res = await fetchImpl(url, { cache: 'no-store', credentials: 'omit' });
   if (!res.ok) throw new Error(SETTINGS_NOT_IN_BUILD);
   return res.json();
+}
+
+/**
+ * Loads a saved API prompt from a relative workflow path and posts it as JSON.
+ * The prompt string, including angle brackets, is the body. It is not a URL.
+ */
+export async function submitSavedStudioPrompt(args: {
+  workflowFile: string;
+  serverUrl: string;
+  pageOrigin?: string;
+  fetchImpl?: typeof fetch;
+  clientId?: string;
+}): Promise<{ postUrl: string; body: string; promptId: string }> {
+  const fetchImpl = args.fetchImpl ?? fetch;
+  const json = await loadStudioWorkflowFile(args.workflowFile, fetchImpl, args.pageOrigin);
+  const patched = patchStudioRunFile(json, { prompt: null, image: null });
+  if (patched.format !== 'api') throw new Error("Couldn't read this card's workflow");
+  const postUrl = joinHttpUrl(args.serverUrl, '/prompt');
+  const body = JSON.stringify({
+    prompt: patched.prompt,
+    client_id: args.clientId ?? '',
+  });
+  let res: Response;
+  try {
+    res = await fetchImpl(postUrl, {
+      method: 'POST',
+      cache: 'no-store',
+      credentials: 'omit',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body,
+    });
+  } catch (err) {
+    throw new Error(scrubUrlError(err instanceof Error ? err.message : 'Could not reach ComfyUI'));
+  }
+  const text = await res.text();
+  if (!res.ok) throw new Error(scrubUrlError(text.trim() || `POST /prompt failed (${res.status})`));
+  let promptId = '';
+  try {
+    const data = JSON.parse(text) as { prompt_id?: string };
+    promptId = typeof data.prompt_id === 'string' ? data.prompt_id : '';
+  } catch {
+    promptId = '';
+  }
+  return { postUrl, body, promptId };
 }

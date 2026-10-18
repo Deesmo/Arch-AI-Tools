@@ -7,7 +7,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MISSING_PICTURES,
-  STUDIO_THUMBS_INDEX,
   cardImage,
   cardMeta,
   copyExtras,
@@ -102,13 +101,13 @@ test('loadStudioThumbs fetches only the index, with no cookies, and treats a mis
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url, init });
-    if (url !== STUDIO_THUMBS_INDEX) return new Response('no', { status: 404 });
+    if (!String(url).endsWith('/studio-thumbs/index.json')) return new Response('no', { status: 404 });
     return new Response(JSON.stringify(sample), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   const ok = await loadStudioThumbs(fetchImpl);
   assert.equal(ok.ok, true);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, '/studio-thumbs/index.json');
+  assert.equal(calls[0].url, 'http://localhost:5173/studio-thumbs/index.json');
   assert.equal(calls[0].init.credentials, 'omit');
   assert.equal(ok.catalog.copies.length, 2);
 

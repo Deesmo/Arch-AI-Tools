@@ -4,6 +4,7 @@
  * All methods take the base URL from the settings store at call time so
  * changing the server in Settings takes effect immediately.
  */
+import { joinHttpUrl } from '../httpUrl';
 import { useSettingsStore } from '../store/settings';
 import type {
   ApiPrompt,
@@ -41,9 +42,8 @@ export function baseUrl(): string {
 }
 
 export function wsUrl(clientId: string): string {
-  const base = baseUrl();
-  const ws = base.replace(/^http/i, 'ws');
-  return `${ws}/ws?clientId=${encodeURIComponent(clientId)}`;
+  const http = absoluteServerUrl('/ws');
+  return `${http.replace(/^http/i, 'ws')}?clientId=${encodeURIComponent(clientId)}`;
 }
 
 /** Thrown when a request exceeded its deadline or stalled; `url` is the exact URL that failed. */
@@ -85,13 +85,13 @@ function withDeadline(outer: AbortSignal | null | undefined, timeoutMs: number) 
   };
 }
 
-/** `baseUrl()` plus a path, always `http(s)://…`. A bare path makes Safari reject the request. */
+/**
+ * `baseUrl()` plus a path. The result is always `http(s)://…`.
+ * A relative path, a bare host, or prompt text is not given to `new URL`.
+ */
 export function absoluteServerUrl(path: string): string {
-  const base = baseUrl();
   const rooted = path.startsWith('/') ? path : `/${path}`;
-  const url = `${base}${rooted}`;
-  if (!/^https?:\/\//i.test(url)) throw new Error(`ComfyUI server address is not a full URL (${base || 'empty'})`);
-  return url;
+  return joinHttpUrl(baseUrl(), rooted);
 }
 
 async function request<T>(path: string, init?: RequestOptions): Promise<T> {
@@ -319,7 +319,7 @@ export const api = {
       type: img.type ?? 'output',
     });
     if (preview) q.set('preview', preview);
-    return `${baseUrl()}/view?${q.toString()}`;
+    return `${absoluteServerUrl('/view')}?${q.toString()}`;
   },
 };
 

@@ -3,6 +3,7 @@
  * and load the workflow JSON from /studio-thumbs/.
  */
 import './browser-stubs.mjs';
+import { fakeLocation } from './browser-stubs.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildObjectInfo } from '../mock-server/object-info.mjs';
@@ -19,9 +20,12 @@ import {
   peekStudioGallery,
   primeStudioGallery,
   resetStudioGallerySession,
+  scrubUrlError,
   studioPhotoStatus,
   studioRunEdits,
+  submitSavedStudioPrompt,
 } from '../src/core/content/studioRun.ts';
+import { joinHttpUrl } from '../src/core/httpUrl.ts';
 import { visibleQueueItems } from '../src/screens/queueList.ts';
 import { graphToPrompt } from '../src/core/graph/prompt.ts';
 import { parseWorkflow } from '../src/core/graph/serialize.ts';
@@ -351,7 +355,7 @@ test('gallery.json is a same-origin list of thumb and file', async () => {
   };
   const images = await loadStudioGallery(fetchImpl);
   assert.equal(images[0].file, '/studio-thumbs/gallery/t.png');
-  assert.equal(calls[0].url, '/studio-thumbs/gallery.json');
+  assert.equal(calls[0].url, 'http://localhost:5173/studio-thumbs/gallery.json');
   assert.equal(calls[0].init.credentials, 'omit');
   assert.equal(calls[0].init.cache, 'no-store');
   await assert.rejects(() => loadStudioGallery(async () => ({ ok: false, status: 404, json: async () => ({}) })), { message: GALLERY_NOT_IN_BUILD });
@@ -400,6 +404,73 @@ test('a gallery photo is fetched from an absolute URL and the sheet shows one ph
   assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', true), "Using copies_start_261015_141131_c4392a.png instead of the card's image.");
   assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', false), "This photo stays as saved in the workflow.");
   assert.equal(studioPhotoStatus(null, true), "Keeping the card's image.");
+});
+
+test('a saved API prompt with angle brackets posts to an absolute URL', async () => {
+  const words = '<Picture 1> standing in the doorway';
+  const saved = {
+    6: { class_type: 'CLIPTextEncode', inputs: { text: words, clip: ['4', 1] } },
+    2: { class_type: 'LoadImage', inputs: { image: 'card.png' } },
+  };
+  const OriginalURL = globalThis.URL;
+  const seen = [];
+  globalThis.URL = class extends OriginalURL {
+    constructor(input, base) {
+      const value = String(input);
+      seen.push(value);
+      if (base !== undefined || /[<>]/.test(value) || !/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
+      super(value);
+    }
+  };
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url: String(url), method: init.method ?? 'GET', body: init.body });
+    const parsed = new URL(String(url));
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new TypeError('The string did not match the expected pattern.');
+    }
+    if ((init.method ?? 'GET') === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(JSON.stringify(saved), { status: 200 });
+  };
+  const previousOrigin = fakeLocation.origin;
+  fakeLocation.origin = 'http://phone.local:8152';
+  try {
+    assert.throws(() => joinHttpUrl('http://phone.local:8152', words), (err) => {
+      assert.equal(/did not match the expected pattern/.test(err.message), false);
+      assert.match(err.message, /prompt/i);
+      return true;
+    });
+    const result = await submitSavedStudioPrompt({
+      workflowFile: 'runs/copy.json',
+      serverUrl: '100.103.142.118:8188',
+      pageOrigin: 'http://phone.local:8152',
+      fetchImpl,
+      clientId: 'phone',
+    });
+    assert.equal(calls[0].url, 'http://phone.local:8152/studio-thumbs/runs/copy.json');
+    assert.equal(calls[0].method, 'GET');
+    assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
+    assert.equal(calls[1].url, result.postUrl);
+    assert.equal(calls[1].method, 'POST');
+    const posted = JSON.parse(calls[1].body);
+    assert.equal(posted.prompt['6'].inputs.text, words);
+    assert.equal(posted.prompt['2'].inputs.image, 'card.png');
+    assert.equal(result.promptId, 'accepted');
+    assert.equal(result.postUrl.includes('<'), false);
+    assert.equal(result.postUrl.includes('Picture'), false);
+    assert.equal(seen.some((value) => value.includes('<') || value.includes('Picture') || value === '/prompt' || value === '100.103.142.118:8188'), false);
+    assert.equal(calls.some((call) => /did not match the expected pattern/.test(JSON.stringify(call))), false);
+    assert.equal(scrubUrlError('The string did not match the expected pattern.'), 'ComfyUI address is not a full URL');
+    assert.equal(/did not match the expected pattern/.test(result.body) && result.body.includes('http'), false);
+    assert.match(result.body, /<Picture 1>/);
+  } finally {
+    globalThis.URL = OriginalURL;
+    fakeLocation.origin = previousOrigin;
+  }
 });
 
 test('an accepted prompt stays visible on the live queue before refresh', () => {

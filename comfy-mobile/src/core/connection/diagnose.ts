@@ -231,9 +231,11 @@ export function describeNodeListLoad(nl: NodeListLoad, serverLabel: string, now 
 
 /** Host[:port] of a server URL, for copy like "Loading node list from Skytech…". */
 export function serverLabel(serverUrl: string): string {
+  if (!/^https?:\/\//i.test(serverUrl) || /[<>\s]/.test(serverUrl)) {
+    return serverUrl.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0] || serverUrl;
+  }
   try {
-    const u = new URL(serverUrl);
-    return u.host;
+    return new URL(serverUrl).host;
   } catch {
     return serverUrl;
   }

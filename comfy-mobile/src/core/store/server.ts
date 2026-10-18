@@ -32,6 +32,7 @@ import type {
 } from '../api/types';
 import { ComfyWebSocket, type WsDiagnostics } from '../api/ws';
 import { nodeListCache } from '../connection/cache';
+import { scrubUrlError } from '../httpUrl';
 import type { Workflow } from '../graph/types';
 import { exportWorkflow } from '../graph/serialize';
 import { useSettingsStore } from './settings';
@@ -214,8 +215,12 @@ function describeError(err: unknown): string {
     const detail = typeof body === 'object' && body?.error?.message ? `: ${body.error.message}` : '';
     return `${err.message}${detail}`;
   }
-  if (err instanceof TypeError) return `Cannot reach ${baseUrl()} (${err.message})`;
-  return err instanceof Error ? err.message : String(err);
+  if (err instanceof TypeError) {
+    const scrubbed = scrubUrlError(err.message);
+    if (scrubbed !== err.message) return scrubbed;
+    return `Cannot reach ${baseUrl()} (${err.message})`;
+  }
+  return scrubUrlError(err instanceof Error ? err.message : String(err));
 }
 
 function failureFrom(err: unknown, url: string): ConnectionFailure {
