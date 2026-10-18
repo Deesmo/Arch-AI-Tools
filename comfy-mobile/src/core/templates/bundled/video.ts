@@ -132,8 +132,8 @@ export const wan22Img2Video: StudioTemplate = {
   tags: ['video', 'wan', 'i2v', 'primary'],
   requires: ['UNETLoader', 'LoraLoaderModelOnly', 'ModelSamplingSD3', 'CLIPLoader', 'LoadImage', 'WanImageToVideo', 'KSamplerAdvanced', 'CreateVideo', 'SaveVideo'],
   models: [
-    { folder: 'diffusion_models', file: 'wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors' },
-    { folder: 'diffusion_models', file: 'wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors' },
+    { folder: 'diffusion_models', file: 'Wan2.2_Remix_NSFW_i2v_14b_high_fp8_v3.0.safetensors' },
+    { folder: 'diffusion_models', file: 'Wan2.2_Remix_NSFW_i2v_14b_low_fp8_v3.0.safetensors' },
     { folder: 'text_encoders', file: 'umt5_xxl_fp8_e4m3fn_scaled.safetensors' },
     { folder: 'vae', file: 'wan_2.1_vae.safetensors' },
     { folder: 'loras', file: 'wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors' },
@@ -156,8 +156,8 @@ export const wan22Img2Video: StudioTemplate = {
   ],
   workflow: buildWorkflow(
     [
-      { id: 1, type: 'UNETLoader', title: 'High-noise model', pos: [40, 60], widgets_values: ['wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors', 'default'], outputs: [['MODEL', 'MODEL']] },
-      { id: 2, type: 'UNETLoader', title: 'Low-noise model', pos: [40, 180], widgets_values: ['wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors', 'default'], outputs: [['MODEL', 'MODEL']] },
+      { id: 1, type: 'UNETLoader', title: 'High-noise model', pos: [40, 60], widgets_values: ['Wan2.2_Remix_NSFW_i2v_14b_high_fp8_v3.0.safetensors', 'default'], outputs: [['MODEL', 'MODEL']] },
+      { id: 2, type: 'UNETLoader', title: 'Low-noise model', pos: [40, 180], widgets_values: ['Wan2.2_Remix_NSFW_i2v_14b_low_fp8_v3.0.safetensors', 'default'], outputs: [['MODEL', 'MODEL']] },
       { id: 3, type: 'LoraLoaderModelOnly', title: 'Lightning LoRA (high)', pos: [360, 60], mode: 4, widgets_values: ['wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors', 1.0], inputs: [['model', 'MODEL']], outputs: [['MODEL', 'MODEL']] },
       { id: 4, type: 'LoraLoaderModelOnly', title: 'Lightning LoRA (low)', pos: [360, 180], mode: 4, widgets_values: ['wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors', 1.0], inputs: [['model', 'MODEL']], outputs: [['MODEL', 'MODEL']] },
       { id: 17, type: 'ModelSamplingSD3', title: 'Shift (high)', pos: [680, 60], widgets_values: [8.0], inputs: [['model', 'MODEL']], outputs: [['MODEL', 'MODEL']] },
@@ -228,7 +228,7 @@ function ltxTail(kind: 'txt2video' | 'img2video'): StudioTemplate {
     tags: ['video', 'ltx', isI2V ? 'i2v' : 't2v', 'primary'],
     requires: ['CheckpointLoaderSimple', 'CLIPLoader', isI2V ? 'LTXVImgToVideo' : 'EmptyLTXVLatentVideo', 'LTXVConditioning', 'LTXVScheduler', 'KSamplerSelect', 'SamplerCustom', 'CreateVideo', 'SaveVideo'],
     models: [
-      { folder: 'checkpoints', file: 'ltx-2.3-22b-dev-fp8.safetensors' },
+      { folder: 'checkpoints', file: 'ltx2310eros_v1.safetensors' },
       { folder: 'text_encoders', file: 'gemma_3_12B_it.safetensors' },
     ],
     resolutionPresets: LTX_PRESETS,
@@ -249,7 +249,7 @@ function ltxTail(kind: 'txt2video' | 'img2video'): StudioTemplate {
     ],
     workflow: buildWorkflow(
       [
-        { id: 1, type: 'CheckpointLoaderSimple', title: 'LTX-2 checkpoint', pos: [40, 60], widgets_values: ['ltx-2.3-22b-dev-fp8.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
+        { id: 1, type: 'CheckpointLoaderSimple', title: 'LTX-2 checkpoint', pos: [40, 60], widgets_values: ['ltx2310eros_v1.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
         { id: 2, type: 'CLIPLoader', title: 'Text encoder', pos: [40, 220], widgets_values: ['gemma_3_12B_it.safetensors', 'ltxv', 'default'], outputs: [['CLIP', 'CLIP']] },
         { id: 3, type: 'CLIPTextEncode', title: 'Positive Prompt', pos: [360, 60], size: [320, 0], widgets_values: ['a woman with long brown hair smiles and turns toward the camera, warm afternoon light, shallow depth of field, gentle camera movement'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#232', bgcolor: '#353' },
         { id: 4, type: 'CLIPTextEncode', title: 'Negative Prompt', pos: [360, 260], size: [320, 0], widgets_values: ['low quality, worst quality, deformed, distorted, disfigured, motion smear, motion artifacts, fused fingers, bad anatomy, weird hand, ugly'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#322', bgcolor: '#533' },
@@ -379,7 +379,7 @@ export const animateDiffTxt2Video: StudioTemplate = {
   tags: ['video', 'animatediff', 'vhs', 'sd15'],
   requires: ['ADE_AnimateDiffLoaderGen1', 'VHS_VideoCombine'],
   models: [
-    { folder: 'checkpoints', file: 'v1-5-pruned-emaonly.safetensors' },
+    { folder: 'checkpoints', file: 'uberRealisticPornMerge_v23Final.safetensors' },
     { folder: 'animatediff_models', file: 'mm_sd_v15_v2.ckpt' },
   ],
   resolutionPresets: [
@@ -402,7 +402,7 @@ export const animateDiffTxt2Video: StudioTemplate = {
   ],
   workflow: buildWorkflow(
     [
-      { id: 1, type: 'CheckpointLoaderSimple', pos: [40, 60], widgets_values: ['v1-5-pruned-emaonly.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
+      { id: 1, type: 'CheckpointLoaderSimple', pos: [40, 60], widgets_values: ['uberRealisticPornMerge_v23Final.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
       { id: 2, type: 'ADE_AnimateDiffLoaderGen1', title: 'AnimateDiff Loader', pos: [360, 60], widgets_values: ['mm_sd_v15_v2.ckpt', 'autoselect'], inputs: [['model', 'MODEL'], ['context_options', 'CONTEXT_OPTIONS'], ['motion_lora', 'MOTION_LORA'], ['ad_settings', 'AD_SETTINGS'], ['sample_settings', 'SAMPLE_SETTINGS'], ['ad_keyframes', 'AD_KEYFRAMES']], outputs: [['MODEL', 'MODEL']] },
       { id: 3, type: 'CLIPTextEncode', title: 'Positive Prompt', pos: [360, 280], size: [320, 0], widgets_values: ['masterpiece, best quality, a golden retriever running through autumn leaves, dynamic motion'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#232', bgcolor: '#353' },
       { id: 4, type: 'CLIPTextEncode', title: 'Negative Prompt', pos: [360, 480], size: [320, 0], widgets_values: ['(worst quality, low quality:1.4), blurry, watermark, text'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#322', bgcolor: '#533' },
