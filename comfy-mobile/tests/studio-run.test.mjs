@@ -23,6 +23,7 @@ import {
   peekStudioGallery,
   primeStudioGallery,
   resetStudioGallerySession,
+  SAVED_PHOTO_NOT_ON_SKYTECH,
   runStudioCard,
   scrubUrlError,
   studioPhotoStatus,
@@ -411,7 +412,7 @@ test('a gallery photo is fetched from an absolute URL and the sheet shows one ph
   assert.equal(safeImageType('image/png; charset=utf-8'), 'image/png');
   assert.equal(safeImageType('not a type'), 'image/png');
   assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', true), "Using copies_start_261015_141131_c4392a.png instead of the card's image.");
-  assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', false), "This photo stays as saved in the workflow.");
+  assert.equal(studioPhotoStatus('copies_start_261015_141131_c4392a.png', false), "Using copies_start_261015_141131_c4392a.png instead of the card's image.");
   assert.equal(studioPhotoStatus(null, true), "Keeping the card's image.");
 });
 
@@ -463,9 +464,11 @@ test('a saved API prompt with angle brackets posts to an absolute URL', async ()
     assert.equal(calls[0].url, 'http://phone.local:8152/studio-thumbs/runs/copy.json');
     assert.equal(calls[0].method, 'GET');
     assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
-    assert.equal(calls[1].url, result.postUrl);
-    assert.equal(calls[1].method, 'POST');
-    const posted = postedJson(calls[1].body);
+    assert.equal(calls[1].method, 'GET');
+    assert.equal(calls[1].url, 'http://100.103.142.118:8188/view?type=input&filename=card.png');
+    assert.equal(calls[2].url, result.postUrl);
+    assert.equal(calls[2].method, 'POST');
+    const posted = postedJson(calls[2].body);
     assert.equal(posted.prompt['6'].inputs.text, words);
     assert.equal(posted.prompt['2'].inputs.image, 'card.png');
     assert.equal(result.promptId, 'accepted');
@@ -814,6 +817,73 @@ test('a job file with bare NaN posts NaN and leaves the word NaN in the prompt',
     { message: JOB_FILE_UNREADABLE },
   );
   assert.equal(jsonCalls, 0);
+});
+
+test('a missing saved photo is not posted', async () => {
+  const file = JSON.stringify({
+    7: {
+      class_type: 'MiniMaxH3Director',
+      inputs: { timeline_data: JSON.stringify({ items: [{ type: 'image', value: 'missing.png' }] }) },
+    },
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push(`${init.method ?? 'GET'} ${url}`);
+    if (String(url).includes('/view?')) return new Response('', { status: 404 });
+    return new Response(file, { status: 200 });
+  };
+  const result = await runStudioCard({
+    workflowFile: 'runs/c-145117818.json',
+    serverUrl: '100.103.142.118:8188',
+    words: 'keep',
+    savedWords: 'keep',
+    promptNodeId: null,
+    promptField: null,
+    imageName: null,
+    imageNodeId: null,
+    imageField: null,
+    fetchImpl,
+    pageOrigin: 'http://phone.local:8152',
+  });
+  assert.equal(result.format, 'needs-photo');
+  assert.equal(SAVED_PHOTO_NOT_ON_SKYTECH, 'Saved photo not on Skytech — pick one.');
+  assert.equal(calls.some((call) => call.startsWith('POST')), false);
+  assert.ok(calls.some((call) => call.includes('/view?type=input&filename=missing.png')));
+});
+
+test('a picked photo replaces the timeline image and is posted', async () => {
+  const file = JSON.stringify({
+    7: {
+      class_type: 'MiniMaxH3Director',
+      inputs: { timeline_data: JSON.stringify({ items: [{ type: 'image', value: 'missing.png' }] }) },
+    },
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push(`${init.method ?? 'GET'} ${url}`);
+    if ((init.method ?? 'GET') === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(file, { status: 200 });
+  };
+  const result = await runStudioCard({
+    workflowFile: 'runs/c-145117818.json',
+    serverUrl: '100.103.142.118:8188',
+    words: 'keep',
+    savedWords: 'keep',
+    promptNodeId: null,
+    promptField: null,
+    imageName: 'picked.png',
+    imageNodeId: null,
+    imageField: null,
+    fetchImpl,
+    pageOrigin: 'http://phone.local:8152',
+  });
+  assert.equal(result.format, 'api');
+  assert.equal(calls.some((call) => call.includes('/view?')), false);
+  const posted = postedJson(result.body);
+  const timeline = JSON.parse(posted.prompt['7'].inputs.timeline_data);
+  assert.equal(timeline.items[0].value, 'picked.png');
 });
 
 test('an accepted prompt stays visible on the live queue before refresh', () => {

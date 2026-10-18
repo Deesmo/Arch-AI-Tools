@@ -25,6 +25,9 @@ export const GALLERY_NOT_IN_BUILD = 'The gallery is not in this build.';
 /** The saved job file is not JSON we can read, including after bare NaN is lifted out. */
 export const JOB_FILE_UNREADABLE = "This card's job file is unreadable.";
 
+/** The card's saved photo is not in Skytech's ComfyUI input folder. */
+export const SAVED_PHOTO_NOT_ON_SKYTECH = "Saved photo not on Skytech — pick one.";
+
 /**
  * Stands in for a bare NaN while the file is a JavaScript value.
  * JSON.stringify escapes the leading NUL, so the quoted form cannot collide
@@ -112,10 +115,9 @@ export function studioRunEdits(args: {
     args.words !== args.savedWords && args.promptNodeId != null && !!args.promptField
       ? { nodeId: args.promptNodeId, field: args.promptField, value: args.words }
       : null;
-  const image =
-    args.imageName && args.imageNodeId != null && !!args.imageField
-      ? { nodeId: args.imageNodeId, field: args.imageField, value: args.imageName }
-      : null;
+  const image = args.imageName
+    ? { nodeId: args.imageNodeId ?? -1, field: args.imageField ?? "", value: args.imageName }
+    : null;
   return { prompt, image };
 }
 
@@ -336,12 +338,13 @@ export function patchStudioRunFile(
       if (!edit) continue;
       const node = asRecord(copy[String(edit.nodeId)]);
       const inputs = node ? asRecord(node.inputs) : null;
-      if (!node || !inputs) {
-        missed.push(key);
+      // A picked photo replaces saved input photos and timeline image items
+      // even when the index has no image widget.
+      const replaced = key === "image" ? replaceSavedPhotos(copy, edit.value) : false;
+      if (!node || !inputs || !edit.field || edit.nodeId < 0) {
+        if (!replaced) missed.push(key);
         continue;
       }
-      // One field. Every other input on this node, including objects such as
-      // timeline_data and builder_state, stays on the object that gets posted.
       inputs[edit.field] = edit.value;
     }
     return { format: 'api', prompt: copy as ApiPrompt, missed };
@@ -400,11 +403,146 @@ export function parseStudioGallery(raw: unknown): StudioGalleryImage[] {
 /** How many columns the run-sheet gallery draws. */
 export const GALLERY_COLUMNS = 3;
 
-/** One line under New photo. A card that cannot take a new image does not also claim the pick is in use. */
+/** One line under New photo. A picked file is the one Run will upload. */
 export function studioPhotoStatus(pickedName: string | null, imageWritable: boolean): string {
-  if (!imageWritable) return "This photo stays as saved in the workflow.";
   if (pickedName) return `Using ${pickedName} instead of the card's image.`;
+  if (!imageWritable) return "This photo stays as saved in the workflow.";
   return "Keeping the card's image.";
+}
+
+const PHOTO_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i;
+
+/** Basename of a saved input photo, or null when the value is not a photo file. */
+export function photoFilename(value: string): string | null {
+  const raw = value.trim();
+  if (!raw || raw.length > 240 || /[\r\n]/.test(raw)) return null;
+  if (raw.endsWith(" [output]") || raw.endsWith(" [temp]")) return null;
+  const body = raw.endsWith(" [input]") ? raw.slice(0, -" [input]".length).trim() : raw;
+  const base = body.split(/[/\\]/).pop() ?? "";
+  return PHOTO_EXT.test(base) ? base : null;
+}
+
+function timelinePhotoNames(value: string, add: (name: string | null) => void): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return;
+  }
+  const walk = (obj: unknown) => {
+    if (Array.isArray(obj)) {
+      obj.forEach(walk);
+      return;
+    }
+    const rec = asRecord(obj);
+    if (!rec) return;
+    if (rec.type === "image" && typeof rec.value === "string") add(photoFilename(rec.value));
+    for (const child of Object.values(rec)) walk(child);
+  };
+  walk(parsed);
+}
+
+/** Photo filenames the job will load from ComfyUI's input folder when no new photo was picked. */
+export function savedPhotoFilenames(raw: unknown): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  const add = (name: string | null) => {
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    found.push(name);
+  };
+  const walk = (obj: unknown) => {
+    if (Array.isArray(obj)) {
+      obj.forEach(walk);
+      return;
+    }
+    const rec = asRecord(obj);
+    if (!rec) return;
+    const inputs = asRecord(rec.inputs);
+    if (inputs && typeof rec.class_type === "string") {
+      for (const [key, value] of Object.entries(inputs)) {
+        if (typeof value !== "string") continue;
+        if (key === "image") add(photoFilename(value));
+        if (key === "timeline_data" || value.startsWith("{") || value.startsWith("[")) timelinePhotoNames(value, add);
+      }
+      return;
+    }
+    for (const value of Object.values(rec)) walk(value);
+  };
+  walk(raw);
+  return found;
+}
+
+function replaceTimelinePhotos(value: string, imageName: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  let changed = false;
+  const walk = (obj: unknown): unknown => {
+    if (Array.isArray(obj)) return obj.map(walk);
+    const rec = asRecord(obj);
+    if (!rec) return obj;
+    const next: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(rec)) {
+      if (key === "value" && rec.type === "image" && typeof child === "string" && photoFilename(child)) {
+        next[key] = imageName;
+        if (child !== imageName) changed = true;
+      } else if (child && typeof child === "object") {
+        next[key] = walk(child);
+      } else {
+        next[key] = child;
+      }
+    }
+    return next;
+  };
+  const next = walk(parsed);
+  return changed ? JSON.stringify(next) : null;
+}
+
+/** Writes a newly uploaded photo over saved input photos and timeline image items. */
+function replaceSavedPhotos(raw: Record<string, unknown>, imageName: string): boolean {
+  let changed = false;
+  for (const node of Object.values(raw)) {
+    const rec = asRecord(node);
+    const inputs = rec ? asRecord(rec.inputs) : null;
+    if (!rec || !inputs || typeof rec.class_type !== "string") continue;
+    for (const [key, value] of Object.entries(inputs)) {
+      if (typeof value !== "string") continue;
+      if (key === "image" && photoFilename(value) && value !== imageName) {
+        inputs[key] = imageName;
+        changed = true;
+      }
+      if (key === "timeline_data" || value.startsWith("{") || value.startsWith("[")) {
+        const next = replaceTimelinePhotos(value, imageName);
+        if (next) {
+          inputs[key] = next;
+          changed = true;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
+async function savedPhotoMissingOnServer(
+  serverUrl: string,
+  names: string[],
+  fetchImpl: typeof fetch,
+): Promise<boolean> {
+  const host = serverUrl.trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/+$/, "");
+  for (const name of names) {
+    const url = `http://${host}/view?type=input&filename=${encodeURIComponent(name)}`;
+    try {
+      const res = await fetchImpl(url, { method: "GET", cache: "no-store" });
+      if (!res.ok) return true;
+    } catch {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -487,7 +625,8 @@ export async function loadStudioWorkflowFile(
 export type StudioSubmitResult =
   | { format: 'api'; postUrl: string; body: string; promptId: string }
   | { format: 'ui'; workflow: unknown; missed: Array<'prompt' | 'image'> }
-  | { format: 'unknown'; missed: Array<'prompt' | 'image'> };
+  | { format: 'unknown'; missed: Array<'prompt' | 'image'> }
+  | { format: 'needs-photo' };
 
 /**
  * Loads a saved workflow from a relative path joined to an explicit page base,
@@ -507,7 +646,14 @@ export async function submitSavedStudioPrompt(args: {
 }): Promise<StudioSubmitResult> {
   const fetchImpl = args.fetchImpl ?? fetch;
   const json = await loadStudioWorkflowFile(args.workflowFile, fetchImpl, args.pageOrigin);
-  const patched = patchStudioRunFile(json, args.edits ?? { prompt: null, image: null });
+  const edits = args.edits ?? { prompt: null, image: null };
+  if (!edits.image) {
+    const names = savedPhotoFilenames(json);
+    if (names.length && (await savedPhotoMissingOnServer(args.serverUrl, names, fetchImpl))) {
+      return { format: "needs-photo" };
+    }
+  }
+  const patched = patchStudioRunFile(json, edits);
   if (patched.format === 'ui') return { format: 'ui', workflow: patched.workflow, missed: patched.missed };
   if (patched.format !== 'api') return { format: 'unknown', missed: patched.missed };
   const host = args.serverUrl.trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/+$/, '');

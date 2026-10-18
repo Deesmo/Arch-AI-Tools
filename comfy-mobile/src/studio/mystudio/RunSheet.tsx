@@ -20,6 +20,7 @@ import {
   peekStudioGallery,
   primeStudioGallery,
   safeImageType,
+  SAVED_PHOTO_NOT_ON_SKYTECH,
   safeUploadName,
   studioPhotoStatus,
   studioRunEdits,
@@ -157,7 +158,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     let postedFromCard = false;
     try {
       let imageName: string | null = null;
-      if (picked && imageWritable) {
+      if (picked) {
         const url = absoluteStudioUrl(picked.file);
         if (!/^https?:\/\//i.test(url)) throw new Error(GALLERY_NOT_IN_BUILD);
         const res = await fetch(url, { cache: 'no-store', credentials: 'omit' });
@@ -179,6 +180,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         imageField: card.imageField,
         clientId: useServerStore.getState().clientId,
       });
+      if (submitted.format === 'needs-photo') {
+        setGalleryOpen(true);
+        setGalleryNote(SAVED_PHOTO_NOT_ON_SKYTECH);
+        return;
+      }
       if (submitted.format === 'unknown') {
         showResult("Couldn't read this card's workflow");
         return;
@@ -291,7 +297,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         <button type="button" className="btn block ms-run-photo" onClick={() => setGalleryOpen(true)}>
           New photo
         </button>
-        <p className="ms-run-keep">{studioPhotoStatus(picked && imageWritable ? picked.name : null, imageWritable)}</p>
+        <p className="ms-run-keep">{studioPhotoStatus(picked ? picked.name : null, imageWritable)}</p>
         {picked && imageWritable && (
           <button type="button" className="btn ghost ms-run-keep-btn" onClick={() => setPicked(null)}>
             Keep the card's image
