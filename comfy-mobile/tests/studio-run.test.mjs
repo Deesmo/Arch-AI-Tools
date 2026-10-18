@@ -28,6 +28,7 @@ import {
   scrubUrlError,
   studioPhotoStatus,
   studioRunEdits,
+  studioSearchHit,
   submitSavedStudioPrompt,
 } from '../src/core/content/studioRun.ts';
 import { joinHttpUrl } from '../src/core/httpUrl.ts';
@@ -884,6 +885,114 @@ test('a picked photo replaces the timeline image and is posted', async () => {
   const posted = postedJson(result.body);
   const timeline = JSON.parse(posted.prompt['7'].inputs.timeline_data);
   assert.equal(timeline.items[0].value, 'picked.png');
+});
+
+test('a broken image token opens the gallery and a pick replaces it', async () => {
+  const file = JSON.stringify({
+    4: { class_type: 'LoadImage', inputs: { image: '$735-0' } },
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push(`${init.method ?? 'GET'} ${url}`);
+    if ((init.method ?? 'GET') === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(file, { status: 200 });
+  };
+  const held = await submitSavedStudioPrompt({
+    workflowFile: 'runs/c-token.json',
+    serverUrl: '100.103.142.118:8188',
+    pageOrigin: 'http://phone.local:8152',
+    fetchImpl,
+    edits: { prompt: null, image: null },
+  });
+  assert.equal(held.format, 'needs-photo');
+  assert.equal(calls.some((call) => call.startsWith('POST')), false);
+  const patched = patchStudioRunFile(JSON.parse(file), {
+    image: { nodeId: -1, field: '', value: 'picked.png' },
+  });
+  assert.equal(patched.format, 'api');
+  assert.equal(patched.prompt['4'].inputs.image, 'picked.png');
+});
+
+test('an empty saved photo opens the gallery and is not posted', async () => {
+  const file = JSON.stringify({
+    4: { class_type: 'LoadImage', inputs: { image: '' } },
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push(`${init.method ?? 'GET'} ${url}`);
+    return new Response(file, { status: 200 });
+  };
+  const result = await runStudioCard({
+    workflowFile: 'runs/c-empty.json',
+    serverUrl: '100.103.142.118:8188',
+    words: 'keep',
+    savedWords: 'keep',
+    promptNodeId: null,
+    promptField: null,
+    imageName: null,
+    imageNodeId: null,
+    imageField: null,
+    fetchImpl,
+    pageOrigin: 'http://phone.local:8152',
+  });
+  assert.equal(result.format, 'needs-photo');
+  assert.equal(calls.some((call) => call.startsWith('POST')), false);
+  assert.equal(calls.some((call) => call.includes('/view?')), false);
+});
+
+test('a previous-output photo opens the gallery and a pick replaces it', async () => {
+  const file = JSON.stringify({
+    4: { class_type: 'LoadImage', inputs: { image: 'frame.png [output]' } },
+    5: { class_type: 'LoadImage', inputs: { image: 'clip.webm [temp]' } },
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push(`${init.method ?? 'GET'} ${url}`);
+    if ((init.method ?? 'GET') === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(file, { status: 200 });
+  };
+  const held = await runStudioCard({
+    workflowFile: 'runs/c-output.json',
+    serverUrl: '100.103.142.118:8188',
+    words: 'keep',
+    savedWords: 'keep',
+    promptNodeId: null,
+    promptField: null,
+    imageName: null,
+    imageNodeId: null,
+    imageField: null,
+    fetchImpl,
+    pageOrigin: 'http://phone.local:8152',
+  });
+  assert.equal(held.format, 'needs-photo');
+  assert.equal(calls.some((call) => call.startsWith('POST')), false);
+  const result = await runStudioCard({
+    workflowFile: 'runs/c-output.json',
+    serverUrl: '100.103.142.118:8188',
+    words: 'keep',
+    savedWords: 'keep',
+    promptNodeId: null,
+    promptField: null,
+    imageName: 'picked.png',
+    imageNodeId: null,
+    imageField: null,
+    fetchImpl,
+    pageOrigin: 'http://phone.local:8152',
+  });
+  assert.equal(result.format, 'api');
+  const posted = postedJson(result.body);
+  assert.equal(posted.prompt['4'].inputs.image, 'picked.png');
+  assert.equal(posted.prompt['5'].inputs.image, 'picked.png');
+});
+
+test('copy search matches an id when duration is a number', () => {
+  assert.equal(studioSearchHit('145118654', ['', 'a prompt', 'Wan', 'sam', 15.08, '145118654']), true);
+  assert.equal(studioSearchHit('15.08', ['', '', '', '', 15.08, '1']), true);
+  assert.equal(studioSearchHit('missing', ['', '', '', '', 15.08, '1']), false);
 });
 
 test('an accepted prompt stays visible on the live queue before refresh', () => {

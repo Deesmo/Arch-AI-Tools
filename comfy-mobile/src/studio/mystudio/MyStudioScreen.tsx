@@ -11,6 +11,7 @@ import {
   copyMainClip,
   loadStudioThumbs,
   primeStudioGallery,
+  studioSearchHit,
   studioThumbUrl,
   type StudioThumbCatalog,
   type StudioThumbCopy,
@@ -64,11 +65,6 @@ function workflowPreview(card: StudioThumbWorkflow): RunPreview {
   return src ? { kind: 'image', src } : null;
 }
 
-const hit = (q: string, fields: (string | undefined | null)[]) => {
-  const n = q.trim().toLowerCase();
-  return !n || fields.some((f) => !!f && f.toLowerCase().includes(n));
-};
-
 export function MyStudioScreen() {
   const { status, catalog } = useStudioThumbs();
   const [section, setSection] = useState<Section>('copies');
@@ -82,15 +78,15 @@ export function MyStudioScreen() {
   };
 
   const copies = useMemo(
-    () => (catalog?.copies ?? []).filter((c) => hit(q, [c.name, c.prompt, c.model, c.author, c.duration, c.civitaiId])),
+    () => (catalog?.copies ?? []).filter((c) => studioSearchHit(q, [c.name, c.prompt, c.model, c.author, c.duration, c.civitaiId])),
     [catalog, q],
   );
   const loras = useMemo(
-    () => (catalog?.loras ?? []).filter((c) => hit(q, [c.name, c.file, c.trigger, c.model, c.author, c.civitaiId])),
+    () => (catalog?.loras ?? []).filter((c) => studioSearchHit(q, [c.name, c.file, c.trigger, c.model, c.author, c.civitaiId])),
     [catalog, q],
   );
   const workflows = useMemo(
-    () => (catalog?.workflows ?? []).filter((c) => hit(q, [c.name, c.prompt, c.model, c.author, c.civitaiId])),
+    () => (catalog?.workflows ?? []).filter((c) => studioSearchHit(q, [c.name, c.prompt, c.model, c.author, c.civitaiId])),
     [catalog, q],
   );
 

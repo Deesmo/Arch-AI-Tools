@@ -28,6 +28,12 @@ export const JOB_FILE_UNREADABLE = "This card's job file is unreadable.";
 /** The card's saved photo is not in Skytech's ComfyUI input folder. */
 export const SAVED_PHOTO_NOT_ON_SKYTECH = "Saved photo not on Skytech — pick one.";
 
+/** Case-insensitive match. Index fields such as duration are numbers, so each value is stringified. */
+export function studioSearchHit(q: string, fields: (string | number | undefined | null)[]): boolean {
+  const n = q.trim().toLowerCase();
+  return !n || fields.some((f) => f != null && f !== "" && String(f).toLowerCase().includes(n));
+}
+
 /**
  * Stands in for a bare NaN while the file is a JavaScript value.
  * JSON.stringify escapes the leading NUL, so the quoted form cannot collide
@@ -422,7 +428,21 @@ export function photoFilename(value: string): string | null {
   return PHOTO_EXT.test(base) ? base : null;
 }
 
-function timelinePhotoNames(value: string, add: (name: string | null) => void): void {
+/**
+ * `file` is a photo Comfy can load from input.
+ * `unresolved` is an empty slot or a previous output, which the gallery must replace.
+ * `other` is left alone.
+ */
+function imageSlotKind(value: string): "file" | "unresolved" | "other" {
+  const raw = value.trim();
+  if (!raw) return "unresolved";
+  if (raw.length > 240 || /[\r\n]/.test(raw)) return "other";
+  if (raw.endsWith(" [output]") || raw.endsWith(" [temp]")) return "unresolved";
+  // A short token that is not a photo file cannot load. The gallery has to replace it.
+  return photoFilename(raw) ? "file" : "unresolved";
+}
+
+function timelinePhotoNames(value: string, add: (name: string | null) => void, unresolved: { hit: boolean }): void {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -436,21 +456,17 @@ function timelinePhotoNames(value: string, add: (name: string | null) => void): 
     }
     const rec = asRecord(obj);
     if (!rec) return;
-    if (rec.type === "image" && typeof rec.value === "string") add(photoFilename(rec.value));
+    if (rec.type === "image" && typeof rec.value === "string") {
+      const kind = imageSlotKind(rec.value);
+      if (kind === "unresolved") unresolved.hit = true;
+      else if (kind === "file") add(photoFilename(rec.value));
+    }
     for (const child of Object.values(rec)) walk(child);
   };
   walk(parsed);
 }
 
-/** Photo filenames the job will load from ComfyUI's input folder when no new photo was picked. */
-export function savedPhotoFilenames(raw: unknown): string[] {
-  const found: string[] = [];
-  const seen = new Set<string>();
-  const add = (name: string | null) => {
-    if (!name || seen.has(name)) return;
-    seen.add(name);
-    found.push(name);
-  };
+function walkSavedImages(raw: unknown, add: (name: string | null) => void, unresolved: { hit: boolean }): void {
   const walk = (obj: unknown) => {
     if (Array.isArray(obj)) {
       obj.forEach(walk);
@@ -462,15 +478,38 @@ export function savedPhotoFilenames(raw: unknown): string[] {
     if (inputs && typeof rec.class_type === "string") {
       for (const [key, value] of Object.entries(inputs)) {
         if (typeof value !== "string") continue;
-        if (key === "image") add(photoFilename(value));
-        if (key === "timeline_data" || value.startsWith("{") || value.startsWith("[")) timelinePhotoNames(value, add);
+        if (key === "image") {
+          const kind = imageSlotKind(value);
+          if (kind === "unresolved") unresolved.hit = true;
+          else if (kind === "file") add(photoFilename(value));
+        }
+        if (key === "timeline_data" || value.startsWith("{") || value.startsWith("[")) timelinePhotoNames(value, add, unresolved);
       }
       return;
     }
     for (const value of Object.values(rec)) walk(value);
   };
   walk(raw);
+}
+
+/** Photo filenames the job will load from ComfyUI's input folder when no new photo was picked. */
+export function savedPhotoFilenames(raw: unknown): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  const add = (name: string | null) => {
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    found.push(name);
+  };
+  walkSavedImages(raw, add, { hit: false });
   return found;
+}
+
+/** True when an image slot is empty or points at a previous output, so Run must ask for a photo. */
+function savedImageUnresolved(raw: unknown): boolean {
+  const unresolved = { hit: false };
+  walkSavedImages(raw, () => {}, unresolved);
+  return unresolved.hit;
 }
 
 function replaceTimelinePhotos(value: string, imageName: string): string | null {
@@ -487,7 +526,7 @@ function replaceTimelinePhotos(value: string, imageName: string): string | null 
     if (!rec) return obj;
     const next: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(rec)) {
-      if (key === "value" && rec.type === "image" && typeof child === "string" && photoFilename(child)) {
+      if (key === "value" && rec.type === "image" && typeof child === "string" && imageSlotKind(child) !== "other") {
         next[key] = imageName;
         if (child !== imageName) changed = true;
       } else if (child && typeof child === "object") {
@@ -511,7 +550,7 @@ function replaceSavedPhotos(raw: Record<string, unknown>, imageName: string): bo
     if (!rec || !inputs || typeof rec.class_type !== "string") continue;
     for (const [key, value] of Object.entries(inputs)) {
       if (typeof value !== "string") continue;
-      if (key === "image" && photoFilename(value) && value !== imageName) {
+      if (key === "image" && imageSlotKind(value) !== "other" && value !== imageName) {
         inputs[key] = imageName;
         changed = true;
       }
@@ -648,6 +687,7 @@ export async function submitSavedStudioPrompt(args: {
   const json = await loadStudioWorkflowFile(args.workflowFile, fetchImpl, args.pageOrigin);
   const edits = args.edits ?? { prompt: null, image: null };
   if (!edits.image) {
+    if (savedImageUnresolved(json)) return { format: "needs-photo" };
     const names = savedPhotoFilenames(json);
     if (names.length && (await savedPhotoMissingOnServer(args.serverUrl, names, fetchImpl))) {
       return { format: "needs-photo" };
