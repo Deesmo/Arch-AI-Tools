@@ -539,47 +539,56 @@ test('submit builds only the prompt URL and an absolute workflow fetch', async (
   }
 });
 
-test('the Run button submit does not throw the Safari URL error', async () => {
+function headerValues(headers) {
+  if (!headers) return [];
+  if (Array.isArray(headers)) return headers.map((pair) => String(pair[1] ?? ''));
+  if (typeof headers.forEach === 'function') {
+    const values = [];
+    headers.forEach((value) => values.push(String(value)));
+    return values;
+  }
+  return Object.values(headers).map((value) => String(value));
+}
+
+test('runStudioCard does not pass a string body to fetch', async () => {
   const words = '<Picture 1> standing in the doorway';
   const saved = {
     6: { class_type: 'CLIPTextEncode', inputs: { text: words } },
   };
-  const OriginalURL = globalThis.URL;
-  const built = [];
-  globalThis.URL = class extends OriginalURL {
-    constructor(input, base) {
-      const value = String(input);
-      built.push(value);
-      if (/[<>]/.test(value) || !/^https?:\/\//i.test(value)) {
+  const calls = [];
+  const sockets = [];
+  const OriginalWebSocket = globalThis.WebSocket;
+  // Native WebSocket throws this sentence for a bad URL without calling the
+  // JavaScript URL constructor. Run must not hand it the prompt.
+  globalThis.WebSocket = class {
+    constructor(url) {
+      const value = String(url);
+      sockets.push(value);
+      if (value.includes('<') || value.includes(words)) {
         throw new TypeError('The string did not match the expected pattern.');
       }
-      if (base === undefined) super(value);
-      else super(value, base);
+    }
+    close() {}
+    send(data) {
+      if (typeof data === 'string' && (data.includes('<') || data.includes(words))) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
     }
   };
-  const calls = [];
   const fetchImpl = async (url, init = {}) => {
-    const target = String(url);
-    const strings = [target];
-    if (typeof init.body === 'string') strings.push(init.body);
-    if (init.headers && typeof init.headers === 'object') {
-      for (const [name, value] of Object.entries(init.headers)) strings.push(String(name), String(value));
+    // Native fetch throws this when the body is a string. It does not call
+    // the JavaScript URL or Request constructors.
+    if (typeof init.body === 'string') {
+      throw new TypeError('The string did not match the expected pattern.');
     }
-    for (const value of strings) {
-      if (/[<>]/.test(value) || (value === target && !/^https?:\/\//i.test(value))) {
+    const values = headerValues(init.headers);
+    for (const value of values) {
+      if (value.includes('<') || value.includes(words)) {
         throw new TypeError('The string did not match the expected pattern.');
       }
     }
-    const req = new Request(target, {
-      method: init.method,
-      headers: init.headers,
-      body: init.body,
-      signal: init.signal,
-      cache: init.cache,
-      credentials: init.credentials,
-    });
-    calls.push({ url: req.url, method: req.method, body: init.body });
-    if (req.method === 'POST') {
+    calls.push({ url: String(url), method: init.method ?? 'GET', body: init.body, headers: values });
+    if ((init.method ?? 'GET') === 'POST') {
       return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
     }
     return new Response(JSON.stringify(saved), { status: 200 });
@@ -602,18 +611,19 @@ test('the Run button submit does not throw the Safari URL error', async () => {
     });
     assert.equal(result.format, 'api');
     assert.equal(result.postUrl, 'http://100.103.142.118:8188/prompt');
-    assert.deepEqual(calls.map((call) => call.url), [
-      'http://phone.local:8152/studio-thumbs/runs/copy.json',
-      'http://100.103.142.118:8188/prompt',
+    assert.deepEqual(calls.map((call) => `${call.method} ${call.url}`), [
+      'GET http://phone.local:8152/studio-thumbs/runs/copy.json',
+      'POST http://100.103.142.118:8188/prompt',
     ]);
-    assert.equal(calls[1].method, 'POST');
     assert.notEqual(typeof calls[1].body, 'string');
+    assert.ok(calls[1].body instanceof ArrayBuffer);
     const posted = postedJson(calls[1].body);
     assert.equal(posted.prompt['6'].inputs.text, words);
-    assert.equal(built.some((value) => /[<>]/.test(value) || value === '100.103.142.118:8188'), false);
+    assert.equal(calls[1].headers.some((value) => value.includes('<') || value.includes('Picture')), false);
+    assert.deepEqual(sockets, []);
     assert.equal(/did not match the expected pattern/.test(JSON.stringify(result)), false);
   } finally {
-    globalThis.URL = OriginalURL;
+    globalThis.WebSocket = OriginalWebSocket;
     fakeLocation.origin = previousOrigin;
   }
 });
@@ -644,6 +654,85 @@ test('Run posts to the node-list server when the saved address has no scheme', a
   } finally {
     globalThis.fetch = previousFetch;
     useSettingsStore.getState().set({ serverUrl: saved });
+  }
+});
+
+test('URL rejects a bare host and runStudioCard still posts', async () => {
+  const words = '<Picture 1> standing in the doorway';
+  const host = '100.103.142.118:8188';
+  const saved = {
+    6: { class_type: 'CLIPTextEncode', inputs: { text: words } },
+  };
+  const OriginalURL = globalThis.URL;
+  const OriginalRequest = globalThis.Request;
+  const seen = [];
+  globalThis.URL = class extends OriginalURL {
+    constructor(input, base) {
+      const value = String(input);
+      seen.push(value);
+      if (!/^https?:\/\//i.test(value)) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
+      if (base === undefined) super(value);
+      else super(value, base);
+    }
+  };
+  globalThis.Request = class extends OriginalRequest {
+    constructor(input, init) {
+      const value = typeof input === 'string' ? input : String(input?.url ?? input);
+      seen.push(value);
+      if (!/^https?:\/\//i.test(value)) {
+        throw new TypeError('The string did not match the expected pattern.');
+      }
+      super(input, init);
+    }
+  };
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const target = String(url);
+    if (!/^https?:\/\//i.test(target)) {
+      throw new TypeError('The string did not match the expected pattern.');
+    }
+    calls.push({ url: target, method: init.method ?? 'GET', body: init.body });
+    if ((init.method ?? 'GET') === 'POST') {
+      return new Response(JSON.stringify({ prompt_id: 'accepted' }), { status: 200 });
+    }
+    return new Response(JSON.stringify(saved), { status: 200 });
+  };
+  const previousOrigin = fakeLocation.origin;
+  fakeLocation.origin = 'http://phone.local:8152';
+  try {
+    const result = await runStudioCard({
+      workflowFile: 'runs/c-145117818.json',
+      serverUrl: host,
+      words,
+      savedWords: words,
+      promptNodeId: 6,
+      promptField: 'text',
+      imageName: null,
+      imageNodeId: null,
+      imageField: null,
+      fetchImpl,
+      clientId: 'phone',
+      pageOrigin: 'http://phone.local:8152',
+    });
+    assert.equal(result.format, 'api');
+    assert.equal(result.promptId, 'accepted');
+    assert.equal(result.postUrl, `http://${host}/prompt`);
+    assert.deepEqual(calls.map((call) => `${call.method} ${call.url}`), [
+      'GET http://phone.local:8152/studio-thumbs/runs/c-145117818.json',
+      `POST http://${host}/prompt`,
+    ]);
+    assert.notEqual(typeof calls[1].body, 'string');
+    assert.ok(calls[1].body instanceof ArrayBuffer);
+    assert.equal(postedJson(calls[1].body).prompt['6'].inputs.text, words);
+    assert.equal(seen.includes(`${host}/prompt`), false);
+    assert.equal(seen.includes(host), false);
+    assert.equal(/did not match the expected pattern/.test(JSON.stringify(result)), false);
+  } finally {
+    globalThis.URL = OriginalURL;
+    globalThis.Request = OriginalRequest;
+    fakeLocation.origin = previousOrigin;
   }
 });
 

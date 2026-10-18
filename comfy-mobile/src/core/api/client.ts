@@ -42,7 +42,47 @@ export function baseUrl(): string {
 
 export function wsUrl(clientId: string): string {
   const http = absoluteServerUrl('/ws');
-  return `${http.replace(/^http/i, 'ws')}?clientId=${encodeURIComponent(clientId)}`;
+  // Native WebSocket parses this string itself. It does not call the
+  // JavaScript URL constructor. The prompt is not part of the URL.
+  const url = `${http.replace(/^http/i, 'ws')}?clientId=${encodeURIComponent(clientId)}`;
+  if (/[<>]/.test(url)) throw new Error('WebSocket URL is not a full URL');
+  return url;
+}
+
+/**
+ * An ArrayBuffer of UTF-8 JSON.
+ * WebKit's native fetch throws "The string did not match the expected pattern."
+ * when the body is a string that contains "<", without calling the JavaScript
+ * URL or Request constructors. An ArrayBuffer is not that string.
+ */
+export function jsonBytes(json: string): ArrayBuffer {
+  const view = new TextEncoder().encode(json);
+  const buffer = new ArrayBuffer(view.byteLength);
+  new Uint8Array(buffer).set(view);
+  return buffer;
+}
+
+function bodyForFetch(body: BodyInit | null | undefined): BodyInit | null | undefined {
+  if (body instanceof Uint8Array) {
+    const buffer = new ArrayBuffer(body.byteLength);
+    new Uint8Array(buffer).set(body);
+    return buffer;
+  }
+  return body;
+}
+
+/** Header values are ByteStrings. The prompt, including "<Picture 1>", is not one. */
+function assertHeaderValues(headers: HeadersInit | undefined): void {
+  const values: string[] = [];
+  if (!headers) return;
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    headers.forEach((value) => values.push(value));
+  } else if (Array.isArray(headers)) {
+    for (const pair of headers) values.push(String(pair[1] ?? ''));
+  } else {
+    for (const value of Object.values(headers)) values.push(String(value));
+  }
+  if (values.some((value) => /[<>]/.test(value))) throw new Error('Refusing to send the prompt in a header');
 }
 
 /** Thrown when a request exceeded its deadline or stalled; `url` is the exact URL that failed. */
@@ -97,18 +137,20 @@ async function request<T>(path: string, init?: RequestOptions): Promise<T> {
   const url = absoluteServerUrl(path);
   const { timeoutMs = 0, signal, ...rest } = init ?? {};
   const deadline = withDeadline(signal, timeoutMs);
+  const outbound = bodyForFetch(rest.body);
+  const headers: HeadersInit = {
+    Accept: 'application/json',
+    ...(outbound && !(outbound instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+    ...(rest.headers ?? {}),
+  };
+  assertHeaderValues(headers);
   let res: Response;
   try {
     res = await fetch(url, {
       ...rest,
+      body: outbound,
       signal: deadline.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(rest.body && !(rest.body instanceof FormData)
-          ? { 'Content-Type': 'application/json' }
-          : {}),
-        ...(rest.headers ?? {}),
-      },
+      headers,
     });
   } catch (err) {
     if (deadline.timedOut()) throw new TimeoutError(`No response from ${url} within ${Math.round(timeoutMs / 1000)}s`, url);
@@ -279,9 +321,9 @@ export const api = {
     request<PromptResponse>('/prompt', {
       method: 'POST',
       timeoutMs,
-      // Bytes, not a string. WebKit's Request throws if a string argument
-      // contains angle brackets such as "<Picture 1>".
-      body: new TextEncoder().encode(JSON.stringify({
+      // ArrayBuffer, not a string. Native fetch throws the Safari pattern
+      // error when a string body contains "<Picture 1>".
+      body: jsonBytes(JSON.stringify({
         prompt,
         client_id: clientId,
         front: front || undefined,

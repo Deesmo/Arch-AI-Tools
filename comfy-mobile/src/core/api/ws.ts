@@ -12,6 +12,7 @@
  *
  * The socket is independent of the HTTP path: a blocked or failing WebSocket
  * never prevents REST calls, it only means no live events (the store polls).
+ * It never sends a payload. The Run prompt is not a WebSocket message.
  */
 import { wsUrl } from './client';
 import type { PreviewFrame, WsMessage } from './types';

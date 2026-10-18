@@ -23,6 +23,7 @@ import {
   safeUploadName,
   studioPhotoStatus,
   studioRunEdits,
+  openQueueHistory,
   runStudioCard,
   useServerStore,
   useSettingsStore,
@@ -153,6 +154,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     setBusy(true);
     setResult(null);
     let accepted: string | null = null;
+    let postedFromCard = false;
     try {
       let imageName: string | null = null;
       if (picked && imageWritable) {
@@ -182,8 +184,10 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         return;
       }
       if (submitted.format === 'api') {
-        if (submitted.promptId) accepted = submitted.promptId;
-        else setResult('The server did not return a prompt id.');
+        if (submitted.promptId) {
+          accepted = submitted.promptId;
+          postedFromCard = true;
+        } else setResult('The server did not return a prompt id.');
       } else {
       const edits = studioRunEdits({
         words: prompt,
@@ -215,11 +219,13 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       if (id) accepted = id;
       }
     } catch (err) {
-      showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
+      // A history error after a real prompt id must not cover that id.
+      if (!accepted) showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
     } finally {
       setBusy(false);
     }
     if (accepted) {
+      if (!postedFromCard) openQueueHistory();
       void useServerStore.getState().refreshQueue();
       onClose();
       focusQueuedRun(accepted);

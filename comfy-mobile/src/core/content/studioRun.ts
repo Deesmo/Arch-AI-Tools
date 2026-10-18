@@ -6,7 +6,7 @@
  * The file is either a UI graph (`{ nodes: [...] }`) or an API prompt
  * (`{ "<id>": { class_type, inputs } }`).
  */
-import { normalizeServerUrl } from '../api/client';
+import { jsonBytes } from '../api/client';
 import type { ApiPrompt } from '../api/types';
 import type { GraphNode, Workflow } from '../graph/types';
 import { scrubUrlError } from '../httpUrl';
@@ -422,8 +422,8 @@ export type StudioSubmitResult =
  * Loads a saved workflow from a relative path joined to an explicit page base,
  * then posts an API prompt as JSON.
  * The prompt string, including angle brackets, is a JSON field. It is not a URL.
- * `serverUrl` is the saved address, scheme or not. The post uses the same
- * `normalizeServerUrl` the node-list fetch uses.
+ * `serverUrl` is the saved host, scheme or not. The post address is the
+ * concatenation `http://` + host + `/prompt`. It is not passed to URL or Request.
  */
 export async function submitSavedStudioPrompt(args: {
   workflowFile: string;
@@ -439,24 +439,26 @@ export async function submitSavedStudioPrompt(args: {
   const patched = patchStudioRunFile(json, args.edits ?? { prompt: null, image: null });
   if (patched.format === 'ui') return { format: 'ui', workflow: patched.workflow, missed: patched.missed };
   if (patched.format !== 'api') return { format: 'unknown', missed: patched.missed };
-  const postUrl = `${normalizeServerUrl(args.serverUrl)}/prompt`;
-  const body = JSON.stringify({
+  const host = args.serverUrl.trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/+$/, '');
+  const postUrl = `http://${host}/prompt`;
+  const payload = JSON.stringify({
     prompt: patched.prompt,
     client_id: args.clientId ?? '',
   });
-  // WebKit's Request throws "The string did not match the expected pattern"
-  // when a string argument contains "<Picture 1>". The JSON stays the body,
-  // but it is bytes, not a string the URL parser can see.
+  // Native fetch throws "The string did not match the expected pattern."
+  // when this JSON is a string body, because it contains "<Picture 1>".
+  // An ArrayBuffer is not a string. Header values stay the two fixed names.
+  const body = jsonBytes(payload);
+  const headers: HeadersInit = [
+    ['Accept', 'application/json'],
+    ['Content-Type', 'application/json'],
+  ];
   const timeoutMs = args.timeoutMs ?? 0;
   const ctrl = new AbortController();
   const timer = timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
   let res: Response;
   try {
-    const init: RequestInit = {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: new TextEncoder().encode(body),
-    };
+    const init: RequestInit = { method: 'POST', headers, body };
     if (timeoutMs > 0) init.signal = ctrl.signal;
     res = await fetchImpl(postUrl, init);
   } catch (err) {
@@ -476,13 +478,13 @@ export async function submitSavedStudioPrompt(args: {
   } catch {
     promptId = '';
   }
-  return { format: 'api', postUrl, body, promptId };
+  return { format: 'api', postUrl, body: payload, promptId };
 }
 
 /**
  * What the Run button calls. A relative workflow path is joined to the page
- * origin. An API prompt is posted as JSON bytes to the saved server.
- * Prompt words stay in that JSON. They are not a string passed to Request.
+ * origin. An API prompt is posted as an ArrayBuffer. The prompt words stay
+ * in that JSON. They are not a fetch body string and not a header value.
  */
 export async function runStudioCard(args: {
   workflowFile: string;
@@ -508,7 +510,7 @@ export async function runStudioCard(args: {
     imageNodeId: args.imageNodeId,
     imageField: args.imageField,
   });
-  return submitSavedStudioPrompt({
+  const result = await submitSavedStudioPrompt({
     workflowFile: args.workflowFile,
     serverUrl: args.serverUrl,
     pageOrigin: args.pageOrigin,
@@ -517,6 +519,23 @@ export async function runStudioCard(args: {
     edits,
     timeoutMs: args.timeoutMs ?? 30_000,
   });
+  if (result.format === 'api' && result.promptId) openQueueHistory();
+  return result;
+}
+
+/**
+ * The Queue is this page. Safari throws "The string did not match the expected
+ * pattern." from pushState and replaceState when the URL is not a plain path
+ * or contains the prompt. This path is only "/".
+ */
+export const QUEUE_HISTORY_PATH = '/';
+
+export function openQueueHistory(): void {
+  try {
+    globalThis.history?.pushState(null, '', QUEUE_HISTORY_PATH);
+  } catch {
+    // The prompt id is already known. A history error must not replace it.
+  }
 }
 
 function promptErrorText(text: string, status: number): string {
