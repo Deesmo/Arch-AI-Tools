@@ -40,8 +40,9 @@ export function isAnimatedImage(name: string): boolean {
   return ANIMATED_IMG_EXT.test(name);
 }
 
-/** Flattens a node output into media items. */
-export function mediaFromOutput(output: NodeOutput, nodeId?: string, promptId?: string): MediaItem[] {
+/** Flattens a node output into media items. A null output is a node that produced nothing. */
+export function mediaFromOutput(output: NodeOutput | null | undefined, nodeId?: string, promptId?: string): MediaItem[] {
+  if (!output || typeof output !== 'object') return [];
   const items: MediaItem[] = [];
   const animatedFlags = (output as { animated?: boolean[] }).animated;
 
@@ -74,6 +75,7 @@ export function mediaFromOutput(output: NodeOutput, nodeId?: string, promptId?: 
 export function mediaFromHistoryEntry(promptId: string, entry: HistoryEntry): MediaItem[] {
   const out: MediaItem[] = [];
   for (const [nodeId, output] of Object.entries(entry.outputs ?? {})) {
+    if (!output) continue;
     out.push(...mediaFromOutput(output, nodeId, promptId));
   }
   return out;

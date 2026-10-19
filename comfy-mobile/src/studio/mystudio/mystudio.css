@@ -350,6 +350,33 @@
   inset: 0;
 }
 
+.ms-workflow-blurb {
+  color: var(--descrip-text);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 4px 0 0;
+  white-space: normal;
+}
+.ms-step {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+.ms-step img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  background: #000;
+  border-radius: var(--radius-sm);
+  margin: 8px 0;
+}
+.ms-step-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .ms-copy-card.is-runnable,
 .ms-item.is-runnable {
   cursor: pointer;

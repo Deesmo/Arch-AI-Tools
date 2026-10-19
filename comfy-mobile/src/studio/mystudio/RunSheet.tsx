@@ -8,26 +8,42 @@
  * live list. A failed or timed-out post stays here and shows the error.
  */
 import { useEffect, useRef, useState } from 'react';
+import { api } from '../../core/api/client';
 import {
   CARD_CANNOT_BE_BUILT,
   GALLERY_COLUMNS,
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
   absoluteStudioUrl,
+  applyApprovedRun,
+  applyMatchedLora,
   applyStudioRunEdits,
+  authorGenerateSteps,
+  collectStartStills,
+  firstOutputImage,
   galleryWindow,
+  loadStudioWorkflowFile,
   parseWorkflow,
+  matchPromptLora,
   peekStudioGallery,
   primeStudioGallery,
+  rewriteInAuthorStyle,
+  scenesInAuthorPrompt,
   safeImageType,
   SAVED_PHOTO_NOT_ON_SKYTECH,
   safeUploadName,
+  spokenLines,
   studioPhotoStatus,
   studioRunEdits,
+  submitApiGraph,
   openQueueHistory,
   runStudioCard,
   useServerStore,
   useSettingsStore,
+  waitForIdleQueue,
+  type AuthorStep,
+  type PromptLora,
+  type PromptLoraMatch,
   type StudioGalleryImage,
   type StudioThumbCopy,
   type StudioThumbWorkflow,
@@ -44,6 +60,20 @@ export type RunPreview =
   | null;
 
 type RunCard = StudioThumbCopy | StudioThumbWorkflow;
+
+type StillState = {
+  status: 'running' | 'done' | 'none' | 'error';
+  url?: string;
+  filename?: string;
+  seed?: number;
+  error?: string;
+  /** Uploaded image this still was conditioned on, when the graph cuts to one. */
+  startName?: string | null;
+};
+
+function stillKey(stepId: string, scene: number): string {
+  return `${stepId}:${scene}`;
+}
 
 function GalleryGrid({ images, picked, onPick }: { images: StudioGalleryImage[]; picked: StudioGalleryImage | null; onPick: (image: StudioGalleryImage) => void }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -105,8 +135,11 @@ function GalleryGrid({ images, picked, onPick }: { images: StudioGalleryImage[];
   );
 }
 
-export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
+type Draft = { id: string; text: string; roll: number; match: PromptLoraMatch | null };
+
+export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; preview: RunPreview; loras: PromptLora[]; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
+  const installedLoras = useServerStore((s) => s.modelLists.loras);
   const uploadInput = useServerStore((s) => s.uploadInput);
   const { queueWorkflow } = useQueue();
   const toast = useUiStore((s) => s.toast);
@@ -118,6 +151,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
   const [galleryNote, setGalleryNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [ownWords, setOwnWords] = useState('');
+  const [steps, setSteps] = useState<AuthorStep[] | null>(null);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [stills, setStills] = useState<Record<string, StillState>>({});
+  const graphRef = useRef<unknown>(null);
 
   useEffect(() => {
     if (images) return;
@@ -136,10 +174,245 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     };
   }, [images]);
 
+  useEffect(() => {
+    if (!card.workflowFile) {
+      setSteps([]);
+      return;
+    }
+    let live = true;
+    void loadStudioWorkflowFile(card.workflowFile)
+      .then((raw) => {
+        if (!live) return;
+        graphRef.current = raw;
+        setSteps(authorGenerateSteps(raw));
+      })
+      .catch(() => {
+        if (live) setSteps([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [card.workflowFile]);
+
   const connected = status === 'connected';
   const canQueue = !!card.workflowFile;
   const promptWritable = card.promptNodeId != null && !!card.promptField;
   const imageWritable = card.imageNodeId != null && !!card.imageField;
+
+  const inCard = !!steps?.length;
+  const imagesReady = inCard && drafts.length > 0 && steps!.every((step) => {
+    const count = scenesInAuthorPrompt(step.authorPrompt);
+    for (let scene = 1; scene <= count; scene++) {
+      const still = stills[stillKey(step.id, scene)];
+      if (still?.status !== 'done' && still?.status !== 'none') return false;
+    }
+    return true;
+  });
+
+  const draftFor = (step: AuthorStep, text: string, roll: number, installed: readonly string[], words: string): Draft => ({
+    id: step.id,
+    text,
+    roll,
+    match: matchPromptLora(step.engine, `${words}\n${text}`, loras, installed),
+  });
+
+  const installedFiles = async (): Promise<readonly string[]> => {
+    const current = useServerStore.getState().modelLists.loras;
+    if (current) return current;
+    return useServerStore.getState().refreshModels('loras');
+  };
+
+  const generatePrompts = () => {
+    if (!steps?.length || !ownWords.trim()) return;
+    const ready = steps;
+    const words = ownWords;
+    void installedFiles().then((installed) => {
+      setDrafts(ready.map((step) => draftFor(
+        step,
+        rewriteInAuthorStyle(step.authorPrompt, words, 0, { kind: step.kind, engine: step.engine }),
+        0,
+        installed,
+        words,
+      )));
+      setStills({});
+      setResult(null);
+    });
+  };
+
+  const rerollPrompt = (step: AuthorStep) => {
+    const words = ownWords;
+    void installedFiles().then((installed) => {
+      setDrafts((prev) => prev.map((draft) => (
+        draft.id === step.id
+            ? draftFor(step, rewriteInAuthorStyle(step.authorPrompt, words, draft.roll + 1, { kind: step.kind, engine: step.engine }), draft.roll + 1, installed, words)
+          : draft
+      )));
+      setStills({});
+      setResult(null);
+    });
+  };
+
+  const waitHistory = async (promptId: string) => {
+    for (;;) {
+      const history = await api.getHistory(32);
+      const entry = history[promptId];
+      if (entry?.status?.completed || entry?.status?.status_str === 'error' || (entry?.outputs && Object.keys(entry.outputs).length)) return entry;
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+    }
+  };
+
+  const makeScene = async (step: AuthorStep, scene: number, text: string, priorName: string | null, matched: PromptLoraMatch | null) => {
+    const key = stillKey(step.id, scene);
+    const seed = 1 + Math.floor(Math.random() * 2_000_000_000);
+    const { stills: built, skipped } = collectStartStills(graphRef.current, text, seed);
+    const skip = skipped.find((item) => item.stepId === step.id && item.scene === scene);
+    const still = built.find((item) => item.stepId === step.id && item.scene === scene);
+    if (skip || !still) {
+      setStills((prev) => ({ ...prev, [key]: { status: 'none', error: 'This scene has no separate still. Render uses the prompt.' } }));
+      return priorName;
+    }
+    const prompt = still.prompt;
+    if (matched) applyMatchedLora(prompt, step.samplerId, matched);
+    let startName: string | null = null;
+    const load = prompt.incard_load;
+    if (load && load.inputs.image === 'start.png') {
+      if (!priorName) {
+        setStills((prev) => ({ ...prev, [key]: { status: 'error', error: 'This scene needs the previous start image.', seed } }));
+        throw new Error('This scene needs the previous start image.');
+      }
+      load.inputs.image = priorName;
+      startName = priorName;
+    }
+    setStills((prev) => ({ ...prev, [key]: { status: 'running', seed, startName } }));
+    try {
+      setResult('Waiting for the queue, then making the start image.');
+      await waitForIdleQueue(() => api.getQueue());
+      setResult(null);
+      const promptId = await submitApiGraph({
+        serverUrl: useSettingsStore.getState().serverUrl,
+        prompt,
+        clientId: useServerStore.getState().clientId,
+      });
+      const entry = await waitHistory(promptId);
+      if (entry.status?.status_str === 'error') {
+        const info = entry.status.messages?.find((item) => item[0] === 'execution_error')?.[1];
+        const detail = typeof info?.exception_message === 'string' ? info.exception_message.trim() : '';
+        throw new Error(detail ? `The start image failed. ${detail.slice(0, 240)}` : 'The start image failed.');
+      }
+      const ref = firstOutputImage(entry);
+      if (!ref) throw new Error('The start image finished with no file.');
+      const blob = await fetch(api.viewUrl(ref)).then((res) => res.blob());
+      const uploaded = await api.uploadImage(blob, `incard-${seed}.png`, true);
+      setStills((prev) => ({ ...prev, [key]: { status: 'done', url: api.viewUrl(ref), filename: uploaded.name, seed, startName } }));
+      return step.kind === 'image' ? uploaded.name : priorName;
+    } catch (err) {
+      const message = err instanceof Error && err.message ? err.message : 'The start image failed.';
+      setStills((prev) => ({ ...prev, [key]: { status: 'error', error: message, seed, startName } }));
+      throw err;
+    }
+  };
+
+  const makeImages = async (onlyKey?: string) => {
+    if (!steps?.length || !drafts.length || busy) return;
+    if (!connected) {
+      showResult('Not connected to a ComfyUI server');
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    try {
+      let prior: string | null = null;
+      for (const step of steps) {
+        const draft = drafts.find((item) => item.id === step.id);
+        const text = draft?.text ?? step.authorPrompt;
+        const count = scenesInAuthorPrompt(step.authorPrompt);
+        for (let scene = 1; scene <= count; scene++) {
+          const key = stillKey(step.id, scene);
+          const already = stills[key];
+          const leaveIt = (onlyKey && key !== onlyKey)
+            || (!onlyKey && already?.status === 'done' && !!already.filename)
+            || (!onlyKey && already?.status === 'none');
+          if (leaveIt) {
+            if (step.kind === 'image' && already?.filename) prior = already.filename;
+            continue;
+          }
+          prior = await makeScene(step, scene, text, prior, draft?.match ?? null);
+          if (onlyKey) return;
+        }
+      }
+    } catch (err) {
+      showResult(err instanceof Error && err.message ? err.message : 'The start image failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const renderApproved = async () => {
+    if (!steps?.length || !card.workflowFile || busy) return;
+    if (!connected) {
+      showResult('Not connected to a ComfyUI server');
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    let accepted: string | null = null;
+    try {
+      let acceptedStart: string | null = null;
+      for (const step of steps) {
+        if (step.kind !== 'image') continue;
+        const count = scenesInAuthorPrompt(step.authorPrompt);
+        for (let scene = 1; scene <= count; scene++) {
+          const still = stills[stillKey(step.id, scene)];
+          if (still?.status === 'done' && still.filename) acceptedStart = still.filename;
+        }
+      }
+      const prompt = applyApprovedRun(graphRef.current, steps.map((step) => {
+        const count = scenesInAuthorPrompt(step.authorPrompt);
+        let filename: string | null = null;
+        let seed: number | null = null;
+        let startName: string | null = null;
+        for (let scene = 1; scene <= count; scene++) {
+          const still = stills[stillKey(step.id, scene)];
+          if (still?.status !== 'done') continue;
+          if (!filename && still.filename) {
+            filename = still.filename;
+            seed = still.seed ?? null;
+          }
+          if (still.startName) startName = still.startName;
+        }
+        return {
+          nodeId: step.nodeId,
+          field: step.field,
+          text: drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt,
+          samplerId: step.samplerId,
+          seed,
+          image: step.kind === 'video' ? (acceptedStart ?? startName ?? filename) : filename,
+          kind: step.kind,
+          engine: step.engine,
+        };
+      }));
+      if (!prompt) throw new Error("Couldn't read this card's workflow");
+      for (const step of steps) {
+        const matched = drafts.find((draft) => draft.id === step.id)?.match;
+        if (matched) applyMatchedLora(prompt, step.samplerId, matched);
+      }
+      await waitForIdleQueue(() => api.getQueue());
+      accepted = await submitApiGraph({
+        serverUrl: useSettingsStore.getState().serverUrl,
+        prompt,
+        clientId: useServerStore.getState().clientId,
+      });
+    } catch (err) {
+      if (!accepted) showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
+    } finally {
+      setBusy(false);
+    }
+    if (accepted) {
+      void useServerStore.getState().refreshQueue();
+      onClose();
+      focusQueuedRun(accepted);
+    }
+  };
 
   const showResult = (message: string) => {
     setResult(message);
@@ -252,8 +525,13 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
                 {result}
               </p>
             )}
-            <button type="button" className="btn primary block ms-run-go" disabled={busy} onClick={() => void run()}>
-              {busy ? 'Queuing…' : 'Run'}
+            <button
+              type="button"
+              className="btn primary block ms-run-go"
+              disabled={busy || (inCard && (!drafts.length || !imagesReady))}
+              onClick={() => void (inCard ? renderApproved() : run())}
+            >
+              {busy ? 'Working…' : inCard ? 'Render' : 'Run'}
             </button>
           </>
         ) : undefined
@@ -272,6 +550,90 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       {!canQueue && <p className="ms-run-note">{CARD_CANNOT_BE_BUILT}</p>}
       {canQueue && !connected && <p className="ms-run-note">Not connected to a ComfyUI server</p>}
 
+      {steps === null && canQueue && <p className="ms-run-note">Reading this card…</p>}
+      {inCard ? (
+        <div className="field">
+          <label className="field-label" htmlFor="ms-run-prompt">
+            What do you want
+          </label>
+          <textarea
+            id="ms-run-prompt"
+            className="textarea ms-run-prompt"
+            rows={4}
+            value={ownWords}
+            inputMode="text"
+            enterKeyHint="done"
+            autoCapitalize="sentences"
+            autoCorrect="on"
+            spellCheck
+            placeholder="Your words. Nothing is rewritten until you tap Generate."
+            onChange={(e) => setOwnWords(e.target.value)}
+            onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
+          />
+          <button type="button" className="btn block" disabled={!ownWords.trim()} onClick={generatePrompts}>
+            Generate
+          </button>
+          {drafts.map((draft) => {
+            const step = steps!.find((item) => item.id === draft.id);
+            if (!step) return null;
+            const said = spokenLines(draft.text);
+            const authorLoraNames = step.loras.map((lora) => lora.file.split(/[/\\]/).pop()?.replace(/\.(safetensors|ckpt|gguf)$/i, '')).filter(Boolean);
+            const count = scenesInAuthorPrompt(step.authorPrompt);
+            return (
+              <div className="ms-step" key={step.id}>
+                <div className="ms-item-title">{step.label}</div>
+                {authorLoraNames.length > 0 && <p className="field-hint">LoRAs: {authorLoraNames.join(', ')}</p>}
+                {draft.match && <p className="field-hint">Matched LoRA: {draft.match.name}</p>}
+                <textarea
+                  className="textarea ms-run-prompt"
+                  rows={4}
+                  aria-label={`${step.label} prompt`}
+                  value={draft.text}
+                  onChange={(e) => {
+                    const text = e.target.value;
+                    const files = installedLoras ?? [];
+                    setDrafts((prev) => prev.map((item) => (
+                      item.id === step.id
+                        ? { ...item, text, match: matchPromptLora(step.engine, `${ownWords}\n${text}`, loras, files) }
+                        : item
+                    )));
+                  }}
+                />
+                {said.length > 0 && <p className="field-hint">Spoken: {said.join(' / ')}</p>}
+                <div className="ms-step-actions">
+                  <button type="button" className="btn sm" onClick={() => rerollPrompt(step)}>
+                    Re-roll prompt
+                  </button>
+                </div>
+                {Array.from({ length: count }, (_, index) => {
+                  const scene = index + 1;
+                  const still = stills[stillKey(step.id, scene)];
+                  return (
+                    <div key={stillKey(step.id, scene)}>
+                      {count > 1 && <p className="field-hint">Scene {scene}</p>}
+                      {(still?.status === 'done' || still?.status === 'error') && (
+                        <div className="ms-step-actions">
+                          <button type="button" className="btn sm" disabled={busy || !connected} onClick={() => void makeImages(stillKey(step.id, scene))}>
+                            Re-roll image
+                          </button>
+                        </div>
+                      )}
+                      {still?.status === 'running' && <p className="ms-run-note">Making the start image…</p>}
+                      {still?.error && <p className="field-hint">{still.error}</p>}
+                      {still?.url && <img src={still.url} alt="" />}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+          {drafts.length > 0 && (
+            <button type="button" className="btn block" style={{ marginTop: 10 }} disabled={busy || !connected} onClick={() => void makeImages()}>
+              Make start images
+            </button>
+          )}
+        </div>
+      ) : steps && (
       <div className="field">
         <label className="field-label" htmlFor="ms-run-prompt">
           Prompt
@@ -291,6 +653,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         />
         {!promptWritable && <p className="field-hint">This prompt stays as saved in the workflow.</p>}
       </div>
+      )}
 
       <div className="field">
         <div className="field-label">Photo</div>
