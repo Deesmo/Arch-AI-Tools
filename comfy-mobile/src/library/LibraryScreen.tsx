@@ -14,7 +14,9 @@ import {
   inputImages,
   loaderFor,
   matchesQuery,
+  loadDiskMedia,
   mediaFromHistoryEntry,
+  mergeGalleryMedia,
   totalModelCount,
   useLibraryStore,
   useServerStore,
@@ -334,14 +336,16 @@ function AssetsView({ onPickInput }: { onPickInput: (file: string) => void }) {
     () => inputs.map((f) => ({ kind: 'image', url: api.viewUrl({ filename: f, subfolder: '', type: 'input' }), ref: { filename: f, subfolder: '', type: 'input' } })),
     [inputs],
   );
+  const [disk, setDisk] = useState<MediaItem[] | null>(null);
   const outputs = useMemo(() => {
     const all: MediaItem[] = [];
     for (const [id, entry] of Object.entries(history ?? {}).sort(historyOrder)) all.push(...mediaFromHistoryEntry(id, entry).filter((m) => m.ref.type !== 'temp'));
-    return all;
-  }, [history]);
+    return mergeGalleryMedia(all, (disk ?? []).filter((m) => m.ref.type !== 'input'));
+  }, [history, disk]);
 
   useEffect(() => {
     if (!history) void refreshHistory();
+    void loadDiskMedia().then(setDisk).catch(() => setDisk((prev) => prev ?? []));
   }, [history, refreshHistory]);
 
   return (
@@ -366,7 +370,7 @@ function AssetsView({ onPickInput }: { onPickInput: (file: string) => void }) {
           Gallery <Icon name="chevron" size={14} />
         </button>
       </div>
-      <div className="field-hint section-hint" style={{ marginBottom: 6 }}>Everything the server still has in its history. Tap to view; the Gallery tab has filters.</div>
+      <div className="field-hint section-hint" style={{ marginBottom: 6 }}>Saved files in the server's output folder, including after a restart. Tap to view; the Gallery tab has filters.</div>
       {outputs.length === 0 && <div className="empty small">Nothing generated yet.</div>}
       <div className="media-grid">
         {outputs.slice(0, 60).map((m, i) => (

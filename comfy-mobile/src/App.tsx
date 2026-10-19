@@ -1,10 +1,10 @@
 /**
- * App shell: connection gate, bottom tab bar, the six screens and the
+ * App shell: connection gate, bottom tab bar, the seven screens and the
  * first-run guide. Studio and Graph are both always mounted (hidden with
  * display:none) so the canvas viewport and form state survive tab switches.
  */
 import { useEffect, useState } from 'react';
-import { useServerStore, useSettingsStore } from './core';
+import { useContentStore, useServerStore, useSettingsStore } from './core';
 import { EditorScreen } from './editor/EditorScreen';
 import { LibraryScreen } from './library/LibraryScreen';
 import { ConnectionScreen } from './screens/ConnectionScreen';
@@ -17,10 +17,12 @@ import { Guide } from './shared/Guide';
 import { Icon, type IconName } from './shared/Icon';
 import { ConfirmDialog, Toasts } from './shared/Overlays';
 import { useUiStore, type Tab } from './shared/ui';
+import { MyStudioScreen } from './studio/mystudio/MyStudioScreen';
 import { StudioScreen } from './studio/StudioScreen';
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'studio', label: 'Studio', icon: 'studio' },
+  { id: 'mystudio', label: 'My Studio', icon: 'star' },
   { id: 'graph', label: 'Graph', icon: 'graph' },
   { id: 'library', label: 'Library', icon: 'library' },
   { id: 'queue', label: 'Queue', icon: 'queue' },
@@ -50,6 +52,7 @@ export default function App() {
     setTab(isTab(wanted) ? wanted : defaultMode === 'graph' ? 'graph' : 'studio');
     if (!guideSeen) setGuideOpen(true);
     void connect();
+    void useContentStore.getState().hydrate();
     setBooted(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,7 +64,8 @@ export default function App() {
     if (status === 'connected') setOffline(false);
   }, [status]);
 
-  const showGate = booted && status !== 'connected' && !offline && tab !== 'settings';
+  // Settings and My Studio (on-device content) stay reachable without a server.
+  const showGate = booted && status !== 'connected' && !offline && tab !== 'settings' && tab !== 'mystudio';
 
   return (
     <div className="app">
@@ -72,6 +76,7 @@ export default function App() {
         <div style={{ position: 'absolute', inset: 0, display: tab === 'graph' ? 'block' : 'none' }}>
           <EditorScreen />
         </div>
+        {tab === 'mystudio' && <MyStudioScreen />}
         {tab === 'library' && <LibraryScreen />}
         {tab === 'queue' && <QueueScreen />}
         {tab === 'gallery' && <GalleryScreen />}

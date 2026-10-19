@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import {
+  activeLoraFiles,
   allTemplates,
   applyTemplate,
   bindTriggerWords,
@@ -19,6 +20,8 @@ import {
   readStudioLoras,
   readTemplateValues,
   supportsStudioLoras,
+  triggerWordsForLora,
+  useContentStore,
   useGraphStore,
   useRecipesStore,
   useServerStore,
@@ -46,6 +49,7 @@ export function useStudio() {
   const status = useServerStore((s) => s.status);
   const activeRecipeId = useRecipesStore((s) => s.activeId);
   const recipe = useRecipesStore((s) => s.items.find((r) => r.id === s.activeId) ?? null);
+  const loraIndex = useContentStore((s) => s.loraIndex);
   const { queueWorkflow } = useQueue();
   const toast = useUiStore((s) => s.toast);
 
@@ -73,16 +77,26 @@ export function useStudio() {
 
   const set = useCallback((key: string, value: unknown) => setValue(template.id, key, value), [setValue, template.id]);
 
-  /** Final positive prompt after recipe trigger words. */
-  const finalPrompt = useMemo(() => {
-    const p = template.params.find((x) => x.role === 'positive_prompt');
-    const text = p ? String(values[p.key] ?? '') : '';
-    return bindTriggerWords(text, recipe && recipe.templateId === template.id ? recipe : null);
-  }, [template, values, recipe]);
-
   const loras: StudioLora[] = useMemo(() => storedLoras ?? [], [storedLoras]);
   /** Whether this template takes the Studio LoRA stack (video templates with a model loader). */
   const lorasSupported = useMemo(() => supportsStudioLoras(template.kind, applyTemplate(template, defaults, info), info), [template, defaults, info]);
+
+  /** Trigger words from My Studio content for the LoRAs currently selected (template slots + the Studio LoRA stack). */
+  const loraTriggerWords = useMemo(() => {
+    const files = [...activeLoraFiles(template, values), ...(lorasSupported ? loras.map((l) => l.file) : [])];
+    const out: string[] = [];
+    for (const file of files) for (const w of triggerWordsForLora(loraIndex, file)) if (!out.includes(w)) out.push(w);
+    return out;
+  }, [template, values, loraIndex, loras, lorasSupported]);
+
+  /** Final positive prompt after recipe + selected-LoRA trigger words. */
+  const finalPrompt = useMemo(() => {
+    const p = template.params.find((x) => x.role === 'positive_prompt');
+    const text = p ? String(values[p.key] ?? '') : '';
+    const active = recipe && recipe.templateId === template.id ? recipe : null;
+    if (!active && !loraTriggerWords.length) return text;
+    return bindTriggerWords(text, { triggerWords: [...(active?.triggerWords ?? []), ...loraTriggerWords], loras: active?.loras ?? [] });
+  }, [template, values, recipe, loraTriggerWords]);
 
   /** Builds the workflow that would be queued right now (template + values + Studio LoRA stack). */
   const buildWorkflow = useCallback((): Workflow => {
@@ -146,6 +160,7 @@ export function useStudio() {
     setLoraStrength: (file: string, strength: number) => setLoraStrength(template.id, file, strength),
     recipe: recipe && recipe.templateId === template.id ? recipe : null,
     activeRecipeId,
+    loraTriggerWords,
     finalPrompt,
     buildWorkflow,
     generate,

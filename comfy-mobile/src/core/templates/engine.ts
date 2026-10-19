@@ -191,8 +191,8 @@ export function serverModelDefault(
  * Default values for all params: template defaults, falling back to the
  * workflow's widget values. Model params (`role: "model"`) whose baked file is
  * not on the connected server default to the first file the server does have,
- * so e.g. the SD1.5 image templates pick a real checkpoint instead of a
- * `v1-5-pruned-emaonly.safetensors` that was never installed.
+ * so a baked checkpoint the connected server does not have is replaced by
+ * the first checkpoint it does have.
  */
 export function defaultValues(template: StudioTemplate, info: ObjectInfo | null, modelLists: Record<string, string[]> = {}): TemplateValues {
   const values = bakedValues(template, info);

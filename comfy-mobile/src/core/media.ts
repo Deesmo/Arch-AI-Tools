@@ -79,6 +79,67 @@ export function mediaFromHistoryEntry(promptId: string, entry: HistoryEntry): Me
   return out;
 }
 
+const INTERNAL_FILE = /^(.*) \[(output|input|temp)\]$/;
+
+/**
+ * `/internal/files/{output|input|temp}` returns `"relative/path [type]"`,
+ * newest first. A subfolder is everything before the last slash; `/view`
+ * wants that split, not the relative path stuffed into `filename`.
+ */
+export function parseInternalFileEntry(entry: string): ImageRef | null {
+  const match = INTERNAL_FILE.exec(entry.trim());
+  if (!match) return null;
+  const rel = match[1].replace(/\\/g, '/');
+  const slash = rel.lastIndexOf('/');
+  const filename = slash >= 0 ? rel.slice(slash + 1) : rel;
+  const subfolder = slash >= 0 ? rel.slice(0, slash) : '';
+  if (!filename || filename.startsWith('.')) return null;
+  return { filename, subfolder, type: match[2] };
+}
+
+/** Saved pictures, video, and audio from a directory listing. Temp files are skipped. */
+export function mediaFromInternalFiles(entries: readonly string[]): MediaItem[] {
+  const items: MediaItem[] = [];
+  for (const entry of entries) {
+    const ref = parseInternalFileEntry(entry);
+    if (!ref || ref.type === 'temp') continue;
+    const kind = kindFromFilename(ref.filename);
+    if (kind === 'file') continue;
+    items.push({
+      kind,
+      url: api.viewUrl(ref),
+      ref,
+      animated: kind === 'image' && isAnimatedImage(ref.filename),
+    });
+  }
+  return items;
+}
+
+function mediaKey(item: MediaItem): string {
+  return `${item.ref.type}\0${item.ref.subfolder ?? ''}\0${item.ref.filename}`;
+}
+
+/**
+ * Disk listing is the durable gallery (it survives a Comfy restart). History
+ * entries overwrite the same file so a run can still be deleted, and files
+ * that exist only in history stay visible.
+ */
+export function mergeGalleryMedia(historyItems: readonly MediaItem[], diskItems: readonly MediaItem[]): MediaItem[] {
+  const byKey = new Map<string, MediaItem>();
+  for (const item of diskItems) byKey.set(mediaKey(item), item);
+  for (const item of historyItems) byKey.set(mediaKey(item), item);
+  return [...byKey.values()];
+}
+
+/** Output folder plus the input library. Either listing can fail on its own. */
+export async function loadDiskMedia(): Promise<MediaItem[]> {
+  const [outputs, inputs] = await Promise.all([
+    api.listDirectory('output'),
+    api.listDirectory('input').catch(() => [] as string[]),
+  ]);
+  return mediaFromInternalFiles([...outputs, ...inputs]);
+}
+
 /** Sort key for history entries: newest first using the prompt number. */
 export function historyOrder(a: [string, HistoryEntry], b: [string, HistoryEntry]): number {
   return (b[1].prompt?.[0] ?? 0) - (a[1].prompt?.[0] ?? 0);

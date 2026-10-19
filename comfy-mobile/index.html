@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="color-scheme" content="dark" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="icon" href="data:," />
     <title>Comfy Mobile</title>
   </head>
@@ -18,5 +21,33 @@
          otherwise position:sticky inside the app breaks. Layout lives in .app. -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // The hashed bundle changes every build. A cached index.html keeps the
+      // phone on the old script. Reload the document from the network when the
+      // module src in the fresh HTML is different.
+      (function () {
+        var current = document.querySelector('script[type="module"]');
+        var src = current ? current.getAttribute('src') : '';
+        if (!src) return;
+        fetch(location.href, { cache: 'reload', credentials: 'omit' })
+          .then(function (res) { return res.ok ? res.text() : ''; })
+          .then(function (html) {
+            if (!html) return;
+            var found = '';
+            var re = /<script\b([^>]*)>/gi;
+            var tag;
+            while ((tag = re.exec(html))) {
+              if (!/type\s*=\s*"module"/.test(tag[1])) continue;
+              var srcMatch = tag[1].match(/\bsrc\s*=\s*"([^"]+)"/);
+              if (srcMatch) found = srcMatch[1];
+            }
+            if (!found || found === src) return;
+            document.open();
+            document.write(html);
+            document.close();
+          })
+          .catch(function () {});
+      })();
+    </script>
   </body>
 </html>

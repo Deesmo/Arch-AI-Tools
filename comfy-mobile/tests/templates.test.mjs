@@ -136,7 +136,7 @@ test('image templates default ckpt_name to the first server checkpoint when the 
   const skytechLike = { checkpoints: ['NoobAI-XL-Vpred-v1.0.safetensors', 'flux1-schnell-fp8.safetensors', 'ltx-2.3-22b-dev-fp8.safetensors'] };
   for (const id of ['default-txt2img', 'default-img2img']) {
     const t = getTemplate(id);
-    assert.equal(bakedValues(t, info).model, 'v1-5-pruned-emaonly.safetensors', `${id} baked`);
+    assert.equal(bakedValues(t, info).model, 'uberRealisticPornMerge_v23Final.safetensors', `${id} baked`);
     const values = defaultValues(t, info, skytechLike);
     assert.equal(values.model, 'NoobAI-XL-Vpred-v1.0.safetensors', `${id} falls back to the first /models/checkpoints entry`);
     const wf = applyTemplate(t, values, info);
@@ -151,13 +151,13 @@ test('image templates default ckpt_name to the first server checkpoint when the 
 test('the baked checkpoint is kept when the server has it, and without a list the widget combo decides', () => {
   const t = getTemplate('default-txt2img');
   // Mock server has v1-5 on disk (and in the CheckpointLoaderSimple combo)
-  assert.equal(defaultValues(t, info, { checkpoints: MODELS.checkpoints }).model, 'v1-5-pruned-emaonly.safetensors');
-  assert.equal(defaultValues(t, info).model, 'v1-5-pruned-emaonly.safetensors');
+  assert.equal(defaultValues(t, info, { checkpoints: MODELS.checkpoints }).model, 'uberRealisticPornMerge_v23Final.safetensors');
+  assert.equal(defaultValues(t, info).model, 'uberRealisticPornMerge_v23Final.safetensors');
   // Not connected: nothing to compare against, no substitution
   const modelParam = t.params.find((p) => p.key === 'model');
   assert.equal(serverModelDefault(modelParam, t, 'v1-5-pruned-emaonly.safetensors', null, { checkpoints: ['other.safetensors'] }), undefined);
   // Empty folder on the server: nothing sensible to pick, keep the baked value
-  assert.equal(defaultValues(t, info, { checkpoints: [] }).model, 'v1-5-pruned-emaonly.safetensors');
+  assert.equal(defaultValues(t, info, { checkpoints: [] }).model, 'uberRealisticPornMerge_v23Final.safetensors');
 });
 
 test('video templates whose files exist on the server are untouched by the model fallback', () => {
@@ -172,7 +172,7 @@ test('video templates whose files exist on the server are untouched by the model
 test('validateTemplate without values still reports the baked file (legacy callers)', () => {
   const t = getTemplate('default-txt2img');
   const v = validateTemplate(t, info, { checkpoints: ['other.safetensors'] });
-  assert.deepEqual(v.missingModels, [{ folder: 'checkpoints', file: 'v1-5-pruned-emaonly.safetensors' }]);
+  assert.deepEqual(v.missingModels, [{ folder: 'checkpoints', file: 'uberRealisticPornMerge_v23Final.safetensors' }]);
   // With values pointing at a file that is also missing, the effective file is reported.
   const v2 = validateTemplate(t, info, { checkpoints: ['other.safetensors'] }, { model: 'gone.safetensors' });
   assert.deepEqual(v2.missingModels, [{ folder: 'checkpoints', file: 'gone.safetensors' }]);

@@ -6,7 +6,7 @@
  * flags a WebSocket that failed to open (HTTP-only mode), and tapping it
  * opens the same diagnostics + "Copy details" as the connect screen.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   buildConnectionReport,
   classifyNodeList,
@@ -30,6 +30,7 @@ export function NodeListBanner() {
   const wsState = useServerStore((s) => s.wsState);
   const loadNodeList = useServerStore((s) => s.loadNodeList);
   const serverUrl = useSettingsStore((s) => s.serverUrl);
+  const bannerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -41,10 +42,28 @@ export function NodeListBanner() {
     return () => clearInterval(id);
   }, [active]);
 
-  if (status !== 'connected') return null;
+  const show = status === 'connected' && (active || nodeList.phase === 'error' || (wsBlocked && wsState !== 'open'));
+  useLayoutEffect(() => {
+    const el = bannerRef.current;
+    if (!show || !el) {
+      document.documentElement.style.removeProperty('--nodelist-banner-h');
+      return;
+    }
+    const apply = () => {
+      document.documentElement.style.setProperty('--nodelist-banner-h', `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    };
+    apply();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(apply) : null;
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      document.documentElement.style.removeProperty('--nodelist-banner-h');
+    };
+  }, [show, nodeList.phase, nodeList.received, wsBlocked, wsState]);
+
+  if (!show) return null;
   const failed = nodeList.phase === 'error';
   const socketDown = wsBlocked && wsState !== 'open';
-  if (!active && !failed && !socketDown) return null;
 
   const label = serverLabel(serverUrl);
   const text = active || failed ? describeNodeListLoad(nodeList, label, now) : { title: 'Live updates unavailable (WebSocket blocked)', detail: 'polling the queue instead · tap for details' };
@@ -60,7 +79,7 @@ export function NodeListBanner() {
 
   return (
     <>
-      <button className={`nodelist-banner ${tone}`} onClick={() => setOpen(true)} data-testid="nodelist-banner" aria-live="polite">
+      <button ref={bannerRef} className={`nodelist-banner ${tone}`} onClick={() => setOpen(true)} data-testid="nodelist-banner" aria-live="polite">
         <span className="nodelist-icon">
           {active ? <Icon name="refresh" size={14} className="spin" /> : <Icon name="warning" size={14} />}
         </span>

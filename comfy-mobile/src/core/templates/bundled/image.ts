@@ -20,7 +20,7 @@ export const defaultTxt2Img: StudioTemplate = {
   engine: 'SD1.5',
   tags: ['image', 'default'],
   requires: ['CheckpointLoaderSimple', 'KSampler', 'SaveImage'],
-  models: [{ folder: 'checkpoints', file: 'v1-5-pruned-emaonly.safetensors' }],
+  models: [{ folder: 'checkpoints', file: 'uberRealisticPornMerge_v23Final.safetensors' }],
   resolutionPresets: SD_PRESETS,
   params: [
     { key: 'prompt', label: 'Prompt', type: 'text', role: 'positive_prompt', bindings: [{ node: { id: 6 }, widget: 'text' }] },
@@ -37,7 +37,7 @@ export const defaultTxt2Img: StudioTemplate = {
   ],
   workflow: buildWorkflow(
     [
-      { id: 4, type: 'CheckpointLoaderSimple', pos: [26, 474], size: [315, 98], widgets_values: ['v1-5-pruned-emaonly.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
+      { id: 4, type: 'CheckpointLoaderSimple', pos: [26, 474], size: [315, 98], widgets_values: ['uberRealisticPornMerge_v23Final.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
       { id: 6, type: 'CLIPTextEncode', title: 'CLIP Text Encode (Prompt)', pos: [415, 186], size: [422, 164], widgets_values: ['beautiful scenery nature glass bottle landscape, purple galaxy bottle,'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']] },
       { id: 7, type: 'CLIPTextEncode', title: 'CLIP Text Encode (Prompt)', pos: [413, 389], size: [425, 180], widgets_values: ['text, watermark'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']] },
       { id: 5, type: 'EmptyLatentImage', pos: [473, 609], size: [315, 106], widgets_values: [512, 512, 1], outputs: [['LATENT', 'LATENT']] },
@@ -67,7 +67,7 @@ export const defaultImg2Img: StudioTemplate = {
   engine: 'SD1.5',
   tags: ['image', 'img2img'],
   requires: ['CheckpointLoaderSimple', 'LoadImage', 'VAEEncode', 'KSampler', 'SaveImage'],
-  models: [{ folder: 'checkpoints', file: 'v1-5-pruned-emaonly.safetensors' }],
+  models: [{ folder: 'checkpoints', file: 'uberRealisticPornMerge_v23Final.safetensors' }],
   params: [
     { key: 'image', label: 'Source image', type: 'image', role: 'reference_image', bindings: [{ node: { id: 10 }, widget: 'image' }] },
     { key: 'prompt', label: 'Prompt', type: 'text', role: 'positive_prompt', bindings: [{ node: { id: 6 }, widget: 'text' }] },
@@ -80,7 +80,7 @@ export const defaultImg2Img: StudioTemplate = {
   ],
   workflow: buildWorkflow(
     [
-      { id: 4, type: 'CheckpointLoaderSimple', pos: [40, 420], widgets_values: ['v1-5-pruned-emaonly.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
+      { id: 4, type: 'CheckpointLoaderSimple', pos: [40, 420], widgets_values: ['uberRealisticPornMerge_v23Final.safetensors'], outputs: [['MODEL', 'MODEL'], ['CLIP', 'CLIP'], ['VAE', 'VAE']] },
       { id: 10, type: 'LoadImage', pos: [40, 60], widgets_values: [''], outputs: [['IMAGE', 'IMAGE'], ['MASK', 'MASK']] },
       { id: 11, type: 'VAEEncode', pos: [400, 60], inputs: [['pixels', 'IMAGE'], ['vae', 'VAE']], outputs: [['LATENT', 'LATENT']] },
       { id: 6, type: 'CLIPTextEncode', title: 'Positive Prompt', pos: [400, 200], size: [320, 0], widgets_values: ['a painting in the style of van gogh'], inputs: [['clip', 'CLIP']], outputs: [['CONDITIONING', 'CONDITIONING']], color: '#232', bgcolor: '#353' },

@@ -442,6 +442,13 @@ input[type='range'] {
   animation: slide-up 0.2s ease-out;
   padding-bottom: var(--safe-bottom);
 }
+/* The gallery viewer sits at 60. A confirm opened from it has to land above that layer. */
+.confirm-backdrop {
+  z-index: 80;
+}
+.confirm-sheet {
+  z-index: 81;
+}
 .sheet.full {
   top: var(--safe-top);
   max-height: none;
@@ -607,6 +614,29 @@ input[type='range'] {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.media-tile .tile-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+}
+.media-tile .tile-delete:active {
+  background: var(--danger, #c0392b);
+}
+.media-tile .tile-delete:disabled {
+  opacity: 0.5;
 }
 .media-tile .kind {
   position: absolute;

@@ -1,23 +1,28 @@
 /**
  * Fullscreen media viewer: swipe between items, native video controls,
- * save to device / share, open the producing workflow.
+ * save to device / share, open the producing workflow, delete (confirmed)
+ * the run from ComfyUI's history.
  */
 import { useEffect, useRef, useState } from 'react';
 import { parseWorkflow, saveUrlToDevice, useGraphStore, useServerStore } from '../core';
 import { Icon } from '../shared/Icon';
 import { MediaView, kindLabel } from '../shared/MediaView';
 import { useUiStore } from '../shared/ui';
+import { useDeleteOutput } from '../shared/useDeleteOutput';
 
 export function MediaViewer() {
   const viewer = useUiStore((s) => s.viewer);
   const close = useUiStore((s) => s.closeViewer);
+  const openViewer = useUiStore((s) => s.openViewer);
   const toast = useUiStore((s) => s.toast);
   const setTab = useUiStore((s) => s.setTab);
   const history = useServerStore((s) => s.history);
   const info = useServerStore((s) => s.objectInfo);
   const load = useGraphStore((s) => s.load);
+  const confirmAndDelete = useDeleteOutput();
   const [index, setIndex] = useState(viewer?.index ?? 0);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const touchStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -38,6 +43,20 @@ export function MediaViewer() {
       toast((err as Error).message, 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    setDeleting(true);
+    try {
+      const gone = await confirmAndDelete(item);
+      if (!gone) return;
+      // The whole run went: show what is left, or close when nothing is.
+      const remaining = items.filter((m) => m.promptId !== item.promptId);
+      if (!remaining.length) close();
+      else openViewer(remaining, Math.min(index, remaining.length - 1));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -93,6 +112,11 @@ export function MediaViewer() {
           <Icon name="chevron" size={16} />
         </button>
         <span style={{ flex: 1 }} />
+        {item.promptId && (
+          <button className="btn danger" onClick={() => void remove()} disabled={deleting} aria-label="Delete">
+            <Icon name="trash" size={16} />
+          </button>
+        )}
         <button className="btn" onClick={openWorkflow}>
           <Icon name="graph" size={16} /> Workflow
         </button>

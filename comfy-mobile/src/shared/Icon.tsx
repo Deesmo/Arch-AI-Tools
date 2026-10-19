@@ -43,6 +43,8 @@ const paths: Record<string, string> = {
   film: 'M4 4h16v16H4z M4 8h16 M4 12h16 M4 16h16 M8 4v16 M16 4v16',
   home: 'M3 11l9-8 9 8 M5 10v10h14V10',
   collapse: 'M8 3H3v5 M16 3h5v5 M3 16v5h5 M21 16v5h-5',
+  star: 'M12 3l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.4 6.3 20.5l1.2-6.4L2.8 9.7l6.4-.8z',
+  cards: 'M4 7h12v12H4z M8 3h12v12',
   library: 'M4 4h4v16H4z M10 4h4v16h-4z M16 5l4-1 3 15-4 1z',
   help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7 M12 17h.01',
 };

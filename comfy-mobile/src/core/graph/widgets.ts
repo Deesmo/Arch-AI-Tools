@@ -234,7 +234,20 @@ export function storedWidgetValue(stored: unknown, index: number, name: string):
  * dynamic combo are expanded, so the widget list is a function of
  * (object_info, current values) — re-run it after a dynamic combo changes.
  */
-export function shapeFromDef(def: NodeDef, stored?: unknown): NodeShape {
+/**
+ * A named map wins for widgets it actually contains. Everything else stays on
+ * the positional `widgets_values` list, so a partial map does not reset the
+ * other widgets to their defaults.
+ */
+function storedPreferringNamed(stored: unknown, named: Record<string, unknown> | null | undefined, index: number, name: string): unknown {
+  if (named && Object.prototype.hasOwnProperty.call(named, name)) {
+    const v = named[name];
+    return v === null ? undefined : v;
+  }
+  return storedWidgetValue(stored, index, name);
+}
+
+export function shapeFromDef(def: NodeDef, stored?: unknown, named?: Record<string, unknown> | null): NodeShape {
   const inputs: NodeInputSlot[] = [];
   const widgets: WidgetDef[] = [];
   const widgetValues: unknown[] = [];
@@ -249,7 +262,7 @@ export function shapeFromDef(def: NodeDef, stored?: unknown): NodeShape {
     if (label !== name) w.label = label;
     const idx = widgets.length;
     widgets.push(w);
-    const kept = storedWidgetValue(stored, idx, name);
+    const kept = storedPreferringNamed(stored, named, idx, name);
     const value = kept === undefined ? defaultWidgetValue(w, spec) : kept;
     widgetValues.push(value);
     if (needsControlWidget(name, spec)) {
@@ -260,7 +273,7 @@ export function shapeFromDef(def: NodeDef, stored?: unknown): NodeShape {
         options: { controls: name },
       };
       widgets.push(c);
-      widgetValues.push(storedWidgetValue(stored, idx + 1, c.name) ?? 'randomize');
+      widgetValues.push(storedPreferringNamed(stored, named, idx + 1, c.name) ?? 'randomize');
     }
     if (isDynamicComboSpec(spec) && depth < 8) {
       const option = dynamicComboOptions(spec).find((o) => o.key === String(value));

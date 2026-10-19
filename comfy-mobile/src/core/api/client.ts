@@ -41,9 +41,48 @@ export function baseUrl(): string {
 }
 
 export function wsUrl(clientId: string): string {
-  const base = baseUrl();
-  const ws = base.replace(/^http/i, 'ws');
-  return `${ws}/ws?clientId=${encodeURIComponent(clientId)}`;
+  const http = absoluteServerUrl('/ws');
+  // Native WebSocket parses this string itself. It does not call the
+  // JavaScript URL constructor. The prompt is not part of the URL.
+  const url = `${http.replace(/^http/i, 'ws')}?clientId=${encodeURIComponent(clientId)}`;
+  if (/[<>]/.test(url)) throw new Error('WebSocket URL is not a full URL');
+  return url;
+}
+
+/**
+ * An ArrayBuffer of UTF-8 JSON.
+ * WebKit's native fetch throws "The string did not match the expected pattern."
+ * when the body is a string that contains "<", without calling the JavaScript
+ * URL or Request constructors. An ArrayBuffer is not that string.
+ */
+export function jsonBytes(json: string): ArrayBuffer {
+  const view = new TextEncoder().encode(json);
+  const buffer = new ArrayBuffer(view.byteLength);
+  new Uint8Array(buffer).set(view);
+  return buffer;
+}
+
+function bodyForFetch(body: BodyInit | null | undefined): BodyInit | null | undefined {
+  if (body instanceof Uint8Array) {
+    const buffer = new ArrayBuffer(body.byteLength);
+    new Uint8Array(buffer).set(body);
+    return buffer;
+  }
+  return body;
+}
+
+/** Header values are ByteStrings. The prompt, including "<Picture 1>", is not one. */
+function assertHeaderValues(headers: HeadersInit | undefined): void {
+  const values: string[] = [];
+  if (!headers) return;
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    headers.forEach((value) => values.push(value));
+  } else if (Array.isArray(headers)) {
+    for (const pair of headers) values.push(String(pair[1] ?? ''));
+  } else {
+    for (const value of Object.values(headers)) values.push(String(value));
+  }
+  if (values.some((value) => /[<>]/.test(value))) throw new Error('Refusing to send the prompt in a header');
 }
 
 /** Thrown when a request exceeded its deadline or stalled; `url` is the exact URL that failed. */
@@ -85,22 +124,33 @@ function withDeadline(outer: AbortSignal | null | undefined, timeoutMs: number) 
   };
 }
 
+/**
+ * Same base the node-list fetch uses (`baseUrl()`, which prefixes `http://`
+ * when the saved address has no scheme) plus a path. No URL parser and no refusal.
+ */
+export function absoluteServerUrl(path: string): string {
+  const rooted = path.startsWith('/') ? path : `/${path}`;
+  return `${baseUrl()}${rooted}`;
+}
+
 async function request<T>(path: string, init?: RequestOptions): Promise<T> {
-  const url = `${baseUrl()}${path}`;
+  const url = absoluteServerUrl(path);
   const { timeoutMs = 0, signal, ...rest } = init ?? {};
   const deadline = withDeadline(signal, timeoutMs);
+  const outbound = bodyForFetch(rest.body);
+  const headers: HeadersInit = {
+    Accept: 'application/json',
+    ...(outbound && !(outbound instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+    ...(rest.headers ?? {}),
+  };
+  assertHeaderValues(headers);
   let res: Response;
   try {
     res = await fetch(url, {
       ...rest,
+      body: outbound,
       signal: deadline.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(rest.body && !(rest.body instanceof FormData)
-          ? { 'Content-Type': 'application/json' }
-          : {}),
-        ...(rest.headers ?? {}),
-      },
+      headers,
     });
   } catch (err) {
     if (deadline.timedOut()) throw new TimeoutError(`No response from ${url} within ${Math.round(timeoutMs / 1000)}s`, url);
@@ -145,7 +195,7 @@ export interface LargeFetchOptions {
  * `/object_info`, which on a server with many custom node packs is tens of MB.
  */
 async function fetchLargeJson<T>(path: string, opts: LargeFetchOptions = {}): Promise<T> {
-  const url = `${baseUrl()}${path}`;
+  const url = absoluteServerUrl(path);
   const { headersTimeoutMs = 15_000, stallTimeoutMs = 30_000 } = opts;
   const deadline = withDeadline(opts.signal, headersTimeoutMs);
   let res: Response;
@@ -264,17 +314,29 @@ export const api = {
 
   getHistory: (maxItems = 64) => request<History>(`/history?max_items=${maxItems}`, { timeoutMs: 30_000 }),
 
+  /**
+   * Files still on disk under ComfyUI's output or input folder.
+   * `GET /internal/files/{directory}` — `"relative/path [type]"`, newest first.
+   * This survives a restart. `/history` does not.
+   */
+  listDirectory: (directory: 'output' | 'input' | 'temp') =>
+    request<string[]>(`/internal/files/${directory}`, { timeoutMs: 30_000 }),
+
   /** Submits an API prompt. Resolves to the prompt id; rejects with ApiError
-   *  whose `body` is a PromptErrorResponse when validation fails (400). */
-  queuePrompt: (prompt: ApiPrompt, clientId: string, workflow?: unknown, front = false) =>
+   *  whose `body` is a PromptErrorResponse when validation fails (400).
+   *  `timeoutMs` aborts when no response headers arrive (0 waits forever). */
+  queuePrompt: (prompt: ApiPrompt, clientId: string, workflow?: unknown, front = false, timeoutMs = 0) =>
     request<PromptResponse>('/prompt', {
       method: 'POST',
-      body: JSON.stringify({
+      timeoutMs,
+      // ArrayBuffer, not a string. Native fetch throws the Safari pattern
+      // error when a string body contains "<Picture 1>".
+      body: jsonBytes(JSON.stringify({
         prompt,
         client_id: clientId,
         front: front || undefined,
         extra_data: workflow ? { extra_pnginfo: { workflow } } : undefined,
-      }),
+      })),
     }),
 
   interrupt: () => request<unknown>('/interrupt', { method: 'POST' }),
@@ -308,7 +370,7 @@ export const api = {
       type: img.type ?? 'output',
     });
     if (preview) q.set('preview', preview);
-    return `${baseUrl()}/view?${q.toString()}`;
+    return `${absoluteServerUrl('/view')}?${q.toString()}`;
   },
 };
 

@@ -166,12 +166,20 @@ interface ServerState {
   queuePrompt: (
     prompt: ApiPrompt,
     workflow: Workflow,
-    meta: { source: 'studio' | 'graph'; templateId?: string },
+    meta: { source: 'studio' | 'graph'; templateId?: string; timeoutMs?: number },
   ) => Promise<{ ok: true; promptId: string } | { ok: false; message: string; nodeErrors: Record<string, NodeError> }>;
   interrupt: () => Promise<void>;
   deleteQueueItem: (id: string) => Promise<void>;
   clearQueue: () => Promise<void>;
   deleteHistoryItem: (id: string) => Promise<void>;
+  /**
+   * Deletes a finished run from ComfyUI's history (`POST /history {"delete"}`),
+   * which removes every output of that run from the Gallery on all devices.
+   * Unlike `deleteHistoryItem` it reports the server's refusal instead of
+   * swallowing it. ComfyUI core has no route that unlinks output files, so
+   * the bytes stay in the server's output folder.
+   */
+  deleteRun: (promptId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   clearHistory: () => Promise<void>;
   clearNodeErrors: () => void;
   clearOutputs: () => void;
@@ -206,7 +214,7 @@ function describeError(err: unknown): string {
     const detail = typeof body === 'object' && body?.error?.message ? `: ${body.error.message}` : '';
     return `${err.message}${detail}`;
   }
-  if (err instanceof TypeError) return `Cannot reach ${baseUrl()} (${err.message})`;
+  if (err instanceof TypeError) return `Cannot reach ${baseUrl()}`;
   return err instanceof Error ? err.message : String(err);
 }
 
@@ -550,7 +558,7 @@ export const useServerStore = create<ServerState>()((set, get) => {
       set({ nodeErrors: {} });
       const exported = exportWorkflow(workflow);
       try {
-        const res = await api.queuePrompt(prompt, get().clientId, exported);
+        const res = await api.queuePrompt(prompt, get().clientId, exported, false, meta.timeoutMs);
         set((s) => ({
           submitted: {
             ...s.submitted,
@@ -603,6 +611,21 @@ export const useServerStore = create<ServerState>()((set, get) => {
     deleteHistoryItem: async (id) => {
       await api.deleteHistoryItems([id]).catch(() => undefined);
       await get().refreshHistory();
+    },
+    deleteRun: async (promptId) => {
+      try {
+        await api.deleteHistoryItems([promptId]);
+      } catch (err) {
+        return { ok: false, error: describeError(err) };
+      }
+      // Drop it locally right away; the refresh confirms against the server.
+      set((s) => {
+        if (!s.history || !(promptId in s.history)) return {};
+        const { [promptId]: _gone, ...rest } = s.history;
+        return { history: rest };
+      });
+      await get().refreshHistory();
+      return { ok: true };
     },
     clearHistory: async () => {
       await api.clearHistory().catch(() => undefined);

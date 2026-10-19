@@ -9,7 +9,7 @@
  *   media.ts    Output classification (image / video / audio) + /view URLs
  */
 export * from './api/types';
-export { api, ApiError, TimeoutError, baseUrl, formatBytes, normalizeServerUrl } from './api/client';
+export { api, ApiError, TimeoutError, absoluteServerUrl, baseUrl, formatBytes, normalizeServerUrl } from './api/client';
 export { nodeListCache } from './connection/cache';
 export * from './graph/types';
 export * from './graph/model';
@@ -30,6 +30,7 @@ export * from './store/library';
 export * from './library';
 export * from './recipes/schema';
 export * from './recipes/store';
+export * from './content';
 export * from './connection/diagnose';
 export * from './platform/save';
 export { workflowFromPng } from './utils/png';

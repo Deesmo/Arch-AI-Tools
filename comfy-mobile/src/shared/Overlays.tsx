@@ -22,8 +22,8 @@ export function ConfirmDialog() {
   if (!confirm) return null;
   return (
     <>
-      <div className="sheet-backdrop" onClick={() => resolve(false)} />
-      <div className="sheet" role="alertdialog">
+      <div className="sheet-backdrop confirm-backdrop" onClick={() => resolve(false)} />
+      <div className="sheet confirm-sheet" role="alertdialog">
         <div className="sheet-handle" />
         <div className="sheet-body">
           <h3 style={{ margin: '4px 0 6px' }}>{confirm.title}</h3>

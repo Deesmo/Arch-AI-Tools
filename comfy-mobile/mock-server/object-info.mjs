@@ -14,10 +14,12 @@ const DUAL_CLIP_TYPES = ['sdxl', 'sd3', 'flux', 'hunyuan_video', 'hidream', 'hun
 
 /** What's "installed" on the mock machine. Deliberately missing a few template defaults. */
 export const MODELS = {
-  checkpoints: ['v1-5-pruned-emaonly.safetensors', 'ltx-2.3-22b-dev-fp8.safetensors', 'dreamshaper_8.safetensors'],
+  checkpoints: ['uberRealisticPornMerge_v23Final.safetensors', 'ltx2310eros_v1.safetensors', 'v1-5-pruned-emaonly.safetensors', 'ltx-2.3-22b-dev-fp8.safetensors', 'dreamshaper_8.safetensors'],
   diffusion_models: [
     'wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors',
     'wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors',
+    'Wan2.2_Remix_NSFW_i2v_14b_high_fp8_v3.0.safetensors',
+    'Wan2.2_Remix_NSFW_i2v_14b_low_fp8_v3.0.safetensors',
     'wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors',
     'wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors',
     'hunyuanvideo1.5_720p_t2v_fp16.safetensors',

@@ -10,10 +10,11 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
+    "test:exporter": "python3 tools/test_export_video_studio.py",
     "preview": "vite preview --host",
     "mock": "node mock-server/server.mjs",
     "audit:privacy": "node scripts/audit-privacy.mjs",
-    "verify": "npm test && npm run build && npm run audit:privacy",
+    "verify": "npm test && npm run test:exporter && npm run build && npm run audit:privacy",
     "cap:sync": "npm run build && npx cap sync",
     "cap:ios": "npm run build && npx cap sync ios && npx cap open ios",
     "cap:android": "npm run build && npx cap sync android && npx cap open android"

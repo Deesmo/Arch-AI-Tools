@@ -37,7 +37,7 @@ export function resolveNode(node: GraphNode, info: ObjectInfo | null): GraphNode
 function resolveNodeWith(node: GraphNode, info: ObjectInfo | null, stored: unknown): GraphNode {
   const def = info?.[node.type];
   const virtual = virtualNodeShape(node.type);
-  const shape = virtual ?? (def ? shapeFromDef(def, stored) : null);
+  const shape = virtual ?? (def ? shapeFromDef(def, stored, node.widgets_values_named) : null);
   if (!shape) {
     return { ...node, widgets: node.widgets ?? [], missing: !!info, inputs: node.inputs ?? [], outputs: node.outputs ?? [] };
   }
@@ -66,7 +66,16 @@ function resolveNodeWith(node: GraphNode, info: ObjectInfo | null, stored: unkno
   });
 
   // shapeFromDef already merged `stored` into its values; virtual shapes are static defaults.
-  const widgets_values = virtual ? alignWidgetValues(stored, widgets, shape.widgetValues) : shape.widgetValues;
+  // A PrimitiveNode has no widget defs of its own (its widget mirrors the
+  // target input), so its serialised value must survive verbatim: the prompt
+  // builder sends it as the literal input value.
+  const widgets_values = virtual
+    ? widgets.length
+      ? alignWidgetValues(stored, widgets, shape.widgetValues)
+      : Array.isArray(stored)
+        ? stored
+        : shape.widgetValues
+    : shape.widgetValues;
 
   const resolved: GraphNode = {
     ...node,
@@ -101,7 +110,15 @@ function alignWidgetValues(raw: unknown, widgets: WidgetDef[], defaults: unknown
 }
 
 export function resolveWorkflow(wf: Workflow, info: ObjectInfo | null): Workflow {
-  return { ...wf, nodes: wf.nodes.map((n) => resolveNode(n, info)) };
+  const defs = new Set((wf.definitions?.subgraphs ?? []).map((d) => d.id));
+  // A subgraph instance is not a server node type: it expands at queue time,
+  // so it is never "missing" while its definition is present.
+  const resolve = (n: GraphNode): GraphNode => (defs.has(n.type) ? { ...n, widgets: n.widgets ?? [], missing: false } : resolveNode(n, info));
+  const out: Workflow = { ...wf, nodes: wf.nodes.map(resolve) };
+  if (wf.definitions) {
+    out.definitions = { subgraphs: wf.definitions.subgraphs.map((d) => ({ ...d, nodes: d.nodes.map(resolve) })) };
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
