@@ -168,7 +168,7 @@ export function MyStudioScreen() {
           </>
         )}
       </div>
-      {run && <RunSheet card={run.card} preview={run.preview} onClose={() => setRun(null)} />}
+      {run && <RunSheet card={run.card} preview={run.preview} loras={catalog?.loras ?? []} onClose={() => setRun(null)} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@
  * Every sentence in a workflow description is a fact read off the graph.
  */
 import type { HistoryEntry, ImageRef } from '../api/types';
+import { loraFitsEngine } from './promptLora';
 
 export interface ApiNode {
   class_type: string;
@@ -181,6 +182,34 @@ function engineOnAncestors(graph: ApiGraph, ids: string[]): { engine: string; fi
     }
   }
   return { engine: '', file: '' };
+}
+
+/**
+ * Adds one inventory LoRA on this step's model. The author's loaders stay.
+ * A file for a different engine is not inserted.
+ */
+export function applyMatchedLora(graph: ApiGraph, samplerId: string | null, lora: { file: string; name?: string }): boolean {
+  if (!samplerId || !graph[samplerId] || !lora.file.trim()) return false;
+  const ids = ancestorIds(graph, samplerId, true);
+  const engine = engineOnAncestors(graph, ids);
+  if (!loraFitsEngine(engine.engine, lora)) return false;
+  const loaderId = ids.find((id) => LOADER_RE.test(graph[id]?.class_type ?? ''));
+  if (!loaderId) return false;
+  const key = lora.file.split(/[/\\]/).pop()?.toLowerCase();
+  if (lorasOnAncestors(graph, ids).some((item) => item.file.split(/[/\\]/).pop()?.toLowerCase() === key)) return false;
+  const consumers = consumersOf(graph, loaderId).filter((edge) => {
+    if (edge.field !== 'model') return false;
+    const link = graph[edge.id]?.inputs[edge.field];
+    return Array.isArray(link) && String(link[0]) === loaderId && link[1] === 0;
+  });
+  if (!consumers.length) return false;
+  const nodeId = `incard_lora_${samplerId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  graph[nodeId] = {
+    class_type: 'LoraLoaderModelOnly',
+    inputs: { model: [loaderId, 0], lora_name: lora.file, strength_model: 1 },
+  };
+  for (const edge of consumers) graph[edge.id].inputs[edge.field] = [nodeId, 0];
+  return true;
 }
 
 function lorasOnAncestors(graph: ApiGraph, ids: string[]): StepLora[] {

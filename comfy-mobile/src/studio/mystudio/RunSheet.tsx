@@ -16,6 +16,7 @@ import {
   SETTINGS_NOT_IN_BUILD,
   absoluteStudioUrl,
   applyApprovedRun,
+  applyMatchedLora,
   applyStudioRunEdits,
   authorGenerateSteps,
   collectStartStills,
@@ -23,6 +24,7 @@ import {
   galleryWindow,
   loadStudioWorkflowFile,
   parseWorkflow,
+  matchPromptLora,
   peekStudioGallery,
   primeStudioGallery,
   rewriteInAuthorStyle,
@@ -40,6 +42,8 @@ import {
   useSettingsStore,
   waitForIdleQueue,
   type AuthorStep,
+  type PromptLora,
+  type PromptLoraMatch,
   type StudioGalleryImage,
   type StudioThumbCopy,
   type StudioThumbWorkflow,
@@ -131,7 +135,9 @@ function GalleryGrid({ images, picked, onPick }: { images: StudioGalleryImage[];
   );
 }
 
-export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: RunPreview; onClose: () => void }) {
+type Draft = { id: string; text: string; roll: number; match: PromptLoraMatch | null };
+
+export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; preview: RunPreview; loras: PromptLora[]; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
   const uploadInput = useServerStore((s) => s.uploadInput);
   const { queueWorkflow } = useQueue();
@@ -146,7 +152,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
   const [result, setResult] = useState<string | null>(null);
   const [ownWords, setOwnWords] = useState('');
   const [steps, setSteps] = useState<AuthorStep[] | null>(null);
-  const [drafts, setDrafts] = useState<{ id: string; text: string; roll: number }[]>([]);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
   const [stills, setStills] = useState<Record<string, StillState>>({});
   const graphRef = useRef<unknown>(null);
 
@@ -202,9 +208,16 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     return true;
   });
 
+  const draftFor = (step: AuthorStep, text: string, roll: number): Draft => ({
+    id: step.id,
+    text,
+    roll,
+    match: matchPromptLora(step.engine, `${ownWords}\n${text}`, loras),
+  });
+
   const generatePrompts = () => {
     if (!steps?.length || !ownWords.trim()) return;
-    setDrafts(steps.map((step) => ({ id: step.id, text: rewriteInAuthorStyle(step.authorPrompt, ownWords, 0, { kind: step.kind, engine: step.engine }), roll: 0 })));
+    setDrafts(steps.map((step) => draftFor(step, rewriteInAuthorStyle(step.authorPrompt, ownWords, 0, { kind: step.kind, engine: step.engine }), 0)));
     setStills({});
     setResult(null);
   };
@@ -212,7 +225,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
   const rerollPrompt = (step: AuthorStep) => {
     setDrafts((prev) => prev.map((draft) => (
       draft.id === step.id
-        ? { ...draft, roll: draft.roll + 1, text: rewriteInAuthorStyle(step.authorPrompt, ownWords, draft.roll + 1, { kind: step.kind, engine: step.engine }) }
+        ? draftFor(step, rewriteInAuthorStyle(step.authorPrompt, ownWords, draft.roll + 1, { kind: step.kind, engine: step.engine }), draft.roll + 1)
         : draft
     )));
     setStills({});
@@ -227,17 +240,18 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     }
   };
 
-  const makeScene = async (step: AuthorStep, scene: number, text: string, priorName: string | null) => {
+  const makeScene = async (step: AuthorStep, scene: number, text: string, priorName: string | null, matched: PromptLoraMatch | null) => {
     const key = stillKey(step.id, scene);
     const seed = 1 + Math.floor(Math.random() * 2_000_000_000);
     const { stills: built, skipped } = collectStartStills(graphRef.current, text, seed);
     const skip = skipped.find((item) => item.stepId === step.id && item.scene === scene);
-    const match = built.find((item) => item.stepId === step.id && item.scene === scene);
-    if (skip || !match) {
+    const still = built.find((item) => item.stepId === step.id && item.scene === scene);
+    if (skip || !still) {
       setStills((prev) => ({ ...prev, [key]: { status: 'none', error: 'This scene has no separate still. Render uses the prompt.' } }));
       return priorName;
     }
-    const prompt = match.prompt;
+    const prompt = still.prompt;
+    if (matched) applyMatchedLora(prompt, step.samplerId, matched);
     let startName: string | null = null;
     const load = prompt.incard_load;
     if (load && load.inputs.image === 'start.png') {
@@ -284,7 +298,8 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     try {
       let prior: string | null = null;
       for (const step of steps) {
-        const text = drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt;
+        const draft = drafts.find((item) => item.id === step.id);
+        const text = draft?.text ?? step.authorPrompt;
         const count = scenesInAuthorPrompt(step.authorPrompt);
         for (let scene = 1; scene <= count; scene++) {
           const key = stillKey(step.id, scene);
@@ -296,7 +311,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
             if (step.kind === 'image' && already?.filename) prior = already.filename;
             continue;
           }
-          prior = await makeScene(step, scene, text, prior);
+          prior = await makeScene(step, scene, text, prior, draft?.match ?? null);
           if (onlyKey) return;
         }
       }
@@ -352,6 +367,10 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         };
       }));
       if (!prompt) throw new Error("Couldn't read this card's workflow");
+      for (const step of steps) {
+        const matched = drafts.find((draft) => draft.id === step.id)?.match;
+        if (matched) applyMatchedLora(prompt, step.samplerId, matched);
+      }
       await waitForIdleQueue(() => api.getQueue());
       accepted = await submitApiGraph({
         serverUrl: useSettingsStore.getState().serverUrl,
@@ -539,6 +558,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
               <div className="ms-step" key={step.id}>
                 <div className="ms-item-title">{step.label}</div>
                 {loras.length > 0 && <p className="field-hint">LoRAs: {loras.join(', ')}</p>}
+                {draft.match && <p className="field-hint">Matched LoRA: {draft.match.name}</p>}
                 <textarea className="textarea ms-run-prompt" rows={4} readOnly value={draft.text} />
                 {said.length > 0 && <p className="field-hint">Spoken: {said.join(' / ')}</p>}
                 <div className="ms-step-actions">

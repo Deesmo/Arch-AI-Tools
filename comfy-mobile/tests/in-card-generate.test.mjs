@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { parseJobFile } from '../src/core/content/studioRun.ts';
 import {
   applyApprovedRun,
+  applyMatchedLora,
   authorGenerateSteps,
   buildStepStill,
   describeWorkflow,
@@ -14,6 +15,7 @@ import {
   rewriteInAuthorStyle,
   spokenLines,
 } from '../src/core/content/inCardGenerate.ts';
+import { matchPromptLora } from '../src/core/content/promptLora.ts';
 
 const root = new URL('../public/studio-thumbs/runs/', import.meta.url);
 
@@ -203,4 +205,45 @@ test('the full run keeps the author length and the approved still', () => {
   const negative = Object.values(full).find((node) => node.inputs.text === 'score_4, score_5, score_6' || node.inputs.value === 'score_4, score_5, score_6');
   assert.ok(negative);
   assert.equal(Object.values(full).some((node) => /nsfw/i.test(String(node.inputs.text ?? node.inputs.value ?? ''))), false);
+});
+
+test('a matched LoRA stays on its own engine', () => {
+  const inventory = [
+    { name: 'Pony bounce', file: 'pony_bounce.safetensors', trigger: 'bouncing her ass' },
+    { name: 'Sulphur wind', file: 'sulphur_wind.safetensors', trigger: 'wind blows her hair' },
+    { name: 'Both engines', file: 'pony_and_sulphur.safetensors', trigger: 'bouncing her ass' },
+    { name: 'Not installed', file: '', trigger: 'bouncing her ass' },
+  ];
+  const words = 'nude adult woman bouncing her ass while the wind blows her hair';
+  const steps = authorGenerateSteps(balcony);
+  const pony = matchPromptLora(steps[0].engine, words, inventory);
+  const sulphur = matchPromptLora(steps[1].engine, words, inventory);
+  assert.equal(pony?.file, 'pony_bounce.safetensors');
+  assert.equal(sulphur?.file, 'sulphur_wind.safetensors');
+  assert.equal(matchPromptLora('Sulphur', words, inventory)?.file.includes('pony'), false);
+  assert.equal(matchPromptLora('Pony', words, inventory)?.file.includes('sulphur'), false);
+
+  const graph = applyApprovedRun(balcony, [
+    { nodeId: steps[0].nodeId, field: steps[0].field, text: words, samplerId: steps[0].samplerId, seed: 1, image: null, kind: 'image', engine: steps[0].engine },
+    { nodeId: steps[1].nodeId, field: steps[1].field, text: words, samplerId: steps[1].samplerId, seed: 2, image: null, kind: 'video', engine: steps[1].engine },
+  ]);
+  assert.ok(graph);
+  const before = JSON.stringify(graph);
+  assert.equal(applyMatchedLora(graph, steps[1].samplerId, { file: 'pony_bounce.safetensors', name: 'Pony bounce' }), false);
+  assert.equal(applyMatchedLora(graph, steps[0].samplerId, { file: 'sulphur_wind.safetensors', name: 'Sulphur wind' }), false);
+  assert.equal(JSON.stringify(graph), before);
+  assert.equal(applyMatchedLora(graph, steps[1].samplerId, sulphur), true);
+  assert.equal(applyMatchedLora(graph, steps[0].samplerId, pony), true);
+  const added = Object.values(graph).filter((node) => node.class_type === 'LoraLoaderModelOnly' && (String(node.inputs.lora_name).includes('pony_bounce') || String(node.inputs.lora_name).includes('sulphur_wind')));
+  assert.equal(added.length, 2);
+  for (const node of added) {
+    const loader = graph[node.inputs.model[0]];
+    const ckpt = String(loader.inputs.ckpt_name ?? '');
+    if (String(node.inputs.lora_name).includes('pony')) assert.match(ckpt, /pony/i);
+    if (String(node.inputs.lora_name).includes('sulphur')) assert.match(ckpt, /sulphur/i);
+  }
+  const files = JSON.stringify(graph);
+  assert.match(files, /ltx_2\.3_22b_distilled/);
+  assert.match(files, /gemma-3-12b/);
+  assert.match(files, /PonyV7base/);
 });
