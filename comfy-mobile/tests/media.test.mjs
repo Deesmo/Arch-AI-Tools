@@ -63,6 +63,13 @@ test('directory listings survive a history wipe and keep subfolders', () => {
   assert.ok(merged.some((i) => i.ref.filename === 'clip_00001.mp4'));
 });
 
+test('a null node output does not crash the gallery', () => {
+  assert.deepEqual(mediaFromOutput(null), []);
+  assert.deepEqual(mediaFromOutput(undefined), []);
+  const items = mediaFromHistoryEntry('p3', { outputs: { 1: null, 2: { images: [ref('still.png')] } } });
+  assert.deepEqual(items.map((i) => i.ref.filename), ['still.png']);
+});
+
 test('entries without a filename are skipped and history entries flatten per node', () => {
   const entry = { outputs: { 1: { video: [{}] }, 2: { images: [ref('a.png')] } }, status: { completed: true } };
   const items = mediaFromHistoryEntry('p2', entry);

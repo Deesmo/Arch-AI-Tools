@@ -392,6 +392,7 @@ export function GraphCanvas({ onOpenSearch, onOpenInspector, registerFit }: Prop
   const mediaByNode = useMemo(() => {
     const map = new Map<number, MediaItem>();
     for (const [nodeId, output] of Object.entries(execution.outputs)) {
+      if (!output) continue;
       const items = mediaFromOutput(output, nodeId, execution.promptId ?? undefined);
       if (items[0]) map.set(Number(nodeId), items[0]);
     }
