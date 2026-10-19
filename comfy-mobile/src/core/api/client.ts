@@ -314,6 +314,14 @@ export const api = {
 
   getHistory: (maxItems = 64) => request<History>(`/history?max_items=${maxItems}`, { timeoutMs: 30_000 }),
 
+  /**
+   * Files still on disk under ComfyUI's output or input folder.
+   * `GET /internal/files/{directory}` — `"relative/path [type]"`, newest first.
+   * This survives a restart. `/history` does not.
+   */
+  listDirectory: (directory: 'output' | 'input' | 'temp') =>
+    request<string[]>(`/internal/files/${directory}`, { timeoutMs: 30_000 }),
+
   /** Submits an API prompt. Resolves to the prompt id; rejects with ApiError
    *  whose `body` is a PromptErrorResponse when validation fails (400).
    *  `timeoutMs` aborts when no response headers arrive (0 waits forever). */

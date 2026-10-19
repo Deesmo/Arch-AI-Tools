@@ -68,6 +68,7 @@ export function MediaView({
 }
 
 export function kindLabel(item: MediaItem): string {
+  if (item.ref.type === 'input') return 'library';
   if (item.kind === 'video') return 'video';
   if (item.animated) return 'anim';
   return item.kind;

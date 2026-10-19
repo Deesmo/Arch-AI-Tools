@@ -5,7 +5,7 @@
 import './browser-stubs.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mediaFromOutput, mediaFromHistoryEntry } from '../src/core/media.ts';
+import { mediaFromOutput, mediaFromHistoryEntry, parseInternalFileEntry, mediaFromInternalFiles, mergeGalleryMedia } from '../src/core/media.ts';
 
 const ref = (filename, extra = {}) => ({ filename, subfolder: '', type: 'output', ...extra });
 
@@ -37,6 +37,30 @@ test('`videos`, `gifs`, `images` and `audio` keep working side by side', () => {
       ['voice.flac', 'audio', false],
     ],
   );
+});
+
+test('directory listings survive a history wipe and keep subfolders', () => {
+  const parsed = parseInternalFileEntry('video/clip_00001.mp4 [output]');
+  assert.deepEqual(parsed, { filename: 'clip_00001.mp4', subfolder: 'video', type: 'output' });
+  assert.equal(parseInternalFileEntry('not a listing line'), null);
+  const disk = mediaFromInternalFiles([
+    'video/clip_00001.mp4 [output]',
+    'ComfyUI_0007.png [output]',
+    'gallery_nude_adult.png [input]',
+    'scratch.png [temp]',
+    'model.safetensors [output]',
+  ]);
+  assert.deepEqual(disk.map((i) => [i.ref.type, i.ref.subfolder, i.ref.filename, i.kind]), [
+    ['output', 'video', 'clip_00001.mp4', 'video'],
+    ['output', '', 'ComfyUI_0007.png', 'image'],
+    ['input', '', 'gallery_nude_adult.png', 'image'],
+  ]);
+  const fromHistory = mediaFromHistoryEntry('p9', { outputs: { 3: { images: [ref('ComfyUI_0007.png')] } } });
+  const merged = mergeGalleryMedia(fromHistory, disk);
+  const png = merged.find((i) => i.ref.filename === 'ComfyUI_0007.png');
+  assert.equal(png.promptId, 'p9');
+  assert.equal(merged.filter((i) => i.ref.filename === 'ComfyUI_0007.png').length, 1);
+  assert.ok(merged.some((i) => i.ref.filename === 'clip_00001.mp4'));
 });
 
 test('entries without a filename are skipped and history entries flatten per node', () => {

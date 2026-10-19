@@ -1,11 +1,11 @@
 /**
- * Gallery of this app's ComfyUI outputs (everything in server history),
- * videos first, with a fullscreen viewer. Each tile has a bin control:
- * confirm, then the run is deleted from ComfyUI's history (see
- * `useDeleteOutput`). Video Studio's old libraries are not shown here.
+ * Gallery of saved ComfyUI outputs plus the input library.
+ * `/history` is wiped on every Comfy restart, so the list is rebuilt from
+ * `/internal/files/output` and `/internal/files/input`. History still supplies
+ * the prompt id used by the bin control (`useDeleteOutput`).
  */
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { historyOrder, mediaFromHistoryEntry, useServerStore, type MediaItem } from '../core';
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { historyOrder, loadDiskMedia, mediaFromHistoryEntry, mergeGalleryMedia, useServerStore, type MediaItem } from '../core';
 import { Icon } from '../shared/Icon';
 import { MediaView, kindLabel } from '../shared/MediaView';
 import { useUiStore } from '../shared/ui';
@@ -21,20 +21,31 @@ export function GalleryScreen() {
   const confirmAndDelete = useDeleteOutput();
   const [filter, setFilter] = useState<Filter>('all');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [disk, setDisk] = useState<MediaItem[] | null>(null);
+
+  const refreshAll = useCallback(async () => {
+    await refreshHistory();
+    try {
+      setDisk(await loadDiskMedia());
+    } catch {
+      setDisk((prev) => prev ?? []);
+    }
+  }, [refreshHistory]);
 
   useEffect(() => {
-    if (status === 'connected') void refreshHistory();
-  }, [status, refreshHistory]);
+    if (status === 'connected') void refreshAll();
+  }, [status, refreshAll]);
 
   const items = useMemo(() => {
-    const all: MediaItem[] = [];
+    const fromHistory: MediaItem[] = [];
     for (const [id, entry] of Object.entries(history ?? {}).sort(historyOrder)) {
-      all.push(...mediaFromHistoryEntry(id, entry).filter((m) => m.ref.type !== 'temp'));
+      fromHistory.push(...mediaFromHistoryEntry(id, entry).filter((m) => m.ref.type !== 'temp'));
     }
+    const all = mergeGalleryMedia(fromHistory, disk ?? []);
     if (filter === 'video') return all.filter((m) => m.kind === 'video' || m.animated);
     if (filter === 'image') return all.filter((m) => m.kind === 'image' && !m.animated);
     return all;
-  }, [history, filter]);
+  }, [history, disk, filter]);
 
   const onDelete = async (e: MouseEvent, m: MediaItem) => {
     e.stopPropagation();
@@ -58,13 +69,14 @@ export function GalleryScreen() {
             </button>
           ))}
         </div>
-        <button className="icon-btn" onClick={() => void refreshHistory()} aria-label="Refresh">
+        <button className="icon-btn" onClick={() => void refreshAll()} aria-label="Refresh">
           <Icon name="refresh" />
         </button>
       </div>
       <div className="screen-body">
         {status !== 'connected' && <div className="empty">Connect to a server to see outputs.</div>}
-        {status === 'connected' && items.length === 0 && <div className="empty">No outputs yet. Generate something in Studio.</div>}
+        {status === 'connected' && disk === null && items.length === 0 && <div className="empty">Loading gallery…</div>}
+        {status === 'connected' && disk !== null && items.length === 0 && <div className="empty">No outputs yet. Generate something in Studio.</div>}
         <div className="media-grid">
           {items.map((m, i) => (
             <div className="media-tile" key={`${m.url}-${i}`} onClick={() => openViewer(items, i)}>
