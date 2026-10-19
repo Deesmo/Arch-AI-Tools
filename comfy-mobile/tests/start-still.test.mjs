@@ -96,6 +96,24 @@ test('balcony stills use each step engine and LoRAs, one graph per scene', () =>
   assert.doesNotMatch(JSON.stringify(image.prompt), DEMO);
 });
 
+test('the H3 still that asked for WomanPortraitRed samples from the prompt', () => {
+  const raw = load('runs/c-145120362.json');
+  const text = 'harley quinn is getting titty fucked by the joker';
+  const { stills } = collectStartStills(raw, text, 5);
+  assert.equal(stills.length, 1);
+  const blob = JSON.stringify(stills[0].prompt);
+  assert.equal(blob.includes('WomanPortraitRed'), false);
+  assert.equal(Object.values(stills[0].prompt).some((node) => /LoadImage/.test(node.class_type)), false);
+  assert.match(blob, /DasiwaMinimaxH3/);
+  assert.match(blob, /Minimax_H3_Unlocked_V2/);
+  assert.match(blob, /harley quinn is getting titty fucked/);
+  const i2v = Object.values(stills[0].prompt).find((node) => node.class_type === 'MiniMaxH3ImageToVideo');
+  assert.ok(i2v);
+  assert.equal(i2v.inputs.first_frame, undefined);
+  assert.equal(i2v.inputs.length, 5);
+  assert.equal(i2v.inputs.prompt, text);
+});
+
 test('every copy card and workflow run returns a closed still per scene', () => {
   const index = JSON.parse(readFileSync(new URL('index.json', root), 'utf8'));
   const named = new Map();
@@ -151,6 +169,15 @@ test('every copy card and workflow run returns a closed still per scene', () => 
       const written = step ? still.prompt[step.nodeId]?.inputs?.[step.field] : undefined;
       if (written !== TEXT) failures.push(`${file} ${still.stepId} text was ${JSON.stringify(written)?.slice(0, 80)}`);
       const files = fileNames(still.prompt);
+      for (const node of Object.values(still.prompt)) {
+        for (const value of Object.values(node.inputs ?? {})) {
+          if (typeof value !== 'string') continue;
+          const baseName = value.split(/[/\\]/).pop() ?? value;
+          if (/\.(png|jpe?g|webp|gif)$/i.test(baseName) && !/^(start\.png|incard-)/i.test(baseName)) {
+            failures.push(`${file} ${still.stepId} loads author file ${baseName}`);
+          }
+        }
+      }
       if (step?.engineFile && !files.includes(base(step.engineFile))) {
         notes.push(`${file} ${still.stepId} scene ${still.scene}: missing engine ${base(step.engineFile)}`);
       }

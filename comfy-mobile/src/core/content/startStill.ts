@@ -111,6 +111,7 @@ function buildOne(graph: ApiGraph, step: AuthorStep, scene: number, text: string
   const prompt: ApiGraph = {};
   for (const id of keep) prompt[id] = cloneNode(graph[id]);
   rewireCuts(prompt, graph, dangling);
+  dropAuthorInputFiles(prompt);
   const source = prompt[step.nodeId];
   if (!source || !(step.field in source.inputs)) {
     return { skip: 'prompt node is not on this image' };
@@ -259,6 +260,56 @@ function crossesScene(
   return !hitsSampler(graph, src, samplerId, samplerMemo);
 }
 
+const OURS = /^(start\.png|incard-)/i;
+
+function authorImageFile(node: ApiNode): string | null {
+  if (!/LoadImage|PixaromaLoadImage/i.test(node.class_type)) return null;
+  for (const key of ['image', 'image_path', 'file'] as const) {
+    const value = node.inputs[key];
+    if (typeof value !== 'string' || !value.trim()) continue;
+    const base = value.split(/[/\\]/).pop() ?? value;
+    if (OURS.test(base)) return null;
+    return value.trim();
+  }
+  return null;
+}
+
+/**
+ * A start still is sampled from the rewritten prompt. An author photo that is
+ * not one of our uploaded stills is not loaded. Optional first and last frames
+ * are disconnected so the model samples from the prompt. A loader another node
+ * still requires becomes an empty image, which reads no file.
+ */
+function dropAuthorInputFiles(graph: ApiGraph): void {
+  const loaders = new Set<string>();
+  for (const [id, node] of Object.entries(graph)) {
+    if (id === 'incard_load') continue;
+    if (authorImageFile(node)) loaders.add(id);
+  }
+  if (!loaders.size) return;
+  for (const node of Object.values(graph)) {
+    for (const [field, value] of Object.entries(node.inputs)) {
+      const src = linkId(value);
+      if (!src || !loaders.has(src)) continue;
+      if (/^(first_frame|last_frame)$/.test(field)) delete node.inputs[field];
+    }
+  }
+  const stillLinked = new Set<string>();
+  for (const node of Object.values(graph)) {
+    for (const value of Object.values(node.inputs)) {
+      const src = linkId(value);
+      if (src && loaders.has(src)) stillLinked.add(src);
+    }
+  }
+  for (const id of loaders) {
+    if (!stillLinked.has(id)) {
+      delete graph[id];
+      continue;
+    }
+    graph[id] = { class_type: 'EmptyImage', inputs: { width: 768, height: 1152, batch_size: 1, color: 0 } };
+  }
+}
+
 function rewireCuts(prompt: ApiGraph, source: ApiGraph, dangling: { id: string; field: string }[]): void {
   let needsImage = false;
   let needsLatent = false;
@@ -316,6 +367,10 @@ function shortenStill(graph: ApiGraph): void {
   for (const node of Object.values(graph)) {
     const duration = asNumber(node.inputs.duration);
     if (duration != null && duration > 2 && /MiniMax|Video|LTX|Wan|Hunyuan/.test(node.class_type)) node.inputs.duration = 2;
+    if (node.class_type === 'MiniMaxH3ImageToVideo') {
+      const length = asNumber(node.inputs.length);
+      if (length != null && length > 5) node.inputs.length = 5;
+    }
   }
   for (const node of Object.values(graph)) {
     if (!/EmptyLTXVLatentVideo|LTXVEmptyLatentAudio|VHS_VideoCombine|EmptyHunyuanLatentVideo/.test(node.class_type)) continue;
