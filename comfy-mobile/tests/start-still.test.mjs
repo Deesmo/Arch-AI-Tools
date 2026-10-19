@@ -52,9 +52,9 @@ test('balcony stills use each step engine and LoRAs, one graph per scene', () =>
   const stills = buildStartStills(raw, TEXT, 42);
   const expected = steps.reduce((sum, step) => sum + scenesInAuthorPrompt(step.authorPrompt), 0);
   assert.equal(scenesInAuthorPrompt(steps[0].authorPrompt), 1);
-  assert.equal(scenesInAuthorPrompt(steps[1].authorPrompt), 4);
+  assert.equal(scenesInAuthorPrompt(steps[1].authorPrompt), 1);
   assert.equal(stills.length, expected);
-  assert.equal(stills.length, 5);
+  assert.equal(stills.length, 2);
 
   const image = stills[0];
   assert.equal(image.kind, 'image');

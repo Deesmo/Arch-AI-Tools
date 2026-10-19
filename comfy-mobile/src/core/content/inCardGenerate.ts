@@ -357,10 +357,19 @@ function rewriteVideoStyle(engine: string, author: string, words: string, roll: 
 }
 
 function rewriteSulphur(author: string, words: string): string {
+  if (BEAT.test(author)) return rewriteSulphurBeats(author, words);
   if (!/global_prompt|smart_prompt/i.test(author)) return words;
   if (/Scene\s+\d+\s*:/i.test(author)) return `global_prompt: ${words}\nsmart_prompt: Scene 1: ${words}`;
   if (author.includes('|')) return `global_prompt: ${words}\nsmart_prompt: ${words}`;
   return `global_prompt: ${words}\nsmart_prompt: ${words}`;
+}
+
+/** One clip. His subject replaces the author's subject. The timed actions stay. */
+function rewriteSulphurBeats(author: string, words: string): string {
+  const beats = [...author.matchAll(/(?<!\d)\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?\s*s\s*:[^\n]*/g)].map((match) => match[0].trim());
+  const subject = words.trim().replace(/\.+$/, '');
+  const lead = /Immediate action/i.test(author) ? ' Immediate action.' : '';
+  return `${subject}.${lead}${beats.length ? `\n${beats.join('\n')}` : ''}`;
 }
 
 function rewriteLtx(words: string): string {
@@ -627,8 +636,6 @@ function sceneCount(texts: string[]): number {
   const shots = new Set<string>();
   for (const match of blob.matchAll(/\[Shot\s+(\d+)/gi)) shots.add(match[1]);
   if (shots.size) return shots.size;
-  const beats = blob.match(/(?<!\d)\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?\s*s\s*:/gi);
-  if (beats && beats.length > 1) return beats.length;
   return 0;
 }
 

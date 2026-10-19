@@ -1,8 +1,8 @@
 /**
  * Start-image graphs for in-card generate.
  *
- * One still per author step. A step whose prompt is several scenes (shot
- * marks or time beats) returns one graph per scene. Each graph keeps that
+ * One still per author step. Shot marks inside one prompt are separate scenes.
+ * Time beats (0-3s, 3-7s) stay inside that one prompt. Each graph keeps that
  * step's engine and LoRAs, stays NSFW, and writes the rewritten sentence
  * into the author's text field. Every link points at a node in the graph.
  */
@@ -34,7 +34,6 @@ export interface StartStill {
 
 const IMAGE_DECODE_RE = /VAEDecode|AVDecode|TiledVAEDecode/;
 const AUDIO_DECODE_RE = /Audio/;
-const BEAT_RE = /(?<!\d)\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?\s*s\s*:/gi;
 const SHOT_RE = /\[Shot\s+(\d+)/gi;
 const LONG_SECONDS = 8;
 const FPS_VALUES = new Set([8, 12, 16, 24, 25, 30, 48]);
@@ -44,13 +43,15 @@ export interface StartStillPlan {
   scene: number;
 }
 
-/** How many stills this step needs. Shots, otherwise time beats, otherwise one. */
+/**
+ * How many stills this step needs. One author text field is one step.
+ * Time beats inside that field (0-3s, 3-7s) stay in the one prompt.
+ * Separate shot marks are still separate scenes.
+ */
 export function scenesInAuthorPrompt(text: string): number {
   const shots = new Set<string>();
   for (const match of text.matchAll(SHOT_RE)) shots.add(match[1]);
   if (shots.size > 1) return shots.size;
-  const beats = text.match(BEAT_RE);
-  if (beats && beats.length > 1) return beats.length;
   return 1;
 }
 

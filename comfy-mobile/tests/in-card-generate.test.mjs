@@ -52,8 +52,30 @@ test('rewrite waits for words and keeps the author format', () => {
   assert.doesNotMatch(once, /red dress/);
   assert.doesNotMatch(once, /stands by the window/);
   const video = rewriteInAuthorStyle(steps[1].authorPrompt, WORDS, 0, { kind: 'video', engine: steps[1].engine });
-  assert.equal(video, WORDS);
-  assert.equal(rewriteInAuthorStyle(steps[1].authorPrompt, WORDS, 1, { kind: 'video', engine: 'Sulphur' }), WORDS);
+  assert.match(video, /0-3s: She starts bouncing her ass/);
+  assert.match(video, /bounces faster/);
+  assert.match(video, /look back/);
+  assert.match(video, /slow sensual hip movements/);
+  assert.doesNotMatch(video, /sports bra|thong/);
+});
+
+test('a sulphur clip with time beats stays one prompt and keeps the author actions', () => {
+  const step = authorGenerateSteps(balcony)[1];
+  const video = rewriteInAuthorStyle(step.authorPrompt, WORDS, 0, { kind: 'video', engine: 'Sulphur' });
+  const again = rewriteInAuthorStyle(step.authorPrompt, WORDS, 1, { kind: 'video', engine: 'Sulphur' });
+  assert.equal(authorGenerateSteps(balcony).length, 2);
+  assert.equal(video, again);
+  assert.match(video, new RegExp(`^${WORDS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\. Immediate action\\.`));
+  assert.match(video, /0-3s:/);
+  assert.match(video, /3-7s:/);
+  assert.match(video, /7-11s:/);
+  assert.match(video, /11-15s:/);
+  assert.match(video, /bouncing her ass firmly/);
+  assert.match(video, /bounces faster/);
+  assert.match(video, /look back/);
+  assert.match(video, /slow sensual hip movements/);
+  assert.doesNotMatch(video, /sports bra|black lace thong|Blonde/);
+  assert.equal(video.split(/0-3s:/).length, 2);
 });
 
 test('H3 video rewrite uses the published fields and keeps the user quote', () => {
@@ -113,7 +135,8 @@ test('balcony description is taken from the graph', () => {
   const brief = describeWorkflow(balcony);
   assert.match(brief.blurb, /Pony/);
   assert.match(brief.blurb, /Sulphur/);
-  assert.match(brief.blurb, /4 scenes/);
+  assert.match(brief.blurb, /2 scenes/);
+  assert.doesNotMatch(brief.blurb, /4 scenes/);
   assert.match(brief.blurb, /own start image/);
   assert.match(brief.blurb, /long video/);
   assert.match(brief.blurb, /15 seconds/);
