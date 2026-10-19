@@ -10,6 +10,7 @@ import {
   authorGenerateSteps,
   buildStepStill,
   describeWorkflow,
+  publishedImageNegative,
   rewriteInAuthorStyle,
   spokenLines,
 } from '../src/core/content/inCardGenerate.ts';
@@ -40,11 +41,16 @@ test('balcony card has an image step then a video step, with the author LoRAs', 
 test('rewrite waits for words and keeps the author format', () => {
   const steps = authorGenerateSteps(balcony);
   assert.equal(rewriteInAuthorStyle(steps[0].authorPrompt, '', 0), steps[0].authorPrompt);
-  const once = rewriteInAuthorStyle(steps[0].authorPrompt, WORDS, 0);
-  const twice = rewriteInAuthorStyle(steps[0].authorPrompt, WORDS, 1);
-  assert.match(once, /nude adult woman/);
+  const once = rewriteInAuthorStyle(steps[0].authorPrompt, WORDS, 0, { kind: 'image', engine: steps[0].engine });
+  const twice = rewriteInAuthorStyle(steps[0].authorPrompt, WORDS, 1, { kind: 'image', engine: steps[0].engine });
+  assert.match(once, /score_9, score_8_up, score_7_up, BREAK,/);
+  assert.match(once, /nude adult female/);
+  assert.match(once, /bare breasts/);
+  assert.match(once, /explicit/);
   assert.notEqual(once, twice);
   assert.doesNotMatch(once, /sports bra/);
+  assert.doesNotMatch(once, /red dress/);
+  assert.doesNotMatch(once, /stands by the window/);
   const video = rewriteInAuthorStyle(steps[1].authorPrompt, WORDS, 0, { kind: 'video', engine: steps[1].engine });
   assert.equal(video, WORDS);
   assert.equal(rewriteInAuthorStyle(steps[1].authorPrompt, WORDS, 1, { kind: 'video', engine: 'Sulphur' }), WORDS);
@@ -72,12 +78,35 @@ test('Wan and LTX and Hunyuan follow the published video styles', () => {
   assert.equal(rewriteInAuthorStyle('anything', sentence, 0, { kind: 'video', engine: 'Wan' }), sentence);
   const ltx = rewriteInAuthorStyle('anything', sentence, 0, { kind: 'video', engine: 'LTX' });
   assert.match(ltx, /Use the provided start image exactly as the first frame/);
-  assert.match(ltx, /Performance: She sits on the couch/);
-  assert.match(ltx, /Dialogue: She says, "come here"/);
+  assert.match(ltx, /Performance: She sits on the couch, leans toward the camera, and says "come here"/);
+  assert.match(ltx, /Dialogue: "come here"/);
+  assert.doesNotMatch(ltx, /slow push-in|already seated/);
   const hunyuan = rewriteInAuthorStyle('anything', sentence, 0, { kind: 'video', engine: 'Hunyuan' });
-  assert.match(hunyuan, /\(\[Style:/);
-  assert.match(hunyuan, /\(\[Action: She sits on the couch/);
+  assert.match(hunyuan, /\(\[Action: She sits on the couch, leans toward the camera, and says "come here"\.\]:1\)/);
   assert.doesNotMatch(hunyuan, /\(\[Man:/);
+  const nsfw = 'nude adult woman, bare breasts, explicit sex';
+  const ltxNsfw = rewriteInAuthorStyle('anything', nsfw, 0, { kind: 'video', engine: 'LTX' });
+  assert.match(ltxNsfw, /Performance: nude adult woman, bare breasts, explicit sex/);
+  assert.doesNotMatch(ltxNsfw, /couch|come here|red dress/);
+});
+
+test('image rewrite keeps his scene and uses only the published shape', () => {
+  const scene = 'nude adult woman, bare breasts, explicit, "look at me"';
+  const pony = rewriteInAuthorStyle('author prompt', scene, 0, { kind: 'image', engine: 'Pony' });
+  assert.match(pony, /^score_9, score_8_up, score_7_up, BREAK, /);
+  assert.match(pony, /nude adult female/);
+  assert.match(pony, /"look at me"/);
+  assert.doesNotMatch(pony, /red dress|masterpiece|score_9, score_9/);
+  const illustrious = rewriteInAuthorStyle('author prompt', scene, 0, { kind: 'image', engine: 'Illustrious' });
+  assert.match(illustrious, /nude adult woman, bare breasts, explicit, "look at me",masterpiece,best quality,amazing quality,$/);
+  assert.equal(publishedImageNegative('Illustrious')?.includes('nsfw'), false);
+  const zimage = rewriteInAuthorStyle('author prompt', scene, 0, { kind: 'image', engine: 'Z-Image' });
+  assert.equal(zimage, scene);
+  assert.doesNotMatch(zimage, /score_9|masterpiece|soft daylight|red dress/);
+  assert.equal(publishedImageNegative('Z-Image'), '');
+  const klein = rewriteInAuthorStyle('author prompt', 'her panties are pulled down to her thighs', 0, { kind: 'image', engine: 'Flux' });
+  assert.match(klein, /her panties are pulled down to her thighs/);
+  assert.doesNotMatch(klein, /red dress/);
 });
 
 test('balcony description is taken from the graph', () => {
@@ -137,9 +166,9 @@ test('video still uses the sulphur step, the author LoRAs, and a short length', 
 
 test('the full run keeps the author length and the approved still', () => {
   const steps = authorGenerateSteps(balcony);
-  const text = rewriteInAuthorStyle(steps[0].authorPrompt, WORDS, 0);
+  const text = rewriteInAuthorStyle(steps[0].authorPrompt, WORDS, 0, { kind: 'image', engine: steps[0].engine });
   const full = applyApprovedRun(balcony, [
-    { nodeId: steps[0].nodeId, field: steps[0].field, text, samplerId: steps[0].samplerId, seed: 7, image: 'kept.png', kind: 'image' },
+    { nodeId: steps[0].nodeId, field: steps[0].field, text, samplerId: steps[0].samplerId, seed: 7, image: 'kept.png', kind: 'image', engine: steps[0].engine },
     { nodeId: steps[1].nodeId, field: steps[1].field, text: rewriteInAuthorStyle(steps[1].authorPrompt, WORDS, 0, { kind: 'video', engine: steps[1].engine }), samplerId: steps[1].samplerId, seed: 8, image: null, kind: 'video' },
   ]);
   assert.ok(full);
@@ -148,4 +177,7 @@ test('the full run keeps the author length and the approved still', () => {
   assert.ok(fifteen);
   assert.ok(Object.values(full).some((node) => node.class_type === 'LoadImage' && node.inputs.image === 'kept.png'));
   assert.equal(full[steps[1].nodeId].inputs[steps[1].field], rewriteInAuthorStyle(steps[1].authorPrompt, WORDS, 0, { kind: 'video', engine: steps[1].engine }));
+  const negative = Object.values(full).find((node) => node.inputs.text === 'score_4, score_5, score_6' || node.inputs.value === 'score_4, score_5, score_6');
+  assert.ok(negative);
+  assert.equal(Object.values(full).some((node) => /nsfw/i.test(String(node.inputs.text ?? node.inputs.value ?? ''))), false);
 });

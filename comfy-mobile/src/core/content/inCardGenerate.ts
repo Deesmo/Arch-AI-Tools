@@ -333,13 +333,9 @@ function styleBits(text: string): string[] {
   return found;
 }
 
-const LTX_CAMERAS = [
-  'A close cinematic shot eases into a slow push-in.',
-  'A static shot holds.',
-  'The camera pushes in with small amplitude at slow speed.',
-];
-
 const H3_CAMERAS = ['Static Shot', 'Push In', 'Pan Left', 'Tracking Shot'];
+const PONY_SCORES = 'score_9, score_8_up, score_7_up, BREAK, ';
+const ILLUSTRIOUS_QUALITY = 'masterpiece,best quality,amazing quality,';
 
 function visualWords(words: string): string {
   return words
@@ -353,9 +349,9 @@ function rewriteVideoStyle(engine: string, author: string, words: string, roll: 
   const name = engine.toLowerCase();
   if (name.includes('wan')) return words;
   if (name.includes('sulphur')) return rewriteSulphur(author, words);
-  if (name.includes('hunyuan')) return rewriteHunyuan(words, roll);
+  if (name.includes('hunyuan')) return rewriteHunyuan(words);
   if (name.includes('minimax') || name.includes('h3')) return rewriteH3(author, words, roll);
-  if (name.includes('ltx')) return rewriteLtx(words, roll);
+  if (name.includes('ltx')) return rewriteLtx(words);
   if (/integrated_multimodal_description|subject_definitions|\[Shot\s+\d+/i.test(author)) return rewriteH3(author, words, roll);
   return words;
 }
@@ -367,22 +363,16 @@ function rewriteSulphur(author: string, words: string): string {
   return `global_prompt: ${words}\nsmart_prompt: ${words}`;
 }
 
-function rewriteLtx(words: string, roll: number): string {
+function rewriteLtx(words: string): string {
   const quotes = spokenLines(words);
-  const dialogue = quotes.length ? ` Dialogue: She says, "${quotes.join(' ')}"` : '';
-  return `Use the provided start image exactly as the first frame. ${LTX_CAMERAS[roll % LTX_CAMERAS.length]} The room and the light stay as they are in the start image. Performance: ${visualWords(words) || words}.${dialogue}`;
+  const dialogue = quotes.length ? ` Dialogue: ${quotes.map((line) => `"${line}"`).join(' ')}` : '';
+  return `Use the provided start image exactly as the first frame. Performance: ${words}.${dialogue}`;
 }
 
-function rewriteHunyuan(words: string, roll: number): string {
-  const cameras = ['slow push in', 'static'];
-  const parts = [
-    '([Style: cinematic.]:1)',
-    `([Scene: ${words}]:1)`,
-    `([Camera: ${cameras[roll % cameras.length]}.]:1)`,
-    `([Woman: ${words}]:1)`,
-  ];
-  if (/\b(man|he|his|him)\b/i.test(words)) parts.push(`([Man: ${words}]:1)`);
-  parts.push(`([Action: ${words}]:1)`);
+function rewriteHunyuan(words: string): string {
+  const parts = [`([Scene: ${words}]:1)`, `([Action: ${words}]:1)`];
+  if (/\b(woman|female|she|her)\b/i.test(words)) parts.splice(1, 0, `([Woman: ${words}]:1)`);
+  if (/\b(man|male|he|his|him)\b/i.test(words)) parts.splice(1, 0, `([Man: ${words}]:1)`);
   return parts.join(' ');
 }
 
@@ -439,15 +429,78 @@ export interface RewriteStep {
   engine?: string;
 }
 
+function hisClauses(words: string, pony: boolean): string[] {
+  let text = words.trim();
+  const quotes: string[] = [];
+  text = text.replace(/"([^"\n]*)"/g, (_match, quote: string) => {
+    quotes.push(`"${quote}"`);
+    return ' ';
+  });
+  if (pony) {
+    text = text
+      .replace(/\bwomen\b/gi, 'female')
+      .replace(/\bwoman\b/gi, 'female')
+      .replace(/\bmen\b/gi, 'male')
+      .replace(/\bman\b/gi, 'male');
+  }
+  const clauses = text.split(',').map((part) => part.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return [...clauses, ...quotes];
+}
+
+function rollClauses(clauses: string[], roll: number): string[] {
+  if (clauses.length < 2) return clauses;
+  const turn = roll % clauses.length;
+  return [...clauses.slice(turn), ...clauses.slice(0, turn)];
+}
+
+function imageFamily(engine: string): 'pony' | 'illustrious' | 'zimage' | 'klein' | 'plain' {
+  const name = engine.toLowerCase();
+  if (name.includes('pony')) return 'pony';
+  if (name.includes('illustrious') || name.includes('wai')) return 'illustrious';
+  if (name.includes('z-image') || name.includes('zimage') || name.includes('cyberrealistic')) return 'zimage';
+  if (name.includes('klein') || name.includes('flux') || name.includes('snofs')) return 'klein';
+  return 'plain';
+}
+
+/** Published image negative. Empty string clears it. Null leaves the graph alone. */
+export function publishedImageNegative(engine: string): string | null {
+  switch (imageFamily(engine)) {
+    case 'pony':
+      return 'score_4, score_5, score_6';
+    case 'illustrious':
+      return 'bad quality,worst quality,worst detail,sketch,censor,';
+    case 'zimage':
+    case 'klein':
+      return '';
+    default:
+      return null;
+  }
+}
+
+function rewriteImageStyle(engine: string, words: string, roll: number): string {
+  const family = imageFamily(engine);
+  if (family === 'pony') return `${PONY_SCORES}${rollClauses(hisClauses(words, true), roll).join(', ')}`;
+  if (family === 'illustrious') return `${rollClauses(hisClauses(words, false), roll).join(', ')},${ILLUSTRIOUS_QUALITY}`;
+  if (family === 'zimage' || family === 'klein') {
+    const clauses = hisClauses(words, false);
+    const quotes = clauses.filter((clause) => clause.startsWith('"'));
+    const body = clauses.filter((clause) => !clause.startsWith('"'));
+    const sentence = roll % 2 === 0 || body.length < 2 ? words : `${body.join('. ')}.${quotes.length ? ` ${quotes.join(' ')}` : ''}`;
+    return sentence;
+  }
+  return words;
+}
+
 /**
- * Image steps keep the author's own format. Image style notes are not in yet.
- * Video steps use the published video prompt styles: the user's words and
- * quotes stay, and only fields that author already published are added.
+ * Video steps use the published video prompt styles. Image steps use the
+ * published image prompt styles. His subject, action, and quotes stay.
+ * The sample sentences in those notes are not copied.
  */
 export function rewriteInAuthorStyle(author: string, userWords: string, roll: number, step?: RewriteStep): string {
   const words = userWords.trim();
   if (!words) return author;
   if (step?.kind === 'video') return rewriteVideoStyle(step.engine ?? '', author, words, roll);
+  if (step?.kind === 'image') return rewriteImageStyle(step.engine ?? '', words, roll);
   const authorLines = spokenLines(author);
   const userLines = spokenLines(words);
   const lines = applyLines(authorLines, userLines);
@@ -923,6 +976,7 @@ export interface ApprovedEdit {
   seed: number | null;
   image: string | null;
   kind: 'image' | 'video';
+  engine?: string;
 }
 
 /**
@@ -937,6 +991,10 @@ export function applyApprovedRun(raw: unknown, edits: ApprovedEdit[]): ApiGraph 
     const node = prompt[edit.nodeId];
     if (node && edit.field in node.inputs) node.inputs[edit.field] = edit.text;
     if (edit.samplerId && edit.seed != null) applySeed(prompt, edit.samplerId, edit.seed);
+    if (edit.kind === 'image' && edit.engine && edit.samplerId) {
+      const negative = publishedImageNegative(edit.engine);
+      if (negative !== null) setNegativeText(prompt, edit.samplerId, negative);
+    }
     if (edit.image && edit.kind === 'image' && edit.samplerId) injectStill(prompt, edit.samplerId, edit.image);
     if (edit.image && edit.kind === 'video' && edit.samplerId) replaceAncestralLoadImages(prompt, edit.samplerId, edit.image);
   }
@@ -977,6 +1035,16 @@ function injectStill(graph: ApiGraph, samplerId: string, filename: string): void
     const node = graph[next.id];
     if (!node || node.class_type === 'SaveImage') continue;
     if (linkId(node.inputs[next.field]) === decodeId) node.inputs[next.field] = [loadId, 0];
+  }
+}
+
+function setNegativeText(graph: ApiGraph, samplerId: string, text: string): void {
+  for (const [nodeId, node] of Object.entries(graph)) {
+    for (const field of TEXT_FIELDS) {
+      if (typeof node.inputs[field] !== 'string') continue;
+      const hit = followToSampler(graph, nodeId);
+      if (hit?.negative && hit.samplerId === samplerId) node.inputs[field] = text;
+    }
   }
 }
 

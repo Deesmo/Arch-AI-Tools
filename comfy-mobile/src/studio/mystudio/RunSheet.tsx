@@ -277,6 +277,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         seed: stills[step.id]?.seed ?? null,
         image: stills[step.id]?.filename ?? null,
         kind: step.kind,
+        engine: step.engine,
       })));
       if (!prompt) throw new Error("Couldn't read this card's workflow");
       await waitForIdleQueue(() => api.getQueue());
