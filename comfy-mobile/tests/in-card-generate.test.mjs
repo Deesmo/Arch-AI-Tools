@@ -248,6 +248,98 @@ test('a matched LoRA stays on its own engine', () => {
   assert.match(files, /PonyV7base/);
 });
 
+test('copy cards list author LoRAs from a bracket prompt, a power loader, and a cloud path', () => {
+  const bracket = {
+    '583:523': { class_type: 'PrimitiveStringMultiline', inputs: { value: '[Scene and invariants]\nA blonde fighter circles the octagon while the crowd shouts.' } },
+    '105:104': { class_type: 'MiniMaxH3ImageToVideo', inputs: { prompt: ['583:523', 0], model: ['105:642', 0] } },
+    '105:14': { class_type: 'SamplerCustomAdvanced', inputs: { guider: ['105:16', 0], latent_image: ['105:104', 1] } },
+    '105:16': { class_type: 'BasicGuider', inputs: { model: ['105:642', 0] } },
+    '105:642': { class_type: 'LoraLoaderModelOnly', inputs: { lora_name: 'minimaxh3/MysticXXX_MMH3-V4.safetensors', strength_model: 0.28, model: ['105:6', 0] } },
+    '105:6': { class_type: 'UNETLoader', inputs: { unet_name: 'DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors' } },
+    '105:622': { class_type: 'MiniMaxH3ImageToVideo', inputs: { prompt: ['583:523', 0] } },
+    '105:627': { class_type: 'SamplerCustomAdvanced', inputs: { latent_image: ['105:622', 1] } },
+  };
+  const bracketSteps = authorGenerateSteps(bracket);
+  assert.equal(bracketSteps.length, 1);
+  assert.equal(bracketSteps[0].engine, 'MiniMax H3');
+  assert.deepEqual(bracketSteps[0].loras.map((lora) => lora.file), ['minimaxh3/MysticXXX_MMH3-V4.safetensors']);
+
+  const cloud = {
+    MiniMaxH3ImageToVideo: {
+      class_type: 'MiniMaxH3ImageToVideo',
+      inputs: { prompt: '[Input Image: Woman lying on her back in bed, breasts exposed]\nShe looks at the camera and smiles slowly.' },
+    },
+    SamplerCustomAdvanced: { class_type: 'SamplerCustomAdvanced', inputs: { latent_image: ['MiniMaxH3ImageToVideo', 1], guider: ['BasicGuider', 0] } },
+    BasicGuider: { class_type: 'BasicGuider', inputs: { model: ['LoraLoader1', 0] } },
+    LoraLoader1: {
+      class_type: 'LoraLoaderModelOnly',
+      inputs: {
+        lora_name: '/mnt/resources/Default/urn:air:minimaxh3:lora:civitai:2856467@3266628.safetensors',
+        strength_model: 1,
+        model: ['LoraLoader0', 0],
+      },
+    },
+    LoraLoader0: {
+      class_type: 'LoraLoaderModelOnly',
+      inputs: {
+        lora_name: '/mnt/resources/RamDisk/urn:air:minimaxh3:lora:huggingface:Kijai%2FMiniMax-H3_comfy@main%2Floras%2Fminimax_h3_fl2v_lightx2v_turbo_4step.safetensors',
+        strength_model: 0.75,
+        model: ['UNETLoader', 0],
+      },
+    },
+    UNETLoader: { class_type: 'UNETLoader', inputs: { unet_name: '/mnt/resources/Default/urn:air:minimaxh3:diffusionmodel:civitai:2821932@3216500.safetensors' } },
+  };
+  const cloudSteps = authorGenerateSteps(cloud);
+  assert.equal(cloudSteps.length, 1);
+  assert.equal(cloudSteps[0].engine, 'MiniMax H3');
+  assert.equal(cloudSteps[0].loras.length, 2);
+  assert.match(cloudSteps[0].loras.map((lora) => lora.file).join('\n'), /3266628\.safetensors/);
+
+  const power = {
+    '583:523': { class_type: 'PrimitiveStringMultiline', inputs: { value: 'For the target video, at 0.00 seconds into the target video, she leans back on the bed.' } },
+    '105:104': { class_type: 'MiniMaxH3ImageToVideo', inputs: { prompt: ['583:523', 0] } },
+    '105:14': { class_type: 'SamplerCustomAdvanced', inputs: { latent_image: ['105:104', 1], guider: ['105:16', 0] } },
+    '105:16': { class_type: 'BasicGuider', inputs: { model: ['105:618', 0] } },
+    '105:618': {
+      class_type: 'Power Lora Loader (rgthree)',
+      inputs: {
+        PowerLoraLoaderHeaderWidget: { type: 'PowerLoraLoaderHeaderWidget' },
+        lora_1: { on: true, lora: 'minimaxh3\\H3_VBVR_Pro_attn_only.safetensors', strength: 0.85 },
+        lora_2: { on: false, lora: 'minimaxh3\\H3_Motion_BoosterV2.safetensors', strength: 0.78 },
+        lora_10: { on: true, lora: 'LTX23\\AmateurHour_01_rank16.safetensors', strength: 1 },
+        model: ['105:6', 0],
+      },
+    },
+    '105:6': { class_type: 'UNETLoader', inputs: { unet_name: 'h3ErosMax_beta5.safetensors' } },
+    '5511': {
+      class_type: 'LTX_lora_loader',
+      inputs: {
+        model: ['105:618', 0],
+        stack_data: JSON.stringify([
+          { on: true, lora: 'MiniMax//H3-PK-Parasyte-Turbo.safetensors', str: 1.5 },
+          { on: false, lora: 'H3/turbo/test/fasth3_6step.safetensors', str: 1 },
+        ]),
+      },
+    },
+  };
+  // The guider reads the power loader, which reads the checkpoint. The stack loader sits beside that chain.
+  power['105:16'].inputs.model = ['5511', 0];
+  power['5511'].inputs.model = ['105:618', 0];
+  const powerSteps = authorGenerateSteps(power);
+  assert.equal(powerSteps.length, 1);
+  assert.equal(powerSteps[0].engine, 'MiniMax H3');
+  const listed = powerSteps[0].loras.map((lora) => lora.file).sort();
+  assert.deepEqual(listed, [
+    'LTX23\\AmateurHour_01_rank16.safetensors',
+    'MiniMax//H3-PK-Parasyte-Turbo.safetensors',
+    'minimaxh3\\H3_VBVR_Pro_attn_only.safetensors',
+  ]);
+  assert.equal(powerSteps[0].loras.some((lora) => /Motion_Booster|fasth3/.test(lora.file)), false);
+  const graph = JSON.parse(JSON.stringify(power));
+  assert.equal(applyMatchedLora(graph, powerSteps[0].samplerId, { file: 'LTX23/AmateurHour_01_rank16.safetensors', name: 'Amateur Hour' }), false);
+  assert.equal(JSON.stringify(graph), JSON.stringify(power));
+});
+
 test('a matched LoRA uses the installed server path for that engine only', () => {
   const inventory = [
     { name: 'X3D Illustrious', file: 'x3d_style.safetensors', trigger: 'elf princess' },

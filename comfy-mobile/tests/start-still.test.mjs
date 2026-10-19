@@ -32,9 +32,19 @@ function missingLinks(prompt) {
 function fileNames(prompt) {
   const found = [];
   const walk = (value, key) => {
-    if (typeof value === 'string' && key && /unet|ckpt|model|lora/i.test(key) && /\.(safetensors|ckpt|gguf|sft)$/i.test(value)) {
+    if (typeof value === 'string' && key && /unet|ckpt|model|lora|stack/i.test(key) && /\.(safetensors|ckpt|gguf|sft)$/i.test(value)) {
       found.push(value.split(/[/\\]/).pop());
-    } else if (value && typeof value === 'object') {
+      return;
+    }
+    if (typeof value === 'string' && /^\s*[[{]/.test(value)) {
+      try {
+        walk(JSON.parse(value), key);
+      } catch {
+        // A prompt can open with a bracket.
+      }
+      return;
+    }
+    if (value && typeof value === 'object') {
       for (const [childKey, child] of Object.entries(value)) walk(child, childKey);
     }
   };
@@ -159,5 +169,6 @@ test('every copy card and workflow run returns a closed still per scene', () => 
   assert.equal(failures.length, 0, failures.slice(0, 12).join('\n'));
   assert.ok(cards > 100, `only ${cards} cards produced stills`);
   assert.ok(graphs > cards, `graphs ${graphs} cards ${cards}`);
-  assert.equal(notes.length, 6, notes.slice(0, 8).join('\n'));
+  assert.equal(notes.length, 5, notes.join('\n'));
+  assert.ok(notes.every((note) => note.includes('no image decode (KSampler)')), notes.join('\n'));
 });

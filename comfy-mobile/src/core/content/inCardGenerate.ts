@@ -52,7 +52,7 @@ export interface StillBuild {
 }
 
 const TEXT_FIELDS = ['text', 'value', 'prompt', 'string', 'caption'];
-const SAMPLER_RE = /KSampler|SamplerCustomAdvanced|WanVideoSampler|WanMoeKSampler|MiniMaxH3Director|MiniMaxH3ImageToVideo|WanImageToVideo/;
+const SAMPLER_RE = /KSampler|SamplerCustomAdvanced|WanVideoSampler|WanMoeKSampler|MiniMaxH3Director/;
 const LOADER_RE = /UNETLoader|CheckpointLoaderSimple|WanVideoModelLoader|UnetLoaderGGUF|DiffusionModelLoader/;
 const VIDEO_NODE_RE = /EmptyLTXVLatentVideo|LTXVImgToVideo|LTXDirector|MiniMaxH3|WanImageToVideo|WanVideo|VHS_VideoCombine|SaveVideo|CreateVideo|Hunyuan|EmptyHunyuan|ImageToVideo|I2V/;
 const IMAGE_LATENT_RE = /^EmptyLatentImage$|^EmptySD3LatentImage$/;
@@ -117,7 +117,14 @@ function isPromptText(value: string): boolean {
   if (s.length < 40) return false;
   if (/^[\w.\\/\-]+\.(safetensors|ckpt|png|jpe?g|json|mp4|webp)$/i.test(s)) return false;
   if ((s.match(/\\/g) ?? []).length >= 2 && !s.includes(' ')) return false;
-  if (s.startsWith('{') || s.startsWith('[')) return false;
+  if (s.startsWith('{') || s.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(s) as unknown;
+      if (parsed && typeof parsed === 'object') return false;
+    } catch {
+      // A prompt can open with a bracket, as in [Scene] or [Shot 1].
+    }
+  }
   return true;
 }
 
@@ -150,22 +157,48 @@ function ancestorIds(graph: ApiGraph, startId: string, stopAtSampler = true): st
   return [...seen];
 }
 
+function loraFile(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const file = value.trim();
+  if (!file || file.toLowerCase() === 'none') return null;
+  return file;
+}
+
+function loraRows(value: unknown): Record<string, unknown>[] {
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text.startsWith('[') && !text.startsWith('{')) return [];
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(parsed)) {
+    return parsed.filter((item): item is Record<string, unknown> => !!item && typeof item === 'object' && !Array.isArray(item));
+  }
+  if (parsed && typeof parsed === 'object') return [parsed as Record<string, unknown>];
+  return [];
+}
+
 function lorasOnNode(node: ApiNode): StepLora[] {
   const found: StepLora[] = [];
   const inputs = node.inputs;
-  if (typeof inputs.lora_name === 'string' && inputs.lora_name.trim() && inputs.lora_name.toLowerCase() !== 'none') {
-    found.push({ file: inputs.lora_name, strength: asNumber(inputs.strength_model) ?? asNumber(inputs.strength) ?? 1 });
-  }
+  const named = loraFile(inputs.lora_name);
+  if (named) found.push({ file: named, strength: asNumber(inputs.strength_model) ?? asNumber(inputs.strength) ?? 1 });
   for (const [key, value] of Object.entries(inputs)) {
-    if (!/lora/i.test(key) || key === 'lora_name') continue;
-    if (typeof value === 'string' && /\.safetensors$/i.test(value) && value.toLowerCase() !== 'none') {
-      found.push({ file: value, strength: 1 });
-    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const row = value as { on?: unknown; lora?: unknown; strength?: unknown };
+    if (key === 'lora_name' || !/lora|stack_data/i.test(key)) continue;
+    const direct = typeof value === 'string' && /\.safetensors$/i.test(value) ? loraFile(value) : null;
+    if (direct) {
+      found.push({ file: direct, strength: 1 });
+      continue;
+    }
+    for (const row of loraRows(value)) {
       if (row.on === false) continue;
-      if (typeof row.lora === 'string' && row.lora.trim() && row.lora.toLowerCase() !== 'none') {
-        found.push({ file: row.lora, strength: asNumber(row.strength) ?? 1 });
-      }
+      const file = loraFile(row.lora) ?? loraFile(row.lora_name);
+      if (!file) continue;
+      found.push({ file, strength: asNumber(row.strength) ?? asNumber(row.str) ?? asNumber(row.strength_model) ?? 1 });
     }
   }
   return found;
@@ -261,11 +294,24 @@ function promptHits(graph: ApiGraph): PromptHit[] {
   return hits;
 }
 
+/** Prefer the sampler that actually loads a model. An upscale sampler with no checkpoint loses. */
+function samplerRank(graph: ApiGraph, samplerId: string): number {
+  let rank = 0;
+  for (const id of ancestorIds(graph, samplerId, true)) {
+    const node = graph[id];
+    if (!node) continue;
+    if (LOADER_RE.test(node.class_type)) rank += 10;
+    if (/lora/i.test(node.class_type)) rank += 1;
+  }
+  return rank;
+}
+
 function followToSampler(graph: ApiGraph, startId: string): { samplerId: string; negative: boolean } | null {
   const start = graph[startId];
   if (start && SAMPLER_RE.test(start.class_type)) return { samplerId: startId, negative: false };
   const seen = new Set<string>();
   const stack: { id: string; negative: boolean }[] = [{ id: startId, negative: false }];
+  const positive: string[] = [];
   let negativeHit: string | null = null;
   while (stack.length) {
     const cur = stack.pop();
@@ -276,8 +322,8 @@ function followToSampler(graph: ApiGraph, startId: string): { samplerId: string;
     const node = graph[cur.id];
     if (!node) continue;
     if (cur.id !== startId && SAMPLER_RE.test(node.class_type)) {
-      if (!cur.negative) return { samplerId: cur.id, negative: false };
-      negativeHit = cur.id;
+      if (!cur.negative) positive.push(cur.id);
+      else if (!negativeHit) negativeHit = cur.id;
       continue;
     }
     const nexts = consumersOf(graph, cur.id).sort((a, b) => Number(b.field === 'negative') - Number(a.field === 'negative'));
@@ -286,7 +332,9 @@ function followToSampler(graph: ApiGraph, startId: string): { samplerId: string;
       stack.push({ id: next.id, negative });
     }
   }
-  return negativeHit ? { samplerId: negativeHit, negative: true } : null;
+  if (!positive.length) return negativeHit ? { samplerId: negativeHit, negative: true } : null;
+  positive.sort((a, b) => samplerRank(graph, b) - samplerRank(graph, a) || (a < b ? -1 : 1));
+  return { samplerId: positive[0], negative: false };
 }
 
 export function authorGenerateSteps(raw: unknown): AuthorStep[] {
