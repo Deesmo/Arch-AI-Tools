@@ -10,3 +10,4 @@ export * from './store';
 export * from './studioThumbs';
 export * from './studioRun';
 export * from './inCardGenerate';
+export * from './startStill';

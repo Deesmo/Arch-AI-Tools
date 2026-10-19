@@ -1061,6 +1061,7 @@ function replaceAncestralLoadImages(graph: ApiGraph, samplerId: string, filename
 export function firstOutputImage(entry: HistoryEntry | undefined): ImageRef | null {
   if (!entry?.outputs) return null;
   for (const output of Object.values(entry.outputs)) {
+    if (!output || typeof output !== 'object') continue;
     const images = output.images ?? [];
     if (images.length) return images[0];
     for (const value of Object.values(output)) {

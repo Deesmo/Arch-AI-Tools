@@ -18,7 +18,7 @@ import {
   applyApprovedRun,
   applyStudioRunEdits,
   authorGenerateSteps,
-  buildStepStill,
+  collectStartStills,
   firstOutputImage,
   galleryWindow,
   loadStudioWorkflowFile,
@@ -26,6 +26,7 @@ import {
   peekStudioGallery,
   primeStudioGallery,
   rewriteInAuthorStyle,
+  scenesInAuthorPrompt,
   safeImageType,
   SAVED_PHOTO_NOT_ON_SKYTECH,
   safeUploadName,
@@ -55,6 +56,20 @@ export type RunPreview =
   | null;
 
 type RunCard = StudioThumbCopy | StudioThumbWorkflow;
+
+type StillState = {
+  status: 'running' | 'done' | 'none' | 'error';
+  url?: string;
+  filename?: string;
+  seed?: number;
+  error?: string;
+  /** Uploaded image this still was conditioned on, when the graph cuts to one. */
+  startName?: string | null;
+};
+
+function stillKey(stepId: string, scene: number): string {
+  return `${stepId}:${scene}`;
+}
 
 function GalleryGrid({ images, picked, onPick }: { images: StudioGalleryImage[]; picked: StudioGalleryImage | null; onPick: (image: StudioGalleryImage) => void }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -132,7 +147,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
   const [ownWords, setOwnWords] = useState('');
   const [steps, setSteps] = useState<AuthorStep[] | null>(null);
   const [drafts, setDrafts] = useState<{ id: string; text: string; roll: number }[]>([]);
-  const [stills, setStills] = useState<Record<string, { status: 'running' | 'done' | 'none'; url?: string; filename?: string; seed?: number; error?: string }>>({});
+  const [stills, setStills] = useState<Record<string, StillState>>({});
   const graphRef = useRef<unknown>(null);
 
   useEffect(() => {
@@ -179,8 +194,12 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
 
   const inCard = !!steps?.length;
   const imagesReady = inCard && drafts.length > 0 && steps!.every((step) => {
-    const still = stills[step.id];
-    return still?.status === 'done' || still?.status === 'none';
+    const count = scenesInAuthorPrompt(step.authorPrompt);
+    for (let scene = 1; scene <= count; scene++) {
+      const still = stills[stillKey(step.id, scene)];
+      if (still?.status !== 'done' && still?.status !== 'none') return false;
+    }
+    return true;
   });
 
   const generatePrompts = () => {
@@ -208,31 +227,53 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     }
   };
 
-  const makeStill = async (step: AuthorStep, text: string, priorName: string | null) => {
+  const makeScene = async (step: AuthorStep, scene: number, text: string, priorName: string | null) => {
+    const key = stillKey(step.id, scene);
     const seed = 1 + Math.floor(Math.random() * 2_000_000_000);
-    const built = buildStepStill(graphRef.current, step, text, seed, priorName);
-    if (!built) {
-      setStills((prev) => ({ ...prev, [step.id]: { status: 'none', error: 'This step has no separate still. Render uses the prompt.' } }));
+    const { stills: built, skipped } = collectStartStills(graphRef.current, text, seed);
+    const skip = skipped.find((item) => item.stepId === step.id && item.scene === scene);
+    const match = built.find((item) => item.stepId === step.id && item.scene === scene);
+    if (skip || !match) {
+      setStills((prev) => ({ ...prev, [key]: { status: 'none', error: 'This scene has no separate still. Render uses the prompt.' } }));
       return priorName;
     }
-    setStills((prev) => ({ ...prev, [step.id]: { status: 'running', seed } }));
-    await waitForIdleQueue(() => api.getQueue());
-    const promptId = await submitApiGraph({
-      serverUrl: useSettingsStore.getState().serverUrl,
-      prompt: built.prompt,
-      clientId: useServerStore.getState().clientId,
-    });
-    const entry = await waitHistory(promptId);
-    if (entry.status?.status_str === 'error') throw new Error('The start image failed.');
-    const ref = firstOutputImage(entry);
-    if (!ref) throw new Error('The start image finished with no file.');
-    const blob = await fetch(api.viewUrl(ref)).then((res) => res.blob());
-    const uploaded = await api.uploadImage(blob, `incard-${seed}.png`, true);
-    setStills((prev) => ({ ...prev, [step.id]: { status: 'done', url: api.viewUrl(ref), filename: uploaded.name, seed } }));
-    return uploaded.name;
+    const prompt = match.prompt;
+    let startName: string | null = null;
+    const load = prompt.incard_load;
+    if (load && load.inputs.image === 'start.png') {
+      if (!priorName) {
+        setStills((prev) => ({ ...prev, [key]: { status: 'error', error: 'This scene needs the previous start image.', seed } }));
+        throw new Error('This scene needs the previous start image.');
+      }
+      load.inputs.image = priorName;
+      startName = priorName;
+    }
+    setStills((prev) => ({ ...prev, [key]: { status: 'running', seed, startName } }));
+    try {
+      setResult('Waiting for the queue, then making the start image.');
+      await waitForIdleQueue(() => api.getQueue());
+      setResult(null);
+      const promptId = await submitApiGraph({
+        serverUrl: useSettingsStore.getState().serverUrl,
+        prompt,
+        clientId: useServerStore.getState().clientId,
+      });
+      const entry = await waitHistory(promptId);
+      if (entry.status?.status_str === 'error') throw new Error('The start image failed.');
+      const ref = firstOutputImage(entry);
+      if (!ref) throw new Error('The start image finished with no file.');
+      const blob = await fetch(api.viewUrl(ref)).then((res) => res.blob());
+      const uploaded = await api.uploadImage(blob, `incard-${seed}.png`, true);
+      setStills((prev) => ({ ...prev, [key]: { status: 'done', url: api.viewUrl(ref), filename: uploaded.name, seed, startName } }));
+      return step.kind === 'image' ? uploaded.name : priorName;
+    } catch (err) {
+      const message = err instanceof Error && err.message ? err.message : 'The start image failed.';
+      setStills((prev) => ({ ...prev, [key]: { status: 'error', error: message, seed, startName } }));
+      throw err;
+    }
   };
 
-  const makeImages = async (onlyId?: string) => {
+  const makeImages = async (onlyKey?: string) => {
     if (!steps?.length || !drafts.length || busy) return;
     if (!connected) {
       showResult('Not connected to a ComfyUI server');
@@ -243,14 +284,21 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     try {
       let prior: string | null = null;
       for (const step of steps) {
-        const already = stills[step.id];
-        if (onlyId && step.id !== onlyId) {
-          if (already?.filename) prior = already.filename;
-          continue;
-        }
         const text = drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt;
-        prior = await makeStill(step, text, prior);
-        if (onlyId) break;
+        const count = scenesInAuthorPrompt(step.authorPrompt);
+        for (let scene = 1; scene <= count; scene++) {
+          const key = stillKey(step.id, scene);
+          const already = stills[key];
+          const leaveIt = (onlyKey && key !== onlyKey)
+            || (!onlyKey && already?.status === 'done' && !!already.filename)
+            || (!onlyKey && already?.status === 'none');
+          if (leaveIt) {
+            if (step.kind === 'image' && already?.filename) prior = already.filename;
+            continue;
+          }
+          prior = await makeScene(step, scene, text, prior);
+          if (onlyKey) return;
+        }
       }
     } catch (err) {
       showResult(err instanceof Error && err.message ? err.message : 'The start image failed.');
@@ -269,16 +317,40 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     setResult(null);
     let accepted: string | null = null;
     try {
-      const prompt = applyApprovedRun(graphRef.current, steps.map((step) => ({
-        nodeId: step.nodeId,
-        field: step.field,
-        text: drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt,
-        samplerId: step.samplerId,
-        seed: stills[step.id]?.seed ?? null,
-        image: stills[step.id]?.filename ?? null,
-        kind: step.kind,
-        engine: step.engine,
-      })));
+      let acceptedStart: string | null = null;
+      for (const step of steps) {
+        if (step.kind !== 'image') continue;
+        const count = scenesInAuthorPrompt(step.authorPrompt);
+        for (let scene = 1; scene <= count; scene++) {
+          const still = stills[stillKey(step.id, scene)];
+          if (still?.status === 'done' && still.filename) acceptedStart = still.filename;
+        }
+      }
+      const prompt = applyApprovedRun(graphRef.current, steps.map((step) => {
+        const count = scenesInAuthorPrompt(step.authorPrompt);
+        let filename: string | null = null;
+        let seed: number | null = null;
+        let startName: string | null = null;
+        for (let scene = 1; scene <= count; scene++) {
+          const still = stills[stillKey(step.id, scene)];
+          if (still?.status !== 'done') continue;
+          if (!filename && still.filename) {
+            filename = still.filename;
+            seed = still.seed ?? null;
+          }
+          if (still.startName) startName = still.startName;
+        }
+        return {
+          nodeId: step.nodeId,
+          field: step.field,
+          text: drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt,
+          samplerId: step.samplerId,
+          seed,
+          image: step.kind === 'video' ? (acceptedStart ?? startName ?? filename) : filename,
+          kind: step.kind,
+          engine: step.engine,
+        };
+      }));
       if (!prompt) throw new Error("Couldn't read this card's workflow");
       await waitForIdleQueue(() => api.getQueue());
       accepted = await submitApiGraph({
@@ -460,9 +532,9 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
           {drafts.map((draft) => {
             const step = steps!.find((item) => item.id === draft.id);
             if (!step) return null;
-            const still = stills[step.id];
             const said = spokenLines(draft.text);
             const loras = step.loras.map((lora) => lora.file.split(/[/\\]/).pop()?.replace(/\.(safetensors|ckpt|gguf)$/i, '')).filter(Boolean);
+            const count = scenesInAuthorPrompt(step.authorPrompt);
             return (
               <div className="ms-step" key={step.id}>
                 <div className="ms-item-title">{step.label}</div>
@@ -473,15 +545,26 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
                   <button type="button" className="btn sm" disabled={busy} onClick={() => rerollPrompt(step)}>
                     Re-roll prompt
                   </button>
-                  {still?.status === 'done' && (
-                    <button type="button" className="btn sm" disabled={busy || !connected} onClick={() => void makeImages(step.id)}>
-                      Re-roll image
-                    </button>
-                  )}
                 </div>
-                {still?.status === 'running' && <p className="ms-run-note">Making the start image…</p>}
-                {still?.error && <p className="field-hint">{still.error}</p>}
-                {still?.url && <img src={still.url} alt="" />}
+                {Array.from({ length: count }, (_, index) => {
+                  const scene = index + 1;
+                  const still = stills[stillKey(step.id, scene)];
+                  return (
+                    <div key={stillKey(step.id, scene)}>
+                      {count > 1 && <p className="field-hint">Scene {scene}</p>}
+                      {still?.status === 'done' && (
+                        <div className="ms-step-actions">
+                          <button type="button" className="btn sm" disabled={busy || !connected} onClick={() => void makeImages(stillKey(step.id, scene))}>
+                            Re-roll image
+                          </button>
+                        </div>
+                      )}
+                      {still?.status === 'running' && <p className="ms-run-note">Making the start image…</p>}
+                      {still?.error && <p className="field-hint">{still.error}</p>}
+                      {still?.url && <img src={still.url} alt="" />}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
