@@ -139,6 +139,7 @@ type Draft = { id: string; text: string; roll: number; match: PromptLoraMatch | 
 
 export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; preview: RunPreview; loras: PromptLora[]; onClose: () => void }) {
   const status = useServerStore((s) => s.status);
+  const installedLoras = useServerStore((s) => s.modelLists.loras);
   const uploadInput = useServerStore((s) => s.uploadInput);
   const { queueWorkflow } = useQueue();
   const toast = useUiStore((s) => s.toast);
@@ -208,27 +209,47 @@ export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; pre
     return true;
   });
 
-  const draftFor = (step: AuthorStep, text: string, roll: number): Draft => ({
+  const draftFor = (step: AuthorStep, text: string, roll: number, installed: readonly string[], words: string): Draft => ({
     id: step.id,
     text,
     roll,
-    match: matchPromptLora(step.engine, `${ownWords}\n${text}`, loras),
+    match: matchPromptLora(step.engine, `${words}\n${text}`, loras, installed),
   });
+
+  const installedFiles = async (): Promise<readonly string[]> => {
+    const current = useServerStore.getState().modelLists.loras;
+    if (current) return current;
+    return useServerStore.getState().refreshModels('loras');
+  };
 
   const generatePrompts = () => {
     if (!steps?.length || !ownWords.trim()) return;
-    setDrafts(steps.map((step) => draftFor(step, rewriteInAuthorStyle(step.authorPrompt, ownWords, 0, { kind: step.kind, engine: step.engine }), 0)));
-    setStills({});
-    setResult(null);
+    const ready = steps;
+    const words = ownWords;
+    void installedFiles().then((installed) => {
+      setDrafts(ready.map((step) => draftFor(
+        step,
+        rewriteInAuthorStyle(step.authorPrompt, words, 0, { kind: step.kind, engine: step.engine }),
+        0,
+        installed,
+        words,
+      )));
+      setStills({});
+      setResult(null);
+    });
   };
 
   const rerollPrompt = (step: AuthorStep) => {
-    setDrafts((prev) => prev.map((draft) => (
-      draft.id === step.id
-        ? draftFor(step, rewriteInAuthorStyle(step.authorPrompt, ownWords, draft.roll + 1, { kind: step.kind, engine: step.engine }), draft.roll + 1)
-        : draft
-    )));
-    setStills({});
+    const words = ownWords;
+    void installedFiles().then((installed) => {
+      setDrafts((prev) => prev.map((draft) => (
+        draft.id === step.id
+            ? draftFor(step, rewriteInAuthorStyle(step.authorPrompt, words, draft.roll + 1, { kind: step.kind, engine: step.engine }), draft.roll + 1, installed, words)
+          : draft
+      )));
+      setStills({});
+      setResult(null);
+    });
   };
 
   const waitHistory = async (promptId: string) => {
@@ -273,7 +294,11 @@ export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; pre
         clientId: useServerStore.getState().clientId,
       });
       const entry = await waitHistory(promptId);
-      if (entry.status?.status_str === 'error') throw new Error('The start image failed.');
+      if (entry.status?.status_str === 'error') {
+        const info = entry.status.messages?.find((item) => item[0] === 'execution_error')?.[1];
+        const detail = typeof info?.exception_message === 'string' ? info.exception_message.trim() : '';
+        throw new Error(detail ? `The start image failed. ${detail.slice(0, 240)}` : 'The start image failed.');
+      }
       const ref = firstOutputImage(entry);
       if (!ref) throw new Error('The start image finished with no file.');
       const blob = await fetch(api.viewUrl(ref)).then((res) => res.blob());
@@ -545,24 +570,38 @@ export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; pre
             onChange={(e) => setOwnWords(e.target.value)}
             onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
           />
-          <button type="button" className="btn block" disabled={busy || !ownWords.trim()} onClick={generatePrompts}>
+          <button type="button" className="btn block" disabled={!ownWords.trim()} onClick={generatePrompts}>
             Generate
           </button>
           {drafts.map((draft) => {
             const step = steps!.find((item) => item.id === draft.id);
             if (!step) return null;
             const said = spokenLines(draft.text);
-            const loras = step.loras.map((lora) => lora.file.split(/[/\\]/).pop()?.replace(/\.(safetensors|ckpt|gguf)$/i, '')).filter(Boolean);
+            const authorLoraNames = step.loras.map((lora) => lora.file.split(/[/\\]/).pop()?.replace(/\.(safetensors|ckpt|gguf)$/i, '')).filter(Boolean);
             const count = scenesInAuthorPrompt(step.authorPrompt);
             return (
               <div className="ms-step" key={step.id}>
                 <div className="ms-item-title">{step.label}</div>
-                {loras.length > 0 && <p className="field-hint">LoRAs: {loras.join(', ')}</p>}
+                {authorLoraNames.length > 0 && <p className="field-hint">LoRAs: {authorLoraNames.join(', ')}</p>}
                 {draft.match && <p className="field-hint">Matched LoRA: {draft.match.name}</p>}
-                <textarea className="textarea ms-run-prompt" rows={4} readOnly value={draft.text} />
+                <textarea
+                  className="textarea ms-run-prompt"
+                  rows={4}
+                  aria-label={`${step.label} prompt`}
+                  value={draft.text}
+                  onChange={(e) => {
+                    const text = e.target.value;
+                    const files = installedLoras ?? [];
+                    setDrafts((prev) => prev.map((item) => (
+                      item.id === step.id
+                        ? { ...item, text, match: matchPromptLora(step.engine, `${ownWords}\n${text}`, loras, files) }
+                        : item
+                    )));
+                  }}
+                />
                 {said.length > 0 && <p className="field-hint">Spoken: {said.join(' / ')}</p>}
                 <div className="ms-step-actions">
-                  <button type="button" className="btn sm" disabled={busy} onClick={() => rerollPrompt(step)}>
+                  <button type="button" className="btn sm" onClick={() => rerollPrompt(step)}>
                     Re-roll prompt
                   </button>
                 </div>
@@ -572,7 +611,7 @@ export function RunSheet({ card, preview, loras, onClose }: { card: RunCard; pre
                   return (
                     <div key={stillKey(step.id, scene)}>
                       {count > 1 && <p className="field-hint">Scene {scene}</p>}
-                      {still?.status === 'done' && (
+                      {(still?.status === 'done' || still?.status === 'error') && (
                         <div className="ms-step-actions">
                           <button type="button" className="btn sm" disabled={busy || !connected} onClick={() => void makeImages(stillKey(step.id, scene))}>
                             Re-roll image

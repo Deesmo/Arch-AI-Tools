@@ -73,22 +73,47 @@ function phraseHits(words: string, phrase: string): boolean {
 }
 
 /**
+ * The server path for this catalog file. A bare filename matches one installed
+ * file in a subfolder. Two installed files with the same name match neither.
+ * An empty installed list matches nothing.
+ */
+export function installedLoraPath(file: string, installed: readonly string[]): string | null {
+  const name = file.trim();
+  if (!name) return null;
+  const exact = installed.find((item) => item.toLowerCase() === name.toLowerCase());
+  if (exact) return exact;
+  const base = name.split(/[/\\]/).pop()?.toLowerCase();
+  if (!base) return null;
+  const hits = installed.filter((item) => (item.split(/[/\\]/).pop() ?? '').toLowerCase() === base);
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/**
  * The installed inventory LoRA for this engine whose trigger phrase is in his
  * words. Longest phrase wins. No phrase, no file, or the wrong engine returns null.
+ * When `installed` is passed, the file has to be on the server. The match uses
+ * that server path, including a subfolder, so Comfy can load it.
  */
-export function matchPromptLora(stepEngine: string, words: string, inventory: PromptLora[]): PromptLoraMatch | null {
-  let best: { lora: PromptLora; phrase: string; score: number } | null = null;
+export function matchPromptLora(
+  stepEngine: string,
+  words: string,
+  inventory: PromptLora[],
+  installed?: readonly string[],
+): PromptLoraMatch | null {
+  let best: { lora: PromptLora; file: string; phrase: string; score: number } | null = null;
   for (const lora of inventory) {
-    if (!lora.file.trim()) continue;
+    const file = installed ? installedLoraPath(lora.file, installed) : lora.file.trim();
+    if (!file) continue;
     if (!loraFitsEngine(stepEngine, lora)) continue;
+    if (installed && !loraFitsEngine(stepEngine, { file, name: lora.name })) continue;
     for (const phrase of triggerPhrases(lora.trigger)) {
       if (!phraseHits(words, phrase)) continue;
       const score = phrase.length;
-      if (!best || score > best.score || (score === best.score && lora.file < best.lora.file)) {
-        best = { lora, phrase, score };
+      if (!best || score > best.score || (score === best.score && file < best.file)) {
+        best = { lora, file, phrase, score };
       }
     }
   }
   if (!best) return null;
-  return { name: best.lora.name || best.lora.file, file: best.lora.file, trigger: best.phrase };
+  return { name: best.lora.name || best.file, file: best.file, trigger: best.phrase };
 }

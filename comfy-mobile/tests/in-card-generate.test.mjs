@@ -247,3 +247,19 @@ test('a matched LoRA stays on its own engine', () => {
   assert.match(files, /gemma-3-12b/);
   assert.match(files, /PonyV7base/);
 });
+
+test('a matched LoRA uses the installed server path for that engine only', () => {
+  const inventory = [
+    { name: 'X3D Illustrious', file: 'x3d_style.safetensors', trigger: 'elf princess' },
+    { name: 'Pony bounce', file: 'pony_bounce.safetensors', trigger: 'elf princess' },
+    { name: 'Sulphur wind', file: 'sulphur_wind.safetensors', trigger: 'elf princess' },
+  ];
+  const installed = ['_harvest/NoobAI/x3d_style.safetensors', 'pony/pony_bounce.safetensors'];
+  const words = 'elf princess on a balcony';
+  assert.equal(matchPromptLora('Illustrious', words, inventory, installed)?.file, '_harvest/NoobAI/x3d_style.safetensors');
+  assert.equal(matchPromptLora('Pony', words, inventory, installed)?.file, 'pony/pony_bounce.safetensors');
+  assert.equal(matchPromptLora('Sulphur', words, inventory, installed), null);
+  assert.equal(matchPromptLora('Illustrious', words, inventory, ['other.safetensors']), null);
+  assert.equal(matchPromptLora('Illustrious', words, inventory, ['a/x3d_style.safetensors', 'b/x3d_style.safetensors']), null);
+  assert.equal(matchPromptLora('Illustrious', words, inventory, ['pony/x3d_style.safetensors']), null);
+});
