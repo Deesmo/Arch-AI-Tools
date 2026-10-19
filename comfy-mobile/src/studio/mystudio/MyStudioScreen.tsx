@@ -70,6 +70,20 @@ export function MyStudioScreen() {
   const [section, setSection] = useState<Section>('copies');
   const [q, setQ] = useState('');
   const [run, setRun] = useState<{ card: StudioThumbCopy | StudioThumbWorkflow; preview: RunPreview } | null>(null);
+  const [blurbs, setBlurbs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let live = true;
+    void fetch('/studio-thumbs/workflow-blurbs.json', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data) => {
+        if (live && data && typeof data === 'object') setBlurbs(data as Record<string, string>);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const counts = {
     copies: catalog?.copies.length ?? 0,
@@ -86,8 +100,8 @@ export function MyStudioScreen() {
     [catalog, q],
   );
   const workflows = useMemo(
-    () => (catalog?.workflows ?? []).filter((c) => studioSearchHit(q, [c.name, c.prompt, c.model, c.author, c.civitaiId])),
-    [catalog, q],
+    () => (catalog?.workflows ?? []).filter((c) => studioSearchHit(q, [c.name, c.prompt, c.model, c.author, c.civitaiId, c.workflowFile ? blurbs[c.workflowFile] : ''])),
+    [catalog, q, blurbs],
   );
 
   const label = SECTIONS.find((s) => s.id === section)?.label.toLowerCase() ?? '';
@@ -144,7 +158,7 @@ export function MyStudioScreen() {
               workflows.length ? (
                 <div className="card" style={{ padding: 0 }}>
                   {workflows.map((c, i) => (
-                    <WorkflowCard key={`${c.name}-${i}`} card={c} onOpen={() => setRun({ card: c, preview: workflowPreview(c) })} />
+                    <WorkflowCard key={`${c.name}-${i}`} card={c} blurb={c.workflowFile ? blurbs[c.workflowFile] : undefined} onOpen={() => setRun({ card: c, preview: workflowPreview(c) })} />
                   ))}
                 </div>
               ) : (

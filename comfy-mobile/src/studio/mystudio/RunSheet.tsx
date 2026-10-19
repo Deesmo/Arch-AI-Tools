@@ -8,26 +8,37 @@
  * live list. A failed or timed-out post stays here and shows the error.
  */
 import { useEffect, useRef, useState } from 'react';
+import { api } from '../../core/api/client';
 import {
   CARD_CANNOT_BE_BUILT,
   GALLERY_COLUMNS,
   GALLERY_NOT_IN_BUILD,
   SETTINGS_NOT_IN_BUILD,
   absoluteStudioUrl,
+  applyApprovedRun,
   applyStudioRunEdits,
+  authorGenerateSteps,
+  buildStepStill,
+  firstOutputImage,
   galleryWindow,
+  loadStudioWorkflowFile,
   parseWorkflow,
   peekStudioGallery,
   primeStudioGallery,
+  rewriteInAuthorStyle,
   safeImageType,
   SAVED_PHOTO_NOT_ON_SKYTECH,
   safeUploadName,
+  spokenLines,
   studioPhotoStatus,
   studioRunEdits,
+  submitApiGraph,
   openQueueHistory,
   runStudioCard,
   useServerStore,
   useSettingsStore,
+  waitForIdleQueue,
+  type AuthorStep,
   type StudioGalleryImage,
   type StudioThumbCopy,
   type StudioThumbWorkflow,
@@ -118,6 +129,11 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
   const [galleryNote, setGalleryNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [ownWords, setOwnWords] = useState('');
+  const [steps, setSteps] = useState<AuthorStep[] | null>(null);
+  const [drafts, setDrafts] = useState<{ id: string; text: string; roll: number }[]>([]);
+  const [stills, setStills] = useState<Record<string, { status: 'running' | 'done' | 'none'; url?: string; filename?: string; seed?: number; error?: string }>>({});
+  const graphRef = useRef<unknown>(null);
 
   useEffect(() => {
     if (images) return;
@@ -136,10 +152,150 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
     };
   }, [images]);
 
+  useEffect(() => {
+    if (!card.workflowFile) {
+      setSteps([]);
+      return;
+    }
+    let live = true;
+    void loadStudioWorkflowFile(card.workflowFile)
+      .then((raw) => {
+        if (!live) return;
+        graphRef.current = raw;
+        setSteps(authorGenerateSteps(raw));
+      })
+      .catch(() => {
+        if (live) setSteps([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [card.workflowFile]);
+
   const connected = status === 'connected';
   const canQueue = !!card.workflowFile;
   const promptWritable = card.promptNodeId != null && !!card.promptField;
   const imageWritable = card.imageNodeId != null && !!card.imageField;
+
+  const inCard = !!steps?.length;
+  const imagesReady = inCard && drafts.length > 0 && steps!.every((step) => {
+    const still = stills[step.id];
+    return still?.status === 'done' || still?.status === 'none';
+  });
+
+  const generatePrompts = () => {
+    if (!steps?.length || !ownWords.trim()) return;
+    setDrafts(steps.map((step) => ({ id: step.id, text: rewriteInAuthorStyle(step.authorPrompt, ownWords, 0, { kind: step.kind, engine: step.engine }), roll: 0 })));
+    setStills({});
+    setResult(null);
+  };
+
+  const rerollPrompt = (step: AuthorStep) => {
+    setDrafts((prev) => prev.map((draft) => (
+      draft.id === step.id
+        ? { ...draft, roll: draft.roll + 1, text: rewriteInAuthorStyle(step.authorPrompt, ownWords, draft.roll + 1, { kind: step.kind, engine: step.engine }) }
+        : draft
+    )));
+    setStills({});
+  };
+
+  const waitHistory = async (promptId: string) => {
+    for (;;) {
+      const history = await api.getHistory(32);
+      const entry = history[promptId];
+      if (entry?.status?.completed || entry?.status?.status_str === 'error' || (entry?.outputs && Object.keys(entry.outputs).length)) return entry;
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+    }
+  };
+
+  const makeStill = async (step: AuthorStep, text: string, priorName: string | null) => {
+    const seed = 1 + Math.floor(Math.random() * 2_000_000_000);
+    const built = buildStepStill(graphRef.current, step, text, seed, priorName);
+    if (!built) {
+      setStills((prev) => ({ ...prev, [step.id]: { status: 'none', error: 'This step has no separate still. Render uses the prompt.' } }));
+      return priorName;
+    }
+    setStills((prev) => ({ ...prev, [step.id]: { status: 'running', seed } }));
+    await waitForIdleQueue(() => api.getQueue());
+    const promptId = await submitApiGraph({
+      serverUrl: useSettingsStore.getState().serverUrl,
+      prompt: built.prompt,
+      clientId: useServerStore.getState().clientId,
+    });
+    const entry = await waitHistory(promptId);
+    if (entry.status?.status_str === 'error') throw new Error('The start image failed.');
+    const ref = firstOutputImage(entry);
+    if (!ref) throw new Error('The start image finished with no file.');
+    const blob = await fetch(api.viewUrl(ref)).then((res) => res.blob());
+    const uploaded = await api.uploadImage(blob, `incard-${seed}.png`, true);
+    setStills((prev) => ({ ...prev, [step.id]: { status: 'done', url: api.viewUrl(ref), filename: uploaded.name, seed } }));
+    return uploaded.name;
+  };
+
+  const makeImages = async (onlyId?: string) => {
+    if (!steps?.length || !drafts.length || busy) return;
+    if (!connected) {
+      showResult('Not connected to a ComfyUI server');
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    try {
+      let prior: string | null = null;
+      for (const step of steps) {
+        const already = stills[step.id];
+        if (onlyId && step.id !== onlyId) {
+          if (already?.filename) prior = already.filename;
+          continue;
+        }
+        const text = drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt;
+        prior = await makeStill(step, text, prior);
+        if (onlyId) break;
+      }
+    } catch (err) {
+      showResult(err instanceof Error && err.message ? err.message : 'The start image failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const renderApproved = async () => {
+    if (!steps?.length || !card.workflowFile || busy) return;
+    if (!connected) {
+      showResult('Not connected to a ComfyUI server');
+      return;
+    }
+    setBusy(true);
+    setResult(null);
+    let accepted: string | null = null;
+    try {
+      const prompt = applyApprovedRun(graphRef.current, steps.map((step) => ({
+        nodeId: step.nodeId,
+        field: step.field,
+        text: drafts.find((draft) => draft.id === step.id)?.text ?? step.authorPrompt,
+        samplerId: step.samplerId,
+        seed: stills[step.id]?.seed ?? null,
+        image: stills[step.id]?.filename ?? null,
+        kind: step.kind,
+      })));
+      if (!prompt) throw new Error("Couldn't read this card's workflow");
+      await waitForIdleQueue(() => api.getQueue());
+      accepted = await submitApiGraph({
+        serverUrl: useSettingsStore.getState().serverUrl,
+        prompt,
+        clientId: useServerStore.getState().clientId,
+      });
+    } catch (err) {
+      if (!accepted) showResult(err instanceof Error && err.message ? err.message : SETTINGS_NOT_IN_BUILD);
+    } finally {
+      setBusy(false);
+    }
+    if (accepted) {
+      void useServerStore.getState().refreshQueue();
+      onClose();
+      focusQueuedRun(accepted);
+    }
+  };
 
   const showResult = (message: string) => {
     setResult(message);
@@ -252,8 +408,13 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
                 {result}
               </p>
             )}
-            <button type="button" className="btn primary block ms-run-go" disabled={busy} onClick={() => void run()}>
-              {busy ? 'Queuing…' : 'Run'}
+            <button
+              type="button"
+              className="btn primary block ms-run-go"
+              disabled={busy || (inCard && (!drafts.length || !imagesReady))}
+              onClick={() => void (inCard ? renderApproved() : run())}
+            >
+              {busy ? 'Working…' : inCard ? 'Render' : 'Run'}
             </button>
           </>
         ) : undefined
@@ -272,6 +433,64 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
       {!canQueue && <p className="ms-run-note">{CARD_CANNOT_BE_BUILT}</p>}
       {canQueue && !connected && <p className="ms-run-note">Not connected to a ComfyUI server</p>}
 
+      {steps === null && canQueue && <p className="ms-run-note">Reading this card…</p>}
+      {inCard ? (
+        <div className="field">
+          <label className="field-label" htmlFor="ms-run-prompt">
+            What do you want
+          </label>
+          <textarea
+            id="ms-run-prompt"
+            className="textarea ms-run-prompt"
+            rows={4}
+            value={ownWords}
+            inputMode="text"
+            enterKeyHint="done"
+            autoCapitalize="sentences"
+            autoCorrect="on"
+            spellCheck
+            placeholder="Your words. Nothing is rewritten until you tap Generate."
+            onChange={(e) => setOwnWords(e.target.value)}
+            onFocus={(e) => e.currentTarget.scrollIntoView({ block: 'center' })}
+          />
+          <button type="button" className="btn block" disabled={busy || !ownWords.trim()} onClick={generatePrompts}>
+            Generate
+          </button>
+          {drafts.map((draft) => {
+            const step = steps!.find((item) => item.id === draft.id);
+            if (!step) return null;
+            const still = stills[step.id];
+            const said = spokenLines(draft.text);
+            const loras = step.loras.map((lora) => lora.file.split(/[/\\]/).pop()?.replace(/\.(safetensors|ckpt|gguf)$/i, '')).filter(Boolean);
+            return (
+              <div className="ms-step" key={step.id}>
+                <div className="ms-item-title">{step.label}</div>
+                {loras.length > 0 && <p className="field-hint">LoRAs: {loras.join(', ')}</p>}
+                <textarea className="textarea ms-run-prompt" rows={4} readOnly value={draft.text} />
+                {said.length > 0 && <p className="field-hint">Spoken: {said.join(' / ')}</p>}
+                <div className="ms-step-actions">
+                  <button type="button" className="btn sm" disabled={busy} onClick={() => rerollPrompt(step)}>
+                    Re-roll prompt
+                  </button>
+                  {still?.status === 'done' && (
+                    <button type="button" className="btn sm" disabled={busy || !connected} onClick={() => void makeImages(step.id)}>
+                      Re-roll image
+                    </button>
+                  )}
+                </div>
+                {still?.status === 'running' && <p className="ms-run-note">Making the start image…</p>}
+                {still?.error && <p className="field-hint">{still.error}</p>}
+                {still?.url && <img src={still.url} alt="" />}
+              </div>
+            );
+          })}
+          {drafts.length > 0 && (
+            <button type="button" className="btn block" style={{ marginTop: 10 }} disabled={busy || !connected} onClick={() => void makeImages()}>
+              Make start images
+            </button>
+          )}
+        </div>
+      ) : steps && (
       <div className="field">
         <label className="field-label" htmlFor="ms-run-prompt">
           Prompt
@@ -291,6 +510,7 @@ export function RunSheet({ card, preview, onClose }: { card: RunCard; preview: R
         />
         {!promptWritable && <p className="field-hint">This prompt stays as saved in the workflow.</p>}
       </div>
+      )}
 
       <div className="field">
         <div className="field-label">Photo</div>

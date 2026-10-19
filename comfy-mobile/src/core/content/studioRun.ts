@@ -738,6 +738,39 @@ export async function submitSavedStudioPrompt(args: {
   return { format: 'api', postUrl, body: payload, promptId };
 }
 
+/** Posts an API graph that was already built. Same ArrayBuffer body as a card run. */
+export async function submitApiGraph(args: {
+  serverUrl: string;
+  prompt: ApiPrompt;
+  clientId?: string;
+  fetchImpl?: typeof fetch;
+}): Promise<string> {
+  const fetchImpl = args.fetchImpl ?? fetch;
+  const host = args.serverUrl.trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/+$/, '');
+  const postUrl = `http://${host}/prompt`;
+  const payload = stringifyJobFile({
+    prompt: args.prompt,
+    client_id: args.clientId ?? '',
+  });
+  const body = jsonBytes(payload);
+  const headers: HeadersInit = [
+    ['Accept', 'application/json'],
+    ['Content-Type', 'application/json'],
+  ];
+  const res = await fetchImpl(postUrl, { method: 'POST', headers, body });
+  const text = await res.text();
+  if (!res.ok) throw new Error(promptErrorText(text, res.status));
+  let promptId = '';
+  try {
+    const data = JSON.parse(text) as { prompt_id?: string };
+    promptId = typeof data.prompt_id === 'string' ? data.prompt_id : '';
+  } catch {
+    promptId = '';
+  }
+  if (!promptId) throw new Error('The server did not return a prompt id.');
+  return promptId;
+}
+
 /**
  * What the Run button calls. A relative workflow path is joined to the page
  * origin. An API prompt is posted as an ArrayBuffer. The prompt words stay

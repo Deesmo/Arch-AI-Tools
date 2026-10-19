@@ -161,7 +161,7 @@ export function LoraCard({ card }: { card: StudioThumbLora }) {
   );
 }
 
-export function WorkflowCard({ card, onOpen }: { card: StudioThumbWorkflow; onOpen?: () => void }) {
+export function WorkflowCard({ card, blurb, onOpen }: { card: StudioThumbWorkflow; blurb?: string; onOpen?: () => void }) {
   return (
     <div
       className={`list-item ms-item${onOpen ? ' is-runnable' : ''}`}
@@ -186,6 +186,7 @@ export function WorkflowCard({ card, onOpen }: { card: StudioThumbWorkflow; onOp
           <Star on={card.favorite} />
         </div>
         <Meta text={cardMeta(card)} />
+        <p className="ms-workflow-blurb">{blurb || 'Reading this workflow…'}</p>
         {card.examples.length > 0 && (
           <div className="sub">
             {card.examples.length} example{card.examples.length === 1 ? '' : 's'}
