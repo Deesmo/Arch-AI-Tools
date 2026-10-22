@@ -3048,6 +3048,19 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
   const servedModel = paid && modelCostMultiplier(session.model) > 1.0
     ? "claude-sonnet-4-6"
     : session.model;
+  const model = servedModel;
+  const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
+  const GPT_MODELS = ["gpt-4o", "gpt-4o-mini"];
+  const anthropicForSession = CLAUDE_MODELS.includes(model) ? getAnthropic() : null;
+  const openaiKeyForSession = GPT_MODELS.includes(model) ? process.env.OPENAI_API_KEY : null;
+  if (CLAUDE_MODELS.includes(model) && !anthropicForSession) {
+    res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
+    return;
+  }
+  if (GPT_MODELS.includes(model) && !openaiKeyForSession) {
+    res.status(503).json({ ok: false, error: "service_unavailable", message: "OpenAI API key not configured", request_id: reqId() });
+    return;
+  }
   // Price per-model like ai-generate: the 20-credit base is Sonnet-tuned, but
   // this route charged a flat 20 for every model — Opus (≈2× COGS) at the flat
   // base was a guaranteed loss on each call. applyModelCost scales the base by
@@ -3075,19 +3088,11 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
   const { window: upstreamMessages, truncated: contextTruncated } =
     trimSessionContext(session.messages, SESSION_CONTEXT_MAX_CHARS);
 
-  const model = servedModel;
-  const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
-  const GPT_MODELS = ["gpt-4o", "gpt-4o-mini"];
-
   try {
     let responseText = "";
 
     if (CLAUDE_MODELS.includes(model)) {
-      if (!getAnthropic()) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
-        return;
-      }
-      const msg = await getAnthropic()!.messages.create({
+      const msg = await anthropicForSession!.messages.create({
         model,
         max_tokens: 2048,
         ...(session.system_prompt ? { system: session.system_prompt } : {}),
@@ -3095,18 +3100,13 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
       });
       responseText = msg.content.find((b) => b.type === "text")?.text ?? "";
     } else if (GPT_MODELS.includes(model)) {
-      const openaiKey = process.env.OPENAI_API_KEY;
-      if (!openaiKey) {
-        res.status(503).json({ ok: false, error: "service_unavailable", message: "OpenAI API key not configured", request_id: reqId() });
-        return;
-      }
       const messages: Array<{ role: string; content: string }> = [];
       if (session.system_prompt) messages.push({ role: "system", content: session.system_prompt });
       messages.push(...upstreamMessages.map((m) => ({ role: m.role, content: m.content })));
 
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKeyForSession}` },
         body: JSON.stringify({ model, max_tokens: 2048, messages }),
       });
       const data = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
