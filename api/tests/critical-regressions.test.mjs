@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.join(__dirname, "..", "src");
 
 const agentSrc = fs.readFileSync(path.join(srcRoot, "routes", "agent.ts"), "utf8");
+const authSrc = fs.readFileSync(path.join(srcRoot, "routes", "auth.ts"), "utf8");
 const toolsSrc = fs.readFileSync(path.join(srcRoot, "routes", "tools", "index.ts"), "utf8");
 const seedSrc = fs.readFileSync(path.join(srcRoot, "seed.ts"), "utf8");
 
@@ -91,6 +92,26 @@ test("research-report reports the deducted cost variable, not the stale flat 15"
   const payloads = [...route.matchAll(/credits_used:\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
   assert.ok(payloads.length >= 2, "research-report has both success payloads");
   assert.ok(payloads.every((v) => v === "researchReportCost"), "every payload reports the deducted cost");
+});
+
+test("reset-password rejects non-string or non-hex tokens before Prisma", () => {
+  const start = authSrc.indexOf('router.post("/reset-password"');
+  assert.ok(start >= 0, "missing reset-password route");
+  const route = authSrc.slice(start);
+  const findFirstIndex = route.indexOf("prisma.agent.findFirst");
+  assert.ok(findFirstIndex > 0, "reset-password route queries by resetToken");
+  assert.ok(
+    route.indexOf('typeof token !== "string"') > 0 && route.indexOf('typeof token !== "string"') < findFirstIndex,
+    "reset-password must type-check token before Prisma receives it",
+  );
+  assert.ok(
+    route.indexOf('/^[a-fA-F0-9]{64}$/.test(token)') > 0 && route.indexOf('/^[a-fA-F0-9]{64}$/.test(token)') < findFirstIndex,
+    "reset-password must reject non-hex token strings before the Prisma query",
+  );
+  assert.ok(
+    route.indexOf("try {") > 0 && route.indexOf("try {") < findFirstIndex,
+    "reset-password async DB work must be inside a try/catch",
+  );
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
