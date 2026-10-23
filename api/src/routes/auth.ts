@@ -295,31 +295,40 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
 
 router.post("/reset-password", sensitiveLimiter, async (req: Request, res: Response): Promise<void> => {
   const { token, password } = req.body ?? {};
-  if (!token || !password) {
+  if (typeof token !== "string" || typeof password !== "string" || !token || !password) {
     res.status(400).json({ ok: false, error: "token_and_password_required" });
     return;
   }
-  if (typeof password !== "string" || password.length < 8) {
+  if (!/^[a-fA-F0-9]{64}$/.test(token)) {
+    res.status(400).json({ ok: false, error: "invalid_or_expired_token", message: "This reset link has expired or is invalid. Please request a new one." });
+    return;
+  }
+  if (password.length < 8) {
     res.status(400).json({ ok: false, error: "password_too_short", message: "Password must be at least 8 characters." });
     return;
   }
 
-  const agent = await prisma.agent.findFirst({
-    where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
-  });
-  if (!agent) {
-    res.status(400).json({ ok: false, error: "invalid_or_expired_token", message: "This reset link has expired or is invalid. Please request a new one." });
-    return;
+  try {
+    const agent = await prisma.agent.findFirst({
+      where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
+    });
+    if (!agent) {
+      res.status(400).json({ ok: false, error: "invalid_or_expired_token", message: "This reset link has expired or is invalid. Please request a new one." });
+      return;
+    }
+
+    const hash = bcrypt.hashSync(password, 10);
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: { passwordHash: hash, resetToken: null, resetTokenExpiry: null },
+    });
+
+    const sessionToken = signSession(agent.id);
+    res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
+    logger.info({ agentId: agent.id }, "Agent reset password + logged in");
+    res.json({ ok: true, redirect: "/dashboard" });
+  } catch (error) {
+    logger.error({ error }, "Reset password failed");
+    res.status(500).json({ ok: false, error: "reset_password_failed", message: "Unable to reset your password right now. Please try again." });
   }
-
-  const hash = bcrypt.hashSync(password, 10);
-  await prisma.agent.update({
-    where: { id: agent.id },
-    data: { passwordHash: hash, resetToken: null, resetTokenExpiry: null },
-  });
-
-  const sessionToken = signSession(agent.id);
-  res.cookie(COOKIE_NAME, sessionToken, COOKIE_OPTS);
-  logger.info({ agentId: agent.id }, "Agent reset password + logged in");
-  res.json({ ok: true, redirect: "/dashboard" });
 });
