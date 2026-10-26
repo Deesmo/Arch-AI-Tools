@@ -3060,6 +3060,13 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 
   // Add user message to history
   session.messages.push({ role: "user", content: message });
+  let userMessagePending = true;
+  const removePendingUserMessage = (): void => {
+    if (userMessagePending && session.messages[session.messages.length - 1]?.role === "user") {
+      session.messages.pop();
+    }
+    userMessagePending = false;
+  };
 
   // Keep conversation history bounded (last 50 messages)
   if (session.messages.length > 50) {
@@ -3084,6 +3091,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
 
     if (CLAUDE_MODELS.includes(model)) {
       if (!getAnthropic()) {
+        removePendingUserMessage();
         res.status(503).json({ ok: false, error: "service_unavailable", message: "Anthropic API key not configured", request_id: reqId() });
         return;
       }
@@ -3097,6 +3105,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     } else if (GPT_MODELS.includes(model)) {
       const openaiKey = process.env.OPENAI_API_KEY;
       if (!openaiKey) {
+        removePendingUserMessage();
         res.status(503).json({ ok: false, error: "service_unavailable", message: "OpenAI API key not configured", request_id: reqId() });
         return;
       }
@@ -3109,12 +3118,28 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
         body: JSON.stringify({ model, max_tokens: 2048, messages }),
       });
-      const data = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      responseText = data.choices?.[0]?.message?.content ?? "";
+      const data = (await resp.json().catch(() => ({}))) as {
+        choices?: Array<{ message?: { content?: string } }>;
+        error?: { message?: string };
+      };
+      if (!resp.ok) {
+        removePendingUserMessage();
+        const detail = data.error?.message ? `OpenAI API error: ${data.error.message}` : `OpenAI API returned ${resp.status}`;
+        res.status(resp.status === 429 ? 429 : 502).json({ ok: false, error: resp.status === 429 ? "rate_limited" : "openai_error", message: detail, request_id: reqId() });
+        return;
+      }
+      const choiceText = data.choices?.[0]?.message?.content;
+      if (typeof choiceText !== "string" || choiceText.length === 0) {
+        removePendingUserMessage();
+        res.status(502).json({ ok: false, error: "openai_error", message: "OpenAI returned an empty response", request_id: reqId() });
+        return;
+      }
+      responseText = choiceText;
     }
 
     // Add assistant response to history
     session.messages.push({ role: "assistant", content: responseText });
+    userMessagePending = false;
 
     res.json({
       ok: true,
@@ -3132,7 +3157,7 @@ router.post("/session-message", ...toolMiddleware("session-message"), async (req
     });
   } catch (e) {
     // Remove the user message we just added since the call failed
-    session.messages.pop();
+    removePendingUserMessage();
     res.status(500).json({ ok: false, error: "session_message_failed", message: safeErr(e), request_id: reqId() });
   }
 });
