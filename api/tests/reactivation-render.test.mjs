@@ -9,7 +9,7 @@ import assert from "assert";
 process.env.UNSUBSCRIBE_SECRET = "test-secret-do-not-use-in-prod";
 process.env.DATABASE_URL = process.env.DATABASE_URL || "postgresql://test:test@127.0.0.1:5/test";
 
-const { SUBJECT, renderText, renderHtml, parseExcludeDomains, emailDomain } = await import("../dist/scripts/reactivationEmail.js");
+const { SUBJECT, renderText, renderHtml, parseExcludeDomains, emailDomain, isStillMarketableRecipient } = await import("../dist/scripts/reactivationEmail.js");
 
 let failures = 0;
 function test(name, fn) {
@@ -85,6 +85,15 @@ test("internal aliases match the default exclusion; real users do not", () => {
     assert.ok(set.has(emailDomain(internal)), `${internal} should be excluded`);
   }
   assert.ok(!set.has(emailDomain("someone@gmail.com")));
+});
+
+test("live send re-check rejects deleted or changed recipients", () => {
+  const snapshot = { email: "sam@example.com" };
+  assert.strictEqual(isStillMarketableRecipient(snapshot, { email: "sam@example.com", emailVerified: true, emailOptOut: false }), true);
+  assert.strictEqual(isStillMarketableRecipient(snapshot, { email: "deleted-agent@deleted.invalid", emailVerified: false, emailOptOut: false }), false);
+  assert.strictEqual(isStillMarketableRecipient(snapshot, { email: "sam@example.com", emailVerified: false, emailOptOut: false }), false);
+  assert.strictEqual(isStillMarketableRecipient(snapshot, { email: "sam@example.com", emailVerified: true, emailOptOut: true }), false);
+  assert.strictEqual(isStillMarketableRecipient(snapshot, null), false);
 });
 
 if (failures) { console.error(`\n${failures} failed`); process.exit(1); }

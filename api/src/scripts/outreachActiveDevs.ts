@@ -62,7 +62,7 @@ import { fileURLToPath } from "url";
 import { prisma } from "../lib/prisma.js";
 import { sendMarketingEmail } from "../services/email.js";
 import { signUnsubscribeToken } from "../lib/unsubscribe.js";
-import { parseExcludeDomains, emailDomain, escapeHtml, maskEmail } from "./reactivationEmail.js";
+import { parseExcludeDomains, emailDomain, escapeHtml, maskEmail, isStillMarketableRecipient } from "./reactivationEmail.js";
 
 const SITE = (process.env.PUBLIC_SITE_URL || "https://archtools.dev").replace(/\/$/, "");
 const CONFIRM = process.env.CONFIRM_SEND === "YES";
@@ -211,11 +211,11 @@ async function main(): Promise<void> {
     // /unsubscribe) must be excluded, not emailed from the stale snapshot.
     const fresh = await prisma.agent.findUnique({
       where: { id: agent.id },
-      select: { emailOptOut: true },
+      select: { email: true, emailVerified: true, emailOptOut: true },
     });
-    if (!fresh || fresh.emailOptOut) {
+    if (!isStillMarketableRecipient(agent, fresh)) {
       skipped++;
-      console.log(JSON.stringify({ at: new Date().toISOString(), agentId: agent.id, email: maskEmail(agent.email), skipped: "opted_out" }));
+      console.log(JSON.stringify({ at: new Date().toISOString(), agentId: agent.id, email: maskEmail(agent.email), skipped: "not_marketable" }));
       continue;
     }
     const unsubUrl = `${SITE}/unsubscribe?token=${encodeURIComponent(signUnsubscribeToken(agent.id))}`;
