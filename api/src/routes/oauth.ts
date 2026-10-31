@@ -19,6 +19,95 @@ function sanitizeScope(raw: string | undefined): string {
   return requested.length ? Array.from(new Set(requested)).join(" ") : "tools:read";
 }
 
+type OAuthClientMetadata =
+  | {
+      ok: true;
+      clientName: string;
+      redirectUris: string[];
+      requestedGrantTypes: string[];
+      authMethod: "none" | "client_secret_post";
+      responseTypes: string[];
+    }
+  | { ok: false; error: string; description: string };
+
+const DEFAULT_GRANT_TYPES = ["authorization_code", "refresh_token"];
+const DEFAULT_RESPONSE_TYPES = ["code"];
+const ALLOWED_GRANT_TYPES = new Set(DEFAULT_GRANT_TYPES);
+const ALLOWED_TOKEN_AUTH_METHODS = ["none", "client_secret_post"] as const;
+const ALLOWED_RESPONSE_TYPES = new Set(DEFAULT_RESPONSE_TYPES);
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isTokenAuthMethod(value: string): value is "none" | "client_secret_post" {
+  return (ALLOWED_TOKEN_AUTH_METHODS as readonly string[]).includes(value);
+}
+
+export function validateOAuthClientMetadata(body: Record<string, unknown>): OAuthClientMetadata {
+  const clientName = body.client_name;
+  const redirectUris = body.redirect_uris;
+  const grantTypes = body.grant_types;
+  const tokenEndpointAuthMethod = body.token_endpoint_auth_method;
+  const responseTypes = body.response_types;
+
+  if (typeof clientName !== "string" || clientName.trim().length === 0) {
+    return { ok: false, error: "invalid_client_metadata", description: "client_name and redirect_uris are required" };
+  }
+  if (!isStringArray(redirectUris) || redirectUris.length === 0) {
+    return { ok: false, error: "invalid_client_metadata", description: "client_name and redirect_uris are required" };
+  }
+
+  for (const uri of redirectUris) {
+    let parsed: URL;
+    try {
+      parsed = new URL(uri);
+    } catch {
+      return { ok: false, error: "invalid_redirect_uri", description: `Invalid URI: ${uri}` };
+    }
+    if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+      return { ok: false, error: "invalid_redirect_uri", description: "redirect_uris must use https (or localhost for development)" };
+    }
+  }
+
+  if (grantTypes !== undefined && !isStringArray(grantTypes)) {
+    return { ok: false, error: "invalid_client_metadata", description: "grant_types must be an array of strings" };
+  }
+  const requestedGrantTypes = grantTypes ?? DEFAULT_GRANT_TYPES;
+  for (const grantType of requestedGrantTypes) {
+    if (!ALLOWED_GRANT_TYPES.has(grantType)) {
+      return { ok: false, error: "invalid_client_metadata", description: `Unsupported grant_type: ${grantType}` };
+    }
+  }
+
+  if (tokenEndpointAuthMethod !== undefined && typeof tokenEndpointAuthMethod !== "string") {
+    return { ok: false, error: "invalid_client_metadata", description: "token_endpoint_auth_method must be 'none' or 'client_secret_post'" };
+  }
+  const authMethod = tokenEndpointAuthMethod ?? "none";
+  if (!isTokenAuthMethod(authMethod)) {
+    return { ok: false, error: "invalid_client_metadata", description: "token_endpoint_auth_method must be 'none' or 'client_secret_post'" };
+  }
+
+  if (responseTypes !== undefined && !isStringArray(responseTypes)) {
+    return { ok: false, error: "invalid_client_metadata", description: "response_types must be an array of strings" };
+  }
+  const requestedResponseTypes = responseTypes ?? DEFAULT_RESPONSE_TYPES;
+  for (const responseType of requestedResponseTypes) {
+    if (!ALLOWED_RESPONSE_TYPES.has(responseType)) {
+      return { ok: false, error: "invalid_client_metadata", description: `Unsupported response_type: ${responseType}` };
+    }
+  }
+
+  return {
+    ok: true,
+    clientName: clientName.trim(),
+    redirectUris,
+    requestedGrantTypes,
+    authMethod,
+    responseTypes: requestedResponseTypes,
+  };
+}
+
 // HTML escape to prevent XSS injection in consent page
 export function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
@@ -324,82 +413,42 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
 
 // ─── POST /oauth/register — Dynamic Client Registration (RFC 7591) ────────────
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
-  const {
-    client_name,
-    redirect_uris,
-    grant_types,
-    token_endpoint_auth_method,
-    response_types,
-  } = req.body as {
-    client_name?: string;
-    redirect_uris?: string[];
-    grant_types?: string[];
-    token_endpoint_auth_method?: string;
-    response_types?: string[];
-  };
-
-  // Validate required fields
-  if (!client_name || !redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
-    res.status(400).json({ error: "invalid_client_metadata", error_description: "client_name and redirect_uris are required" });
-    return;
-  }
-
-  // Validate redirect URIs — must be https or localhost
-  for (const uri of redirect_uris) {
-    let parsed: URL;
-    try {
-      parsed = new URL(uri);
-    } catch {
-      res.status(400).json({ error: "invalid_redirect_uri", error_description: `Invalid URI: ${uri}` });
-      return;
-    }
-    if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
-      res.status(400).json({ error: "invalid_redirect_uri", error_description: "redirect_uris must use https (or localhost for development)" });
-      return;
-    }
-  }
-
-  // Validate grant_types if provided
-  const allowedGrantTypes = ["authorization_code", "refresh_token"];
-  const requestedGrantTypes = grant_types ?? ["authorization_code", "refresh_token"];
-  for (const gt of requestedGrantTypes) {
-    if (!allowedGrantTypes.includes(gt)) {
-      res.status(400).json({ error: "invalid_client_metadata", error_description: `Unsupported grant_type: ${gt}` });
-      return;
-    }
-  }
-
-  // Validate token_endpoint_auth_method
-  const authMethod = token_endpoint_auth_method ?? "none";
-  if (!["none", "client_secret_post"].includes(authMethod)) {
-    res.status(400).json({ error: "invalid_client_metadata", error_description: "token_endpoint_auth_method must be 'none' or 'client_secret_post'" });
+  const validation = validateOAuthClientMetadata((req.body && typeof req.body === "object") ? req.body as Record<string, unknown> : {});
+  if (!validation.ok) {
+    res.status(400).json({ error: validation.error, error_description: validation.description });
     return;
   }
 
   const clientId = `arch_${crypto.randomBytes(16).toString("hex")}`;
-  const isPublic = authMethod === "none";
+  const isPublic = validation.authMethod === "none";
   const clientSecret = isPublic ? null : crypto.randomBytes(32).toString("base64url");
 
-  await prisma.oAuthClient.create({
-    data: {
-      id: crypto.randomUUID(),
-      clientId,
-      clientSecret: clientSecret ?? null,
-      name: client_name,
-      redirectUris: redirect_uris,
-      grantTypes: requestedGrantTypes,
-      tokenEndpointAuthMethod: authMethod,
-      isPublic,
-    },
-  });
+  try {
+    await prisma.oAuthClient.create({
+      data: {
+        id: crypto.randomUUID(),
+        clientId,
+        clientSecret: clientSecret ?? null,
+        name: validation.clientName,
+        redirectUris: validation.redirectUris,
+        grantTypes: validation.requestedGrantTypes,
+        tokenEndpointAuthMethod: validation.authMethod,
+        isPublic,
+      },
+    });
+  } catch (error) {
+    console.error("OAuth client registration failed:", error);
+    res.status(500).json({ error: "server_error" });
+    return;
+  }
 
   const responseBody: Record<string, unknown> = {
     client_id: clientId,
-    client_name,
-    redirect_uris,
-    grant_types: requestedGrantTypes,
-    response_types: response_types ?? ["code"],
-    token_endpoint_auth_method: authMethod,
+    client_name: validation.clientName,
+    redirect_uris: validation.redirectUris,
+    grant_types: validation.requestedGrantTypes,
+    response_types: validation.responseTypes,
+    token_endpoint_auth_method: validation.authMethod,
   };
 
   // Only include client_secret for confidential clients
