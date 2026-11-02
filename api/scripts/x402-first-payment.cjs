@@ -118,7 +118,7 @@ async function main() {
 **Method:** POST (query: "x402 payment protocol")
 **Network:** Base Mainnet (eip155:8453)
 **Asset:** USDC (${USDC_ADDRESS})
-**Cost:** 0.005 USDC (5000 units)
+**Cost:** 0.015 USDC (15000 units)
 **TX Hash / Receipt:** ${txHash}
 **Response Status:** ${response.status}
 **Elapsed:** ${elapsed}ms
