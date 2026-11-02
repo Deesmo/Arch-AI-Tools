@@ -65,7 +65,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRe = /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/;
   if (!emailRe.test(email)) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "Invalid email format", request_id: reqId() });
     return;
@@ -299,7 +299,7 @@ router.post("/verify-email/resend", async (req: Request, res: Response): Promise
   // Browser form posts (Accept: text/html) get a page; fetch/API clients
   // (Accept: */* or application/json) get JSON — json listed first wins */*.
   const wantsHtml = req.accepts(["json", "html"]) === "html";
-  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || email.length > 254 || !/^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/.test(email)) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "A valid email is required.", request_id: reqId() });
     return;
   }

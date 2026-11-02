@@ -654,7 +654,7 @@
         const maxCalls = Math.max(...tools.map(t => t.calls), 1);
         document.getElementById('top-tools-chart').innerHTML = tools.length ? tools.map(t => `
           <div class="bar-wrap">
-            <span class="bar-label">${t.tool}</span>
+            <span class="bar-label">${esc(t.tool)}</span>
             <div class="bar-track"><div class="bar-fill" style="width:${(t.calls/maxCalls*100).toFixed(0)}%"></div></div>
             <span class="bar-count">${t.calls.toLocaleString()}</span>
           </div>
@@ -765,10 +765,16 @@
 
       list.innerHTML = todaySignups.map(a => `
         <div class="signup-item">
-          📧 ${a.email || '—'} <span style="color:var(--accent);margin-left:8px;">${a.tier || 'free'}</span>
+          📧 ${esc(a.email || '—')} <span style="color:var(--accent);margin-left:8px;">${esc(a.tier || 'free')}</span>
           <span style="float:right;color:var(--muted)">${new Date(a.createdAt).toLocaleTimeString()}</span>
         </div>
       `).join('');
+    }
+
+    // Escape anything user-controlled before it goes into innerHTML (signup emails
+    // are attacker-chosen; an unescaped one ran script with the admin key in reach).
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     function tierTag(tier) {
@@ -811,13 +817,13 @@
 
       document.getElementById('agents-tbody').innerHTML = filtered.length ? filtered.map(a => `
         <tr>
-          <td class="mono" style="font-size:12px">${a.email || '—'}</td>
+          <td class="mono" style="font-size:12px">${esc(a.email || '—')}</td>
           <td class="mono">${(a.credits ?? 0).toLocaleString()}</td>
           <td>${tierTag(a.tier || 'free')}</td>
           <td style="color:var(--muted);font-size:12px">${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '—'}</td>
           <td style="color:var(--muted);font-size:12px">${timeAgo(a.lastActive)}</td>
           <td class="mono">${(a.totalCalls ?? 0).toLocaleString()}</td>
-          <td><button class="btn btn-sm btn-green" onclick="openGrantFor('${a.id}','${(a.email||'').replace(/'/g,"\\'")}')">+ Credits</button></td>
+          <td><button class="btn btn-sm btn-green" onclick="openGrantFor('${esc(a.id)}')">+ Credits</button></td>
         </tr>
       `).join('') : '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">No agents match</td></tr>';
     }
@@ -870,7 +876,8 @@
       }
     }
 
-    function openGrantFor(id, email) {
+    function openGrantFor(id) {
+      const email = (allAgents.find(x => x.id === id) || {}).email || '';
       openModal('grant');
       setTimeout(() => {
         document.getElementById('grant-id').value = id;

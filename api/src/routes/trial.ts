@@ -43,7 +43,7 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRe = /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/;
   if (!emailRe.test(email)) {
     res.status(400).json({
       ok: false,

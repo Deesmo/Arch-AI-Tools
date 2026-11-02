@@ -223,7 +223,7 @@ export default router;
 
 router.post("/forgot-password", forgotLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body ?? {};
-  if (!email) {
+  if (typeof email !== "string" || !email) {
     res.status(400).json({ ok: false, error: "email_required" });
     return;
   }
@@ -295,7 +295,13 @@ router.get("/reset-password", (_req: Request, res: Response): void => {
 
 router.post("/reset-password", sensitiveLimiter, async (req: Request, res: Response): Promise<void> => {
   const { token, password } = req.body ?? {};
-  if (!token || !password) {
+  // SECURITY: the token must be the 64-hex string we issued. Anything else (e.g. a
+  // Prisma filter object like {"not":""}) would match another account's pending reset.
+  if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) {
+    res.status(400).json({ ok: false, error: "invalid_or_expired_token", message: "This reset link has expired or is invalid. Please request a new one." });
+    return;
+  }
+  if (!password) {
     res.status(400).json({ ok: false, error: "token_and_password_required" });
     return;
   }
