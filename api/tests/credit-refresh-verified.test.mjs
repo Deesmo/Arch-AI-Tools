@@ -16,7 +16,16 @@ import { DISPOSABLE_DOMAINS } from "../dist/lib/disposableDomains.js";
 // A — source pins on the refresh job.
 const cron = readFileSync(new URL("../src/cron/refreshCredits.ts", import.meta.url), "utf8");
 assert.match(cron, /where:\s*\{\s*tier:\s*"free",\s*emailVerified:\s*true\s*\}/, "refresh must select verified free accounts only");
-assert.match(cron, /agent\.email && !agent\.emailOptOut/, "refresh email must skip unsubscribed accounts");
+assert.match(cron, /if \(await shouldSendRefreshEmail\(agent\.email, agent\.emailOptOut\)\)/, "refresh email must go through the deliverability guard");
+assert.match(cron, /if \(!email \|\| emailOptOut\) return false;/, "unsubscribed accounts must never be emailed");
+assert.match(cron, /EXCLUDE_DOMAINS\.has\(domain\) \|\| isDisposableEmail\(email\)/, "internal and throwaway domains must be skipped");
+
+// A2 — null-MX handling (RFC 7505: "0 ." means the domain accepts no mail; Node reports exchange "").
+const { mxAcceptsMail } = await import("../dist/cron/refreshCredits.js");
+assert.equal(mxAcceptsMail([{ exchange: "", priority: 0 }]), false, "null MX (example.com) accepts no mail");
+assert.equal(mxAcceptsMail([{ exchange: ".", priority: 0 }]), false);
+assert.equal(mxAcceptsMail([]), false);
+assert.equal(mxAcceptsMail([{ exchange: "gmail-smtp-in.l.google.com", priority: 5 }]), true);
 
 // B — blocklist contents and wiring.
 for (const d of ["nexotp.web.id", "trialkupremium.web.id", "mailinator.com", "yopmail.com", "calirona.com", "maxxspace.com"]) {
