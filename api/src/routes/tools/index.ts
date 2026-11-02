@@ -11,6 +11,7 @@ import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
 import { trimSessionContext } from "../../lib/sessionContext.js";
 import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { zonedToDate } from "../../lib/zonedTime.js";
+import { noteProviderResponse, unavailableProviders } from "../../lib/providerHealth.js";
 import { DISPOSABLE_DOMAINS } from "../../lib/disposableDomains.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
@@ -144,6 +145,7 @@ function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFuncti
 function upstreamFailure(res: Response, provider: string, status: number, detail: string | undefined, byok: boolean): void {
   const callerFault = byok && status >= 400 && status < 500;
   if (!byok) console.error(`[ai-generate] ${provider} failed:`, status, detail ?? "(no text)");
+  if (!byok && provider === "OpenAI") noteProviderResponse("openai", status, String(detail ?? ""));
   res.status(callerFault ? 400 : 503).json({
     ok: false,
     error: callerFault ? "byok_api_error" : "upstream_unavailable",
@@ -155,8 +157,26 @@ function upstreamFailure(res: Response, provider: string, status: number, detail
   });
 }
 
+/**
+ * Answer 503 before any payment challenge or credit charge when the paid
+ * provider behind this tool is out of credit (lib/providerHealth.ts).
+ */
+function providerGate(toolName: string) {
+  return (_req: Request, res: Response, next: NextFunction): void => {
+    if (!unavailableProviders(toolName)) { next(); return; }
+    res.setHeader("Retry-After", "1800");
+    res.status(503).json({
+      ok: false,
+      error: "tool_temporarily_unavailable",
+      message: `${toolName} is temporarily unavailable because its provider is out of credit. You have not been charged. Retry later.`,
+      retry_after_seconds: 1800,
+      request_id: reqId(),
+    });
+  };
+}
+
 function toolMiddleware(toolName: string) {
-  return [x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
+  return [providerGate(toolName), x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
 }
 
 function isX402Paid(req: Request): boolean {
@@ -2395,6 +2415,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
     if (!r.ok) {
       const err = await r.text();
       console.error("[text-to-speech] ElevenLabs error:", r.status, err);
+      noteProviderResponse("elevenlabs", r.status, err);
       res.status(503).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: reqId() }); return;
     }
     const buf = await r.arrayBuffer();
@@ -2436,6 +2457,7 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     if (!r.ok) {
       const err = await r.text();
       console.error("[transcribe-audio] OpenAI error:", r.status, err);
+      noteProviderResponse("openai", r.status, err);
       res.status(503).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { text: string; language?: string; duration?: number; segments?: unknown[] };
@@ -2586,6 +2608,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
       console.error("[design-create] OpenAI error:", r.status, err);
+      noteProviderResponse("openai", r.status, JSON.stringify(err));
       // Fallback: Stability AI
       if (process.env.STABILITY_API_KEY) {
         try {
@@ -2599,10 +2622,10 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
             if (sd.image) {
               res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return;
             }
-          }
+          } else noteProviderResponse("stability", sr.status, await sr.text().catch(() => ""));
         } catch (_) { /* fall through */ }
       }
-      res.status(503).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "generation_error", message: `Image generation is temporarily unavailable (provider returned ${r.status}). Please retry later.`, request_id: reqId() }); return;
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
     const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
@@ -3277,7 +3300,8 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
 
       console.error("[video-generate] Runway start error:", attempt.status, err);
-      res.status(503).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      noteProviderResponse("runway", attempt.status, err);
+      res.status(503).json({ ok: false, error: "runway_error", message: `Video generation is temporarily unavailable (provider returned ${attempt.status}). Please retry later.`, request_id: reqId() }); return;
     }
 
     if (!startResp || !selectedModel) {
@@ -3346,6 +3370,7 @@ router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
+      noteProviderResponse("removebg", resp.status, err);
       // NOTE: never return 502 from origin — Cloudflare replaces origin 502
       // bodies with its own error page, hiding our JSON from the client.
       let detail = err.slice(0, 300);
@@ -3384,6 +3409,7 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[email-find] Hunter error:", resp.status, err);
+      noteProviderResponse("hunter", resp.status, err);
       // NOTE: never return 502 from origin — Cloudflare replaces origin 502 bodies
       // with its own error page, hiding our JSON from the client.
       let detail = err.slice(0, 300);

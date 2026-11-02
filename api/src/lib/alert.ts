@@ -21,6 +21,8 @@ export type SecurityAlertType =
   | "auth_fail_burst"
   | "unauthed_billable_hit"
   | "credit_drain_spike"
+  | "provider_exhausted"
+  | "provider_recovered"
   | "test";
 
 export interface SecurityAlertPayload {
@@ -29,6 +31,8 @@ export interface SecurityAlertPayload {
   detail: string;
   severity?: "info" | "warning" | "critical";
   fields?: Record<string, string | number>;
+  /** Rate-limit key (default: type) — e.g. one per provider so two providers can alert together. */
+  dedupeKey?: string;
 }
 
 const SEVERITY_COLOR: Record<string, number> = {
@@ -46,9 +50,10 @@ export function sendSecurityAlert(payload: SecurityAlertPayload): boolean {
     if (!WEBHOOK_URL) return false;
 
     const now = Date.now();
-    const last = lastSentByType.get(payload.type) ?? 0;
+    const key = payload.dedupeKey ?? payload.type;
+    const last = lastSentByType.get(key) ?? 0;
     if (now - last < COOLDOWN_MS) return false;
-    lastSentByType.set(payload.type, now);
+    lastSentByType.set(key, now);
 
     const severity = payload.severity ?? "warning";
     const embed = {

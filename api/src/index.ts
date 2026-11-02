@@ -9,6 +9,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { startProviderHealth } from "./lib/providerHealth.js";
 import { config } from "./config.js";
 
 // ESM-compatible __dirname (safe in both CommonJS and ESM builds)
@@ -658,6 +659,7 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
 
 app.listen(config.port, () => {
   console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
+  startProviderHealth();
   console.log(`   ENV: ${config.nodeEnv}`);
   console.log(`   Site: ${config.publicSiteUrl}`);
 });
@@ -665,9 +667,9 @@ app.listen(config.port, () => {
 // Daily cleanup of expired OAuth records
 setInterval(async () => {
   try {
-    const { cleanupExpiredOAuthRecords } = await import("./lib/systemJobs");
+    const { cleanupExpiredOAuthRecords } = await import("./lib/systemJobs.js");
     await cleanupExpiredOAuthRecords();
-  } catch { /* non-fatal */ }
+  } catch (err) { console.error("[cleanup] OAuth cleanup failed:", (err as Error).message); }
 }, 24 * 60 * 60 * 1000);
 
 // MCP anonymous-demo pool auto-top-off — hourly, hard-capped per month.
@@ -675,15 +677,15 @@ setInterval(async () => {
 // this is the bounded-credit backstop (see src/cron/demoTopoff.ts).
 setInterval(async () => {
   try {
-    const { runDemoTopoff } = await import("./cron/demoTopoff");
+    const { runDemoTopoff } = await import("./cron/demoTopoff.js");
     await runDemoTopoff();
-  } catch { /* non-fatal */ }
+  } catch (err) { console.error("[demo-topoff] failed:", (err as Error).message); }
 }, 60 * 60 * 1000);
 setTimeout(async () => {
   try {
-    const { runDemoTopoff } = await import("./cron/demoTopoff");
+    const { runDemoTopoff } = await import("./cron/demoTopoff.js");
     await runDemoTopoff();
-  } catch { /* non-fatal */ }
+  } catch (err) { console.error("[demo-topoff] failed:", (err as Error).message); }
 }, 90 * 1000); // one kick shortly after boot
 
 export default app;

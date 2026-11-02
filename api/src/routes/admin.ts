@@ -5,8 +5,16 @@ import { requireAdmin } from "../middleware/auth.js";
 import { reqId, safeErr } from "../utils/credits.js";
 import { sendFeatureAnnouncement } from "../services/email.js";
 import { logger } from "../lib/logger.js";
+import { providerHealthSnapshot, runProviderProbes } from "../lib/providerHealth.js";
 
 const router = Router();
+
+// Provider credit health (lib/providerHealth.ts): which paid providers are out of
+// credit and which tools that switched off. ?refresh=1 runs every probe now.
+router.get("/provider-health", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  if (req.query.refresh === "1") await runProviderProbes(true);
+  res.json({ ok: true, providers: providerHealthSnapshot(), request_id: reqId() });
+});
 
 router.get("/stats", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
