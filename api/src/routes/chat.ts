@@ -146,13 +146,13 @@ router.post("/", chatLimiter, async (req: Request, res: Response): Promise<void>
     if (!resp.ok) {
       const errData = await resp.json().catch(() => ({}));
       console.error("Chat AI error:", resp.status, errData);
-      res.status(502).json({ ok: false, error: "Failed to get AI response. Try again." });
+      res.status(503).json({ ok: false, error: "Failed to get AI response. Try again." });
       return;
     }
 
     const data = (await resp.json()) as { ok?: boolean; text?: string };
     if (!data.ok || !data.text) {
-      res.status(502).json({ ok: false, error: "Empty AI response. Try again." });
+      res.status(503).json({ ok: false, error: "Empty AI response. Try again." });
       return;
     }
 

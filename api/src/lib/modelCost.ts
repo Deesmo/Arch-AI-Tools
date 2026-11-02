@@ -25,11 +25,18 @@ const MODEL_COST_MULTIPLIER: Record<string, number> = {
   "gpt-4o-mini": 0.3,
   "gpt-4-turbo": 2.0,
   "gpt-3.5-turbo": 0.3,
-  // Google
+  // Google (2.5 family: Pro $1.25/$10, Flash $0.30/$2.50, Flash-Lite $0.10/$0.40 per MTok)
+  "gemini-2.5-pro": 0.8,
+  "gemini-2.5-flash": 0.3,
+  "gemini-2.5-flash-lite": 0.3,
+  // retired upstream; kept so old session rows still price
   "gemini-2.0-flash": 0.3,
   "gemini-1.5-pro": 0.8,
   "gemini-1.5-flash": 0.3,
-  // xAI
+  // xAI (prices from GET https://api.x.ai/v1/language-models, 2026-11-02: $1.25/$2.50 per MTok)
+  "grok-4.3": 0.3,
+  "grok-4.20-0309-non-reasoning": 0.3,
+  // retired upstream; kept so old session rows still price
   "grok-3": 1.0,
   "grok-3-fast": 1.3,
   "grok-2": 0.8,

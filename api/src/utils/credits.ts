@@ -206,6 +206,18 @@ export async function deductCredits(
     res.setHeader("X-Upgrade-URL", packUrl(recommendPack(cost).id));
   }
 
+  // A failed call is refunded in finalizeCharge, so its response must not report
+  // the up-front deduction: rewrite the credit headers as the response is sent.
+  const originalWriteHead = res.writeHead;
+  res.writeHead = function (this: Response, ...args: unknown[]) {
+    const status = typeof args[0] === "number" ? args[0] : res.statusCode;
+    if (status >= 400 && !isChargeWaived(res)) {
+      res.setHeader("X-Credits-Used", "0");
+      res.setHeader("X-Credits-Remaining", (agent.credits + cost).toString());
+    }
+    return (originalWriteHead as (...a: unknown[]) => Response).apply(this, args);
+  } as typeof res.writeHead;
+
   let finalized = false;
   const finalizeCharge = async (responseCompleted: boolean): Promise<void> => {
     if (finalized) return;

@@ -10,6 +10,8 @@ import { prisma } from "../../lib/prisma.js";
 import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
 import { trimSessionContext } from "../../lib/sessionContext.js";
 import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
+import { zonedToDate } from "../../lib/zonedTime.js";
+import { DISPOSABLE_DOMAINS } from "../../lib/disposableDomains.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
 import {
@@ -128,6 +130,29 @@ function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFuncti
     return;
   }
   next();
+}
+
+/**
+ * A model/provider call failed or returned no text. Respond with an error so the
+ * up-front credit charge is refunded — never a 200 with empty output. A BYOK
+ * caller's own key being rejected (4xx) is the caller's error (400); anything
+ * else is 503 (never 502: Cloudflare replaces origin 502 bodies with its page).
+ * The provider's own error text is shown only for the caller's own key (BYOK):
+ * for our platform keys it can carry quota/billing/project details, so it is
+ * logged server-side and the caller gets a generic message.
+ */
+function upstreamFailure(res: Response, provider: string, status: number, detail: string | undefined, byok: boolean): void {
+  const callerFault = byok && status >= 400 && status < 500;
+  if (!byok) console.error(`[ai-generate] ${provider} failed:`, status, detail ?? "(no text)");
+  res.status(callerFault ? 400 : 503).json({
+    ok: false,
+    error: callerFault ? "byok_api_error" : "upstream_unavailable",
+    message: byok
+      ? `${provider} ${status >= 400 ? `returned ${status}` : "returned no text"}${detail ? `: ${String(detail).slice(0, 200)}` : ""}`
+      : `${provider} is temporarily unavailable. Please retry later or choose another model.`,
+    provider: provider.toLowerCase(),
+    request_id: reqId(),
+  });
 }
 
 function toolMiddleware(toolName: string) {
@@ -353,8 +378,9 @@ router.post("/generate-hash", ...toolMiddleware("generate-hash"), async (req: Au
     const ok = await deductCredits(req, res, "generate-hash", 1);
     if (!ok) return;
   }
-  const { text, algorithm = "sha256", encoding = "hex" } = req.body as { text?: string; algorithm?: string; encoding?: string };
-  if (!text || typeof text !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required and must be a string", request_id: reqId() }); return; }
+  const { algorithm = "sha256", encoding = "hex" } = req.body as { algorithm?: string; encoding?: string };
+  const text = (req.body.text ?? req.body.input) as string | undefined; // accept the catalog's documented `input`
+  if (!text || typeof text !== "string") { res.status(400).json({ ok: false, error: "invalid_request", message: "text (or input) is required and must be a string", request_id: reqId() }); return; }
   const algos = ["sha256", "sha512", "sha1", "md5", "sha384"];
   if (!algos.includes(algorithm)) { res.status(400).json({ ok: false, error: "invalid_request", message: `algorithm must be one of: ${algos.join(", ")}`, request_id: reqId() }); return; }
   const enc: "hex" | "base64" = (encoding === "base64" ? "base64" : "hex");
@@ -451,9 +477,12 @@ router.post("/transform-text", ...toolMiddleware("transform-text"), async (req: 
   }
   const { text } = req.body as { text?: string };
   let mode = (req.body.mode ?? req.body.operation) as string | undefined; // accept documented alias `operation`
-  if (mode === "camelCase") mode = "camel"; else if (mode === "snakeCase") mode = "snake"; else if (mode === "kebabCase") mode = "kebab"; // accept documented casing variants
-  if (!text || !mode) { res.status(400).json({ ok: false, error: "invalid_request", message: "text and mode (or operation) are required", request_id: reqId() }); return; }
-  const modes = ["uppercase","lowercase","titlecase","slug","camel","snake","kebab","base64_encode","base64_decode","reverse","trim","word_count"];
+  // Accept every documented spelling: the catalog (upper/lower/title, default uppercase)
+  // and openapi.json (upper/lower/title/pascal) use short names.
+  const MODE_ALIASES: Record<string, string> = { camelCase: "camel", snakeCase: "snake", kebabCase: "kebab", upper: "uppercase", lower: "lowercase", title: "titlecase", pascalCase: "pascal" };
+  mode = MODE_ALIASES[mode ?? ""] ?? mode ?? "uppercase";
+  if (!text) { res.status(400).json({ ok: false, error: "invalid_request", message: "text is required", request_id: reqId() }); return; }
+  const modes = ["uppercase","lowercase","titlecase","slug","camel","pascal","snake","kebab","base64_encode","base64_decode","reverse","trim","word_count"];
   if (!modes.includes(mode)) { res.status(400).json({ ok: false, error: "invalid_request", message: `mode must be one of: ${modes.join(", ")}`, request_id: reqId() }); return; }
   let result: string | number;
   const words = text.trim().split(/\s+/);
@@ -463,6 +492,7 @@ router.post("/transform-text", ...toolMiddleware("transform-text"), async (req: 
     case "titlecase": result = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "); break;
     case "slug": result = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); break;
     case "camel": result = words.map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(""); break;
+    case "pascal": result = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(""); break;
     case "snake": result = text.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""); break;
     case "kebab": result = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); break;
     case "base64_encode": result = Buffer.from(text, "utf8").toString("base64"); break;
@@ -593,7 +623,7 @@ router.post("/extract-page", ...toolMiddleware("extract-page"), async (req: Auth
     $("a[href]").each((_, el) => { const h = $(el).attr("href"); if (h?.startsWith("http")) links.push(h); });
     res.json({ ok: true, url, title, description, text, images: images.slice(0, 20), links: links.slice(0, 30), word_count: text.split(/\s+/).length, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "extract_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "extract_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -667,7 +697,7 @@ router.post("/search-web", ...toolMiddleware("search-web"), async (req: AuthedRe
     }
     res.status(503).json({ ok: false, error: "search_unavailable", message: "Search is temporarily unavailable. Pass x-brave-key or x-tavily-key header for BYOK.", request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "search_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -785,7 +815,7 @@ router.post("/ip-lookup", ...toolMiddleware("ip-lookup"), async (req: AuthedRequ
     if (data.status === "fail") { res.status(422).json({ ok: false, error: "lookup_error", message: String(data.message ?? "Invalid IP"), request_id: reqId() }); return; }
     res.json({ ok: true, ip: data.query, country: data.country, country_code: data.countryCode, region: data.regionName, city: data.city, zip: data.zip, lat: data.lat, lon: data.lon, timezone: data.timezone, isp: data.isp, org: data.org, is_proxy: data.proxy, is_hosting: data.hosting, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "lookup_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "lookup_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -829,7 +859,7 @@ router.post("/whois-lookup", ...toolMiddleware("whois-lookup"), async (req: Auth
     const resp = await axios.get(`https://rdap.iana.org/domain/${clean}`, { timeout: 10000, headers: { "Accept": "application/json" } });
     res.json({ ...parseRdap(resp.data as Record<string, unknown>), source: "iana_fallback" }); return;
   } catch (e) {
-    res.status(502).json({ ok: false, error: "whois_error", message: safeErr(lastError ?? e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "whois_error", message: safeErr(lastError ?? e), request_id: reqId() });
   }
 });
 
@@ -846,17 +876,20 @@ router.post("/email-verify", ...toolMiddleware("email-verify"), async (req: Auth
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const valid_format = emailRe.test(email);
   const domain = email.split("@")[1] ?? "";
-  const disposableDomains = ["mailinator.com","guerrillamail.com","temp-mail.org","throwaway.email","yopmail.com","trashmail.com","fakeinbox.com","maildrop.cc","sharklasers.com","guerrillamailblock.com"];
-  const is_disposable = disposableDomains.includes(domain.toLowerCase());
+  const is_disposable = DISPOSABLE_DOMAINS.has(domain.toLowerCase());
   let mx_valid = false;
+  let null_mx = false;
   if (valid_format && !is_disposable) {
     try {
-      const resp = await axios.get(`https://dns.google/resolve?name=${domain}&type=MX`, { timeout: 5000 });
-      const data = resp.data as { Status: number; Answer?: unknown[] };
-      mx_valid = data.Status === 0 && (data.Answer?.length ?? 0) > 0;
+      const resp = await axios.get(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`, { timeout: 5000 });
+      const data = resp.data as { Status: number; Answer?: Array<{ type?: number; data?: string }> };
+      const mx = (data.Answer ?? []).filter(a => a.type === 15).map(a => String(a.data ?? "").trim());
+      // RFC 7505: a single MX of "0 ." is a "null MX" — the domain accepts no mail.
+      null_mx = mx.length > 0 && mx.every(r => /^\d+\s+\.$/.test(r));
+      mx_valid = data.Status === 0 && mx.some(r => !/^\d+\s+\.$/.test(r));
     } catch { mx_valid = false; }
   }
-  res.json({ ok: true, email, valid_format, is_disposable, mx_valid, deliverable: valid_format && !is_disposable && mx_valid, domain, request_id: reqId() });
+  res.json({ ok: true, email, valid_format, is_disposable, mx_valid, ...(null_mx ? { null_mx: true } : {}), deliverable: valid_format && !is_disposable && mx_valid, domain, request_id: reqId() });
 });
 
 // ─── 15. PHONE-VALIDATE ──────────────────────────────────────────────────────
@@ -892,13 +925,13 @@ router.post("/currency-convert", ...toolMiddleware("currency-convert"), async (r
   try {
     const resp = await axios.get(`https://open.er-api.com/v6/latest/${from.toUpperCase()}`, { timeout: 8000 });
     const data = resp.data as { result: string; rates?: Record<string, number> };
-    if (data.result !== "success" || !data.rates) { res.status(502).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() }); return; }
+    if (data.result !== "success" || !data.rates) { res.status(503).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() }); return; }
     const rate = data.rates[to.toUpperCase()];
     if (!rate) { res.status(422).json({ ok: false, error: "invalid_currency", message: `Currency ${to} not found`, request_id: reqId() }); return; }
     const converted = Math.round(amount * rate * 100) / 100;
     res.json({ ok: true, from: from.toUpperCase(), to: to.toUpperCase(), amount, rate, converted, request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "convert_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "convert_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -910,13 +943,14 @@ router.post("/timezone-convert", ...toolMiddleware("timezone-convert"), async (r
     const ok = await deductCredits(req, res, "timezone-convert", 1);
     if (!ok) return;
   }
-  const { datetime, from_tz, to_tz } = req.body as { datetime?: string; from_tz?: string; to_tz?: string };
-  if (!datetime || !from_tz || !to_tz) { res.status(400).json({ ok: false, error: "invalid_request", message: "datetime, from_tz, and to_tz are required", request_id: reqId() }); return; }
+  // Catalog contract: to_tz required; from_tz defaults to UTC; datetime defaults to now.
+  const { to_tz, from_tz = "UTC", datetime = new Date().toISOString() } = req.body as { datetime?: string; from_tz?: string; to_tz?: string };
+  if (!to_tz) { res.status(400).json({ ok: false, error: "invalid_request", message: "to_tz is required (from_tz defaults to UTC, datetime to now)", request_id: reqId() }); return; }
   try {
-    const fromDate = new Date(datetime);
-    if (isNaN(fromDate.getTime())) { res.status(422).json({ ok: false, error: "invalid_datetime", message: "Could not parse datetime", request_id: reqId() }); return; }
-    const toFormatted = new Intl.DateTimeFormat("en-US", { timeZone: to_tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(fromDate);
-    res.json({ ok: true, input: datetime, from_tz, to_tz, result: toFormatted, iso: fromDate.toISOString(), request_id: reqId() });
+    const fromDate = zonedToDate(datetime, from_tz);
+    if (!fromDate) { res.status(422).json({ ok: false, error: "invalid_datetime", message: "Could not parse datetime (use ISO 8601, e.g. 2026-11-02T12:00)", request_id: reqId() }); return; }
+    const fmt = (tz: string) => new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(fromDate);
+    res.json({ ok: true, input: datetime, from_tz, to_tz, from_local: fmt(from_tz), result: fmt(to_tz), iso: fromDate.toISOString(), request_id: reqId() });
   } catch (e) {
     res.status(422).json({ ok: false, error: "tz_error", message: safeErr(e), request_id: reqId() });
   }
@@ -930,14 +964,18 @@ router.post("/generate-uuid", ...toolMiddleware("generate-uuid"), async (req: Au
     const ok = await deductCredits(req, res, "generate-uuid", 1);
     if (!ok) return;
   }
-  const { version = "v4", count = 1, format = "uuid" } = req.body as { version?: string; count?: number; format?: string };
-  const n = Math.min(Math.max(1, count), 100);
+  const { count = 1, format = "uuid" } = req.body as { count?: number; format?: string };
+  const version = String(req.body.version ?? req.body.type ?? "v4"); // catalog documents `type`
+  const prefix = typeof req.body.prefix === "string" ? req.body.prefix.slice(0, 50) : "";
+  const n = Math.min(Math.max(1, Number(count) || 1), 100);
   const results: string[] = [];
   for (let i = 0; i < n; i++) {
-    if (version === "v1") results.push(uuidv1());
-    else if (format === "api_key") results.push(`arch_${uuidv4().replace(/-/g, "")}`);
-    else if (format === "token") results.push(crypto.randomBytes(32).toString("hex"));
-    else results.push(uuidv4());
+    let v: string;
+    if (version === "v1") v = uuidv1();
+    else if (format === "api_key") v = `arch_${uuidv4().replace(/-/g, "")}`;
+    else if (format === "token") v = crypto.randomBytes(32).toString("hex");
+    else v = uuidv4();
+    results.push(prefix + v);
   }
   res.json({ ok: true, version, format, values: results, count: n, request_id: reqId() });
 });
@@ -1198,8 +1236,15 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     "gpt": "gpt-4o",
     "gpt4": "gpt-4o",
     "gpt-4": "gpt-4o",
-    "gemini": "gemini-2.0-flash",
-    "grok": "grok-3",
+    "gemini": "gemini-2.5-flash",
+    "grok": "grok-4.3",
+    // Retired upstream (Google/xAI model lists checked 2026-11-02) — map to current models.
+    "gemini-2.0-flash": "gemini-2.5-flash",
+    "gemini-1.5-flash": "gemini-2.5-flash",
+    "gemini-1.5-pro": "gemini-2.5-pro",
+    "grok-3": "grok-4.3",
+    "grok-3-fast": "grok-4.3",
+    "grok-2": "grok-4.3",
   };
   const requestedModel = explicitModel ? (MODEL_ALIASES[explicitModel.toLowerCase()] ?? explicitModel) : undefined;
   let model = requestedModel ?? AI_MODE_PRESETS[mode ?? "smart"] ?? "claude-sonnet-4-6";
@@ -1207,8 +1252,8 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
 
   const CLAUDE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"];
   const GPT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
-  const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
-  const GROK_MODELS = ["grok-3", "grok-3-fast", "grok-2"];
+  const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"];
+  const GROK_MODELS = ["grok-4.3", "grok-4.20-0309-non-reasoning"];
 
   // x402 flat pricing gap (council finding 2026-07-27): the flat x402 price for
   // this tool ($0.040) covers the standard Sonnet-tier cost, but the 402 challenge
@@ -1275,8 +1320,9 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
         body: JSON.stringify({ model, max_tokens: maxTok, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }] }),
       });
-      const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const data = await resp.json().catch(() => ({})) as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number }; error?: { message?: string } };
       const text = data.choices?.[0]?.message?.content ?? "";
+      if (!resp.ok || !text) { upstreamFailure(res, "OpenAI", resp.status, data.error?.message, byokProvider === "openai"); return; }
       const _u = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
       res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "openai", usage: _u, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_u.input_tokens * 0.000003 + _u.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "openai" ? { byok: true, byok_provider: "openai" } : {}), request_id: reqId() });
       return;
@@ -1292,10 +1338,11 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { maxOutputTokens: maxTok } }),
       });
-      const data = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } };
+      const data = await resp.json().catch(() => ({})) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }; error?: { message?: string } };
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      if (!resp.ok || !text) { upstreamFailure(res, "Google", resp.status, data.error?.message, byokProvider === "google"); return; }
       const _ug = { input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0 };
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.000001 + _ug.output_tokens * 0.000004).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "google" ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "google", usage: _ug, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ug.input_tokens * 0.0000003 + _ug.output_tokens * 0.0000025).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "google" ? { byok: true, byok_provider: "google" } : {}), request_id: reqId() });
       return;
     }
 
@@ -1308,10 +1355,11 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${xaiKey}` },
         body: JSON.stringify({ model, max_tokens: maxTok, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }] }),
       });
-      const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const data = await resp.json().catch(() => ({})) as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number }; error?: unknown };
       const text = data.choices?.[0]?.message?.content ?? "";
+      if (!resp.ok || !text) { upstreamFailure(res, "xAI", resp.status, typeof data.error === "string" ? data.error : (data.error as { message?: string } | undefined)?.message, byokProvider === "xai"); return; }
       const _ux = { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 };
-      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.000005 + _ux.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "xai" ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
+      res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "xai", usage: _ux, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ux.input_tokens * 0.00000125 + _ux.output_tokens * 0.0000025).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "xai" ? { byok: true, byok_provider: "xai" } : {}), request_id: reqId() });
       return;
     }
 
@@ -1330,6 +1378,7 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
         msg = await getAnthropic()!.messages.create({ model, max_tokens: maxTok, ...(system ? { system } : {}), messages: [{ role: "user", content: prompt }] });
       }
       const text = msg.content.find((b: any) => b.type === "text")?.text ?? "";
+      if (!text) { upstreamFailure(res, "Anthropic", 200, "empty response", byokProvider === "anthropic"); return; }
       const _ua = { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens };
       res.json({ ok: true, text, model, ...(resolvedMode ? { mode: resolvedMode } : {}), provider: "anthropic", usage: _ua, word_count: text.split(/\s+/).filter(Boolean).length, char_count: text.length, sentence_count: text.split(/[.!?]+/).filter((s: string) => s.trim()).length, estimated_cost_usd: (_ua.input_tokens * 0.000003 + _ua.output_tokens * 0.000015).toFixed(6), response_format: "structured", arch_tools_version: "1.9.0", processed_at: new Date().toISOString(), ...(byokProvider === "anthropic" ? { byok: true, byok_provider: "anthropic" } : {}), request_id: reqId() });
       return;
@@ -1415,23 +1464,26 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
     const ok = await deductCredits(req, res, "browser-task", 10);
     if (!ok) return;
   }
-  const { url, selector, text: inputText } = req.body as { url?: string; selector?: string; text?: string };
-  const action = String(req.body.action ?? req.body.task ?? "extract");
+  const { url } = req.body as { url?: string };
+  // The MCP schema sends `task` (free text) and `extract` (a selector): free text
+  // is not an action, so only an explicit extract/html in `task` counts.
+  const selector = (req.body.selector ?? req.body.extract) as string | undefined;
+  const taskAsAction = req.body.task === "extract" || req.body.task === "html" ? req.body.task : undefined;
+  const action = String(req.body.action ?? taskAsAction ?? "extract");
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
+  if (action !== "extract" && action !== "html") {
+    res.status(400).json({ ok: false, error: "unsupported_action", message: `browser-task supports only "extract" and "html" (static page fetch, no JavaScript). "${action.slice(0, 40)}" is not available, so you were not charged.`, supported_actions: ["extract", "html"], request_id: reqId() }); return;
+  }
   try { await validateUrl(url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
   // Fallback: use axios + cheerio for extract (Playwright not available on Render free tier)
   try {
     const resp = await safeAxiosGet(url, { timeout: 15000, headers: { "User-Agent": "Mozilla/5.0 ArchTools Browser Task" } });
     const cheerio = await import("cheerio");
     const $ = cheerio.load(resp.data as string);
-    if (action === "extract" || action === "html") {
-      const content = selector ? (action === "html" ? $(selector).html() : $(selector).text()) : $("body").text().replace(/\s+/g, " ").trim();
-      res.json({ ok: true, url, action, result: (content ?? "").slice(0, 5000), request_id: reqId() });
-    } else {
-      res.json({ ok: true, url, action, result: `Simulated ${action} on ${selector ?? "page"}${inputText ? ` with text: ${inputText}` : ""}`, note: "Full Playwright automation requires dedicated infrastructure", request_id: reqId() });
-    }
+    const content = selector ? (action === "html" ? $(selector).html() : $(selector).text()) : $("body").text().replace(/\s+/g, " ").trim();
+    res.json({ ok: true, url, action, result: (content ?? "").slice(0, 5000), request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "browser_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "browser_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1520,7 +1572,7 @@ router.post("/screenshot-capture", ...toolMiddleware("screenshot-capture"), asyn
       request_id: reqId(),
     });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "screenshot_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "screenshot_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1546,6 +1598,24 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
     // Remove nav, footer, script, style
     $("script, style, nav, footer, iframe, noscript").remove();
     const title = $("title").text().trim();
+    // Inline content (text, links, emphasis, code) inside a block element.
+    // .text() flattened these, so "<p>see <a href=x>docs</a></p>" lost the link.
+    function inlineMd(el: ReturnType<typeof $>): string {
+      let out = "";
+      el.contents().each((_i, node) => {
+        if (node.type === "text") { out += ((node as { data?: string }).data ?? "").replace(/\s+/g, " "); return; }
+        const tag = (node as { tagName?: string }).tagName?.toLowerCase() ?? "";
+        const c = $(node);
+        if (tag === "a") { const href = c.attr("href") ?? ""; const t = inlineMd(c).trim(); out += href ? `[${t}](${href})` : t; }
+        else if (tag === "strong" || tag === "b") out += `**${inlineMd(c).trim()}**`;
+        else if (tag === "em" || tag === "i") out += `*${inlineMd(c).trim()}*`;
+        else if (tag === "code") out += `\`${c.text()}\``;
+        else if (tag === "br") out += "\n";
+        else if (tag === "img") { const src = c.attr("src") ?? ""; if (src) out += `![${c.attr("alt") ?? "image"}](${src})`; }
+        else out += inlineMd(c);
+      });
+      return out;
+    }
     // Convert headings, paragraphs, links, lists to markdown
     function toMd(el: ReturnType<typeof $>): string {
       let md = "";
@@ -1554,17 +1624,17 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
         const child = $(node);
         if (["h1","h2","h3","h4","h5","h6"].includes(tag)) {
           const level = parseInt(tag[1], 10);
-          md += `${"#".repeat(level)} ${child.text().trim()}\n\n`;
+          md += `${"#".repeat(level)} ${inlineMd(child).trim()}\n\n`;
         } else if (tag === "p") {
-          const text = child.text().trim();
+          const text = inlineMd(child).trim();
           if (text) md += `${text}\n\n`;
         } else if (tag === "a") {
           const href = child.attr("href") ?? "";
-          const text = child.text().trim();
+          const text = inlineMd(child).trim();
           md += href ? `[${text}](${href})` : text;
         } else if (tag === "ul" || tag === "ol") {
           child.children("li").each((_j, li) => {
-            md += `${tag === "ul" ? "- " : "1. "}${$(li).text().trim()}\n`;
+            md += `${tag === "ul" ? "- " : "1. "}${inlineMd($(li)).trim()}\n`;
           });
           md += "\n";
         } else if (tag === "code") {
@@ -1572,7 +1642,7 @@ router.post("/html-to-markdown", ...toolMiddleware("html-to-markdown"), async (r
         } else if (tag === "pre") {
           md += `\`\`\`\n${child.text()}\n\`\`\`\n\n`;
         } else if (tag === "blockquote") {
-          md += `> ${child.text().trim()}\n\n`;
+          md += `> ${inlineMd(child).trim()}\n\n`;
         } else if (tag === "strong" || tag === "b") {
           md += `**${child.text()}**`;
         } else if (tag === "em" || tag === "i") {
@@ -1618,7 +1688,7 @@ router.post("/url-shorten", ...toolMiddleware("url-shorten"), async (req: Authed
     if (!short.startsWith("http")) throw new Error("TinyURL service unavailable");
     res.json({ ok: true, original_url: url, short_url: short, service: "tinyurl", request_id: reqId() });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "shorten_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "shorten_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -1633,24 +1703,24 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
     if (!ok) return;
   }
   const webhook_url = req.body.url ?? req.body.webhook_url;
-  const { payload, headers: customHeaders = {}, method = "POST" } = req.body as {
-    payload?: unknown;
+  const { headers: customHeaders = {}, method = "POST" } = req.body as {
     headers?: Record<string, string>;
     method?: string;
   };
+  const payload: unknown = req.body.payload ?? req.body.body; // catalog documents `body`
   if (!webhook_url) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url (or url) is required", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("http")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must be a valid http/https URL", request_id: reqId() }); return; }
   if (!webhook_url.startsWith("https://")) { res.status(400).json({ ok: false, error: "invalid_request", message: "webhook_url must use https", request_id: reqId() }); return; }
   try { await validateUrl(webhook_url); } catch (err) { res.status(400).json({ ok: false, error: "invalid_url", message: (err as Error).message, request_id: reqId() }); return; }
-  const allowedMethods = ["POST"];
-  const httpMethod = allowedMethods.includes(method.toUpperCase()) ? method.toUpperCase() : "POST";
+  const allowedMethods = ["POST", "PUT", "PATCH"];
+  const httpMethod = allowedMethods.includes(String(method).toUpperCase()) ? String(method).toUpperCase() : "POST";
   const payloadString = JSON.stringify(payload ?? {});
   if (payloadString.length > 20_000) { res.status(400).json({ ok: false, error: "invalid_request", message: "payload must be 20KB or less", request_id: reqId() }); return; }
   const safeHeaders = sanitizeWebhookHeaders(customHeaders);
   try {
     const start = Date.now();
     const resp = await safeAxiosRequest(webhook_url, {
-      method: httpMethod as "POST",
+      method: httpMethod as "POST" | "PUT" | "PATCH",
       data: payload ?? {},
       headers: { "Content-Type": "application/json", "User-Agent": "ArchTools-Webhook/1.0", ...safeHeaders },
       timeout: 10000,
@@ -1669,7 +1739,7 @@ router.post("/webhook-send", ...toolMiddleware("webhook-send"), async (req: Auth
       request_id: reqId(),
     });
   } catch (e) {
-    res.status(502).json({ ok: false, error: "webhook_error", message: safeErr(e), request_id: reqId() });
+    res.status(503).json({ ok: false, error: "webhook_error", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -2001,7 +2071,7 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
     }
   }
 
-  res.status(502).json({ ok: false, error: "oracle_failed", message: `All providers failed. Last error: ${lastError}`, request_id: reqId() });
+  res.status(503).json({ ok: false, error: "oracle_failed", message: `All providers failed. Last error: ${lastError}`, request_id: reqId() });
 });
 
 // ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
@@ -2086,7 +2156,7 @@ router.post("/crypto-price", ...toolMiddleware("crypto-price"), async (req: Auth
   try {
     const id = normalizeCoinId(symbol);
     const r = await fetch(`${cgBase()}/simple/price?ids=${id}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: cgHeaders() });
-    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
+    if (!r.ok) { res.status(503).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as Record<string, Record<string, number>>;
     if (!data || !data[id]) {
       res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found or CoinGecko rate limit hit. Try again in a moment or use a Pro API key.`, request_id: reqId() });
@@ -2147,22 +2217,7 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
       res.json({ ok: true, currency, coins, source: "coingecko", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
-    // Fallback: CoinCap API (no rate limit on cloud IPs)
-    const ccUrl = `https://api.coincap.io/v2/assets?limit=${n}`;
-    const ccResp = await fetch(ccUrl, { signal: AbortSignal.timeout(8000) });
-    if (ccResp.ok) {
-      const ccJson = await ccResp.json() as { data: { rank: string; id: string; symbol: string; name: string; priceUsd: string; marketCapUsd: string; volumeUsd24Hr: string; changePercent24Hr: string }[] };
-      const coins = (ccJson.data || []).map(c => ({
-        rank: parseInt(c.rank), id: c.id, symbol: c.symbol.toLowerCase(), name: c.name,
-        price: parseFloat(c.priceUsd) || 0,
-        market_cap: parseFloat(c.marketCapUsd) || 0,
-        volume_24h: parseFloat(c.volumeUsd24Hr) || 0,
-        change_24h: parseFloat(c.changePercent24Hr) || 0,
-      }));
-      res.json({ ok: true, currency: "usd", coins, source: "coincap_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
-    }
-
-    // Fallback 3: CryptoCompare (free, no key, different IP reputation)
+    // Fallback: CryptoCompare (free, no key). CoinCap v2 was removed — api.coincap.io no longer resolves.
     try {
       const ccmpUrl = `https://min-api.cryptocompare.com/data/top/mktcapfull?limit=${n}&tsym=USD`;
       const ccmpResp = await fetch(ccmpUrl, { signal: AbortSignal.timeout(8000) });
@@ -2175,11 +2230,11 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
           volume_24h: c.RAW?.USD?.TOTALVOLUME24HTO || 0,
           change_24h: c.RAW?.USD?.CHANGEPCT24HOUR || 0,
         }));
-        res.json({ ok: true, currency: "usd", coins, source: "cryptocompare_fallback", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
+        res.json({ ok: true, currency: "usd", coins, source: "cryptocompare_fallback", data_source: "CryptoCompare", attribution: "Data from CryptoCompare — https://www.cryptocompare.com", request_id: reqId() }); return;
       }
     } catch { /* fall through */ }
 
-    res.status(502).json({ ok: false, error: "fetch_error", message: "All crypto data sources unavailable (CoinGecko, CoinCap, CryptoCompare). Try again shortly.", request_id: reqId() });
+    res.status(503).json({ ok: false, error: "fetch_error", message: "All crypto data sources unavailable (CoinGecko, CryptoCompare). Try again shortly.", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2212,7 +2267,7 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
       if (r.status === 429) { res.status(429).json({ ok: false, error: "rate_limited", message: "CoinGecko rate limit hit. Try again in a moment.", request_id: reqId() }); return; }
       if (r.status === 403) { res.status(503).json({ ok: false, error: "tier_required", message: "This endpoint requires a paid CoinGecko plan.", request_id: reqId() }); return; }
       if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found on CoinGecko. Use full name (e.g. 'bitcoin', not 'BTC').`, request_id: reqId() }); return; }
-      res.status(502).json({ ok: false, error: "upstream_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "upstream_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { sentiment_votes_up_percentage?: number; sentiment_votes_down_percentage?: number; community_data?: { twitter_followers?: number; reddit_subscribers?: number; reddit_active_accounts?: number }; market_data?: { price_change_percentage_24h?: number; price_change_percentage_7d?: number } };
     res.json({
@@ -2306,7 +2361,7 @@ router.post("/token-lookup", ...toolMiddleware("token-lookup"), async (req: Auth
   if (!query) { res.status(400).json({ ok: false, error: "invalid_request", message: "query (or text/symbol) is required", request_id: reqId() }); return; }
   try {
     const r = await fetch(`${cgBase()}/search?query=${encodeURIComponent(query)}`, { headers: cgHeaders() });
-    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
+    if (!r.ok) { res.status(503).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { coins?: { id: string; name: string; symbol: string; market_cap_rank?: number; thumb?: string }[] };
     const coins = (data.coins ?? []).slice(0, 10).map(c => ({ id: c.id, name: c.name, symbol: c.symbol.toUpperCase(), market_cap_rank: c.market_cap_rank ?? null }));
     res.json({ ok: true, query, results: coins, count: coins.length, tip: "Use the 'id' field with other crypto tools (e.g. crypto-price)", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() });
@@ -2340,7 +2395,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
     if (!r.ok) {
       const err = await r.text();
       console.error("[text-to-speech] ElevenLabs error:", r.status, err);
-      res.status(502).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: reqId() }); return;
     }
     const buf = await r.arrayBuffer();
     const b64 = Buffer.from(buf).toString("base64");
@@ -2381,7 +2436,7 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     if (!r.ok) {
       const err = await r.text();
       console.error("[transcribe-audio] OpenAI error:", r.status, err);
-      res.status(502).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { text: string; language?: string; duration?: number; segments?: unknown[] };
     res.json({ ok: true, transcript: data.text, language: data.language ?? language ?? null, duration_seconds: data.duration ?? null, request_id: reqId() });
@@ -2490,7 +2545,9 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { message?: string };
-      res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() }); return;
+      console.error("[send-email] Resend error:", r.status, err);
+      const failure = mapResendFailure(r.status, err.message);
+      res.status(failure.status).json({ ok: false, error: failure.error, message: failure.message, request_id: reqId() }); return;
     }
     const data = await r.json() as { id?: string };
     res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });
@@ -2545,7 +2602,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
           }
         } catch (_) { /* fall through */ }
       }
-      res.status(502).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
     const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
@@ -2661,7 +2718,7 @@ router.post("/check-domain", ...toolMiddleware("domain-check"), async (req: Auth
     if (status === 404) {
       res.json({ ok: true, domain: clean, available: true, registrar: null, expiry_date: null, status: ["available"], credits_used: 2, request_id: reqId() });
     } else {
-      res.status(502).json({ ok: false, error: "lookup_failed", message: safeErr(e), request_id: reqId() });
+      res.status(503).json({ ok: false, error: "lookup_failed", message: safeErr(e), request_id: reqId() });
     }
   }
 });
@@ -2721,7 +2778,7 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
       }));
       return void res.json({ ok: true, query, results, source: "serper", credits_used: 12, request_id: reqId() });
     } catch (e) {
-      return void res.status(502).json({ ok: false, error: "search_failed", message: safeErr(e), request_id: reqId() });
+      return void res.status(503).json({ ok: false, error: "search_failed", message: safeErr(e), request_id: reqId() });
     }
   }
 
@@ -2783,7 +2840,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
   }
 
   if (searchResults.length === 0) {
-    return void res.status(502).json({ ok: false, error: "search_failed", message: "No search results available", request_id: reqId() });
+    return void res.status(503).json({ ok: false, error: "search_failed", message: "No search results available", request_id: reqId() });
   }
 
   // Step 2: Synthesize with Claude
@@ -2807,7 +2864,7 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
     const report = ((claude.data as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "").trim();
     return void res.json({ ok: true, query, depth, report, sources: searchResults, credits_used: researchReportCost, ...(rrHasByok ? { byok: true, byok_provider: byokAnthropicKeyRR ? "anthropic" : rrSearchProvider } : {}), request_id: reqId() });
   } catch (e) {
-    return void res.status(502).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
+    return void res.status(503).json({ ok: false, error: "synthesis_failed", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -2904,7 +2961,7 @@ router.post("/fact-check", ...toolMiddleware("fact-check"), async (req: AuthedRe
       credits_used: 14, ...(fcHasByok ? { byok: true, byok_provider: byokAnthropicKeyFC ? "anthropic" : fcSearchProvider } : {}), request_id: reqId()
     });
   } catch (e) {
-    return void res.status(502).json({ ok: false, error: "analysis_failed", message: safeErr(e), request_id: reqId() });
+    return void res.status(503).json({ ok: false, error: "analysis_failed", message: safeErr(e), request_id: reqId() });
   }
 });
 
@@ -3220,7 +3277,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
 
       console.error("[video-generate] Runway start error:", attempt.status, err);
-      res.status(502).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
 
     if (!startResp || !selectedModel) {
@@ -3229,7 +3286,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
 
     const startData = startResp.data as { id?: string };
     const taskId = startData.id;
-    if (!taskId) { res.status(502).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
+    if (!taskId) { res.status(503).json({ ok: false, error: "runway_error", message: "No task ID returned from Runway", request_id: reqId() }); return; }
 
     // Poll for completion (max 120s)
     let videoUrl: string | null = null;
@@ -3247,7 +3304,7 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
         break;
       }
       if (pollData.status === "FAILED") {
-        res.status(502).json({ ok: false, error: "generation_failed", message: pollData.failure ?? pollData.failureCode ?? "Video generation failed", request_id: reqId() }); return;
+        res.status(503).json({ ok: false, error: "generation_failed", message: pollData.failure ?? pollData.failureCode ?? "Video generation failed", request_id: reqId() }); return;
       }
     }
     if (!videoUrl) { res.status(504).json({ ok: false, error: "timeout", message: "Video generation timed out after 120s. Task ID: " + taskId, task_id: taskId, request_id: reqId() }); return; }
@@ -3403,7 +3460,7 @@ router.post("/semantic-search", ...toolMiddleware("semantic-search"), async (req
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[semantic-search] Exa error:", resp.status, err);
-      res.status(502).json({ ok: false, error: "exa_error", message: `Exa returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "exa_error", message: `Exa returned ${resp.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
     }
     const data = await resp.json() as { results?: Array<{ title?: string; url?: string; text?: string; score?: number; publishedDate?: string; author?: string }> };
     const results = (data.results ?? []).map(r => ({ title: r.title ?? "", url: r.url ?? "", text: (r.text ?? "").slice(0, 1000), score: r.score ?? 0, published_date: r.publishedDate ?? null, author: r.author ?? null }));
@@ -3436,7 +3493,7 @@ router.post("/wallet-balance", ...toolMiddleware("wallet-balance"), async (req: 
     if (!r.ok) {
       const errText = await r.text().catch(() => "");
       console.error("[wallet-balance] CDP error:", r.status, errText);
-      res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+      res.status(503).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
       return;
     }
     const data = await r.json() as { balances?: any[] };
@@ -3476,7 +3533,7 @@ router.post("/address-history", ...toolMiddleware("address-history"), async (req
     if (!r.ok) {
       const errText = await r.text().catch(() => "");
       console.error("[address-history] CDP error:", r.status, errText);
-      res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+      res.status(503).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
       return;
     }
     const data = await r.json() as { transactions?: any[]; next_page_token?: string };
@@ -3504,7 +3561,7 @@ router.post("/gas-price", ...toolMiddleware("gas-price"), async (req: AuthedRequ
       body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }),
     });
     if (!r.ok) {
-      res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
+      res.status(503).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
       return;
     }
     const data = await r.json() as { result?: string };
@@ -3549,7 +3606,7 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
     if (!r.ok) {
       const errText = await r.text().catch(() => "");
       console.error("[base-nft-metadata] CDP error:", r.status, errText);
-      res.status(502).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
+      res.status(503).json({ ok: false, error: "cdp_error", message: `CDP API returned ${r.status}`, request_id: reqId() });
       return;
     }
     const data = await r.json() as any;
@@ -3586,7 +3643,7 @@ router.post("/eth-resolve-ens", ...toolMiddleware("eth-resolve-ens"), async (req
     if (!r.ok) {
       const errText = await r.text().catch(() => "");
       console.error("[eth-resolve-ens] ENSIdeas error:", r.status, errText);
-      res.status(502).json({ ok: false, error: "ens_error", message: `ENS resolver returned ${r.status}`, request_id: reqId() });
+      res.status(503).json({ ok: false, error: "ens_error", message: `ENS resolver returned ${r.status}`, request_id: reqId() });
       return;
     }
     const data = await r.json() as { address?: string; name?: string; displayName?: string; avatar?: string; error?: string };
@@ -3617,13 +3674,13 @@ router.post("/base-block-info", ...toolMiddleware("base-block-info"), async (req
       body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBlockByNumber", params: ["latest", false], id: 1 }),
     });
     if (!r.ok) {
-      res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
+      res.status(503).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${r.status}`, request_id: reqId() });
       return;
     }
     const data = await r.json() as { result?: any };
     const block = data.result;
     if (!block) {
-      res.status(502).json({ ok: false, error: "rpc_error", message: "No block data returned from Base RPC", request_id: reqId() });
+      res.status(503).json({ ok: false, error: "rpc_error", message: "No block data returned from Base RPC", request_id: reqId() });
       return;
     }
     const blockNumber = parseInt(block.number, 16);
@@ -3663,7 +3720,7 @@ router.post("/defi-tvl", ...toolMiddleware("defi-tvl"), async (req: AuthedReques
       const r = await fetch(`https://api.llama.fi/protocol/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) {
         if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Protocol '${slug}' not found on DefiLlama`, request_id: reqId() }); return; }
-        res.status(502).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() }); return;
+        res.status(503).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() }); return;
       }
       const data = await r.json() as any;
       res.json({
@@ -3686,7 +3743,7 @@ router.post("/defi-tvl", ...toolMiddleware("defi-tvl"), async (req: AuthedReques
     } else {
       const n = Math.min(Math.max(1, limit), 100);
       const r = await fetch("https://api.llama.fi/protocols", { signal: AbortSignal.timeout(10000) });
-      if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() }); return; }
+      if (!r.ok) { res.status(503).json({ ok: false, error: "fetch_error", message: `DefiLlama returned ${r.status}`, request_id: reqId() }); return; }
       const data = await r.json() as any[];
       const sorted = data.sort((a: any, b: any) => (b.tvl ?? 0) - (a.tvl ?? 0)).slice(0, n);
       const protocols = sorted.map((p: any) => ({
@@ -3706,24 +3763,7 @@ router.post("/crypto-dominance", ...toolMiddleware("crypto-dominance"), async (r
   try {
     const r = await fetch(`${cgBase()}/global`, { headers: cgHeaders(), signal: AbortSignal.timeout(10000) });
     if (!r.ok) {
-      try {
-        const ccResp = await fetch("https://api.coincap.io/v2/assets?limit=2", { signal: AbortSignal.timeout(8000) });
-        if (ccResp.ok) {
-          const ccData = await ccResp.json() as { data: any[] };
-          const btc = ccData.data?.find((c: any) => c.id === "bitcoin");
-          const eth = ccData.data?.find((c: any) => c.id === "ethereum");
-          res.json({
-            ok: true,
-            btc_dominance: btc?.marketCapDominance ? parseFloat(btc.marketCapDominance) : null,
-            eth_dominance: eth?.marketCapDominance ? parseFloat(eth.marketCapDominance) : null,
-            total_market_cap_usd: null, total_volume_24h_usd: null,
-            source: "coincap_fallback",
-            data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com",
-            request_id: reqId(),
-          }); return;
-        }
-      } catch (_) { /* fall through */ }
-      res.status(502).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "fetch_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { data?: { market_cap_percentage?: Record<string, number>; total_market_cap?: Record<string, number>; total_volume?: Record<string, number>; active_cryptocurrencies?: number; markets?: number; market_cap_change_percentage_24h_usd?: number } };
     const d = data.data;
@@ -3792,7 +3832,7 @@ router.post("/base-tx-decode", ...toolMiddleware("base-tx-decode"), async (req: 
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getTransactionByHash", params: [txHash], id: 1 }),
     });
-    if (!txResp.ok) { res.status(502).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${txResp.status}`, request_id: reqId() }); return; }
+    if (!txResp.ok) { res.status(503).json({ ok: false, error: "rpc_error", message: `Base RPC returned ${txResp.status}`, request_id: reqId() }); return; }
     const txData = await txResp.json() as { result?: any };
     const tx = txData.result;
     if (!tx) { res.status(404).json({ ok: false, error: "not_found", message: `Transaction '${txHash}' not found on Base`, request_id: reqId() }); return; }
@@ -3859,7 +3899,7 @@ router.post("/stock-price", ...toolMiddleware("stock-price"), async (req: Authed
     const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) {
       if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Symbol '${ticker}' not found`, request_id: reqId() }); return; }
-      res.status(502).json({ ok: false, error: "fetch_error", message: `Yahoo Finance returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "fetch_error", message: `Yahoo Finance returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as any;
     const result = data?.chart?.result?.[0];
@@ -3897,7 +3937,7 @@ router.post("/weather-current", ...toolMiddleware("weather-current"), async (req
       headers: { "User-Agent": "ArchTools/1.0" },
     });
     if (!r.ok) {
-      res.status(502).json({ ok: false, error: "fetch_error", message: `wttr.in returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "fetch_error", message: `wttr.in returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as any;
     const current = data?.current_condition?.[0];
@@ -3951,7 +3991,7 @@ router.post("/github-repo-stats", ...toolMiddleware("github-repo-stats"), async 
     });
     if (!resp.ok) {
       if (resp.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Repository '${o}/${r}' not found`, request_id: reqId() }); return; }
-      res.status(502).json({ ok: false, error: "fetch_error", message: `GitHub API returned ${resp.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "fetch_error", message: `GitHub API returned ${resp.status}`, request_id: reqId() }); return;
     }
     const data = await resp.json() as any;
     res.json({
@@ -3996,7 +4036,7 @@ router.post("/wikipedia-search", ...toolMiddleware("wikipedia-search"), async (r
       `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=${n}&format=json&origin=*`,
       { signal: AbortSignal.timeout(10000) }
     );
-    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `Wikipedia API returned ${r.status}`, request_id: reqId() }); return; }
+    if (!r.ok) { res.status(503).json({ ok: false, error: "fetch_error", message: `Wikipedia API returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as any;
     const results = (data?.query?.search ?? []).map((item: any) => ({
       title: item.title,
@@ -4160,9 +4200,9 @@ router.post("/exchange-rates", ...toolMiddleware("exchange-rates"), async (req: 
   try {
     const baseCurrency = base.toUpperCase().trim();
     const r = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(baseCurrency)}`, { signal: AbortSignal.timeout(10000) });
-    if (!r.ok) { res.status(502).json({ ok: false, error: "fetch_error", message: `Exchange rate API returned ${r.status}`, request_id: reqId() }); return; }
+    if (!r.ok) { res.status(503).json({ ok: false, error: "fetch_error", message: `Exchange rate API returned ${r.status}`, request_id: reqId() }); return; }
     const data = await r.json() as { result?: string; rates?: Record<string, number>; time_last_update_utc?: string };
-    if (data.result !== "success" || !data.rates) { res.status(502).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() }); return; }
+    if (data.result !== "success" || !data.rates) { res.status(503).json({ ok: false, error: "rate_error", message: "Could not fetch exchange rates", request_id: reqId() }); return; }
     if (target) {
       const targetCurrency = target.toUpperCase().trim();
       const rate = data.rates[targetCurrency];
@@ -4187,7 +4227,7 @@ router.post("/ip-geolocation", ...toolMiddleware("ip-geolocation"), async (req: 
     });
     if (!r.ok) {
       if (r.status === 429) { res.status(429).json({ ok: false, error: "rate_limited", message: "IP geolocation rate limit hit. Try again shortly.", request_id: reqId() }); return; }
-      res.status(502).json({ ok: false, error: "fetch_error", message: `ipapi.co returned ${r.status}`, request_id: reqId() }); return;
+      res.status(503).json({ ok: false, error: "fetch_error", message: `ipapi.co returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as any;
     if (data.error) { res.status(422).json({ ok: false, error: "lookup_error", message: data.reason ?? "Invalid IP address", request_id: reqId() }); return; }
