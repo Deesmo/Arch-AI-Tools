@@ -57,6 +57,43 @@ try {
   console.error("[startup] social-post cleanup skipped:", err.message);
 }
 
+// Catalog truth (2026-11-02 audit): the DB catalog — served by GET /v1/tools and
+// the MCP tools/list — promised features two tools do not have (Playwright
+// click/type; a rendered screenshot), and listed generate-image at 30 credits
+// although it charges as design-create (50 at the default quality). Targeted
+// updates by name, idempotent — they only write when a value differs.
+try {
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  const fixes = [
+    { name: "browser-task", data: {
+      description: "Fetch a public page and extract its text or HTML, optionally by CSS selector (static HTML only: no JavaScript, clicking or typing)",
+      schemaJson: { type: "object", required: ["url"], properties: {
+        url: { type: "string", description: "Public page URL to fetch" },
+        action: { type: "string", enum: ["extract", "html"], default: "extract", description: "extract = visible text, html = inner HTML of the selected element" },
+        selector: { type: "string", description: "Optional CSS selector (defaults to the page body)" } } } } },
+    { name: "screenshot-capture", data: {
+      description: "Get a page's title, description, Open Graph image and a text preview (metadata only; no rendered screenshot)",
+      schemaJson: { type: "object", required: ["url"], properties: { url: { type: "string", description: "Public page URL" } } } } },
+    { name: "generate-image", data: { credits: 50 } },
+  ];
+  for (const { name, data } of fixes) {
+    const row = await prisma.tool.findFirst({ where: { name } });
+    if (!row) continue;
+    // Postgres jsonb reorders object keys, so compare with sorted keys.
+    const canon = (v) => JSON.stringify(v, (_k, x) => (x && typeof x === "object" && !Array.isArray(x)
+      ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x));
+    const changed = Object.entries(data).some(([k, v]) => canon(row[k]) !== canon(v));
+    if (changed) {
+      await prisma.tool.updateMany({ where: { name }, data });
+      console.log(`[startup] Catalog corrected for '${name}' (${Object.keys(data).join(", ")}).`);
+    }
+  }
+  await prisma.$disconnect();
+} catch (err) {
+  console.error("[startup] catalog correction skipped:", err.message);
+}
+
 // Archive the legacy SQLite file on the persistent disk into Postgres (2026-11-02),
 // so the disk — which blocks zero-downtime deploys — can be removed without losing
 // anything. Logs table names and row counts only (never row contents); reads a

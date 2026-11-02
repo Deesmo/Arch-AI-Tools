@@ -21,9 +21,9 @@ export const TOOL_SCHEMAS = {
     "browser-task": {
         type: "object",
         properties: {
-            url: { type: "string", description: "URL to navigate to" },
-            task: { type: "string", description: "Description of the browser task to perform" },
-            extract: { type: "string", description: "CSS selector or description of data to extract" }
+            url: { type: "string", description: "Public page URL to fetch (static HTML; no JavaScript, clicking or typing)" },
+            action: { type: "string", enum: ["extract", "html"], description: "extract = visible text (default), html = inner HTML of the selected element" },
+            selector: { type: "string", description: "Optional CSS selector (defaults to the page body)" }
         },
         required: ["url"]
     },
@@ -263,10 +263,7 @@ export const TOOL_SCHEMAS = {
     "screenshot-capture": {
         type: "object",
         properties: {
-            url: { type: "string", description: "URL of the page to screenshot" },
-            width: { type: "number", description: "Viewport width in pixels (default: 1280)" },
-            height: { type: "number", description: "Viewport height in pixels (default: 720)" },
-            fullPage: { type: "boolean", description: "Capture full scrollable page (default: false)" }
+            url: { type: "string", description: "Public page URL. Returns title, description, Open Graph image and a text preview (metadata only; no rendered screenshot)" }
         },
         required: ["url"]
     },

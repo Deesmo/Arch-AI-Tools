@@ -148,20 +148,16 @@ Parameters:
   - url: string (required) — URL to extract
 
 ### POST /v1/tools/browser-task — 10 credits · x402 $0.010 USDC
-Headless browser automation (click/type/extract) via Playwright — SSRF hardened
+Fetch a public page and extract its text or HTML, optionally by CSS selector (static HTML only: no JavaScript, clicking or typing)
 Parameters:
-  - url: string (required) — URL to open
-  - text: string — Text for type action
-  - action: string — one of: extract, click, type, html
-  - selector: string — CSS selector (required for click/type, optional for extract)
+  - url: string (required) — Public page URL to fetch
+  - action: string — one of: extract, html (default extract)
+  - selector: string — Optional CSS selector (defaults to the page body)
 
 ### POST /v1/tools/screenshot-capture — 10 credits · x402 $0.010 USDC
-Capture page metadata and screenshot URL for any public URL
+Get a page's title, description, Open Graph image and a text preview (metadata only; no rendered screenshot)
 Parameters:
-  - url: string (required) — URL to screenshot
-  - width: integer
-  - height: integer
-  - full_page: boolean — Capture full scrollable page
+  - url: string (required) — Public page URL
 
 ### POST /v1/tools/html-to-markdown — 3 credits · x402 $0.010 USDC
 Convert HTML or any URL to clean Markdown

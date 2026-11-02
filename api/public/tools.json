@@ -186,7 +186,7 @@
     },
     {
       "name": "browser-task",
-      "description": "Headless browser automation (click/type/extract) via Playwright",
+      "description": "Fetch a public page and extract its text or HTML, optionally by CSS selector (static HTML only: no JavaScript, clicking or typing)",
       "endpoint": "https://archtools.dev/v1/tools/browser-task",
       "method": "POST",
       "credits": 10,
@@ -194,42 +194,25 @@
       "parameters": {
         "type": "object",
         "required": [
-          "url",
-          "steps"
+          "url"
         ],
         "properties": {
           "url": {
             "type": "string",
-            "description": "Starting URL for the browser session"
+            "description": "Public page URL to fetch"
           },
-          "steps": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "action": {
-                  "type": "string",
-                  "enum": [
-                    "click",
-                    "type",
-                    "extract",
-                    "screenshot",
-                    "wait",
-                    "navigate"
-                  ],
-                  "description": "Action to perform"
-                },
-                "selector": {
-                  "type": "string",
-                  "description": "CSS selector for the target element"
-                },
-                "value": {
-                  "type": "string",
-                  "description": "Value for type action or URL for navigate"
-                }
-              }
-            },
-            "description": "Sequence of browser actions to execute"
+          "action": {
+            "type": "string",
+            "enum": [
+              "extract",
+              "html"
+            ],
+            "default": "extract",
+            "description": "extract = visible text, html = inner HTML of the selected element"
+          },
+          "selector": {
+            "type": "string",
+            "description": "Optional CSS selector (defaults to the page body)"
           }
         }
       },
@@ -1535,7 +1518,7 @@
     },
     {
       "name": "screenshot-capture",
-      "description": "Capture a screenshot of any webpage",
+      "description": "Get a page's title, description, Open Graph image and a text preview (metadata only; no rendered screenshot)",
       "endpoint": "https://archtools.dev/v1/tools/screenshot-capture",
       "method": "POST",
       "credits": 10,
@@ -1548,30 +1531,7 @@
         "properties": {
           "url": {
             "type": "string",
-            "description": "URL to screenshot"
-          },
-          "width": {
-            "type": "integer",
-            "default": 1280,
-            "description": "Viewport width in pixels"
-          },
-          "height": {
-            "type": "integer",
-            "default": 800,
-            "description": "Viewport height in pixels"
-          },
-          "full_page": {
-            "type": "boolean",
-            "default": false,
-            "description": "Capture full scrollable page"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "png",
-              "jpeg"
-            ],
-            "default": "png"
+            "description": "Public page URL"
           }
         }
       },
