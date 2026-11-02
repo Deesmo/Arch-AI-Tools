@@ -59,11 +59,50 @@ const AUTH_REQUIRED_MESSAGE = JSON.stringify({
 // do not hit paid upstream providers. Anything else requires the caller's own
 // API key — this prevents draining the platform ARCH_API_KEY on expensive
 // AI/media/search calls via IP rotation (H6).
-const ANON_ALLOWED_TOOLS = new Set([
-    "generate-hash", "generate-uuid", "qr-code", "barcode-generate",
-    "transform-text", "diff-text", "validate-data", "convert-format",
-    "jsonpath-query", "timezone-convert", "language-detect", "readability-score",
-]);
+//
+// Each entry lists the tool's required arguments exactly as the API checks them
+// (api/src/routes/tools/index.ts): every inner array is one requirement, and any
+// of its names satisfies it (the API's accepted aliases). Demo calls missing a
+// requirement are refused here instead of being sent to the API on the platform
+// key — registry crawlers call every demo tool with empty arguments, and each of
+// those used to land in the platform call log as a 400 against the house account.
+const DEMO_REQUIRED_ARGS = {
+    "generate-hash": [["text"]],
+    "generate-uuid": [],
+    "qr-code": [["text", "content"]],
+    "barcode-generate": [["value", "data", "text", "content"]],
+    "transform-text": [["text"], ["mode", "operation"]],
+    "diff-text": [["text1", "original"], ["text2", "modified"]],
+    "validate-data": [["data"], ["schema"]],
+    "convert-format": [["data", "input", "content"], ["from"], ["to"]],
+    "jsonpath-query": [["data", "json"], ["query", "path"]],
+    "timezone-convert": [["datetime"], ["from_tz"], ["to_tz"]],
+    "language-detect": [["text"]],
+    "readability-score": [["text"]],
+};
+const ANON_ALLOWED_TOOLS = new Set(Object.keys(DEMO_REQUIRED_ARGS));
+function isArgProvided(toolName, argName, value) {
+    if (value === undefined)
+        return false;
+    // validate-data accepts any JSON value as `data`, including null and "".
+    if (toolName === "validate-data" && argName === "data")
+        return true;
+    return value !== null && value !== "";
+}
+function missingDemoArgs(toolName, args) {
+    const input = (args && typeof args === "object" ? args : {});
+    return (DEMO_REQUIRED_ARGS[toolName] ?? [])
+        .filter((names) => !names.some((n) => isArgProvided(toolName, n, input[n])))
+        .map(([first, ...aliases]) => (aliases.length ? `${first} (or ${aliases.join("/")})` : first));
+}
+function demoArgsErrorMessage(toolName, missing) {
+    return JSON.stringify({
+        error: "invalid_arguments",
+        message: `${toolName}: missing required argument(s): ${missing.join(", ")}. See the tool's inputSchema in tools/list.`,
+        missing,
+        docs: "https://archtools.dev/docs",
+    }, null, 2);
+}
 const ANON_TOOL_BLOCKED_MESSAGE = JSON.stringify({
     error: "api_key_required",
     message: "This tool requires your own Arch Tools API key. Anonymous demo access is limited to free local utilities. Pass `x-api-key` or `Authorization: Bearer <key>`. Get a free key with signup credits at https://archtools.dev/signup",
@@ -112,8 +151,11 @@ async function invokeTool(toolName, input, config = resolveApiConfig(), keyOverr
         body: JSON.stringify(input ?? {}),
     });
     if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `Tool error: ${res.status}`);
+        // API errors are { ok: false, error: "<code>", message: "<detail>" }; older
+        // handlers nest { error: { message } }. Surface the real detail, not just the code.
+        const err = (await res.json().catch(() => ({})));
+        const detail = err.message || err.error?.message || (typeof err.error === "string" ? err.error : "");
+        throw new Error(detail ? `${detail} (HTTP ${res.status})` : `Tool error: ${res.status}`);
     }
     const out = await res.json();
     return JSON.stringify(out, null, 2);
@@ -253,6 +295,10 @@ async function createServer(auth, apiConfig = resolveApiConfig()) {
             if (!ANON_ALLOWED_TOOLS.has(request.params.name)) {
                 return { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true };
             }
+            const missing = missingDemoArgs(request.params.name, request.params.arguments);
+            if (missing.length) {
+                return { content: [{ type: "text", text: demoArgsErrorMessage(request.params.name, missing) }], isError: true };
+            }
             const allowance = checkAnonAllowance(auth.ip);
             if (!allowance.allowed) {
                 return { content: [{ type: "text", text: AUTH_REQUIRED_MESSAGE }], isError: true };
@@ -321,9 +367,15 @@ async function handleStreamablePost(req, res) {
                 break;
             case "tools/call": {
                 const clientKey = extractClientKey(req);
+                const toolArgs = body.params?.arguments ?? body.params?.input ?? {};
                 if (!clientKey) {
                     if (!ANON_ALLOWED_TOOLS.has(body.params?.name)) {
                         send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: ANON_TOOL_BLOCKED_MESSAGE }], isError: true } });
+                        break;
+                    }
+                    const missing = missingDemoArgs(body.params?.name, toolArgs);
+                    if (missing.length) {
+                        send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: demoArgsErrorMessage(body.params?.name, missing) }], isError: true } });
                         break;
                     }
                     const allowance = checkAnonAllowance(clientIp(req));
@@ -332,7 +384,7 @@ async function handleStreamablePost(req, res) {
                         break;
                     }
                 }
-                const result = await invokeTool(body.params?.name, body.params?.arguments ?? body.params?.input ?? {}, apiConfig, clientKey || undefined);
+                const result = await invokeTool(body.params?.name, toolArgs, apiConfig, clientKey || undefined);
                 send({ jsonrpc: "2.0", id: body.id, result: { content: [{ type: "text", text: result }] } });
                 break;
             }
@@ -400,7 +452,10 @@ async function main() {
                 res.status(400).json({ error: "Session not found" });
                 return;
             }
-            await session.transport.handlePostMessage(req, res);
+            // express.json() above has already consumed the request stream, so hand the
+            // SDK the parsed body; without it every legacy-SSE message (initialize
+            // included) failed with HTTP 400 "stream is not readable".
+            await session.transport.handlePostMessage(req, res, req.body);
         });
         // ─── Streamable HTTP transport (Smithery + modern MCP clients) ────────────
         app.get("/mcp", (req, res) => {
