@@ -33,9 +33,9 @@
     "start:sse": "MCP_TRANSPORT=sse node dist/index.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2",
+    "express": "^4.22.3",
     "node-fetch": "^3.3.2",
     "zod": "^3.23.8"
   },
@@ -48,11 +48,11 @@
   },
   "overrides": {
     "express-rate-limit": "8.5.2",
-    "fast-uri": "3.1.2",
-    "hono": "4.12.25",
-    "@hono/node-server": "1.19.13",
-    "ip-address": "10.2.0",
-    "qs": "6.15.2",
+    "fast-uri": "3.1.9",
+    "hono": "4.13.11",
+    "@hono/node-server": "1.19.15",
+    "ip-address": "10.7.4",
+    "qs": "6.16.1",
     "express": {
       "path-to-regexp": "0.1.13"
     },
