@@ -1464,8 +1464,12 @@ router.post("/browser-task", ...toolMiddleware("browser-task"), async (req: Auth
     const ok = await deductCredits(req, res, "browser-task", 10);
     if (!ok) return;
   }
-  const { url, selector } = req.body as { url?: string; selector?: string };
-  const action = String(req.body.action ?? req.body.task ?? "extract");
+  const { url } = req.body as { url?: string };
+  // The MCP schema sends `task` (free text) and `extract` (a selector): free text
+  // is not an action, so only an explicit extract/html in `task` counts.
+  const selector = (req.body.selector ?? req.body.extract) as string | undefined;
+  const taskAsAction = req.body.task === "extract" || req.body.task === "html" ? req.body.task : undefined;
+  const action = String(req.body.action ?? taskAsAction ?? "extract");
   if (!url) { res.status(400).json({ ok: false, error: "invalid_request", message: "url is required", request_id: reqId() }); return; }
   if (action !== "extract" && action !== "html") {
     res.status(400).json({ ok: false, error: "unsupported_action", message: `browser-task supports only "extract" and "html" (static page fetch, no JavaScript). "${action.slice(0, 40)}" is not available, so you were not charged.`, supported_actions: ["extract", "html"], request_id: reqId() }); return;

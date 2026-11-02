@@ -51,6 +51,8 @@ assert.ok(hm.includes('const text = inlineMd(child).trim();'), "paragraphs use i
 const bt = handler("browser-task");
 assert.ok(!bt.includes("Simulated"), "no simulated browser actions");
 assert.ok(bt.includes('error: "unsupported_action"'));
+assert.ok(bt.includes("req.body.selector ?? req.body.extract"), "MCP's `extract` selector is honoured");
+assert.ok(bt.includes('req.body.task === "extract" || req.body.task === "html"'), "MCP's free-text `task` is not treated as an action");
 
 // ai-generate: failed/empty upstream answers are errors (refunded), and models are current.
 const ag = handler("ai-generate");
