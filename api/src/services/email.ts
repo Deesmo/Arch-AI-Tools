@@ -243,8 +243,9 @@ export function renderVerificationEmail(verifyUrl: string, pendingCredits?: numb
 export async function sendVerificationEmail(args: { to: string; verifyUrl: string; pendingCredits?: number }): Promise<void> {
   const { to, verifyUrl, pendingCredits } = args;
   const { subject, html, text } = renderVerificationEmail(verifyUrl, pendingCredits);
-  await sendEmail(to, subject, html, text);
-  logger.info({ to }, "Verification email sent");
+  // sendEmail already logs the provider's error; only claim success when it succeeded.
+  if (await sendEmail(to, subject, html, text)) logger.info({ to }, "Verification email sent");
+  else logger.warn({ to }, "Verification email NOT sent");
 }
 
 // ─── 2. Welcome Email ───

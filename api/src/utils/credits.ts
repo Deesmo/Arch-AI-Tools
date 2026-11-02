@@ -263,7 +263,12 @@ export async function deductCredits(
         },
       });
 
-      await logError(agent.id, toolName, 0, res.statusCode, Date.now() - requestStartMs);
+      const fp = fingerprintCaller(req.headers["user-agent"]);
+      await logError(agent.id, toolName, 0, res.statusCode, Date.now() - requestStartMs, {
+        callerType: fp.callerType,
+        callerName: callerNameFromArchSource(req.headers["x-arch-source"]) ?? fp.callerName,
+        callerVersion: fp.callerVersion ?? null,
+      });
     } catch {
       // Non-fatal; never block the response path
     }
@@ -315,7 +320,10 @@ export async function logError(
   toolName: string,
   cost: number,
   statusCode?: number,
-  responseMs?: number
+  responseMs?: number,
+  // Same caller fingerprint the SUCCESS row records; without it every error row
+  // was attributed to an unknown caller.
+  caller?: { callerType?: string | null; callerName?: string | null; callerVersion?: string | null }
 ): Promise<void> {
   try {
     await prisma.apiRequest.create({
@@ -328,6 +336,9 @@ export async function logError(
         status: classifyStatus(statusCode),
         statusCode: statusCode ?? null,
         responseMs: responseMs ?? null,
+        callerType: caller?.callerType ?? null,
+        callerName: caller?.callerName ?? null,
+        callerVersion: caller?.callerVersion ?? null,
       },
     });
 
