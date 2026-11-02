@@ -69,6 +69,8 @@ assert.equal(modelCostMultiplier("grok-4.3"), 0.3);
 assert.ok(!tools.includes("status(502)"), "tools never answer 502");
 assert.ok(!src("src/routes/chat.ts").includes("status(502)"), "chat never answers 502");
 assert.ok(!tools.includes("api.coincap.io/v2"), "dead CoinCap v2 fallback removed");
+assert.ok(!tools.includes("min-api.cryptocompare.com"), "CryptoCompare fallback (now key-only) removed");
+assert.ok(tools.includes('h["x-cg-demo-api-key"] = demo'), "a free CoinGecko Demo key is supported");
 
 // Refunded calls report the refund in their credit headers.
 const credits = src("src/utils/credits.ts");

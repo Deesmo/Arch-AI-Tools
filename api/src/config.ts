@@ -25,7 +25,11 @@ export const config = {
     apiKey: process.env.RESEND_API_KEY ?? "",
   },
   coingecko: {
+    // Pro (paid) key → pro-api host. Demo (free) key → public host + demo header
+    // (docs.coingecko.com authentication). Neither → keyless public API, which
+    // rate-limits shared cloud IPs such as Render's.
     apiKey: process.env.COINGECKO_API_KEY ?? "",
+    demoApiKey: process.env.COINGECKO_DEMO_API_KEY ?? "",
   },
   cdp: {
     // Support both naming conventions: CDP_API_KEY_ID (SDK) or CDP_API_KEY (Render)

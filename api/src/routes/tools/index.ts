@@ -2095,20 +2095,21 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
 });
 
 // ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
-// Helper: returns CoinGecko headers, including API key when configured
+// CoinGecko plan selection (docs.coingecko.com/reference/authentication):
+// a Pro key uses pro-api.coingecko.com + x-cg-pro-api-key; a free Demo key uses
+// api.coingecko.com + x-cg-demo-api-key; with neither, the keyless public API.
+const cgProKey = (): string => {
+  const key = config.coingecko?.apiKey;
+  return key && key.length > 10 && !key.startsWith("REPLACE") ? key : "";
+};
 const cgHeaders = (): Record<string, string> => {
   const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
-  const key = config.coingecko?.apiKey;
-  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-pro-api-key"] = key;
+  const demo = config.coingecko?.demoApiKey;
+  if (cgProKey()) h["x-cg-pro-api-key"] = cgProKey();
+  else if (demo) h["x-cg-demo-api-key"] = demo;
   return h;
 };
-// Use pro endpoint when a CoinGecko API key is configured, otherwise fall back to free tier
-const cgBase = (): string => {
-  const key = config.coingecko?.apiKey;
-  return (key && key.length > 10 && !key.startsWith("REPLACE"))
-    ? "https://pro-api.coingecko.com/api/v3"
-    : "https://api.coingecko.com/api/v3";
-};
+const cgBase = (): string => (cgProKey() ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3");
 
 // Ticker → CoinGecko slug map. Lets users pass BTC/ETH/etc and have it resolved
 // to the canonical CoinGecko id. Slugs (e.g. "bitcoin") still pass through as-is.
@@ -2221,15 +2222,17 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const _cgHeaders = cgHeaders();
     type CgCoin = { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number };
     let cgData: CgCoin[] | null = null;
+    let lastStatus: number | string = "no response";
 
     for (const delay of [0, 1500, 3000]) {
       if (delay > 0) await new Promise(r => setTimeout(r, delay));
       try {
         const r = await fetch(cgUrl, { headers: _cgHeaders, signal: AbortSignal.timeout(8000) });
+        lastStatus = r.status;
         if (r.ok) { cgData = (await r.json()) as CgCoin[]; break; }
         if (r.status === 429 || r.status === 503) continue; // rate limited — retry
         break; // other error — don't retry
-      } catch { continue; }
+      } catch (e) { lastStatus = (e as Error).name; continue; }
     }
 
     if (cgData && Array.isArray(cgData) && cgData.length > 0) {
@@ -2237,24 +2240,10 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
       res.json({ ok: true, currency, coins, source: "coingecko", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
-    // Fallback: CryptoCompare (free, no key). CoinCap v2 was removed — api.coincap.io no longer resolves.
-    try {
-      const ccmpUrl = `https://min-api.cryptocompare.com/data/top/mktcapfull?limit=${n}&tsym=USD`;
-      const ccmpResp = await fetch(ccmpUrl, { signal: AbortSignal.timeout(8000) });
-      if (ccmpResp.ok) {
-        const ccmpJson = await ccmpResp.json() as { Data: any[] };
-        const coins = (ccmpJson.Data || []).map((c: any, i: number) => ({
-          rank: i + 1, id: (c.CoinInfo?.Name || "").toLowerCase(), symbol: (c.CoinInfo?.Name || "").toLowerCase(), name: c.CoinInfo?.FullName || "",
-          price: c.RAW?.USD?.PRICE || 0,
-          market_cap: c.RAW?.USD?.MKTCAP || 0,
-          volume_24h: c.RAW?.USD?.TOTALVOLUME24HTO || 0,
-          change_24h: c.RAW?.USD?.CHANGEPCT24HOUR || 0,
-        }));
-        res.json({ ok: true, currency: "usd", coins, source: "cryptocompare_fallback", data_source: "CryptoCompare", attribution: "Data from CryptoCompare — https://www.cryptocompare.com", request_id: reqId() }); return;
-      }
-    } catch { /* fall through */ }
-
-    res.status(503).json({ ok: false, error: "fetch_error", message: "All crypto data sources unavailable (CoinGecko, CryptoCompare). Try again shortly.", request_id: reqId() });
+    // CryptoCompare (the former fallback) now requires an API key (401 "API key
+    // required", checked 2026-11-02), so CoinGecko is the only source.
+    console.error(`[crypto-market-cap] CoinGecko failed: ${lastStatus}`);
+    res.status(503).json({ ok: false, error: "fetch_error", message: "Market data is temporarily unavailable (CoinGecko rate limit or outage). Try again shortly.", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
