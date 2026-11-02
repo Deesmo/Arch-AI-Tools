@@ -10,10 +10,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^4.3.2",
     "lodash": "^4.18.1",
     "lucide-react": "^0.540.0",
-    "next": "^15.5.19",
+    "next": "^15.5.28",
     "posthog-js": "^1.360.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -26,8 +26,8 @@
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.9.0",
-    "eslint-config-next": "^15.5.19",
-    "postcss": "^8.5.10",
+    "eslint-config-next": "^15.5.28",
+    "postcss": "^8.5.23",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4"
   },
@@ -51,13 +51,13 @@
       "picomatch": "4.0.4"
     },
     "minimatch@3.1.5": {
-      "brace-expansion": "1.1.13"
+      "brace-expansion": "1.1.21"
     },
     "minimatch@9.0.9": {
       "brace-expansion": "2.0.3"
     },
     "minimatch@10.2.4": {
-      "brace-expansion": "5.0.6"
+      "brace-expansion": "5.0.12"
     },
     "refractor": {
       "prismjs": "1.30.0"
