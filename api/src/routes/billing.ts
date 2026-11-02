@@ -63,6 +63,10 @@ const LEGACY_PACK_ALIASES = new Map<string, string>([
   ["large pack", "business"],
 ]);
 
+function normalizeBillingKey(value: unknown): string {
+  return typeof value === "string" ? value.toLowerCase().trim() : "";
+}
+
 // ─── Monthly subscription plans ────────────────────────────────────────────
 const SUBSCRIPTION_PLANS = [
   {
@@ -171,8 +175,8 @@ router.post("/checkout", requireAuthOrSession, async (req: AuthedRequest, res: R
   // Accept both `pack` and `plan` — agents mix the two up, and a failed
   // checkout is a lost sale. If the value names a subscription instead,
   // answer with the exact corrective call.
-  const { pack, plan } = req.body as { pack?: string; plan?: string };
-  const rawKey = (pack ?? plan ?? "").toLowerCase().trim();
+  const { pack, plan } = req.body as { pack?: unknown; plan?: unknown };
+  const rawKey = normalizeBillingKey(pack ?? plan);
   const packKey = LEGACY_PACK_ALIASES.get(rawKey) ?? rawKey;
   const packConfig = packKey
     ? CREDIT_PACKS.find(p => p.id === packKey || p.label.toLowerCase().startsWith(packKey))
@@ -226,8 +230,8 @@ router.post("/subscribe", requireAuthOrSession, async (req: AuthedRequest, res: 
   // subscription (all three pack ids collide with -monthly plan tiers). Exact
   // plan ids always win regardless of key; bare-name expansion is a
   // subscription-intent convenience reserved for the `plan` key.
-  const { plan, pack } = req.body as { plan?: string; pack?: string };
-  const planKey = (plan ?? pack ?? "").toLowerCase().trim();
+  const { plan, pack } = req.body as { plan?: unknown; pack?: unknown };
+  const planKey = normalizeBillingKey(plan ?? pack);
   let planConfig = SUBSCRIPTION_PLANS.find(p => p.id === planKey);
   if (!planConfig) {
     const packMatch = CREDIT_PACKS.find(p => p.id === planKey);

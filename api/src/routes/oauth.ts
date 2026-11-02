@@ -339,8 +339,24 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
   };
 
   // Validate required fields
-  if (!client_name || !redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
+  if (typeof client_name !== "string" || !client_name.trim() || !redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
     res.status(400).json({ error: "invalid_client_metadata", error_description: "client_name and redirect_uris are required" });
+    return;
+  }
+  if (!redirect_uris.every((uri) => typeof uri === "string")) {
+    res.status(400).json({ error: "invalid_client_metadata", error_description: "redirect_uris must be an array of strings" });
+    return;
+  }
+  if (grant_types !== undefined && (!Array.isArray(grant_types) || !grant_types.every((gt) => typeof gt === "string"))) {
+    res.status(400).json({ error: "invalid_client_metadata", error_description: "grant_types must be an array of strings" });
+    return;
+  }
+  if (response_types !== undefined && (!Array.isArray(response_types) || !response_types.every((rt) => typeof rt === "string"))) {
+    res.status(400).json({ error: "invalid_client_metadata", error_description: "response_types must be an array of strings" });
+    return;
+  }
+  if (token_endpoint_auth_method !== undefined && typeof token_endpoint_auth_method !== "string") {
+    res.status(400).json({ error: "invalid_client_metadata", error_description: "token_endpoint_auth_method must be a string" });
     return;
   }
 
