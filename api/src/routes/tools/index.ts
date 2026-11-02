@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthedRequest } from "../../middleware/auth.js";
 import { x402Middleware, X402_PRICES, isX402AnonymousTool, buildPaymentRequiredV2 } from "../../middleware/x402.js";
 import { deductCredits, reqId, safeErr, waiveCharge } from "../../utils/credits.js";
+import { mapResendFailure } from "../../utils/resendErrors.js";
 import { getCached, setCached } from "../../lib/lru.js";
 import { config } from "../../config.js";
 import { validateUrl, safeAxiosGet, safeFetch, safeAxiosRequest } from "../../lib/ssrf.js";
@@ -2435,7 +2436,8 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { message?: string };
       console.error("[email-send] Resend error:", r.status, err);
-      res.status(502).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() }); return;
+      const failure = mapResendFailure(r.status, err.message);
+      res.status(failure.status).json({ ok: false, error: failure.error, message: failure.message, request_id: reqId() }); return;
     }
     const data = await r.json() as { id?: string };
     res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });

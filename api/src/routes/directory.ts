@@ -82,7 +82,13 @@ interface DirectoryData {
   };
 }
 
-function loadDirectory(): DirectoryData {
+// The live directory is one DirectoryState row. Writes used to go to DATA_PATH in
+// place, but Render resets the disk on every deploy, so submissions and approvals
+// were silently lost. The bundled file now only seeds the row (first save) and is
+// the read-only fallback while the database is unreachable.
+const DIRECTORY_STATE_ID = "x402-directory";
+
+function readBundledDirectory(): DirectoryData {
   try {
     const raw = fs.readFileSync(DATA_PATH, "utf-8");
     return JSON.parse(raw) as DirectoryData;
@@ -96,19 +102,34 @@ function loadDirectory(): DirectoryData {
   }
 }
 
-function saveDirectory(data: DirectoryData): void {
+async function loadDirectory(): Promise<DirectoryData> {
+  try {
+    const row = await prisma.directoryState.findUnique({ where: { id: DIRECTORY_STATE_ID } });
+    if (row) return row.data as unknown as DirectoryData;
+  } catch (err) {
+    console.error("[directory] state read failed — serving bundled directory:", (err as Error).message);
+  }
+  return readBundledDirectory();
+}
+
+async function saveDirectory(data: DirectoryData): Promise<void> {
   // Update meta counts
   data.meta.total_services = data.services.filter(s => s.status === "active").length;
   data.meta.total_endpoints = data.services.reduce((sum, s) => sum + s.total_endpoints, 0);
   const allChains = new Set(data.services.flatMap(s => s.chains_supported));
   data.meta.total_chains = allChains.size;
   data.meta.last_updated = new Date().toISOString();
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), "utf-8");
+  const doc = JSON.parse(JSON.stringify(data));
+  await prisma.directoryState.upsert({
+    where: { id: DIRECTORY_STATE_ID },
+    create: { id: DIRECTORY_STATE_ID, data: doc },
+    update: { data: doc },
+  });
 }
 
 // ─── GET /api/v1/x402/directory — Full catalog ───────────────────────────────
 router.get("/", async (_req: Request, res: Response): Promise<void> => {
-  const data = loadDirectory();
+  const data = await loadDirectory();
   const activeServices = data.services.filter(s => s.status === "active");
 
   // Merge premium listing status from DB
@@ -165,8 +186,8 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 });
 
 // ─── GET /api/v1/x402/directory/search — Filter/search ───────────────────────
-router.get("/search", (req: Request, res: Response): void => {
-  const data = loadDirectory();
+router.get("/search", async (req: Request, res: Response): Promise<void> => {
+  const data = await loadDirectory();
   let results = data.services.filter(s => s.status === "active");
 
   // Filter by category
@@ -250,8 +271,8 @@ router.get("/search", (req: Request, res: Response): void => {
 });
 
 // ─── GET /api/v1/x402/directory/stats — Aggregate stats ──────────────────────
-router.get("/stats", (_req: Request, res: Response): void => {
-  const data = loadDirectory();
+router.get("/stats", async (_req: Request, res: Response): Promise<void> => {
+  const data = await loadDirectory();
   const active = data.services.filter(s => s.status === "active");
 
   const chainCounts: Record<string, number> = {};
@@ -297,9 +318,9 @@ router.get("/stats", (_req: Request, res: Response): void => {
 });
 
 // ─── GET /api/v1/x402/directory/sitemap — Service URLs for search engines ────
-router.get("/sitemap", (_req: Request, res: Response) => {
+router.get("/sitemap", async (_req: Request, res: Response) => {
   try {
-    const data = loadDirectory();
+    const data = await loadDirectory();
     const services = data.services || [];
 
     const urls = services
@@ -325,7 +346,7 @@ router.get("/sitemap", (_req: Request, res: Response) => {
 });
 
 // ─── POST /api/v1/x402/directory/submit — Submit a new service ───────────────
-router.post("/submit", (req: Request, res: Response): void => {
+router.post("/submit", async (req: Request, res: Response): Promise<void> => {
   const { name, url, description, contact_email, endpoints } = req.body;
 
   // Validate required fields
@@ -346,7 +367,7 @@ router.post("/submit", (req: Request, res: Response): void => {
     return;
   }
 
-  const data = loadDirectory();
+  const data = await loadDirectory();
 
   // Check for duplicate URL
   const existing = data.services.find(s => s.base_url === url || s.website_url === url);
@@ -374,7 +395,13 @@ router.post("/submit", (req: Request, res: Response): void => {
   };
 
   data.pending_submissions.push(submission);
-  saveDirectory(data);
+  try {
+    await saveDirectory(data);
+  } catch (err) {
+    console.error("[directory] submit not saved:", (err as Error).message);
+    res.status(503).json({ ok: false, error: "unavailable", message: "Could not save your submission right now — please try again shortly." });
+    return;
+  }
 
   res.status(201).json({
     ok: true,
@@ -417,7 +444,7 @@ router.post("/upgrade", async (req: Request, res: Response): Promise<void> => {
   }
 
   // Verify service exists in directory
-  const data = loadDirectory();
+  const data = await loadDirectory();
   const service = data.services.find(s => s.id === service_id);
   if (!service) {
     res.status(404).json({
@@ -549,12 +576,12 @@ router.post("/listings/:id/approve", requireAdmin, async (req: Request, res: Res
     });
 
     // Also update the JSON directory file
-    const data = loadDirectory();
+    const data = await loadDirectory();
     const service = data.services.find(s => s.id === listing.serviceId);
     if (service) {
       if (listing.tier === "featured") service.featured = true;
       if (listing.tier === "verified") service.verified = true;
-      saveDirectory(data);
+      await saveDirectory(data);
     }
 
     res.json({
@@ -632,8 +659,8 @@ router.get("/tiers", (_req: Request, res: Response): void => {
 // ─── GET /api/v1/x402/directory/:id — Single service ─────────────────────────
 // MUST stay LAST among the GET routes: /:id matches any single path segment,
 // so registering it earlier shadows literal routes like /tiers and /listings.
-router.get("/:id", (req: Request, res: Response): void => {
-  const data = loadDirectory();
+router.get("/:id", async (req: Request, res: Response): Promise<void> => {
+  const data = await loadDirectory();
   const service = data.services.find(s => s.id === req.params.id);
 
   if (!service) {
