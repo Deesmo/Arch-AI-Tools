@@ -133,26 +133,36 @@ function walk(dir, exts, out = []) {
       maxBuffer: 50 * 1024 * 1024,
       stdio: ["ignore", "pipe", "pipe"],
     }).toString();
-    const data = JSON.parse(out);
-    const v = data.metadata?.vulnerabilities ?? {};
-    report(v);
+    report(JSON.parse(out));
   } catch (err) {
     // npm audit exits non-zero when vulns exist — parse stdout anyway
     const out = err.stdout?.toString?.() ?? "";
     try {
-      const data = JSON.parse(out);
-      report(data.metadata?.vulnerabilities ?? {});
+      report(JSON.parse(out));
     } catch {
       console.warn("\u26a0\ufe0f  [npm-audit] could not run/parse npm audit — skipping (non-fatal)");
     }
   }
-  function report(v) {
-    const high = (v.high ?? 0) + (v.critical ?? 0);
-    // Baseline 2026-06-10: 7 pre-existing high vulns in prod deps (coinbase/solana/axios
-    // chain, all marked fixable). Ratchet this down as deps get upgraded — never raise it.
-    const MAX_HIGH = Number(process.env.SECURITY_GATE_MAX_HIGH ?? 7);
-    if (high > MAX_HIGH) fail("npm-audit", `${v.high ?? 0} high + ${v.critical ?? 0} critical prod vulnerabilities (max allowed: ${MAX_HIGH})`);
-    else pass("npm-audit", `prod high/critical vulnerabilities: ${high} (max allowed: ${MAX_HIGH})`);
+  function report(data) {
+    // Count distinct high/critical ADVISORIES, not affected packages. One advisory in a
+    // shared dependency flags every package that depends on it (on 2026-11-02 a single
+    // zod advisory flagged 11 packages), so a package count stays red on one unfixable
+    // issue and stops telling new problems apart.
+    const ids = new Set();
+    for (const vuln of Object.values(data.vulnerabilities ?? {})) {
+      for (const via of vuln.via ?? []) {
+        if (typeof via === "object" && (via.severity === "high" || via.severity === "critical")) {
+          ids.add(via.url?.split("/").pop() || String(via.source));
+        }
+      }
+    }
+    // Baseline 2026-11-02: 1 — GHSA-mrhx-c7xc-m3w5 (zod <4.6.6; fixed only in zod 4, and
+    // @coinbase/cdp-sdk + @x402/* still require zod 3). Was 7 *packages* (2026-06-10).
+    // Ratchet this down as deps get upgraded — never raise it.
+    const MAX_HIGH = Number(process.env.SECURITY_GATE_MAX_HIGH ?? 1);
+    const list = [...ids].sort().join(", ");
+    if (ids.size > MAX_HIGH) fail("npm-audit", `${ids.size} high/critical advisories in prod deps (max allowed: ${MAX_HIGH}): ${list}`);
+    else pass("npm-audit", `prod high/critical advisories: ${ids.size} (max allowed: ${MAX_HIGH})${list ? ` — ${list}` : ""}`);
   }
 })();
 
