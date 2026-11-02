@@ -10,4 +10,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: "20.11.1"
+        value: "22.23.4"
