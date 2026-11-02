@@ -4,8 +4,9 @@
  * Processes a real x402 payment against archtools.dev using @x402/fetch + @x402/evm.
  * The SDK handles the full 402→sign→pay→200 flow automatically.
  * 
- * Usage:
- *   cd api && PAYER_PRIVATE_KEY=0x... node ../scripts/x402-first-payment.cjs
+ * Usage (pays the live search-web price — 0.015 USDC on Base — from YOUR wallet):
+ *   cd api && npm ci && PAYER_PRIVATE_KEY=0x... node scripts/x402-first-payment.cjs
+ * Optional: RESULTS_PATH=/path/to/report.md (default ./x402-first-payment-result.md).
  */
 
 const { wrapFetchWithPaymentFromConfig } = require("@x402/fetch");
@@ -23,7 +24,7 @@ if (!PRIVATE_KEY) {
 
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const TARGET_URL = "https://archtools.dev/v1/tools/search-web";
-const RESULTS_PATH = "/Users/bradvaldes/.openclaw/workspace/FIRST-X402-PAYMENT.md";
+const RESULTS_PATH = process.env.RESULTS_PATH || require("path").join(process.cwd(), "x402-first-payment-result.md");
 
 async function main() {
   const account = privateKeyToAccount(PRIVATE_KEY);
@@ -45,9 +46,10 @@ async function main() {
   const balanceFormatted = formatUnits(usdcBalance, 6);
   console.log(`💰 USDC balance: ${balanceFormatted} USDC`);
 
-  if (usdcBalance < 5000n) {
-    console.error(`❌ Insufficient USDC. Need at least 0.005 USDC (5000 units). Have: ${usdcBalance.toString()}`);
-    console.error(`   Send ≥ 0.01 USDC to ${account.address} on Base network`);
+  // search-web is priced at 0.015 USDC (src/middleware/x402.ts); check before signing.
+  if (usdcBalance < 15000n) {
+    console.error(`❌ Insufficient USDC. Need at least 0.015 USDC (15000 units). Have: ${usdcBalance.toString()}`);
+    console.error(`   Send ≥ 0.02 USDC to ${account.address} on Base network`);
     process.exit(1);
   }
 
@@ -124,7 +126,7 @@ async function main() {
 ## How It Worked
 1. \`@x402/fetch\` sent POST to archtools.dev/v1/tools/search-web
 2. Server returned HTTP 402 with payment requirements (scheme: exact, network: eip155:8453)
-3. \`@x402/evm\` (ExactEvmScheme) signed EIP-3009 TransferWithAuthorization for 0.005 USDC
+3. \`@x402/evm\` (ExactEvmScheme) signed EIP-3009 TransferWithAuthorization for the price in the 402 (search-web: 0.015 USDC)
 4. Facilitator (x402.org) verified signature and settled on-chain (gasless for payer)
 5. Server returned HTTP 200 with search results
 
