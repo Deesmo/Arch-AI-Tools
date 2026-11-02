@@ -291,6 +291,22 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
       return;
     }
 
+    // SECURITY: refuse settlements too small to cover the gas our hot wallet pays
+    // (a zero-value payment otherwise verifies and still costs an on-chain tx).
+    const signedValue = decodePayment(payment)?.payload?.authorization?.value ?? paymentDetails.maxAmountRequired;
+    let signedUnits = 0n;
+    try { signedUnits = BigInt(signedValue ?? "0"); } catch { signedUnits = 0n; }
+    const minUnits = BigInt(process.env.FACILITATOR_MIN_SETTLE_UNITS || "10000"); // 0.01 USDC
+    if (signedUnits < minUnits) {
+      res.status(400).json({
+        ok: false,
+        error: "amount_too_small",
+        message: `Minimum settlement is ${minUnits} atomic units.`,
+        request_id: reqId(),
+      });
+      return;
+    }
+
     // SECURITY (F-06): never settle an unverified payment. If this payment was
     // not already verified (verify→settle flow), verify it now (one-step flow).
     // verifyPayment enforces signature (fail-closed), amount, recipient, expiry,
@@ -472,7 +488,7 @@ router.post("/register", registerLimiter, async (req: Request, res: Response): P
     }
 
     // Validate email format
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/.test(email)) {
       res.status(400).json({ ok: false, error: "invalid_email", message: "Invalid email address", request_id: reqId() });
       return;
     }
@@ -532,6 +548,9 @@ router.post("/register", registerLimiter, async (req: Request, res: Response): P
         networks: requestedNetworks,
         endpoints: endpoints || null,
         feePercent: getDefaultFeePercent(),  // Default from FACILITATOR_FEE_PERCENT env (2.5%)
+        // SECURITY: settlements are paid for by our hot wallet's gas, so a
+        // self-registered provider stays inactive until an admin approves it.
+        active: false,
       },
     });
 
@@ -545,7 +564,9 @@ router.post("/register", registerLimiter, async (req: Request, res: Response): P
         networks: provider.networks,
         feePercent: provider.feePercent,
         createdAt: provider.createdAt.toISOString(),
+        status: "pending_approval",
       },
+      message: "Registered. Your provider is pending review; verify and settle will work once it is approved.",
       // IMPORTANT: API key is only shown once at registration
       apiKey,
       facilitatorUrl: `${process.env.PUBLIC_SITE_URL || "https://archtools.dev"}/api/v1/facilitator`,
