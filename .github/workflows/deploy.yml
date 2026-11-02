@@ -1,4 +1,4 @@
-name: Deploy to Render
+name: Main build check (Render auto-deploys api/)
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy
+    name: Build check
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -36,13 +36,8 @@ jobs:
       - name: Run integration tests
         run: npm run test || true  # Don't block deploy on test failures (tests need DB)
 
-      - name: Deploy to Render
-        if: success()
-        run: |
-          curl -sf -X POST \
-            "https://api.render.com/v1/services/srv-d6iuo3ua2pns73asd8dg/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"clearCache":"do_not_clear"}' \
-            && echo "✅ Deploy triggered successfully" \
-            || echo "⚠️ Deploy trigger failed (check RENDER_API_KEY secret)"
+      # No deploy step: the Render service auto-deploys main itself, only when
+      # files under its root directory (api/) change. The curl trigger that lived
+      # here made every api/ change deploy twice (Render's deploy + this one) and
+      # redeployed unchanged code on every web/ or mcp/ merge; each swap is a
+      # brief 502 window (seen 2026-11-02, 16:39:56-16:40:09Z).
