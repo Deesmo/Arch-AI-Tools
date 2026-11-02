@@ -137,13 +137,19 @@ function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFuncti
  * up-front credit charge is refunded — never a 200 with empty output. A BYOK
  * caller's own key being rejected (4xx) is the caller's error (400); anything
  * else is 503 (never 502: Cloudflare replaces origin 502 bodies with its page).
+ * The provider's own error text is shown only for the caller's own key (BYOK):
+ * for our platform keys it can carry quota/billing/project details, so it is
+ * logged server-side and the caller gets a generic message.
  */
 function upstreamFailure(res: Response, provider: string, status: number, detail: string | undefined, byok: boolean): void {
   const callerFault = byok && status >= 400 && status < 500;
+  if (!byok) console.error(`[ai-generate] ${provider} failed:`, status, detail ?? "(no text)");
   res.status(callerFault ? 400 : 503).json({
     ok: false,
     error: callerFault ? "byok_api_error" : "upstream_unavailable",
-    message: `${provider} ${status >= 400 ? `returned ${status}` : "returned no text"}${detail ? `: ${String(detail).slice(0, 200)}` : ""}`,
+    message: byok
+      ? `${provider} ${status >= 400 ? `returned ${status}` : "returned no text"}${detail ? `: ${String(detail).slice(0, 200)}` : ""}`
+      : `${provider} is temporarily unavailable. Please retry later or choose another model.`,
     provider: provider.toLowerCase(),
     request_id: reqId(),
   });
@@ -2535,7 +2541,9 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { message?: string };
-      res.status(503).json({ ok: false, error: "send_error", message: err.message ?? `Resend returned ${r.status}`, request_id: reqId() }); return;
+      console.error("[send-email] Resend error:", r.status, err);
+      const failure = mapResendFailure(r.status, err.message);
+      res.status(failure.status).json({ ok: false, error: failure.error, message: failure.message, request_id: reqId() }); return;
     }
     const data = await r.json() as { id?: string };
     res.json({ ok: true, message_id: data.id ?? null, to, subject, from: fromAddr, request_id: reqId() });
