@@ -11,6 +11,7 @@ import { applyModelCost, modelCostMultiplier } from "../../lib/modelCost.js";
 import { trimSessionContext } from "../../lib/sessionContext.js";
 import { moderateGenerationPrompt } from "../../lib/promptModeration.js";
 import { zonedToDate } from "../../lib/zonedTime.js";
+import { noteProviderResponse, unavailableProviders } from "../../lib/providerHealth.js";
 import { DISPOSABLE_DOMAINS } from "../../lib/disposableDomains.js";
 import { readArrayBufferWithLimit, ResponseTooLargeError } from "../../utils/responseBody.js";
 import { enforcementTierForAccount } from "../../lib/tiers.js";
@@ -144,6 +145,7 @@ function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFuncti
 function upstreamFailure(res: Response, provider: string, status: number, detail: string | undefined, byok: boolean): void {
   const callerFault = byok && status >= 400 && status < 500;
   if (!byok) console.error(`[ai-generate] ${provider} failed:`, status, detail ?? "(no text)");
+  if (!byok && provider === "OpenAI") noteProviderResponse("openai", status, String(detail ?? ""));
   res.status(callerFault ? 400 : 503).json({
     ok: false,
     error: callerFault ? "byok_api_error" : "upstream_unavailable",
@@ -155,8 +157,26 @@ function upstreamFailure(res: Response, provider: string, status: number, detail
   });
 }
 
+/**
+ * Answer 503 before any payment challenge or credit charge when the paid
+ * provider behind this tool is out of credit (lib/providerHealth.ts).
+ */
+function providerGate(toolName: string) {
+  return (_req: Request, res: Response, next: NextFunction): void => {
+    if (!unavailableProviders(toolName)) { next(); return; }
+    res.setHeader("Retry-After", "1800");
+    res.status(503).json({
+      ok: false,
+      error: "tool_temporarily_unavailable",
+      message: `${toolName} is temporarily unavailable because its provider is out of credit. You have not been charged. Retry later.`,
+      retry_after_seconds: 1800,
+      request_id: reqId(),
+    });
+  };
+}
+
 function toolMiddleware(toolName: string) {
-  return [x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
+  return [providerGate(toolName), x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
 }
 
 function isX402Paid(req: Request): boolean {
@@ -2075,20 +2095,21 @@ router.post("/ai-oracle", ...toolMiddleware("ai-oracle"), async (req: AuthedRequ
 });
 
 // ─── CRYPTO TOOLS ─────────────────────────────────────────────────────────────
-// Helper: returns CoinGecko headers, including API key when configured
+// CoinGecko plan selection (docs.coingecko.com/reference/authentication):
+// a Pro key uses pro-api.coingecko.com + x-cg-pro-api-key; a free Demo key uses
+// api.coingecko.com + x-cg-demo-api-key; with neither, the keyless public API.
+const cgProKey = (): string => {
+  const key = config.coingecko?.apiKey;
+  return key && key.length > 10 && !key.startsWith("REPLACE") ? key : "";
+};
 const cgHeaders = (): Record<string, string> => {
   const h: Record<string, string> = { "Accept": "application/json", "User-Agent": "ArchTools/1.6" };
-  const key = config.coingecko?.apiKey;
-  if (key && key.length > 10 && !key.startsWith("REPLACE")) h["x-cg-pro-api-key"] = key;
+  const demo = config.coingecko?.demoApiKey;
+  if (cgProKey()) h["x-cg-pro-api-key"] = cgProKey();
+  else if (demo) h["x-cg-demo-api-key"] = demo;
   return h;
 };
-// Use pro endpoint when a CoinGecko API key is configured, otherwise fall back to free tier
-const cgBase = (): string => {
-  const key = config.coingecko?.apiKey;
-  return (key && key.length > 10 && !key.startsWith("REPLACE"))
-    ? "https://pro-api.coingecko.com/api/v3"
-    : "https://api.coingecko.com/api/v3";
-};
+const cgBase = (): string => (cgProKey() ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3");
 
 // Ticker → CoinGecko slug map. Lets users pass BTC/ETH/etc and have it resolved
 // to the canonical CoinGecko id. Slugs (e.g. "bitcoin") still pass through as-is.
@@ -2201,15 +2222,17 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
     const _cgHeaders = cgHeaders();
     type CgCoin = { id: string; symbol: string; name: string; current_price: number; market_cap: number; market_cap_rank: number; total_volume: number; price_change_percentage_24h: number };
     let cgData: CgCoin[] | null = null;
+    let lastStatus: number | string = "no response";
 
     for (const delay of [0, 1500, 3000]) {
       if (delay > 0) await new Promise(r => setTimeout(r, delay));
       try {
         const r = await fetch(cgUrl, { headers: _cgHeaders, signal: AbortSignal.timeout(8000) });
+        lastStatus = r.status;
         if (r.ok) { cgData = (await r.json()) as CgCoin[]; break; }
         if (r.status === 429 || r.status === 503) continue; // rate limited — retry
         break; // other error — don't retry
-      } catch { continue; }
+      } catch (e) { lastStatus = (e as Error).name; continue; }
     }
 
     if (cgData && Array.isArray(cgData) && cgData.length > 0) {
@@ -2217,24 +2240,10 @@ router.post("/crypto-market-cap", ...toolMiddleware("crypto-market-cap"), async 
       res.json({ ok: true, currency, coins, source: "coingecko", data_source: "CoinGecko", attribution: "Powered by CoinGecko API — https://www.coingecko.com", data_license: "CoinGecko Terms apply — https://www.coingecko.com/en/api_terms", request_id: reqId() }); return;
     }
 
-    // Fallback: CryptoCompare (free, no key). CoinCap v2 was removed — api.coincap.io no longer resolves.
-    try {
-      const ccmpUrl = `https://min-api.cryptocompare.com/data/top/mktcapfull?limit=${n}&tsym=USD`;
-      const ccmpResp = await fetch(ccmpUrl, { signal: AbortSignal.timeout(8000) });
-      if (ccmpResp.ok) {
-        const ccmpJson = await ccmpResp.json() as { Data: any[] };
-        const coins = (ccmpJson.Data || []).map((c: any, i: number) => ({
-          rank: i + 1, id: (c.CoinInfo?.Name || "").toLowerCase(), symbol: (c.CoinInfo?.Name || "").toLowerCase(), name: c.CoinInfo?.FullName || "",
-          price: c.RAW?.USD?.PRICE || 0,
-          market_cap: c.RAW?.USD?.MKTCAP || 0,
-          volume_24h: c.RAW?.USD?.TOTALVOLUME24HTO || 0,
-          change_24h: c.RAW?.USD?.CHANGEPCT24HOUR || 0,
-        }));
-        res.json({ ok: true, currency: "usd", coins, source: "cryptocompare_fallback", data_source: "CryptoCompare", attribution: "Data from CryptoCompare — https://www.cryptocompare.com", request_id: reqId() }); return;
-      }
-    } catch { /* fall through */ }
-
-    res.status(503).json({ ok: false, error: "fetch_error", message: "All crypto data sources unavailable (CoinGecko, CryptoCompare). Try again shortly.", request_id: reqId() });
+    // CryptoCompare (the former fallback) now requires an API key (401 "API key
+    // required", checked 2026-11-02), so CoinGecko is the only source.
+    console.error(`[crypto-market-cap] CoinGecko failed: ${lastStatus}`);
+    res.status(503).json({ ok: false, error: "fetch_error", message: "Market data is temporarily unavailable (CoinGecko rate limit or outage). Try again shortly.", request_id: reqId() });
   } catch (e) { res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
 
@@ -2395,6 +2404,7 @@ router.post("/text-to-speech", ...toolMiddleware("text-to-speech"), async (req: 
     if (!r.ok) {
       const err = await r.text();
       console.error("[text-to-speech] ElevenLabs error:", r.status, err);
+      noteProviderResponse("elevenlabs", r.status, err);
       res.status(503).json({ ok: false, error: "tts_error", message: `ElevenLabs returned ${r.status}`, request_id: reqId() }); return;
     }
     const buf = await r.arrayBuffer();
@@ -2436,6 +2446,7 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
     if (!r.ok) {
       const err = await r.text();
       console.error("[transcribe-audio] OpenAI error:", r.status, err);
+      noteProviderResponse("openai", r.status, err);
       res.status(503).json({ ok: false, error: "transcription_error", message: `OpenAI returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { text: string; language?: string; duration?: number; segments?: unknown[] };
@@ -2555,6 +2566,24 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
 });
 
 // ─── design-create ────────────────────────────────────────────────────────────
+/** Stability AI fallback for image generation (1:1 webp). A data URL, or null when it can't deliver. Feeds the provider breaker. */
+async function stabilityImageFallback(prompt: string): Promise<string | null> {
+  if (!process.env.STABILITY_API_KEY) return null;
+  try {
+    const sr = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.STABILITY_API_KEY}`, Accept: "application/json" },
+      body: (() => { const fd = new FormData(); fd.append("prompt", prompt); fd.append("aspect_ratio", "1:1"); fd.append("output_format", "webp"); return fd; })(),
+    });
+    if (sr.ok) {
+      const sd = await sr.json() as { image?: string };
+      return sd.image ? `data:image/webp;base64,${sd.image}` : null;
+    }
+    noteProviderResponse("stability", sr.status, await sr.text().catch(() => ""));
+  } catch (_) { /* fall through */ }
+  return null;
+}
+
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; n?: number };
@@ -2586,23 +2615,10 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
       console.error("[design-create] OpenAI error:", r.status, err);
-      // Fallback: Stability AI
-      if (process.env.STABILITY_API_KEY) {
-        try {
-          const sr = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${process.env.STABILITY_API_KEY}`, Accept: "application/json" },
-            body: (() => { const fd = new FormData(); fd.append("prompt", prompt); fd.append("aspect_ratio", "1:1"); fd.append("output_format", "webp"); return fd; })(),
-          });
-          if (sr.ok) {
-            const sd = await sr.json() as { image?: string };
-            if (sd.image) {
-              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return;
-            }
-          }
-        } catch (_) { /* fall through */ }
-      }
-      res.status(503).json({ ok: false, error: "generation_error", message: err.error?.message ?? `OpenAI returned ${r.status}`, request_id: reqId() }); return;
+      noteProviderResponse("openai", r.status, JSON.stringify(err));
+      const fallback = await stabilityImageFallback(prompt);
+      if (fallback) { res.json({ ok: true, images: [{ url: fallback, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return; }
+      res.status(503).json({ ok: false, error: "generation_error", message: `Image generation is temporarily unavailable (provider returned ${r.status}). Please retry later.`, request_id: reqId() }); return;
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
     const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
@@ -2692,7 +2708,17 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req: A
     const img = (r.data as { data: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }).data[0];
     const image_url = img.url ?? (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
     res.json({ ok: true, image_url, revised_prompt: img.revised_prompt ?? null, size: safeSize, quality: safeQuality, request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() }); }
+  } catch (e) {
+    // Same providers as /design-create (its gate): report OpenAI to the breaker, then try Stability.
+    const upstream = (e as { response?: { status?: number; data?: unknown } })?.response;
+    if (upstream?.status) {
+      console.error("[generate-image] OpenAI error:", upstream.status, upstream.data);
+      noteProviderResponse("openai", upstream.status, JSON.stringify(upstream.data ?? {}));
+      const fallback = await stabilityImageFallback(prompt);
+      if (fallback) { res.json({ ok: true, image_url: fallback, revised_prompt: null, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return; }
+    }
+    res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() });
+  }
 });
 
 // DB has "check-domain" but route is /domain-check
@@ -3277,7 +3303,8 @@ router.post("/video-generate", ...toolMiddleware("video-generate"), async (req: 
       }
 
       console.error("[video-generate] Runway start error:", attempt.status, err);
-      res.status(503).json({ ok: false, error: "runway_error", message: `Runway returned ${attempt.status}: ${err.slice(0, 200)}`, request_id: reqId() }); return;
+      noteProviderResponse("runway", attempt.status, err);
+      res.status(503).json({ ok: false, error: "runway_error", message: `Video generation is temporarily unavailable (provider returned ${attempt.status}). Please retry later.`, request_id: reqId() }); return;
     }
 
     if (!startResp || !selectedModel) {
@@ -3346,6 +3373,7 @@ router.post("/image-remove-bg", ...toolMiddleware("image-remove-bg"), async (req
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[image-remove-bg] RemoveBG error:", resp.status, err);
+      noteProviderResponse("removebg", resp.status, err);
       // NOTE: never return 502 from origin — Cloudflare replaces origin 502
       // bodies with its own error page, hiding our JSON from the client.
       let detail = err.slice(0, 300);
@@ -3384,6 +3412,7 @@ router.post("/email-find", ...toolMiddleware("email-find"), async (req: AuthedRe
     if (!resp.ok) {
       const err = await resp.text();
       console.error("[email-find] Hunter error:", resp.status, err);
+      noteProviderResponse("hunter", resp.status, err);
       // NOTE: never return 502 from origin — Cloudflare replaces origin 502 bodies
       // with its own error page, hiding our JSON from the client.
       let detail = err.slice(0, 300);
