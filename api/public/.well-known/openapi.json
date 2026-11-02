@@ -303,7 +303,7 @@
     "/v1/tools/screenshot-capture": {
       "post": {
         "operationId": "screenshotCapture",
-        "summary": "Capture a screenshot of any webpage",
+        "summary": "Get a page's title, description, Open Graph image and a text preview (metadata only; no rendered screenshot)",
         "tags": [
           "Web"
         ],
@@ -318,27 +318,8 @@
                 ],
                 "properties": {
                   "url": {
-                    "type": "string"
-                  },
-                  "width": {
-                    "type": "integer",
-                    "default": 1280
-                  },
-                  "height": {
-                    "type": "integer",
-                    "default": 800
-                  },
-                  "full_page": {
-                    "type": "boolean",
-                    "default": false
-                  },
-                  "format": {
                     "type": "string",
-                    "enum": [
-                      "png",
-                      "jpeg"
-                    ],
-                    "default": "png"
+                    "description": "Public page URL"
                   }
                 }
               }
@@ -347,7 +328,7 @@
         },
         "responses": {
           "200": {
-            "description": "Base64 encoded screenshot"
+            "description": "Page title, description, Open Graph image, first heading and a text preview (no image)"
           }
         }
       }
@@ -389,7 +370,7 @@
     "/v1/tools/browser-task": {
       "post": {
         "operationId": "browserTask",
-        "summary": "Automate browser interactions via Playwright",
+        "summary": "Fetch a public page and extract its text or HTML, optionally by CSS selector (static HTML only: no JavaScript, clicking or typing)",
         "tags": [
           "Web"
         ],
@@ -400,17 +381,25 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "url",
-                  "task"
+                  "url"
                 ],
                 "properties": {
                   "url": {
                     "type": "string",
-                    "description": "Starting URL"
+                    "description": "Public page URL to fetch"
                   },
-                  "task": {
+                  "action": {
                     "type": "string",
-                    "description": "Task description for the browser agent"
+                    "enum": [
+                      "extract",
+                      "html"
+                    ],
+                    "default": "extract",
+                    "description": "extract = visible text, html = inner HTML of the selected element"
+                  },
+                  "selector": {
+                    "type": "string",
+                    "description": "Optional CSS selector (defaults to the page body)"
                   }
                 }
               }
@@ -419,7 +408,7 @@
         },
         "responses": {
           "200": {
-            "description": "Task result and extracted data"
+            "description": "Extracted text or HTML"
           }
         }
       }

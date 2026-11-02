@@ -52,8 +52,8 @@ Protocol: https://x402.org
 ### Web & Scraping
 - [Web Scrape](https://archtools.dev/v1/tools/web-scrape): Scrape and extract content from websites with optional CSS selector (5 credits)
 - [Extract Page](https://archtools.dev/v1/tools/extract-page): Fetch a webpage and return clean text, metadata, and links (5 credits)
-- [Browser Task](https://archtools.dev/v1/tools/browser-task): Headless browser automation (click/type/extract) via Playwright — SSRF hardened (10 credits)
-- [Screenshot Capture](https://archtools.dev/v1/tools/screenshot-capture): Capture page metadata and screenshot URL for any public URL (10 credits)
+- [Browser Task](https://archtools.dev/v1/tools/browser-task): Fetch a public page and extract its text or HTML, optionally by CSS selector (static HTML only: no JavaScript, clicking or typing) (10 credits)
+- [Screenshot Capture](https://archtools.dev/v1/tools/screenshot-capture): Get a page's title, description, Open Graph image and a text preview (metadata only; no rendered screenshot) (10 credits)
 - [HTML To Markdown](https://archtools.dev/v1/tools/html-to-markdown): Convert HTML or any URL to clean Markdown (3 credits)
 - [RSS Parse](https://archtools.dev/v1/tools/rss-parse): Fetch and parse RSS or Atom feeds into clean structured JSON (4 credits)
 - [Extract PDF](https://archtools.dev/v1/tools/extract-pdf): Extract text and tables from a PDF (6 credits)
