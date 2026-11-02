@@ -8,6 +8,8 @@
  *        expiry, up to its own 30d refresh lifetime.
  *  - #23 (CRITICAL crash DoS): a workflow step with missing/non-object input is
  *        rejected by the validation fn (→ 400) instead of throwing.
+ *  - DCR malformed-body crash DoS: public /oauth/register metadata is type-
+ *        checked before Prisma sees it.
  *
  * Run: npm run build first (populates dist/), then:
  *   node tests/oauth-workflow-hardening.test.mjs
@@ -60,6 +62,49 @@ async function main() {
 
   test("escapeHtml escapes & and single-quote too", () => {
     assert.strictEqual(esc(`a&b'c`), "a&amp;b&#x27;c");
+  });
+
+  // ── DCR: public client registration metadata validation ─────────────────
+  console.log("OAuth DCR — malformed metadata validation:");
+  const { validateOAuthClientMetadata } = oauth;
+
+  test("valid public-client metadata is sanitized", () => {
+    const result = validateOAuthClientMetadata({
+      client_name: "  Test Client  ",
+      redirect_uris: ["https://client.example/callback"],
+      token_endpoint_auth_method: "none",
+      response_types: ["code"],
+    });
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.clientName, "Test Client");
+    assert.deepStrictEqual(result.redirectUris, ["https://client.example/callback"]);
+    assert.deepStrictEqual(result.requestedGrantTypes, ["authorization_code", "refresh_token"]);
+    assert.deepStrictEqual(result.responseTypes, ["code"]);
+  });
+
+  test("non-string client_name is rejected before Prisma", () => {
+    const result = validateOAuthClientMetadata({
+      client_name: { text: "boom" },
+      redirect_uris: ["https://client.example/callback"],
+    });
+    assert.deepStrictEqual(result, {
+      ok: false,
+      error: "invalid_client_metadata",
+      description: "client_name and redirect_uris are required",
+    });
+  });
+
+  test("redirect_uris / grant_types / response_types must be string arrays", () => {
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: [42] }).ok, false);
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: ["https://client.example/cb"], grant_types: "authorization_code" }).ok, false);
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: ["https://client.example/cb"], response_types: [{}] }).ok, false);
+  });
+
+  test("unsupported DCR values are rejected with 400-shaped errors", () => {
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: ["http://evil.example/cb"] }).error, "invalid_redirect_uri");
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: ["https://client.example/cb"], grant_types: ["password"] }).error, "invalid_client_metadata");
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: ["https://client.example/cb"], token_endpoint_auth_method: {} }).error, "invalid_client_metadata");
+    assert.strictEqual(validateOAuthClientMetadata({ client_name: "x", redirect_uris: ["https://client.example/cb"], response_types: ["token"] }).error, "invalid_client_metadata");
   });
 
   // ── #13: workflow step.tool path-traversal guard ──────────────────────────
