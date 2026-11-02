@@ -364,6 +364,18 @@ model Referral {
 
 // Live x402 directory document (one row, id "x402-directory"). Replaces in-place
 // writes to dist/data/x402-directory.json, which Render's per-deploy disk reset lost.
+// Byte-for-byte archive of files found on the Render persistent disk before it was
+// removed (2026-11-02): a legacy SQLite database last written 2026-03-03.
+model DiskArchive {
+  id             String   @id @default(cuid())
+  path           String
+  sha256         String   @unique
+  size           Int
+  fileModifiedAt DateTime
+  content        Bytes
+  createdAt      DateTime @default(now())
+}
+
 model DirectoryState {
   id        String   @id
   data      Json
