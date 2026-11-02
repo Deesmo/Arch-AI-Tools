@@ -30,9 +30,13 @@ export async function refreshMonthlyCredits(now = new Date()): Promise<{ granted
   startOfMonth.setUTCDate(1);
   startOfMonth.setUTCHours(0, 0, 0, 0);
 
+  // VERIFIED ONLY: signup holds back most free credits until the email is verified,
+  // so the monthly top-up must not hand them to unverified accounts. Topping up every
+  // free account let throwaway-email bots (60 unverified accounts on 2026-10-14) collect
+  // the full monthly grant without ever proving an address.
   const agents = await prisma.agent.findMany({
-    where: { tier: "free" },
-    select: { id: true, email: true, credits: true, updatedAt: true },
+    where: { tier: "free", emailVerified: true },
+    select: { id: true, email: true, credits: true, updatedAt: true, emailOptOut: true },
   });
 
   let granted = 0;
@@ -58,8 +62,8 @@ export async function refreshMonthlyCredits(now = new Date()): Promise<{ granted
     }
     granted++;
 
-    // Send monthly refresh email (non-blocking)
-    if (agent.email) {
+    // Send monthly refresh email (non-blocking), never to someone who unsubscribed.
+    if (agent.email && !agent.emailOptOut) {
       sendMonthlyRefreshEmail(agent.email, credits - agent.credits, credits).catch(() => {});
     }
   }
