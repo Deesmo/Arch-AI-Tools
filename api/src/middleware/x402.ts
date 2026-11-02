@@ -23,6 +23,7 @@ import { config } from "../config.js";
 import { redis } from "../lib/redis.js";
 import { getBazaarExtension } from "./bazaarDiscovery.js";
 import { classifyStatus } from "../utils/statusClass.js";
+import { deferResponse, type Decision } from "./deferResponse.js";
 import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
 import { toV1Requirements, asV1Payload, claimsV1, toV2Payload, toV2Requirements } from "../lib/x402V1.js";
 import { toV2PaymentRequired, toV2FacilitatorArgs, toCaip2, networksEqual, paymentPayloadVersion } from "../lib/x402V2.js";
@@ -1390,78 +1391,79 @@ export function x402Middleware(toolName: string) {
       return;
     }
 
-    // Settle payment using spec-compliant format
-    const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
+    // Mark request as x402-paid so tool handlers can skip credit checks and,
+    // for stateful tools, bind resources to the payer.
+    (req as Request & { x402Paid?: boolean }).x402Paid = true;
+    const verifiedPayer = verifyResult.payer ?? extractPayerAddress(paymentHeader);
+    if (verifiedPayer) {
+      (req as Request & { x402Payer?: string }).x402Payer = verifiedPayer;
+    }
 
-    // SECURITY: require an actual SUCCESSFUL settlement before serving the tool.
-    // success===true is mandatory — a settle response that carries a transaction
-    // hash but success!==true (e.g. a reverted/failed tx) means funds did NOT move,
-    // so it must not grant access.
-    const settled = !!settleResult && settleResult.success === true;
-    if (!settled) {
-      // Free the nonce so the agent can retry the payment
-      if (nonce) await releaseStoredNonce(nonce);
+    // Settle and record. Returns the PAYMENT-RESPONSE header value, or null when
+    // settlement failed (the nonce is released so the agent can retry).
+    const settleAndRecord = async (): Promise<string | null> => {
+      const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
+
+      // SECURITY: require an actual SUCCESSFUL settlement before serving the tool.
+      // success===true is mandatory — a settle response that carries a transaction
+      // hash but success!==true (e.g. a reverted/failed tx) means funds did NOT move,
+      // so it must not grant access.
+      const settled = !!settleResult && settleResult.success === true;
+      if (!settled) {
+        if (nonce) await releaseStoredNonce(nonce);
+        try {
+          await prisma.x402Payment.create({
+            data: {
+              toolName,
+              amountUsdc: price,
+              network: (paymentRequirements as any).network ?? config.x402.network,
+              status: "settle_failed",
+            },
+          });
+        } catch {
+          // Non-fatal
+        }
+        return null;
+      }
+
       try {
         await prisma.x402Payment.create({
           data: {
             toolName,
             amountUsdc: price,
-            network: (paymentRequirements as any).network ?? config.x402.network,
-            status: "settle_failed",
+            txHash: settleResult?.transaction ?? undefined,
+            network: settleResult?.network ?? (paymentRequirements as any).network ?? config.x402.network,
+            status: "settled",
           },
         });
       } catch {
-        // Non-fatal
+        // Non-fatal — don't block the request
       }
-      res.status(402).json({
-        ok: false,
-        error: "payment_settlement_failed",
-        message: "x402 payment could not be settled. You have not been charged — please retry.",
-      });
-      return;
-    }
 
-    // Log the x402 payment
-    try {
-      await prisma.x402Payment.create({
-        data: {
-          toolName,
-          amountUsdc: price,
-          txHash: settleResult?.transaction ?? undefined,
-          network: settleResult?.network ?? (paymentRequirements as any).network ?? config.x402.network,
-          status: "settled",
-        },
-      });
-    } catch {
-      // Non-fatal — don't block the request
-    }
+      const payer = settleResult?.payer ?? verifiedPayer;
+      if (payer) {
+        (req as Request & { x402Payer?: string }).x402Payer = payer;
+      }
 
-    // Mark request as x402-paid so tool handlers can skip credit checks and,
-    // for stateful tools, bind resources to the settled payer.
-    (req as Request & { x402Paid?: boolean }).x402Paid = true;
-    const payer = settleResult?.payer ?? verifyResult.payer ?? extractPayerAddress(paymentHeader);
-    if (payer) {
-      (req as Request & { x402Payer?: string }).x402Payer = payer;
-    }
-
-    // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 v2 spec §5.3.2
-    // ("network: Blockchain network identifier in CAIP-2 format") — normalize the
-    // facilitator-returned network too: the v1-passthrough settle branch gets a
-    // v1-shaped CDP response with a NAMED network (e.g. "base"), not just our
-    // internal fallbacks. toCaip2 passes CAIP-2 through unchanged and returns null
-    // for unmappable ids, so unknown values still fall through verbatim.
-    const settleResponse = {
-      success: true,
-      transaction: settleResult?.transaction ?? "",
-      network:
-        toCaip2(settleResult?.network) ??
-        settleResult?.network ??
-        toCaip2((paymentRequirements as any).network) ??
-        toCaip2(config.x402.network) ??
-        config.x402.network,
-      payer: payer ?? "",
+      // PAYMENT-RESPONSE header: Base64-encoded SettleResponse per x402 v2 spec §5.3.2
+      // ("network: Blockchain network identifier in CAIP-2 format") — normalize the
+      // facilitator-returned network too: the v1-passthrough settle branch gets a
+      // v1-shaped CDP response with a NAMED network (e.g. "base"), not just our
+      // internal fallbacks. toCaip2 passes CAIP-2 through unchanged and returns null
+      // for unmappable ids, so unknown values still fall through verbatim.
+      const settleResponse = {
+        success: true,
+        transaction: settleResult?.transaction ?? "",
+        network:
+          toCaip2(settleResult?.network) ??
+          settleResult?.network ??
+          toCaip2((paymentRequirements as any).network) ??
+          toCaip2(config.x402.network) ??
+          config.x402.network,
+        payer: payer ?? "",
+      };
+      return Buffer.from(JSON.stringify(settleResponse)).toString("base64");
     };
-    res.setHeader("PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResponse)).toString("base64"));
 
     // Log x402 tool call to ApiRequest for admin stats visibility after the
     // downstream handler finishes, so statusCode/responseMs reflect reality.
@@ -1489,8 +1491,42 @@ export function x402Middleware(toolName: string) {
       }
     };
 
-    res.once("finish", () => { void logX402Request(); });
-    res.once("close", () => { void logX402Request(); });
+    const attachRequestLog = (): void => {
+      res.once("finish", () => { void logX402Request(); });
+      res.once("close", () => { void logX402Request(); });
+    };
+
+    // Settle AFTER the tool succeeds (X402_SETTLE_AFTER_RESPONSE=1), the order the
+    // official x402 Express middleware uses: a failed call (status >= 400) is
+    // never settled, so the payer is not charged for it. Off by default — the
+    // legacy order (settle, then run) stays until this is proven with a live payment.
+    if (process.env.X402_SETTLE_AFTER_RESPONSE === "1") {
+      attachRequestLog();
+      await deferResponse(res, next, async ({ statusCode }): Promise<Decision> => {
+        if (statusCode >= 400) {
+          if (nonce) await releaseStoredNonce(nonce);
+          return { headers: { "X-Payment-Settled": "false" } };
+        }
+        const paymentResponse = await settleAndRecord();
+        if (!paymentResponse) {
+          return { replace: { status: 402, body: { ok: false, error: "payment_settlement_failed", message: "x402 payment could not be settled. You have not been charged — please retry." } } };
+        }
+        return { headers: { "PAYMENT-RESPONSE": paymentResponse } };
+      });
+      return;
+    }
+
+    const paymentResponse = await settleAndRecord();
+    if (!paymentResponse) {
+      res.status(402).json({
+        ok: false,
+        error: "payment_settlement_failed",
+        message: "x402 payment could not be settled. You have not been charged — please retry.",
+      });
+      return;
+    }
+    res.setHeader("PAYMENT-RESPONSE", paymentResponse);
+    attachRequestLog();
 
     next();
   };
