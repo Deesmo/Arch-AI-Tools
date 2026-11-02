@@ -7,7 +7,8 @@
  *                     input, so a 400 carrying Resend's reason.
  *   429             — Resend quota / rate limit → 429, retry later.
  *   401 / 403 / 5xx — our API key, sending domain or Resend itself → a real platform
- *                     failure, 502.
+ *                     failure, 503 (not 502: Cloudflare replaces origin 502 bodies
+ *                     with its own HTML page, hiding this JSON).
  *
  * Every failure used to surface as 502, so callers' bad recipients read as
  * ArchTools outages (all 7 of the customer email-send "server errors" on record).
@@ -26,5 +27,5 @@ export function mapResendFailure(resendStatus: number, resendMessage?: string): 
   if (resendStatus === 429) {
     return { status: 429, error: "provider_rate_limited", message: "Email provider rate limit reached — retry shortly." };
   }
-  return { status: 502, error: "send_error", message };
+  return { status: 503, error: "send_error", message };
 }

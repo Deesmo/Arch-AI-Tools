@@ -351,6 +351,8 @@ export async function safeAxiosGet(
  * re-validating each hop. Returns the final Response. The caller is responsible
  * for inspecting `response.ok` / status as usual.
  */
+const DEFAULT_USER_AGENT = "ArchTools/1.9 (+https://archtools.dev)";
+
 export async function safeFetch(rawUrl: string, init: RequestInit = {}): Promise<Response> {
   let current = rawUrl;
 
@@ -360,7 +362,10 @@ export async function safeFetch(rawUrl: string, init: RequestInit = {}): Promise
     // internal IP between validation and connect (TOCTOU).
     const target = await resolveSafeTarget(current);
 
-    const resp = await fetchPinned(target, { ...init, redirect: "manual" });
+    // Some hosts (e.g. Wikimedia) refuse requests with no User-Agent (403).
+    const headers = new Headers(init.headers);
+    if (!headers.has("user-agent")) headers.set("User-Agent", DEFAULT_USER_AGENT);
+    const resp = await fetchPinned(target, { ...init, headers, redirect: "manual" });
 
     if (resp.status >= 300 && resp.status < 400) {
       const location = resp.headers.get("location");

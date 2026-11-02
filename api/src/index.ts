@@ -17,7 +17,10 @@ const __dirname = dirname(__filename);
 
 // Init Sentry before anything else
 if (process.env.SENTRY_DSN) {
-  Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV ?? "development", tracesSampleRate: 0.1 });
+  // tracePropagationTargets: by default the SDK attaches sentry-trace/baggage
+  // headers (incl. our public key, org id and release) to EVERY outgoing request,
+  // e.g. customer webhooks. Only our own host may receive them.
+  Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV ?? "development", tracesSampleRate: 0.1, tracePropagationTargets: [/^https:\/\/(www\.)?archtools\.dev\//] });
 }
 
 // Routes

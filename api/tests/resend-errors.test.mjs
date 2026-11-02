@@ -2,7 +2,7 @@
  * email-send error mapping — regression tests (2026-11-02).
  *
  * Resend 400/409/422 are the caller's request (e.g. a refused example.com
- * recipient) → 400 with Resend's reason; 429 → 429; 401/403/5xx are ours → 502.
+ * recipient) → 400 with Resend's reason; 429 → 429; 401/403/5xx are ours → 503.
  * Before this, every Resend failure surfaced as 502 and read as an ArchTools outage.
  * Runs against the compiled helper (npm run build first), like the other *.test.mjs.
  */
@@ -21,7 +21,7 @@ assert.equal(limited.error, "provider_rate_limited");
 
 for (const ours of [401, 403, 500, 503]) {
   const f = mapResendFailure(ours, "boom");
-  assert.equal(f.status, 502, `Resend ${ours} must stay a platform error`);
+  assert.equal(f.status, 503, `Resend ${ours} must stay a platform error (503, never 502)`);
   assert.equal(f.error, "send_error");
 }
 assert.equal(mapResendFailure(500).message, "Resend returned 500");
