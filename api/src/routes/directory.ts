@@ -102,6 +102,8 @@ function readBundledDirectory(): DirectoryData {
   }
 }
 
+// Read-only path: the bundled file stands in while the database is unreachable.
+// Never feed this result back into a write — see mutateDirectory.
 async function loadDirectory(): Promise<DirectoryData> {
   try {
     const row = await prisma.directoryState.findUnique({ where: { id: DIRECTORY_STATE_ID } });
@@ -112,18 +114,33 @@ async function loadDirectory(): Promise<DirectoryData> {
   return readBundledDirectory();
 }
 
-async function saveDirectory(data: DirectoryData): Promise<void> {
-  // Update meta counts
-  data.meta.total_services = data.services.filter(s => s.status === "active").length;
-  data.meta.total_endpoints = data.services.reduce((sum, s) => sum + s.total_endpoints, 0);
-  const allChains = new Set(data.services.flatMap(s => s.chains_supported));
-  data.meta.total_chains = allChains.size;
-  data.meta.last_updated = new Date().toISOString();
-  const doc = JSON.parse(JSON.stringify(data));
-  await prisma.directoryState.upsert({
-    where: { id: DIRECTORY_STATE_ID },
-    create: { id: DIRECTORY_STATE_ID, data: doc },
-    update: { data: doc },
+// Write path: read-modify-write of the live row under a transaction-scoped advisory
+// lock, so overlapping writers (across requests and instances) serialize instead of
+// each upserting a stale snapshot. The row is read inside the transaction with no
+// bundled fallback — a failed read fails the write rather than overwriting the live
+// document; the bundled file only seeds the row when it does not exist yet. The
+// callback returns `save: false` to leave the row untouched.
+async function mutateDirectory<T extends { save: boolean }>(mutate: (data: DirectoryData) => T): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${DIRECTORY_STATE_ID}))`;
+    const row = await tx.directoryState.findUnique({ where: { id: DIRECTORY_STATE_ID } });
+    const data = row ? (row.data as unknown as DirectoryData) : readBundledDirectory();
+    const outcome = mutate(data);
+    if (!outcome.save) return outcome;
+
+    // Update meta counts
+    data.meta.total_services = data.services.filter(s => s.status === "active").length;
+    data.meta.total_endpoints = data.services.reduce((sum, s) => sum + s.total_endpoints, 0);
+    const allChains = new Set(data.services.flatMap(s => s.chains_supported));
+    data.meta.total_chains = allChains.size;
+    data.meta.last_updated = new Date().toISOString();
+    const doc = JSON.parse(JSON.stringify(data));
+    await tx.directoryState.upsert({
+      where: { id: DIRECTORY_STATE_ID },
+      create: { id: DIRECTORY_STATE_ID, data: doc },
+      update: { data: doc },
+    });
+    return outcome;
   });
 }
 
@@ -367,22 +384,6 @@ router.post("/submit", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const data = await loadDirectory();
-
-  // Check for duplicate URL
-  const existing = data.services.find(s => s.base_url === url || s.website_url === url);
-  if (existing) {
-    res.status(409).json({ ok: false, error: "duplicate", message: `A service with this URL already exists: ${existing.name}` });
-    return;
-  }
-
-  // Check for duplicate pending
-  const pendingDup = data.pending_submissions.find(p => p.url === url && p.status === "pending");
-  if (pendingDup) {
-    res.status(409).json({ ok: false, error: "duplicate", message: "A submission with this URL is already pending review" });
-    return;
-  }
-
   const submission: PendingSubmission = {
     id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
@@ -394,12 +395,28 @@ router.post("/submit", async (req: Request, res: Response): Promise<void> => {
     status: "pending",
   };
 
-  data.pending_submissions.push(submission);
+  let outcome: { save: boolean; duplicate?: string };
   try {
-    await saveDirectory(data);
+    outcome = await mutateDirectory(data => {
+      // Check for duplicate URL
+      const existing = data.services.find(s => s.base_url === url || s.website_url === url);
+      if (existing) return { save: false, duplicate: `A service with this URL already exists: ${existing.name}` };
+
+      // Check for duplicate pending
+      const pendingDup = data.pending_submissions.find(p => p.url === url && p.status === "pending");
+      if (pendingDup) return { save: false, duplicate: "A submission with this URL is already pending review" };
+
+      data.pending_submissions.push(submission);
+      return { save: true };
+    });
   } catch (err) {
     console.error("[directory] submit not saved:", (err as Error).message);
     res.status(503).json({ ok: false, error: "unavailable", message: "Could not save your submission right now — please try again shortly." });
+    return;
+  }
+
+  if (outcome.duplicate) {
+    res.status(409).json({ ok: false, error: "duplicate", message: outcome.duplicate });
     return;
   }
 
@@ -575,14 +592,14 @@ router.post("/listings/:id/approve", requireAdmin, async (req: Request, res: Res
       },
     });
 
-    // Also update the JSON directory file
-    const data = await loadDirectory();
-    const service = data.services.find(s => s.id === listing.serviceId);
-    if (service) {
+    // Also update the live directory document
+    await mutateDirectory(data => {
+      const service = data.services.find(s => s.id === listing.serviceId);
+      if (!service) return { save: false };
       if (listing.tier === "featured") service.featured = true;
       if (listing.tier === "verified") service.verified = true;
-      await saveDirectory(data);
-    }
+      return { save: true };
+    });
 
     res.json({
       ok: true,

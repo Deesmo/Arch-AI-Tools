@@ -30,5 +30,7 @@ assert.equal(mapResendFailure(500).message, "Resend returned 500");
 const route = readFileSync(new URL("../src/routes/tools/index.ts", import.meta.url), "utf8");
 const handler = route.slice(route.indexOf('router.post("/email-send"'), route.indexOf('router.post("/email-send"') + 4000);
 assert.ok(handler.includes("mapResendFailure(r.status, err.message)"), "email-send must map Resend failures via mapResendFailure");
+const alias = route.slice(route.indexOf('router.post("/send-email"'), route.indexOf('router.post("/send-email"') + 4000);
+assert.ok(alias.includes("mapResendFailure(r.status, err.message)"), "send-email alias must map Resend failures via mapResendFailure");
 
 console.log("All resend-errors tests passed.");
