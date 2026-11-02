@@ -19,6 +19,10 @@ function sanitizeScope(raw: string | undefined): string {
   return requested.length ? Array.from(new Set(requested)).join(" ") : "tools:read";
 }
 
+function tokenParam(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 // HTML escape to prevent XSS injection in consent page
 export function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
@@ -207,15 +211,14 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
 
 // ─── POST /oauth/token ────────────────────────────────────────────────────────
 router.post("/token", async (req: Request, res: Response): Promise<void> => {
-  const {
-    grant_type,
-    code,
-    client_id,
-    client_secret,
-    redirect_uri,
-    refresh_token,
-    code_verifier,
-  } = req.body as Record<string, string>;
+  const body = req.body as Record<string, unknown>;
+  const grant_type = tokenParam(body.grant_type);
+  const code = tokenParam(body.code);
+  const client_id = tokenParam(body.client_id);
+  const client_secret = tokenParam(body.client_secret);
+  const redirect_uri = tokenParam(body.redirect_uri);
+  const refresh_token = tokenParam(body.refresh_token);
+  const code_verifier = tokenParam(body.code_verifier);
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
   if (!client) {
