@@ -61,6 +61,7 @@ try {
   assert.equal(r.status, 402, "settlement failure replaces the tool output");
   assert.equal(JSON.parse(buf).error, "payment_settlement_failed");
   assert.equal(r.headers.get("content-disposition"), null, "tool headers that describe the old body are dropped");
+  assert.match(r.headers.get("content-type"), /^application\/json/, "the 402 is labelled as JSON, not the tool's image type");
 
   ({ r, buf } = await get("/decide-throws"));
   assert.equal(r.status, 503, "an exception while settling never releases the paid output");
@@ -75,7 +76,9 @@ try {
 const mw = readFileSync(new URL("../src/middleware/x402.ts", import.meta.url), "utf8");
 assert.ok(mw.includes('process.env.X402_SETTLE_AFTER_RESPONSE === "1"'), "deferred settle is behind a switch");
 const deferred = mw.slice(mw.indexOf("await deferResponse(res, next"));
-assert.ok(/statusCode >= 400\) \{\s*if \(nonce\) await releaseStoredNonce\(nonce\);/.test(deferred), "failed call releases the nonce, no settle");
-assert.ok(deferred.indexOf("settleAndRecord()") > deferred.indexOf("statusCode >= 400"), "settle only after the status check");
+const failBranch = deferred.slice(deferred.indexOf("statusCode >= 400"), deferred.indexOf("settleAndRecord(false)"));
+assert.ok(!failBranch.includes("releaseStoredNonce"), "a failed call keeps its nonce consumed (no replay of one signature)");
+assert.ok(deferred.indexOf("settleAndRecord(false)") > deferred.indexOf("statusCode >= 400"), "settle only after the status check, without releasing the nonce");
+assert.ok(mw.includes("const paymentResponse = await settleAndRecord(true);"), "settle-first order may still release the nonce (tool not run yet)");
 
 console.log("All x402-settle-after tests passed.");

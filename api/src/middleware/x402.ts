@@ -1400,8 +1400,9 @@ export function x402Middleware(toolName: string) {
     }
 
     // Settle and record. Returns the PAYMENT-RESPONSE header value, or null when
-    // settlement failed (the nonce is released so the agent can retry).
-    const settleAndRecord = async (): Promise<string | null> => {
+    // settlement failed. releaseNonce: free the nonce so the same signed payment
+    // can be retried — only when the tool has NOT run yet (settle-first order).
+    const settleAndRecord = async (releaseNonce: boolean): Promise<string | null> => {
       const settleResult = await settlePayment(paymentHeader, toolName, paymentRequirements);
 
       // SECURITY: require an actual SUCCESSFUL settlement before serving the tool.
@@ -1410,7 +1411,7 @@ export function x402Middleware(toolName: string) {
       // so it must not grant access.
       const settled = !!settleResult && settleResult.success === true;
       if (!settled) {
-        if (nonce) await releaseStoredNonce(nonce);
+        if (releaseNonce && nonce) await releaseStoredNonce(nonce);
         try {
           await prisma.x402Payment.create({
             data: {
@@ -1502,21 +1503,25 @@ export function x402Middleware(toolName: string) {
     // legacy order (settle, then run) stays until this is proven with a live payment.
     if (process.env.X402_SETTLE_AFTER_RESPONSE === "1") {
       attachRequestLog();
+      // The tool has already run here, so the nonce stays consumed whether or
+      // not we settle: one signed payment = one attempt. Releasing it would let
+      // the same signature replay a failing call (and its side effects, e.g. a
+      // delivered webhook) for free. Unsettled payments cost nothing, so the
+      // caller simply signs a new one to retry.
       await deferResponse(res, next, async ({ statusCode }): Promise<Decision> => {
         if (statusCode >= 400) {
-          if (nonce) await releaseStoredNonce(nonce);
           return { headers: { "X-Payment-Settled": "false" } };
         }
-        const paymentResponse = await settleAndRecord();
+        const paymentResponse = await settleAndRecord(false);
         if (!paymentResponse) {
-          return { replace: { status: 402, body: { ok: false, error: "payment_settlement_failed", message: "x402 payment could not be settled. You have not been charged — please retry." } } };
+          return { replace: { status: 402, body: { ok: false, error: "payment_settlement_failed", message: "x402 payment could not be settled. You have not been charged — sign a new payment to retry." } } };
         }
         return { headers: { "PAYMENT-RESPONSE": paymentResponse } };
       });
       return;
     }
 
-    const paymentResponse = await settleAndRecord();
+    const paymentResponse = await settleAndRecord(true);
     if (!paymentResponse) {
       res.status(402).json({
         ok: false,

@@ -89,6 +89,9 @@ export async function deferResponse(
     calls = [];
     restore();
     if (!res.headersSent) {
+      // Headers set with setHeader() are not buffered: drop the ones that
+      // describe the discarded body (res.json keeps an existing Content-Type).
+      res.removeHeader("Content-Type");
       res.removeHeader("Content-Length");
       res.removeHeader("Content-Disposition");
       res.removeHeader("ETag");
