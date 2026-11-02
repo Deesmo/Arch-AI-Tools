@@ -47,14 +47,23 @@ try {
   await runProviderProbes(true);
   assert.equal(providerHealthSnapshot().openai.exhausted, true, "OpenAI probe 429 quota -> exhausted");
   assert.equal(providerHealthSnapshot().runway.exhausted, false, "balance 1 alone does not trip (no guessed threshold)");
-  noteProviderResponse("runway", 400, "You do not have enough credits to run this task.");
-  assert.equal(providerHealthSnapshot().runway.balanceAtExhaustion, 1);
+  // A live failure trips the breaker while the last (healthy) probe reading is stale and
+  // high: 1000 read hours ago, real balance now 1. The baseline a top-up must beat is the
+  // fresh reading, otherwise a normal top-up below 1000 would never clear the breaker.
+  replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 1000 })]);
   await runProviderProbes(true);
+  assert.equal(providerHealthSnapshot().runway.balance, 1000);
+  replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 1 })]);
+  noteProviderResponse("runway", 400, "You do not have enough credits to run this task.");
+  assert.equal(providerHealthSnapshot().runway.exhausted, true, "live credit failure -> off");
+  assert.notEqual(providerHealthSnapshot().runway.balanceAtExhaustion, 1000, "stale probe balance is not the baseline");
+  await runProviderProbes(true);
+  assert.equal(providerHealthSnapshot().runway.balanceAtExhaustion, 1, "baseline = fresh reading after the failure");
   assert.equal(providerHealthSnapshot().runway.exhausted, true, "same balance -> still off");
-  replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 5000 })]);
+  replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 500 })]);
   replies.set("api.openai.com", [200, '{"choices":[{"message":{"content":"o"}}]}']);
   await runProviderProbes(true);
-  assert.equal(providerHealthSnapshot().runway.exhausted, false, "top-up -> back on");
+  assert.equal(providerHealthSnapshot().runway.exhausted, false, "top-up (even below the stale 1000) -> back on");
   assert.equal(providerHealthSnapshot().openai.exhausted, false, "successful test call -> back on");
   replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 0 })]);
   await runProviderProbes(true);
@@ -71,9 +80,11 @@ try {
 // Wiring: the gate runs before payment and charging; real failures feed it; probes start at boot.
 const tools = readFileSync(new URL("../src/routes/tools/index.ts", import.meta.url), "utf8");
 assert.ok(tools.includes("return [providerGate(toolName), x402Middleware(toolName),"), "gate runs before the x402 challenge and credit charge");
-for (const p of ['"openai", r.status, err', '"runway", attempt.status', '"elevenlabs", r.status', '"removebg", resp.status', '"hunter", resp.status', '"stability", sr.status']) {
+for (const p of ['"openai", r.status, err', '"openai", upstream.status', '"runway", attempt.status', '"elevenlabs", r.status', '"removebg", resp.status', '"hunter", resp.status', '"stability", sr.status']) {
   assert.ok(tools.includes(`noteProviderResponse(${p}`), `feeds ${p}`);
 }
+// /generate-image is gated as design-create (OpenAI or Stability), so it must have the same Stability fallback.
+assert.equal((tools.match(/await stabilityImageFallback\(prompt\)/g) ?? []).length, 2, "design-create and its generate-image alias both fall back to Stability");
 const index = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
 assert.ok(index.includes("startProviderHealth();"), "probes start with the server");
 assert.ok(index.includes('import("./lib/systemJobs.js")') && index.includes('import("./cron/demoTopoff.js")'), "background jobs import with .js (ESM)");

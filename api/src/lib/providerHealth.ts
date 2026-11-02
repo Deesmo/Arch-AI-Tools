@@ -70,13 +70,17 @@ function toolsFor(p: ProviderName): string[] {
   return Object.entries(TOOL_PROVIDERS).filter(([, ps]) => ps.includes(p)).map(([t]) => t);
 }
 
-function markExhausted(p: ProviderName, detail: string): void {
+function markExhausted(p: ProviderName, detail: string, balance?: number): void {
   const s = get(p);
   if (s.exhausted) return;
   s.exhausted = true;
   s.since = new Date().toISOString();
   s.detail = detail.slice(0, 300);
-  s.balanceAtExhaustion = s.balance;
+  // The baseline a top-up must beat. Only a fresh probe reading counts: s.balance is from
+  // the last healthy probe (up to 6h old, and higher after the spend that ran it dry), and
+  // a top-up landing below it would never clear the breaker. Unknown here → the next probe
+  // reading fills it in (noteProviderResponse probes right away).
+  s.balanceAtExhaustion = balance;
   const off = toolsFor(p).filter((t) => unavailableProviders(t));
   console.error(`[provider-health] ${PROVIDER_LABEL[p]} exhausted: ${s.detail}`);
   sendSecurityAlert({
@@ -110,7 +114,11 @@ function markRecovered(p: ProviderName, why: string): void {
 
 /** Feed a real upstream response (our platform key only). Trips the breaker on a definite credit failure. */
 export function noteProviderResponse(p: ProviderName, status: number, body: string): void {
-  if (isCreditExhaustion(status, body)) markExhausted(p, `${PROVIDER_LABEL[p]} returned ${status}: ${body.slice(0, 200)}`);
+  if (!isCreditExhaustion(status, body)) return;
+  const tripped = !get(p).exhausted;
+  markExhausted(p, `${PROVIDER_LABEL[p]} returned ${status}: ${body.slice(0, 200)}`);
+  // Read the balance now, before a top-up can land, so recovery means "rose since we ran dry".
+  if (tripped) void probeProvider(p);
 }
 
 /** The exhausted providers that make this tool unavailable (all of its providers), or null if usable. */
@@ -198,31 +206,41 @@ const PROBES: Partial<Record<ProviderName, { key: string; probe: Probe }>> = {
 const HEALTHY_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const EXHAUSTED_INTERVAL_MS = 30 * 60 * 1000;
 
+async function probeProvider(p: ProviderName): Promise<void> {
+  const entry = PROBES[p];
+  if (!entry || !process.env[entry.key]) return;
+  const s = get(p);
+  try {
+    const r = await entry.probe();
+    s.lastCheck = new Date().toISOString();
+    s.lastCheckOk = r.status >= 200 && r.status < 300;
+    if (r.balance !== undefined) {
+      s.balance = r.balance;
+      // Out of credit with no baseline yet (a live failure tripped the breaker): this
+      // first fresh reading is the baseline, so this probe cannot recover on it.
+      if (s.exhausted && s.balanceAtExhaustion === undefined) s.balanceAtExhaustion = r.balance;
+    }
+    if (isCreditExhaustion(r.status, r.body) || (r.balance !== undefined && r.balance <= 0)) {
+      markExhausted(p, `${PROVIDER_LABEL[p]} probe: ${r.balance !== undefined ? `balance ${r.balance}` : `${r.status} ${r.body.slice(0, 160)}`}`, r.balance);
+    } else if (s.exhausted && s.lastCheckOk) {
+      // Balance providers recover only when the balance rose (a top-up);
+      // OpenAI (no balance) recovers when the probe call succeeds.
+      const rose = r.balance === undefined || s.balanceAtExhaustion === undefined || r.balance > s.balanceAtExhaustion;
+      if (rose) markRecovered(p, r.balance !== undefined ? `Balance is now ${r.balance}.` : "A test call succeeded.");
+    }
+  } catch {
+    s.lastCheck = new Date().toISOString();
+    s.lastCheckOk = false; // network error: no state change either way
+  }
+}
+
 /** Run the probes that are due (or all, with force). Exported for the admin endpoint and tests. */
 export async function runProviderProbes(force = false): Promise<void> {
   const now = Date.now();
-  await Promise.all((Object.entries(PROBES) as [ProviderName, { key: string; probe: Probe }][]).map(async ([p, { key, probe }]) => {
-    if (!process.env[key]) return;
+  await Promise.all((Object.keys(PROBES) as ProviderName[]).map(async (p) => {
     const s = get(p);
     const due = force || !s.lastCheck || now - Date.parse(s.lastCheck) >= (s.exhausted ? EXHAUSTED_INTERVAL_MS : HEALTHY_INTERVAL_MS);
-    if (!due) return;
-    try {
-      const r = await probe();
-      s.lastCheck = new Date().toISOString();
-      s.lastCheckOk = r.status >= 200 && r.status < 300;
-      if (r.balance !== undefined) s.balance = r.balance;
-      if (isCreditExhaustion(r.status, r.body) || (r.balance !== undefined && r.balance <= 0)) {
-        markExhausted(p, `${PROVIDER_LABEL[p]} probe: ${r.balance !== undefined ? `balance ${r.balance}` : `${r.status} ${r.body.slice(0, 160)}`}`);
-      } else if (s.exhausted && s.lastCheckOk) {
-        // Balance providers recover only when the balance rose (a top-up);
-        // OpenAI (no balance) recovers when the probe call succeeds.
-        const rose = r.balance === undefined || s.balanceAtExhaustion === undefined || r.balance > s.balanceAtExhaustion;
-        if (rose) markRecovered(p, r.balance !== undefined ? `Balance is now ${r.balance}.` : "A test call succeeded.");
-      }
-    } catch {
-      s.lastCheck = new Date().toISOString();
-      s.lastCheckOk = false; // network error: no state change either way
-    }
+    if (due) await probeProvider(p);
   }));
 }
 

@@ -2566,6 +2566,24 @@ router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRe
 });
 
 // ─── design-create ────────────────────────────────────────────────────────────
+/** Stability AI fallback for image generation (1:1 webp). A data URL, or null when it can't deliver. Feeds the provider breaker. */
+async function stabilityImageFallback(prompt: string): Promise<string | null> {
+  if (!process.env.STABILITY_API_KEY) return null;
+  try {
+    const sr = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.STABILITY_API_KEY}`, Accept: "application/json" },
+      body: (() => { const fd = new FormData(); fd.append("prompt", prompt); fd.append("aspect_ratio", "1:1"); fd.append("output_format", "webp"); return fd; })(),
+    });
+    if (sr.ok) {
+      const sd = await sr.json() as { image?: string };
+      return sd.image ? `data:image/webp;base64,${sd.image}` : null;
+    }
+    noteProviderResponse("stability", sr.status, await sr.text().catch(() => ""));
+  } catch (_) { /* fall through */ }
+  return null;
+}
+
 router.post("/design-create", ...toolMiddleware("design-create"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   const { prompt, size = "1024x1024", quality = "medium", n = 1 } = req.body as { prompt?: string; size?: string; quality?: string; n?: number };
@@ -2598,22 +2616,8 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
       console.error("[design-create] OpenAI error:", r.status, err);
       noteProviderResponse("openai", r.status, JSON.stringify(err));
-      // Fallback: Stability AI
-      if (process.env.STABILITY_API_KEY) {
-        try {
-          const sr = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${process.env.STABILITY_API_KEY}`, Accept: "application/json" },
-            body: (() => { const fd = new FormData(); fd.append("prompt", prompt); fd.append("aspect_ratio", "1:1"); fd.append("output_format", "webp"); return fd; })(),
-          });
-          if (sr.ok) {
-            const sd = await sr.json() as { image?: string };
-            if (sd.image) {
-              res.json({ ok: true, images: [{ url: `data:image/webp;base64,${sd.image}`, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return;
-            }
-          } else noteProviderResponse("stability", sr.status, await sr.text().catch(() => ""));
-        } catch (_) { /* fall through */ }
-      }
+      const fallback = await stabilityImageFallback(prompt);
+      if (fallback) { res.json({ ok: true, images: [{ url: fallback, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return; }
       res.status(503).json({ ok: false, error: "generation_error", message: `Image generation is temporarily unavailable (provider returned ${r.status}). Please retry later.`, request_id: reqId() }); return;
     }
     const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
@@ -2704,7 +2708,17 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req: A
     const img = (r.data as { data: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }).data[0];
     const image_url = img.url ?? (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
     res.json({ ok: true, image_url, revised_prompt: img.revised_prompt ?? null, size: safeSize, quality: safeQuality, request_id: reqId() });
-  } catch (e) { res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() }); }
+  } catch (e) {
+    // Same providers as /design-create (its gate): report OpenAI to the breaker, then try Stability.
+    const upstream = (e as { response?: { status?: number; data?: unknown } })?.response;
+    if (upstream?.status) {
+      console.error("[generate-image] OpenAI error:", upstream.status, upstream.data);
+      noteProviderResponse("openai", upstream.status, JSON.stringify(upstream.data ?? {}));
+      const fallback = await stabilityImageFallback(prompt);
+      if (fallback) { res.json({ ok: true, image_url: fallback, revised_prompt: null, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return; }
+    }
+    res.status(500).json({ ok: false, error: "generation_failed", message: safeErr(e), request_id: reqId() });
+  }
 });
 
 // DB has "check-domain" but route is /domain-check
