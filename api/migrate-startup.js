@@ -57,5 +57,47 @@ try {
   console.error("[startup] social-post cleanup skipped:", err.message);
 }
 
+// Archive the legacy SQLite file on the persistent disk into Postgres (2026-11-02),
+// so the disk — which blocks zero-downtime deploys — can be removed without losing
+// anything. Logs table names and row counts only (never row contents); reads a
+// temporary copy, never the original. Idempotent on sha256; silent with no disk.
+{
+  const legacy = path.join(process.env.DISK_REPORT_PATH || "/opt/render/project/data", "arch_tools.db");
+  if (fs.existsSync(legacy)) {
+    try {
+      const { createHash } = await import("crypto");
+      const os = await import("os");
+      const content = fs.readFileSync(legacy);
+      const sha256 = createHash("sha256").update(content).digest("hex");
+      const copy = path.join(os.tmpdir(), `legacy-${sha256}.db`);
+      fs.writeFileSync(copy, content);
+      try {
+        const { DatabaseSync } = await import("node:sqlite");
+        const db = new DatabaseSync(copy);
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map((r) => r.name);
+        const counts = tables.map((t) => `${t}=${db.prepare(`SELECT count(*) AS n FROM "${t.replace(/"/g, '""')}"`).get().n}`);
+        db.close();
+        console.log(`[startup] legacy sqlite ${legacy}: tables ${counts.join(", ") || "(none)"}`);
+      } catch (err) {
+        console.log(`[startup] legacy sqlite: could not inspect (${err.message})`);
+      }
+      const { PrismaClient } = await import("@prisma/client");
+      const prisma = new PrismaClient();
+      const fileModifiedAt = fs.statSync(legacy).mtime;
+      await prisma.diskArchive.upsert({
+        where: { sha256 },
+        create: { path: legacy, sha256, size: content.length, fileModifiedAt, content },
+        update: {},
+      });
+      const stored = await prisma.diskArchive.findUnique({ where: { sha256 }, select: { size: true, content: true } });
+      const match = stored && createHash("sha256").update(Buffer.from(stored.content)).digest("hex") === sha256;
+      console.log(`[startup] legacy sqlite archived to DiskArchive: ${content.length} bytes, sha256 ${sha256}, verified=${match}`);
+      await prisma.$disconnect();
+    } catch (err) {
+      console.error("[startup] legacy sqlite archive skipped:", err.message);
+    }
+  }
+}
+
 console.log("[startup] Starting server...");
 import("./dist/index.js");
