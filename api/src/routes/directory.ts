@@ -112,18 +112,45 @@ async function loadDirectory(): Promise<DirectoryData> {
   return readBundledDirectory();
 }
 
-async function saveDirectory(data: DirectoryData): Promise<void> {
+function normalizedDirectory(data: DirectoryData): any {
   // Update meta counts
   data.meta.total_services = data.services.filter(s => s.status === "active").length;
   data.meta.total_endpoints = data.services.reduce((sum, s) => sum + s.total_endpoints, 0);
   const allChains = new Set(data.services.flatMap(s => s.chains_supported));
   data.meta.total_chains = allChains.size;
   data.meta.last_updated = new Date().toISOString();
-  const doc = JSON.parse(JSON.stringify(data));
-  await prisma.directoryState.upsert({
-    where: { id: DIRECTORY_STATE_ID },
-    create: { id: DIRECTORY_STATE_ID, data: doc },
-    update: { data: doc },
+  return JSON.parse(JSON.stringify(data));
+}
+
+class DirectoryRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: Record<string, unknown>,
+  ) {
+    super(String(body.message ?? body.error ?? "directory request failed"));
+  }
+}
+
+async function mutateDirectory<T>(mutate: (data: DirectoryData) => T | Promise<T>): Promise<T> {
+  // Create the singleton row before taking a row lock. ON CONFLICT preserves any
+  // row another request won during concurrent first writes.
+  await prisma.$executeRaw`
+    INSERT INTO "DirectoryState" ("id", "data")
+    VALUES (${DIRECTORY_STATE_ID}, ${JSON.stringify(normalizedDirectory(readBundledDirectory()))}::jsonb)
+    ON CONFLICT ("id") DO NOTHING
+  `;
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<Array<{ data: unknown }>>`
+      SELECT data FROM "DirectoryState" WHERE id = ${DIRECTORY_STATE_ID} FOR UPDATE
+    `;
+    const data = (rows[0]?.data as DirectoryData | undefined) ?? readBundledDirectory();
+    const result = await mutate(data);
+    await tx.directoryState.update({
+      where: { id: DIRECTORY_STATE_ID },
+      data: { data: normalizedDirectory(data) },
+    });
+    return result;
   });
 }
 
@@ -367,22 +394,6 @@ router.post("/submit", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const data = await loadDirectory();
-
-  // Check for duplicate URL
-  const existing = data.services.find(s => s.base_url === url || s.website_url === url);
-  if (existing) {
-    res.status(409).json({ ok: false, error: "duplicate", message: `A service with this URL already exists: ${existing.name}` });
-    return;
-  }
-
-  // Check for duplicate pending
-  const pendingDup = data.pending_submissions.find(p => p.url === url && p.status === "pending");
-  if (pendingDup) {
-    res.status(409).json({ ok: false, error: "duplicate", message: "A submission with this URL is already pending review" });
-    return;
-  }
-
   const submission: PendingSubmission = {
     id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
@@ -394,10 +405,27 @@ router.post("/submit", async (req: Request, res: Response): Promise<void> => {
     status: "pending",
   };
 
-  data.pending_submissions.push(submission);
   try {
-    await saveDirectory(data);
+    await mutateDirectory((data) => {
+      // Duplicate checks must run while the DirectoryState row is locked; doing
+      // them before the read-modify-write lets simultaneous submissions win.
+      const existing = data.services.find(s => s.base_url === submission.url || s.website_url === submission.url);
+      if (existing) {
+        throw new DirectoryRequestError(409, { ok: false, error: "duplicate", message: `A service with this URL already exists: ${existing.name}` });
+      }
+
+      const pendingDup = data.pending_submissions.find(p => p.url === submission.url && p.status === "pending");
+      if (pendingDup) {
+        throw new DirectoryRequestError(409, { ok: false, error: "duplicate", message: "A submission with this URL is already pending review" });
+      }
+
+      data.pending_submissions.push(submission);
+    });
   } catch (err) {
+    if (err instanceof DirectoryRequestError) {
+      res.status(err.status).json(err.body);
+      return;
+    }
     console.error("[directory] submit not saved:", (err as Error).message);
     res.status(503).json({ ok: false, error: "unavailable", message: "Could not save your submission right now — please try again shortly." });
     return;
@@ -575,14 +603,14 @@ router.post("/listings/:id/approve", requireAdmin, async (req: Request, res: Res
       },
     });
 
-    // Also update the JSON directory file
-    const data = await loadDirectory();
-    const service = data.services.find(s => s.id === listing.serviceId);
-    if (service) {
+    // Also update the live directory document. This write is serialized with
+    // submissions and other approvals so one approval cannot erase another.
+    await mutateDirectory((data) => {
+      const service = data.services.find(s => s.id === listing.serviceId);
+      if (!service) return;
       if (listing.tier === "featured") service.featured = true;
       if (listing.tier === "verified") service.verified = true;
-      await saveDirectory(data);
-    }
+    });
 
     res.json({
       ok: true,
