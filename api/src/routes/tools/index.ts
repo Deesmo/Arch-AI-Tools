@@ -1340,8 +1340,10 @@ router.post("/ai-generate", ...toolMiddleware("ai-generate"), async (req: Authed
     null;
 
   if (!paid) {
-    // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000.
-    const requestedTokens = Math.max(1, Number(max_tokens) || 1000);
+    // Scale by max_tokens: base 20, +20 per 1000 tokens above 1000 — counted up
+    // to the 4096 we actually serve (maxTok), so asking for 10000 no longer costs
+    // 200 credits for at most 4096 tokens.
+    const requestedTokens = Math.min(4096, Math.max(1, Number(max_tokens) || 1000));
     let aiGenCost = 20 + 20 * Math.ceil(Math.max(0, requestedTokens - 1000) / 1000);
     if (byokProvider) {
       // BYOK: the caller pays the model's inference cost themselves, so our credit
@@ -1892,35 +1894,32 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
   if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() }); return; }
   const validTypes = ["code128", "qr"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
+  // Real symbologies via bwip-js (a port of Barcode Writer in Pure PostScript).
+  // The old encoder drew one bar per set bit of each character code, which is
+  // not Code 128 and could not be scanned; "qr" drew the same bars.
+  const includeText = req.body.include_text !== false;
+  const text = barcodeData.slice(0, type === "qr" ? 1000 : 80);
+  let svg: string;
   try {
-    // Generate Code128 SVG (simplified — bars based on char codes)
-    const chars = barcodeData.slice(0, 80);
-    const barWidth = Math.max(1, Math.floor((width - 20) / (chars.length * 11)));
-    let bars = "";
-    let x = 10;
-    // Start quiet zone + start char pattern
-    bars += `<rect x="${x}" y="10" width="${barWidth * 2}" height="${height - 20}" fill="#000"/>`;
-    x += barWidth * 3;
-    for (const ch of chars) {
-      const code = ch.charCodeAt(0);
-      // Simple encoding: alternate bars based on bit pattern of char code
-      for (let bit = 6; bit >= 0; bit--) {
-        const on = (code >> bit) & 1;
-        if (on) bars += `<rect x="${x}" y="10" width="${barWidth}" height="${height - 20}" fill="#000"/>`;
-        x += barWidth + 1;
-      }
-      x += 1;
-    }
-    // Stop bar
-    bars += `<rect x="${x}" y="10" width="${barWidth * 2}" height="${height - 20}" fill="#000"/>`;
-    const svgWidth = Math.max(x + 20, width);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${height}" viewBox="0 0 ${svgWidth} ${height}">
-  <rect width="${svgWidth}" height="${height}" fill="#fff"/>
-  ${bars}
-  <text x="${svgWidth / 2}" y="${height - 2}" text-anchor="middle" font-family="monospace" font-size="10" fill="#000">${escapeXml(chars)}</text>
-</svg>`;
+    const { toSVG } = await import("bwip-js");
+    svg = type === "qr"
+      ? toSVG({ bcid: "qrcode", text, scale: 4 })
+      : toSVG({ bcid: "code128", text, scale: 3, height: 12, includetext: includeText, textxalign: "center" });
+  } catch (e) {
+    // bwip-js throws on input the symbology can't encode.
+    res.status(400).json({ ok: false, error: "invalid_request", message: `Cannot encode that value as ${type}: ${typeof e === "string" ? e : safeErr(e)}`, request_id: reqId() });
+    return;
+  }
+  try {
+    // Scale to the requested width (QR stays square); the viewBox keeps proportions.
+    const vb = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+    const natW = vb ? Number(vb[1]) : width;
+    const natH = vb ? Number(vb[2]) : height;
+    const outW = Math.max(50, Math.min(2000, Number(width) || natW));
+    const outH = type === "qr" ? outW : Math.max(30, Math.min(1000, Number(height) || Math.round(natH * (outW / natW))));
+    svg = svg.replace(/<svg /, `<svg width="${outW}" height="${outH}" preserveAspectRatio="xMidYMid meet" `);
     const base64 = Buffer.from(svg).toString("base64");
-    res.json({ ok: true, data: barcodeData, type, width: svgWidth, height, svg, data_url: `data:image/svg+xml;base64,${base64}`, note: "SVG barcode generated. For production use verify scanning with a barcode reader. Full Code128 encoding via bwip-js recommended for high-fidelity output.", request_id: reqId() });
+    res.json({ ok: true, data: barcodeData, type, width: outW, height: outH, svg, data_url: `data:image/svg+xml;base64,${base64}`, request_id: reqId() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "barcode_error", message: safeErr(e), request_id: reqId() });
   }
@@ -2296,13 +2295,14 @@ router.post("/crypto-sentiment", ...toolMiddleware("crypto-sentiment"), async (r
   const { symbol } = req.body as { symbol?: string };
   if (!symbol) { res.status(400).json({ ok: false, error: "invalid_request", message: "symbol is required", request_id: reqId() }); return; }
   try {
-    const id = symbol.toLowerCase().trim();
+    // Tickers (BTC, ETH, SOL…) map to CoinGecko ids, as crypto-price does.
+    const id = normalizeCoinId(symbol);
     const r = await fetch(`${cgBase()}/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`, { headers: cgHeaders() });
     if (!r.ok) {
       console.warn(`[crypto-sentiment] CoinGecko returned ${r.status} for '${id}'`);
       if (r.status === 429) { res.status(429).json({ ok: false, error: "rate_limited", message: "CoinGecko rate limit hit. Try again in a moment.", request_id: reqId() }); return; }
       if (r.status === 403) { res.status(503).json({ ok: false, error: "tier_required", message: "This endpoint requires a paid CoinGecko plan.", request_id: reqId() }); return; }
-      if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found on CoinGecko. Use full name (e.g. 'bitcoin', not 'BTC').`, request_id: reqId() }); return; }
+      if (r.status === 404) { res.status(404).json({ ok: false, error: "not_found", message: `Token '${id}' not found on CoinGecko. Use a CoinGecko id (e.g. 'bitcoin') or a common ticker (e.g. 'BTC').`, request_id: reqId() }); return; }
       res.status(503).json({ ok: false, error: "upstream_error", message: `CoinGecko returned ${r.status}`, request_id: reqId() }); return;
     }
     const data = await r.json() as { sentiment_votes_up_percentage?: number; sentiment_votes_down_percentage?: number; community_data?: { twitter_followers?: number; reddit_subscribers?: number; reddit_active_accounts?: number }; market_data?: { price_change_percentage_24h?: number; price_change_percentage_7d?: number } };
@@ -2649,8 +2649,13 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
       if (fallback) { res.json({ ok: true, images: [{ url: fallback, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return; }
       res.status(503).json({ ok: false, error: "generation_error", message: `Image generation is temporarily unavailable (provider returned ${r.status}). Please retry later.`, request_id: reqId() }); return;
     }
-    const data = await r.json() as { data?: { url: string; revised_prompt?: string }[] };
-    const images = (data.data ?? []).map(img => ({ url: img.url, revised_prompt: img.revised_prompt ?? null }));
+    // gpt-image-1 always returns base64 (b64_json), never a url (OpenAI API
+    // reference); reading only .url returned images with no picture.
+    const data = await r.json() as { data?: { url?: string; b64_json?: string; revised_prompt?: string }[] };
+    const images = (data.data ?? [])
+      .map(img => ({ url: img.url ?? (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null), revised_prompt: img.revised_prompt ?? null }))
+      .filter((img) => img.url);
+    if (!images.length) { upstreamFailure(res, "OpenAI", 502, "no image in response", false); return; }
     res.json({ ok: true, images, count: images.length, size: safeSize, quality: safeQuality, request_id: reqId() });
   } catch (e) { console.error("[design-create]", e); res.status(500).json({ ok: false, error: "fetch_error", message: safeErr(e), request_id: reqId() }); }
 });
