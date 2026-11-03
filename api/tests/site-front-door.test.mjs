@@ -71,6 +71,14 @@ assert.equal(st.components?.database, "operational");
 assert.ok(Array.isArray(st.tools_unavailable));
 assert.ok(!("dependencies" in st), "no internals on the public status");
 
+// dist/ is built on deploy (no longer committed), so the build must copy
+// src/data/*.json next to the compiled routes that read them.
+assert.ok(JSON.parse(read("package.json")).scripts.build.includes("cpSync('src/data','dist/data'"), "build copies src/data into dist/data");
+r = await fetch(`${BASE}/api/v1/x402/directory`);
+assert.ok((await r.json()).services?.length > 0, "x402 directory lists services");
+r = await fetch(`${BASE}/api/v1/mcp/servers`);
+assert.ok((await r.json()).servers?.length > 0, "MCP marketplace lists servers");
+
 r = await fetch(`${BASE}/health`);
 assert.deepEqual(await r.json(), { ok: true }, "public /health stays { ok } only");
 
