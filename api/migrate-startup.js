@@ -131,6 +131,52 @@ try {
   console.error("[startup] catalog correction skipped:", err.message);
 }
 
+// Input schemas (2026-11-03): 26 catalog tools published no input fields at all
+// and 16 had fields without a description — the hosted MCP server's tools/list
+// reads this same column, so connected agents couldn't tell how to call them.
+// src/data/tool-input-schemas.json was written from each handler. A schema is
+// only replaced when it has no properties; descriptions fill gaps, and a null
+// removes a property the handler never reads, and `add` publishes fields it
+// reads that were missing. Idempotent (compares sorted keys).
+try {
+  const { fileURLToPath } = await import("url");
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), "src/data/tool-input-schemas.json");
+  const { schemas, descriptions, add = {} } = JSON.parse(fs.readFileSync(file, "utf8"));
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  const canon = (v) => JSON.stringify(v, (_k, x) => (x && typeof x === "object" && !Array.isArray(x)
+    ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x));
+  let updated = 0;
+  for (const name of new Set([...Object.keys(schemas), ...Object.keys(descriptions), ...Object.keys(add)])) {
+    const row = await prisma.tool.findFirst({ where: { name } });
+    if (!row) continue;
+    const cur = row.schemaJson && typeof row.schemaJson === "object" ? row.schemaJson : {};
+    let next = JSON.parse(JSON.stringify(cur));
+    if (schemas[name] && !Object.keys(next.properties ?? {}).length) next = schemas[name];
+    for (const [prop, desc] of Object.entries(descriptions[name] ?? {})) {
+      if (!next.properties?.[prop]) continue;
+      if (desc === null) {
+        delete next.properties[prop];
+        if (Array.isArray(next.required)) next.required = next.required.filter((r) => r !== prop);
+      } else {
+        next.properties[prop].description = desc;
+      }
+    }
+    for (const [prop, def] of Object.entries(add[name] ?? {})) {
+      next.properties = next.properties ?? {};
+      if (!next.properties[prop]) next.properties[prop] = def;
+    }
+    if (canon(next) !== canon(cur)) {
+      await prisma.tool.updateMany({ where: { name }, data: { schemaJson: next } });
+      updated++;
+    }
+  }
+  if (updated) console.log(`[startup] Catalog input schemas updated for ${updated} tool(s).`);
+  await prisma.$disconnect();
+} catch (err) {
+  console.error("[startup] input schema update skipped:", err.message);
+}
+
 // Archive the legacy SQLite file on the persistent disk into Postgres (2026-11-02),
 // so the disk — which blocks zero-downtime deploys — can be removed without losing
 // anything. Logs table names and row counts only (never row contents); reads a

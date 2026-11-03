@@ -1,0 +1,692 @@
+{
+  "_note": "Input schemas for the DB tool catalog (GET /v1/tools and the hosted MCP tools/list), written from each handler in src/routes/tools/index.ts on 2026-11-03. Applied by migrate-startup.js. `schemas` replace a tool's schemaJson when it has no properties; `descriptions` fill in a property's description, null removes a property the handler never reads, and `add` publishes fields the handler reads that the old schema left out.",
+  "schemas": {
+    "ai-oracle": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question or problem to analyze, up to 10,000 characters.",
+          "maxLength": 10000
+        },
+        "context": {
+          "type": "string",
+          "description": "Optional background text for the analysis; only the first 8,000 characters are used."
+        },
+        "reasoning_depth": {
+          "type": "string",
+          "description": "standard (Sonnet, 2,048 tokens) or deep (Opus, 4,096 tokens, costs about 2x credits); any other value returns 400. x402-paid calls without a BYOK key are served at standard.",
+          "enum": [
+            "standard",
+            "deep"
+          ],
+          "default": "standard"
+        }
+      },
+      "required": [
+        "question"
+      ]
+    },
+    "check-domain": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "Domain name to look up via RDAP, e.g. example.com; a leading http(s):// and any path are stripped."
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    },
+    "crypto-fear-greed": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Number of daily Fear & Greed index entries to return, newest first (default 7, clamped to 1-30).",
+          "default": 7,
+          "minimum": 1,
+          "maximum": 30
+        }
+      },
+      "required": []
+    },
+    "crypto-market-cap": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Number of top coins by market cap to return (default 10, clamped to 1-100).",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100
+        },
+        "currency": {
+          "type": "string",
+          "description": "Fiat or crypto currency code for prices, e.g. usd or eur (lowercased; default usd).",
+          "default": "usd"
+        }
+      },
+      "required": []
+    },
+    "crypto-news": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Optional coin to filter headlines by, as a ticker or name, e.g. BTC or bitcoin; alias: coin. Omit for general crypto news."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of articles (default 10, clamped to 1-20).",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 20
+        }
+      },
+      "required": []
+    },
+    "crypto-ohlcv": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Coin as a CoinGecko id or common ticker, e.g. bitcoin or BTC (tickers like BTC/ETH/SOL are mapped to ids); alias: coin."
+        },
+        "days": {
+          "type": "integer",
+          "description": "How many days of OHLC candles to return, passed to CoinGecko as-is (CoinGecko accepts 1, 7, 14, 30, 90, 180, 365); default 7.",
+          "default": 7
+        },
+        "currency": {
+          "type": "string",
+          "description": "Quote currency in lowercase, e.g. usd (default usd).",
+          "default": "usd"
+        }
+      },
+      "required": [
+        "symbol"
+      ]
+    },
+    "crypto-price": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Coin as a CoinGecko id or common ticker, e.g. bitcoin or BTC (tickers like BTC/ETH/SOL are mapped to ids); alias: coin."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Quote currency in lowercase, e.g. usd or eur (default usd); the server does not lowercase it, so always send lowercase.",
+          "default": "usd"
+        }
+      },
+      "required": [
+        "symbol"
+      ]
+    },
+    "crypto-sentiment": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Full CoinGecko coin id, e.g. bitcoin or ethereum (lowercased). Tickers like BTC are NOT mapped and return 404."
+        }
+      },
+      "required": [
+        "symbol"
+      ]
+    },
+    "design-create": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Description of the image to generate with gpt-image-1, e.g. 'a watercolor fox in a forest'; screened by content moderation."
+        },
+        "size": {
+          "type": "string",
+          "description": "Image size in pixels; other values fall back to 1024x1024 (x402-paid calls are always 1024x1024).",
+          "enum": [
+            "1024x1024",
+            "1792x1024",
+            "1024x1792"
+          ],
+          "default": "1024x1024"
+        },
+        "quality": {
+          "type": "string",
+          "description": "Image quality: low, medium or high (aliases: standard/vivid/natural = medium, hd = high); any other value becomes medium. High quality costs more credits; x402-paid calls are capped at medium.",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "medium"
+        },
+        "n": {
+          "type": "integer",
+          "description": "Number of images; always capped at 1.",
+          "default": 1,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    },
+    "domain-check": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "Domain name to check for registration via RDAP, e.g. example.com; lowercased, and a leading http(s):// and any path are stripped."
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    },
+    "email-find": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "Company domain to search with Hunter.io, e.g. stripe.com."
+        },
+        "first_name": {
+          "type": "string",
+          "description": "Person's first name; with last_name, switches to a single-person email lookup. Ignored unless last_name is also given."
+        },
+        "last_name": {
+          "type": "string",
+          "description": "Person's last name; with first_name, switches to a single-person email lookup. Ignored unless first_name is also given."
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    },
+    "email-send": {
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "One recipient email address, e.g. alice@example.com; must contain @ and may not contain commas or newlines (single recipient only)."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email subject line, 200 characters or fewer.",
+          "maxLength": 200
+        },
+        "body": {
+          "type": "string",
+          "description": "Plain-text body (up to 10,000 chars used). Either body or html is required."
+        },
+        "html": {
+          "type": "string",
+          "description": "HTML body (up to 20,000 chars used; script tags and inline on* handlers are stripped). Either body or html is required."
+        },
+        "from": {
+          "type": "string",
+          "description": "Custom sender address; only honored when the server has ALLOW_CUSTOM_EMAIL_FROM=true, otherwise the default Arch Tools sender is used."
+        }
+      },
+      "required": [
+        "to",
+        "subject"
+      ]
+    },
+    "fact-check": {
+      "type": "object",
+      "properties": {
+        "claim": {
+          "type": "string",
+          "description": "The statement to fact-check, e.g. 'The Great Wall of China is visible from space'; may also be sent as a ?claim= query parameter."
+        }
+      },
+      "required": [
+        "claim"
+      ]
+    },
+    "generate-image": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Description of the image to generate with gpt-image-1; screened by content moderation."
+        },
+        "size": {
+          "type": "string",
+          "description": "Image size in pixels; other values fall back to 1024x1024 (x402-paid calls are always 1024x1024).",
+          "enum": [
+            "1024x1024",
+            "1792x1024",
+            "1024x1792"
+          ],
+          "default": "1024x1024"
+        },
+        "quality": {
+          "type": "string",
+          "description": "Image quality: low, medium or high (aliases: standard/vivid/natural = medium, hd = high); any other value becomes medium. High quality costs more credits; x402-paid calls are capped at medium.",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "medium"
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    },
+    "image-remove-bg": {
+      "type": "object",
+      "properties": {
+        "image_url": {
+          "type": "string",
+          "description": "Public http(s) URL of the image (downloaded by the server, max about 22 MB). Either image_url or image_base64 is required."
+        },
+        "image_base64": {
+          "type": "string",
+          "description": "Base64-encoded image bytes; used instead of image_url when both are given. Either image_url or image_base64 is required."
+        },
+        "size": {
+          "type": "string",
+          "description": "Output resolution for remove.bg: auto, preview, full, or hd (hd is sent as full); other values return 400.",
+          "enum": [
+            "auto",
+            "preview",
+            "hd",
+            "full"
+          ],
+          "default": "auto"
+        }
+      },
+      "required": []
+    },
+    "news-search": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "News search query, e.g. 'OpenAI funding'; may also be sent as a ?query= query parameter."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of articles (default 5, capped at 10); may also be sent as ?limit=.",
+          "default": 5,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "research-report": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Research topic or question, e.g. 'state of solid-state batteries'; alias: topic (also accepted as ?query= or ?topic= query parameters)."
+        },
+        "depth": {
+          "type": "string",
+          "description": "standard (5 sources, concise report) or deep (10 sources, advanced search, longer report); any value other than deep behaves as standard.",
+          "enum": [
+            "standard",
+            "deep"
+          ],
+          "default": "standard"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "semantic-search": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Natural-language search query, e.g. 'startups building AI agents for accounting'."
+        },
+        "num_results": {
+          "type": "integer",
+          "description": "Number of results (default 5, clamped to 1-20); alias: limit, which takes precedence if both are sent.",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "type": {
+          "type": "string",
+          "description": "Exa search mode: neural (default) or keyword; other values return 400. Ignored when documents is provided.",
+          "enum": [
+            "neural",
+            "keyword"
+          ],
+          "default": "neural"
+        },
+        "documents": {
+          "type": "array",
+          "description": "Optional list of your own text documents to rank against the query locally by keyword overlap instead of searching the web with Exa.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "send-email": {
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "One recipient email address, e.g. alice@example.com; must contain @ and may not contain commas or newlines (single recipient only)."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email subject line, 200 characters or fewer.",
+          "maxLength": 200
+        },
+        "body": {
+          "type": "string",
+          "description": "Plain-text body (up to 10,000 chars used). Either body or html is required."
+        },
+        "html": {
+          "type": "string",
+          "description": "HTML body (up to 20,000 chars used; script tags and inline on* handlers are stripped). Either body or html is required."
+        },
+        "from": {
+          "type": "string",
+          "description": "Custom sender address; only honored when the server has ALLOW_CUSTOM_EMAIL_FROM=true, otherwise the default Arch Tools sender is used."
+        }
+      },
+      "required": [
+        "to",
+        "subject"
+      ]
+    },
+    "session-create": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "Required label grouping this conversation session, e.g. 'support-bot' (truncated to 100 chars)."
+        },
+        "system_prompt": {
+          "type": "string",
+          "description": "Optional system prompt for every turn in the session (truncated to 4,000 chars); alias: system."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model for the session: alias claude, gpt, gpt4 or gpt-4 (case-insensitive), or an exact id; other values return 400. Default claude-sonnet-4-6. x402-paid sessions are pinned to claude-sonnet-4-6 for premium models.",
+          "enum": [
+            "claude",
+            "gpt",
+            "gpt4",
+            "gpt-4",
+            "claude-sonnet-4-6",
+            "claude-opus-4-6",
+            "claude-haiku-4-5-20251001",
+            "gpt-4o",
+            "gpt-4o-mini"
+          ],
+          "default": "claude-sonnet-4-6"
+        }
+      },
+      "required": [
+        "namespace"
+      ]
+    },
+    "session-message": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "description": "Session id returned by session-create, e.g. sess_3f2a...; must belong to the same caller."
+        },
+        "message": {
+          "type": "string",
+          "description": "The user message to send in the session, up to 10,000 characters.",
+          "maxLength": 10000
+        }
+      },
+      "required": [
+        "session_id",
+        "message"
+      ]
+    },
+    "text-to-speech": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Text to speak, up to 5,000 characters (credit cost grows with length).",
+          "maxLength": 5000
+        },
+        "voice_id": {
+          "type": "string",
+          "description": "ElevenLabs voice id, letters/digits/_/- only (default EXAVITQu4vr4xnSDxMaL).",
+          "default": "EXAVITQu4vr4xnSDxMaL",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "model_id": {
+          "type": "string",
+          "description": "ElevenLabs model id (default eleven_turbo_v2_5).",
+          "default": "eleven_turbo_v2_5"
+        },
+        "stability": {
+          "type": "number",
+          "description": "ElevenLabs voice stability from 0 to 1 (default 0.5; not range-checked by the server).",
+          "default": 0.5
+        },
+        "similarity_boost": {
+          "type": "number",
+          "description": "ElevenLabs voice similarity boost from 0 to 1 (default 0.75; not range-checked by the server).",
+          "default": 0.75
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "token-lookup": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Token name or ticker to search on CoinGecko, e.g. solana or SOL; aliases: text, symbol. Use the returned id with other crypto tools."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "transcribe-audio": {
+      "type": "object",
+      "properties": {
+        "audio_url": {
+          "type": "string",
+          "description": "Public http(s) URL of the audio file (mp3, wav, ogg, webm, mp4/m4a), fetched within 60 s and limited to 25 MB by default."
+        },
+        "language": {
+          "type": "string",
+          "description": "Optional ISO-639-1 language code of the audio, e.g. en; auto-detected by Whisper if omitted."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Optional context hint passed to Whisper, e.g. names or jargon to spell correctly."
+        }
+      },
+      "required": [
+        "audio_url"
+      ]
+    },
+    "video-generate": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Text description of the video to generate with Runway; screened by content moderation."
+        },
+        "duration": {
+          "type": "integer",
+          "description": "Video length in seconds: 5 or 10 only, sent as a JSON number (a string like \"5\" returns 400). Default 5.",
+          "enum": [
+            5,
+            10
+          ],
+          "default": 5
+        },
+        "aspect_ratio": {
+          "type": "string",
+          "description": "16:9 (landscape, default) or 9:16 (portrait); 1280:720, 720:1280, 1280:768 and 768:1280 are also accepted. Other values return 400.",
+          "enum": [
+            "16:9",
+            "9:16",
+            "1280:720",
+            "720:1280",
+            "1280:768",
+            "768:1280"
+          ],
+          "default": "16:9"
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    },
+    "workflow-agent": {
+      "type": "object",
+      "properties": {
+        "goal": {
+          "type": "string",
+          "description": "The goal to work through step by step, e.g. 'plan a product launch email campaign'; aliases: task, objective."
+        },
+        "context": {
+          "type": "string",
+          "description": "Optional background information to include with the goal."
+        },
+        "steps": {
+          "type": "integer",
+          "description": "Number of steps the model should plan (default 3, clamped to 1-10); alias: max_steps.",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "goal"
+      ]
+    }
+  },
+  "descriptions": {
+    "ai-generate": {
+      "model": "Explicit model; overrides mode. Accepts aliases claude, gpt/gpt4/gpt-4, gemini, grok (case-insensitive) or an exact id: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001, gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo, gemini-2.5-flash, gemini-2.5-pro, gemini-2.5-flash-lite, grok-4.3, grok-4.20-0309-non-reasoning (retired gemini-1.5/2.0 and grok-2/3 names are remapped). Unknown models return 400. If omitted, mode decides (default smart = claude-sonnet-4-6).",
+      "max_tokens": "Maximum output tokens (default 1000, served value capped at 4096). Credit cost is 20 plus 20 per 1,000 requested tokens above 1,000."
+    },
+    "barcode-generate": {
+      "width": "Target SVG width in pixels (default 250); bar width is derived from it, and the SVG grows wider if the data needs more room.",
+      "format": "Alias for type: the barcode type, code128 (default) or qr; any other value returns 400.",
+      "height": "SVG height in pixels including the text line (default 100).",
+      "include_text": null
+    },
+    "convert-format": {
+      "to": "Target format: json, yaml, csv or xml when from is a structured format; base64 or hex when from is text; text (or string) or hex when from is base64. Unsupported targets return 400.",
+      "from": "Format of the input: json, yaml, csv, xml, text (or string), or base64. Unsupported formats return 400."
+    },
+    "diff-text": {
+      "format": null
+    },
+    "generate-hash": {
+      "algorithm": "Hash algorithm: sha256 (default), sha512, sha384, sha1 or md5; other values return 400."
+    },
+    "generate-uuid": {
+      "type": "Alias for version: v1 for a timestamp-based UUID; any other value (default v4) gives a random v4 UUID (or the api_key/token value selected by format).",
+      "count": "How many values to generate (default 1, clamped to 1-100)."
+    },
+    "image-generate": {
+      "style": null,
+      "width": "SVG width in pixels written into the model prompt and viewBox (default 400; not validated).",
+      "height": "SVG height in pixels written into the model prompt and viewBox (default 300; not validated).",
+      "quality": null
+    },
+    "ocr-extract": {
+      "media_type": "MIME type of image_base64: image/jpeg (default), image/png, image/gif or image/webp; other values fall back to image/jpeg. Not used when the image is downloaded from image_url (the download's Content-Type is used)."
+    },
+    "qr-code": {
+      "width": null,
+      "format": "Output format: png (default, returned as a data URL) or svg (SVG markup); any other value returns png.",
+      "margin": null
+    },
+    "rss-parse": {
+      "limit": "Maximum number of feed items to return (default 20; no upper cap)."
+    },
+    "search-web": {
+      "limit": "Number of results to return (default 5, clamped to 1-10); num_results is accepted as an alias."
+    },
+    "summarize": {
+      "style": "Summary style: paragraph (default), bullets, tldr, headline or executive; unknown values fall back to paragraph.",
+      "max_length": null
+    },
+    "transform-text": {
+      "mode": "Transformation: uppercase (default), lowercase, titlecase, slug, camel, pascal, snake, kebab, base64_encode, base64_decode, reverse, trim or word_count. Also accepts upper, lower, title, camelCase, snakeCase, kebabCase, pascalCase, and the field name operation. Other values return 400."
+    },
+    "webhook-send": {
+      "method": "HTTP method for the webhook call: POST (default), PUT or PATCH (case-insensitive); any other value is sent as POST."
+    },
+    "web-scrape": {
+      "format": null
+    },
+    "web-search": {
+      "max_results": null,
+      "search_depth": null
+    }
+  },
+  "add": {
+    "qr-code": {
+      "size": {
+        "type": "integer",
+        "description": "Image size in pixels (default 256, clamped to 64-1024).",
+        "default": 256,
+        "minimum": 64,
+        "maximum": 1024
+      },
+      "error_correction": {
+        "type": "string",
+        "description": "QR error-correction level: L, M (default), Q or H.",
+        "enum": [
+          "L",
+          "M",
+          "Q",
+          "H"
+        ],
+        "default": "M"
+      }
+    },
+    "diff-text": {
+      "mode": {
+        "type": "string",
+        "description": "Diff granularity: words (default), chars, or lines (unified is the same as lines).",
+        "enum": [
+          "words",
+          "chars",
+          "lines",
+          "unified"
+        ],
+        "default": "words"
+      }
+    },
+    "web-scrape": {
+      "selector": {
+        "type": "string",
+        "description": "Optional CSS selector; returns only the text of the matching element(s)."
+      }
+    }
+  }
+}
