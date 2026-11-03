@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
@@ -8,18 +7,18 @@ import { logAudit } from "../lib/audit.js";
 import { logger } from "../lib/logger.js";
 import { sendPasswordResetEmail } from "../services/email.js";
 import { captureEvent, identifyUser } from "../lib/posthog.js";
+import { isSameOrigin } from "../middleware/auth.js";
+import { signSession, verifySession } from "../lib/session.js";
 
 const router = Router();
 
 if (!process.env.JWT_SECRET) {
   throw new Error("FATAL: JWT_SECRET env var is not set. Refusing to start. Set a strong random secret.");
 }
-const JWT_SECRET = process.env.JWT_SECRET;
 
 const COOKIE_NAME = "arch_session";
 const DUMMY_BCRYPT_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8y4q0h0iI1GtIsfRSAxEPPYUajFBlW";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const SESSION_TTL_JWT = "7d";
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -54,18 +53,7 @@ const sensitiveLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export function signSession(agentId: string): string {
-  return jwt.sign({ sub: agentId }, JWT_SECRET, { expiresIn: SESSION_TTL_JWT });
-}
-
-export function verifySession(token: string): { sub: string } | null {
-  try {
-    // Pin the algorithm so a token cannot be presented with a different/none alg.
-    return jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as { sub: string };
-  } catch {
-    return null;
-  }
-}
+export { signSession, verifySession };
 
 async function findAgentByApiKey(apiKey: string) {
   // Plaintext keys are no longer stored — prefix lookup + bcrypt compare only.
@@ -141,7 +129,7 @@ router.post("/login", loginLimiter, async (req: Request, res: Response): Promise
 
 router.post("/set-password", sensitiveLimiter, async (req: Request, res: Response): Promise<void> => {
   const { api_key, password } = req.body ?? {};
-  if (typeof api_key !== "string" || typeof password !== "string" || !api_key || !password) {
+  if (typeof password !== "string" || !password || (api_key !== undefined && (typeof api_key !== "string" || !api_key))) {
     res.status(400).json({ ok: false, error: "api_key_and_password_required" });
     return;
   }
@@ -151,7 +139,22 @@ router.post("/set-password", sensitiveLimiter, async (req: Request, res: Respons
   }
 
   try {
-    const agent = await findAgentByApiKey(api_key);
+    let agent;
+    if (typeof api_key === "string") {
+      agent = await findAgentByApiKey(api_key);
+    } else {
+      // Signed in without a key (the dashboard): only a FIRST password can be
+      // set this way. Changing an existing one goes through the reset email,
+      // so a borrowed session can't lock the owner out.
+      const session = req.cookies?.[COOKIE_NAME];
+      const payload = session && isSameOrigin(req) ? verifySession(session) : null;
+      const found = payload ? await prisma.agent.findUnique({ where: { id: payload.sub } }) : null;
+      if (found?.passwordHash) {
+        res.status(409).json({ ok: false, error: "password_already_set", message: "A password is already set. Use “Forgot password” on the sign-in page to change it." });
+        return;
+      }
+      agent = found;
+    }
     if (!agent) {
       res.status(404).json({ ok: false, error: "not_found" });
       return;
@@ -203,6 +206,8 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     credits: agent.credits,
     tier: agent.tier,
     created_at: agent.createdAt,
+    has_password: Boolean(agent.passwordHash),
+    api_key_masked: agent.apiKeyPrefix ? `${agent.apiKeyPrefix}…` : null,
   });
 });
 

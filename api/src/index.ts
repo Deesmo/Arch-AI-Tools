@@ -27,7 +27,7 @@ if (process.env.SENTRY_DSN) {
 // Routes
 import discoveryRouter from "./routes/discovery.js";
 import agentRouter from "./routes/agent.js";
-import { requireAuth, AuthedRequest } from "./middleware/auth.js";
+import { requireAuth, allowSessionAuth, AuthedRequest } from "./middleware/auth.js";
 import toolsRouter from "./routes/tools/index.js";
 import billingRouter from "./routes/billing.js";
 import adminRouter from "./routes/admin.js";
@@ -144,7 +144,7 @@ app.use(cors({
       return;
     }
 
-    callback(new Error("Not allowed by CORS"));
+    callback(Object.assign(new Error("Not allowed by CORS"), { status: 403, type: "cors.refused" }));
   },
   credentials: true,
   exposedHeaders: [
@@ -170,6 +170,16 @@ app.use(express.json({ limit: "10mb" }));
 // right after the parser, so clients get a clear 400; everything else falls
 // through to the generic error handler at the bottom of this file.
 app.use((err: Error & { type?: string; status?: number }, _req: Request, res: Response, next: NextFunction) => {
+  if (err?.type === "cors.refused") {
+    // A browser page on a site we don't allow. A refusal, not a server fault.
+    res.status(403).json({
+      ok: false,
+      error: "origin_not_allowed",
+      message: "Requests from this website are not allowed. Call the API from your server or agent instead.",
+      request_id: reqId(),
+    });
+    return;
+  }
   if (err?.type === "entity.parse.failed" || (err instanceof SyntaxError && err.status === 400)) {
     res.status(400).json({
       ok: false,
@@ -271,6 +281,13 @@ app.get("/api/discovery", async (_req: Request, res: Response): Promise<void> =>
 // SEO free tool pages + no-auth API endpoints
 app.use("/tools", seoRouter);
 app.use("/v1/tools", seoRouter);  // Free endpoint proxies
+
+// The signed-in dashboard calls these with its session cookie instead of an
+// API key (the browser never holds the full key after sign-in).
+app.use(
+  ["/v1/agent/usage", "/v1/agent/me", "/v1/agent/keys/rotate", "/v1/affiliate/link", "/v1/referral/apply", "/v1/referral/code"],
+  allowSessionAuth,
+);
 
 // Agent registration — tight limit to prevent credit farming
 app.use("/v1/agent/register", registerLimiter);

@@ -178,6 +178,19 @@ export const LOGIN_HTML = `<!DOCTYPE html>
     el.className = 'status ' + (isError ? 'error' : (msg ? 'success' : ''));
   }
 
+  // Only same-site paths: "/login?next=https://evil.example" must not
+  // bounce a freshly signed-in user to another site. Let the browser's own URL
+  // parser decide (it also strips the tab/CR/LF tricks like "/%09/evil.example").
+  function safeNext(n) {
+    if (typeof n !== 'string' || !n) return '/dashboard';
+    try {
+      var u = new URL(n, window.location.origin);
+      return u.origin === window.location.origin ? u.pathname + u.search + u.hash : '/dashboard';
+    } catch (_) {
+      return '/dashboard';
+    }
+  }
+
   async function doLogin() {
     var email = document.getElementById('email').value.trim();
     var password = document.getElementById('password').value;
@@ -196,7 +209,7 @@ export const LOGIN_HTML = `<!DOCTYPE html>
       if (d.ok) {
         setStatus('status-password', '✓ Signed in — redirecting…', false);
         var params = new URLSearchParams(window.location.search);
-        var next = params.get('next') || '/dashboard';
+        var next = safeNext(params.get('next'));
         setTimeout(() => window.location.href = next, 500);
       } else if (d.error === 'no_password_set') {
         setStatus('status-password', 'No password set for this account. Use the API Key tab to access your dashboard, then set a password from there.', true);
@@ -223,10 +236,9 @@ export const LOGIN_HTML = `<!DOCTYPE html>
       });
       var d = await r.json();
       if (d.ok) {
-        sessionStorage.setItem('arch_api_key', key);
         setStatus('status-key', '✓ Key validated — redirecting…', false);
         var params = new URLSearchParams(window.location.search);
-        var next = params.get('next') || '/dashboard';
+        var next = safeNext(params.get('next'));
         setTimeout(function() { window.location.href = next; }, 500);
       } else {
         setStatus('status-key', d.message || 'Invalid API key.', true);

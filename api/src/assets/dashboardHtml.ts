@@ -140,15 +140,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto;"></div>
     </div>
 
-    <!-- API KEY ENTRY (hidden by default — only shown as last resort fallback) -->
+    <!-- LOAD ERROR (only if the signed-in account can't be loaded) -->
     <div id="key-entry-card" class="card" style="display:none;">
-      <div class="card-label">API Key</div>
-      <div class="key-entry-row">
-        <input id="key-input" class="key-input" placeholder="arch_..." autocomplete="off" />
-        <button id="load-btn" class="btn-load">Load</button>
-        <span id="status-tag" class="status-tag"></span>
-      </div>
-      <div style="font-size:12px;color:var(--muted)">Don&#39;t have a key? <a href="/signup" style="color:var(--accent)">Get one free →</a></div>
+      <div class="card-label">Couldn&#39;t load your account</div>
+      <div style="font-size:13px;color:var(--muted)"><span id="status-tag" class="status-tag"></span> <a href="/login?next=/dashboard" style="color:var(--accent)">Sign in again &#8594;</a></div>
     </div>
 
     <!-- MASKED KEY DISPLAY (shown after load) -->
@@ -157,10 +152,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <div class="key-display-row">
         <span id="key-masked" class="key-masked"></span>
         <div class="key-actions">
-          <button id="key-toggle" class="key-btn">&#128065; Show</button>
-          <button id="key-copy" class="key-btn">&#128203; Copy</button>
+          <button id="key-toggle" class="key-btn" style="display:none">&#128065; Show</button>
+          <button id="key-copy" class="key-btn" style="display:none">&#128203; Copy</button>
+          <button id="key-rotate" class="key-btn">&#128260; New key</button>
         </div>
       </div>
+      <div id="key-note" style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5">We only keep a fingerprint of your key, so the full key was shown once, when you created it. Lost it? Make a new one here &#8212; the old key stops working.</div>
     </div>
 
     <!-- STATS -->
@@ -249,17 +246,19 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
   <script>
     function doSignOut() {
-      sessionStorage.removeItem("arch_api_key");
-      try { localStorage.removeItem("arch_api_key"); } catch(_) {}
+      try { sessionStorage.removeItem("arch_api_key"); localStorage.removeItem("arch_api_key"); } catch(_) {}
       window.location.href = "/auth/logout";
     }
 
+    // The account loads with the sign-in session (cookie). Keys are stored only
+    // as a fingerprint, so the full key exists on this page only right after
+    // "New key" makes one.
     var fullKey = "";
     var keyVisible = false;
 
     function maskKey(k) {
       if (!k || k.length < 12) return k;
-      return k.slice(0, 7) + "\u2022".repeat(Math.min(32, k.length - 11)) + k.slice(-6);
+      return k.slice(0, 7) + "•".repeat(Math.min(32, k.length - 11)) + k.slice(-6);
     }
 
     function setStatus(msg, color) {
@@ -268,59 +267,88 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       el.style.color = color || "rgba(255,255,255,0.4)";
     }
 
-    document.getElementById("load-btn").addEventListener("click", loadDashboard);
-    document.getElementById("key-input").addEventListener("keydown", function(e) {
-      if (e.key === "Enter") loadDashboard();
-    });
+    function showKeyEntryFallback() {
+      document.getElementById("loading-card").style.display = "none";
+      document.getElementById("key-entry-card").style.display = "block";
+    }
 
     document.getElementById("key-toggle").addEventListener("click", function() {
       keyVisible = !keyVisible;
       document.getElementById("key-masked").textContent = keyVisible ? fullKey : maskKey(fullKey);
-      this.textContent = keyVisible ? "\u{1F576}\uFE0F Hide" : "\u{1F441} Show";
+      this.textContent = keyVisible ? "\u{1F576}️ Hide" : "\u{1F441} Show";
     });
 
     document.getElementById("key-copy").addEventListener("click", function() {
       var btn = this;
       navigator.clipboard.writeText(fullKey).then(function() {
-        btn.textContent = "\u2713 Copied!";
+        btn.textContent = "✓ Copied!";
         btn.classList.add("copied");
         setTimeout(function() { btn.textContent = "\u{1F4CB} Copy"; btn.classList.remove("copied"); }, 2000);
       });
     });
 
-    async function loadDashboard() {
-      var raw = (document.getElementById("key-input").value || "").trim();
-      var token = raw.replace(/^authorization:\\s*/i, "").replace(/^bearer /i, "").trim();
-      
-      var btn = document.getElementById("load-btn");
-      btn.disabled = true; btn.textContent = "Loading\u2026";
-      setStatus("", "");
-      
+    document.getElementById("key-rotate").addEventListener("click", async function() {
+      if (!confirm("Make a new API key? Your current key stops working right away, so update any app or agent that uses it.")) return;
+      var btn = this;
+      var note = document.getElementById("key-note");
+      btn.disabled = true;
       try {
-        var resp = await fetch("/v1/agent/usage", { headers: { Authorization: "Bearer " + token } });
-        var data;
-        try { data = await resp.json(); } catch(_) {
-          setStatus(resp.status >= 500 ? "Service unavailable \u2014 try again" : "Server error (" + resp.status + ")", "#f87171");
+        var r = await fetch("/v1/agent/keys/rotate", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: "{}"
+        });
+        var d = await r.json().catch(function() { return {}; });
+        if (!r.ok || !d.api_key) {
+          note.style.color = "#f87171";
+          note.textContent = d.message || "Could not make a new key. Sign in again and retry.";
           return;
         }
-        if (!resp.ok || data.ok === false) {
-          setStatus(data.error === "unauthorized" ? "\u274C Invalid key" : (data.message || "Error"), "#f87171");
+        fullKey = d.api_key;
+        keyVisible = true;
+        document.getElementById("key-masked").textContent = fullKey;
+        document.getElementById("key-toggle").textContent = "\u{1F576}️ Hide";
+        document.getElementById("key-toggle").style.display = "";
+        document.getElementById("key-copy").style.display = "";
+        note.style.color = "var(--green)";
+        note.textContent = "New key made. Copy it now — it won't be shown again. Your old key no longer works.";
+        updateQuickstart(maskKey(fullKey));
+      } catch(_) {
+        note.style.color = "#f87171";
+        note.textContent = "Connection error. Try again.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function updateQuickstart(keyText) {
+      var SQ = String.fromCharCode(39);
+      var BSNL = String.fromCharCode(92, 10) + "  ";
+      document.getElementById("quickstart-code").textContent =
+        "curl -X POST https://archtools.dev/v1/tools/generate-hash" + BSNL +
+        "-H \\"x-api-key: " + keyText + "\\"" + BSNL +
+        "-H \\"Content-Type: application/json\\"" + BSNL +
+        "-d " + SQ + "{\\"text\\":\\"hello world\\",\\"algorithm\\":\\"sha256\\"}" + SQ;
+    }
+
+    async function loadDashboard(me) {
+      try {
+        var resp = await fetch("/v1/agent/usage", { credentials: "include" });
+        var data = await resp.json().catch(function() { return null; });
+        if (!resp.ok || !data || data.ok === false) {
           showKeyEntryFallback();
+          setStatus(resp.status === 401 ? "Your session has expired."
+            : resp.status >= 500 ? "The service is unavailable — try again in a minute."
+            : ((data && data.message) || "Error " + resp.status + "."), "#f87171");
           return;
         }
 
-        fullKey = token;
-        if (token) { sessionStorage.setItem("arch_api_key", token); try { localStorage.setItem("arch_api_key", token); } catch(_) {} }
-        setStatus("\u2713 Loaded", "var(--green)");
-
-        // Show masked key
         var kd = document.getElementById("key-display");
         kd.style.display = "block";
-        document.getElementById("key-masked").textContent = maskKey(token);
+        document.getElementById("key-masked").textContent = me.api_key_masked || "No active key — make a new one";
 
-        // Show stats
-        var ss = document.getElementById("stats-section");
-        ss.style.display = "block";
+        document.getElementById("stats-section").style.display = "block";
         document.getElementById("credits").textContent = (data.credits_remaining ?? 0).toLocaleString();
         document.getElementById("calls-today").textContent = data.calls_today ?? 0;
         document.getElementById("calls-total").textContent = (data.total_calls ?? 0).toLocaleString();
@@ -341,55 +369,50 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           document.getElementById("verify-banner").style.display = "none";
         }
 
-        // Activity
         var act = data.recent_activity || [];
         var al = document.getElementById("activity-list");
         if (act.length === 0) {
-          al.innerHTML = '<p class="activity-empty">No API calls yet. <a href="/docs" style="color:var(--accent)">Try a tool \u2192</a></p>';
+          al.innerHTML = '<p class="activity-empty">No API calls yet. <a href="/docs" style="color:var(--accent)">Try a tool →</a></p>';
         } else {
-          al.innerHTML = act.slice(0, 10).map(function(a) {
+          al.textContent = "";
+          act.slice(0, 10).forEach(function(a) {
             var ts = a.createdAt || a.created_at || "";
-            var d = ts ? new Date(ts).toLocaleTimeString() : "";
+            var row = document.createElement("div");
+            row.className = "activity-row";
+            var tool = document.createElement("span");
+            tool.className = "activity-tool";
+            tool.textContent = a.toolName || a.tool || "api call";
+            var right = document.createElement("span");
             var credits = a.creditsUsed || a.credits_used || 0;
-            var cr = credits ? '<span class="activity-credits">-' + credits + ' cr</span>' : '';
-            var toolName = a.toolName || a.tool || 'api call';
-            return '<div class="activity-row"><span class="activity-tool">' + toolName + '</span><span>' + cr + ' <span class="activity-time">' + d + '</span></span></div>';
-          }).join("");
+            if (credits) {
+              var c = document.createElement("span");
+              c.className = "activity-credits";
+              c.textContent = "-" + credits + " cr ";
+              right.appendChild(c);
+            }
+            var t = document.createElement("span");
+            t.className = "activity-time";
+            t.textContent = ts ? new Date(ts).toLocaleTimeString() : "";
+            right.appendChild(t);
+            row.appendChild(tool);
+            row.appendChild(right);
+            al.appendChild(row);
+          });
         }
 
-        // Update quickstart with actual key
-        var qs = document.getElementById("quickstart-code");
-        var displayKey = maskKey(token);
-        var SQ = String.fromCharCode(39);
-        var BSNL = String.fromCharCode(92, 10) + '  ';
-        qs.textContent = 'curl -X POST https://archtools.dev/v1/tools/generate-hash' + BSNL + '-H "x-api-key: ' + displayKey + '"' + BSNL + '-H "Content-Type: application/json"' + BSNL + '-d ' + SQ + '{"text":"hello world","algorithm":"sha256"}' + SQ;
+        updateQuickstart("YOUR_API_KEY");
+        loadReferral();
 
-        // Referral card (non-blocking)
-        loadReferral(token);
-
-        // Hide the key entry card entirely after successful load
-        document.getElementById("key-entry-card").style.display = "none";
         document.getElementById("loading-card").style.display = "none";
-        // Show set-password card only if not already logged in via session
-        fetch("/auth/me", { credentials: "include" }).then(r => r.json()).then(function(me) {
-          if (!me.ok) document.getElementById("set-password-card").style.display = "block";
-        }).catch(function() { document.getElementById("set-password-card").style.display = "block"; });
-
+        document.getElementById("set-password-card").style.display = me.has_password === false ? "block" : "none";
       } catch(_) {
-        setStatus("Connection error", "#f87171");
         showKeyEntryFallback();
-      } finally {
-        btn.disabled = false; btn.textContent = "Load";
+        setStatus("Connection error — try again.", "#f87171");
       }
     }
 
-    function showKeyEntryFallback() {
-      document.getElementById("loading-card").style.display = "none";
-      document.getElementById("key-entry-card").style.display = "block";
-    }
-
-    function loadReferral(token) {
-      fetch("/v1/affiliate/link", { headers: { Authorization: "Bearer " + token } })
+    function loadReferral() {
+      fetch("/v1/affiliate/link", { credentials: "include" })
         .then(function(r) { return r.json(); })
         .then(function(d) {
           if (!d || !d.ok) return;
@@ -423,12 +446,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       var code = (document.getElementById("apply-ref-code").value || "").trim();
       var statusEl = document.getElementById("apply-ref-status");
       if (!code) { statusEl.style.color = "#f87171"; statusEl.textContent = "Enter a referral code."; return; }
-      if (!fullKey) { statusEl.style.color = "#f87171"; statusEl.textContent = "Load your API key first."; return; }
       statusEl.style.color = "var(--muted)"; statusEl.textContent = "Applying…";
       try {
         var r = await fetch("/v1/referral/apply", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: "Bearer " + fullKey },
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: code })
         });
         var d = await r.json();
@@ -448,90 +471,43 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       }
     }
 
-    // Auto-load: session-first, no manual key entry for logged-in users
-    // Loop-breaker: track if we already attempted auth this page load
-    var _authAttempted = sessionStorage.getItem("_dash_auth_attempt") === "1";
+    // Load the signed-in account. The server only serves this page to a valid
+    // session; the loop-breaker covers a session that expires mid-visit.
     setTimeout(async function() {
-      var params = new URLSearchParams(window.location.search);
-      var qKey = params.get("key");
-      if (qKey && qKey.startsWith("arch_")) {
-        // Consume key from URL immediately — strip from history so it never leaks
-        history.replaceState({}, "", "/dashboard");
-        sessionStorage.setItem("arch_api_key", qKey);
-        try { localStorage.setItem("arch_api_key", qKey); } catch(_) {}
-        document.getElementById("key-input").value = qKey;
-        document.getElementById("loading-card").style.display = "none";
-        await loadDashboard();
-        return;
-      }
-      // Primary: session cookie — this is the normal path after email/password login
+      // Old links put the key in the URL (?key=). Drop it so it never stays in history.
+      if (new URLSearchParams(window.location.search).has("key")) history.replaceState({}, "", "/dashboard");
+      // Earlier versions kept the full key in browser storage; clear it.
+      try { sessionStorage.removeItem("arch_api_key"); localStorage.removeItem("arch_api_key"); } catch(_) {}
+      var me = null;
       try {
         var meResp = await fetch("/auth/me", { credentials: "include" });
-        if (meResp.ok) {
-          var me = await meResp.json();
-          if (me.ok) {
-            // Sentinel fix: clear stale localStorage key before loading session key
-            // Prevents cross-account key bleed if /auth/api-key fails transiently
-            sessionStorage.removeItem("arch_api_key");
-            try { localStorage.removeItem("arch_api_key"); } catch(_) {}
-            try {
-              var keyResp = await fetch("/auth/api-key", { credentials: "include" });
-              if (keyResp.ok) {
-                var kd = await keyResp.json();
-                if (kd.ok && kd.api_key) {
-                  document.getElementById("key-input").value = kd.api_key;
-                  sessionStorage.setItem("arch_api_key", kd.api_key);
-                  try { localStorage.setItem("arch_api_key", kd.api_key); } catch(_) {}
-                  document.getElementById("loading-card").style.display = "none";
-                  sessionStorage.removeItem("_dash_auth_attempt");
-                  await loadDashboard();
-                  return;
-                }
-              }
-            } catch(_) {}
-            // Session valid but /auth/api-key failed — show error, do NOT fall to stale localStorage
-            document.getElementById("loading-card").style.display = "none";
-            showKeyEntryFallback();
-            document.getElementById("status-tag").textContent = "Session error — enter your API key";
-            document.getElementById("status-tag").style.color = "#f87171";
-            return;
-          }
-        }
+        me = await meResp.json();
       } catch(_) {}
-      // Secondary: localStorage (returning users who used API key tab, no active session)
-      var saved = sessionStorage.getItem("arch_api_key");
-      if (!saved) { try { saved = localStorage.getItem("arch_api_key"); } catch(_) {} }
-      if (saved) {
-        document.getElementById("key-input").value = saved;
-        document.getElementById("loading-card").style.display = "none";
-        await loadDashboard();
+      if (!me || !me.ok) {
+        if (sessionStorage.getItem("_dash_auth_attempt") === "1") {
+          showKeyEntryFallback();
+          setStatus("Your session has expired.", "#f87171");
+          return;
+        }
+        sessionStorage.setItem("_dash_auth_attempt", "1");
+        window.location.href = "/login?next=/dashboard";
         return;
       }
-      // No session + no saved key: redirect to login
-      // Loop-breaker: if we already redirected once this tab session, show error instead of looping
-      if (_authAttempted) {
-        document.getElementById("loading-card").style.display = "none";
-        showKeyEntryFallback();
-        document.getElementById("status-tag").textContent = "Session expired — please sign in again";
-        document.getElementById("status-tag").style.color = "#f87171";
-        return;
-      }
-      sessionStorage.setItem("_dash_auth_attempt", "1");
-      window.location.href = '/login?next=/dashboard';
+      sessionStorage.removeItem("_dash_auth_attempt");
+      await loadDashboard(me);
     }, 0);
 
     async function setPassword() {
       var pw = (document.getElementById("new-password").value || "").trim();
       var statusEl = document.getElementById("pw-status");
       if (!pw || pw.length < 8) { statusEl.style.color="#f87171"; statusEl.textContent="Password must be at least 8 characters."; return; }
-      if (!fullKey) { statusEl.style.color="#f87171"; statusEl.textContent="Load your API key first."; return; }
       statusEl.style.color="var(--muted)"; statusEl.textContent="Setting password…";
       try {
         var r = await fetch("/auth/set-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ api_key: fullKey, password: pw })
+          body: JSON.stringify({ password: pw })
         });
         var d = await r.json();
         if (d.ok) {

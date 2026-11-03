@@ -419,16 +419,15 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           signupEmail = email;
           // If password provided, set it and log in via session cookie
           const pw = (document.getElementById('password').value || '').trim();
-          if (pw && pw.length >= 8) {
-            try {
-              await fetch('/auth/set-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ api_key: data.api_key, password: pw })
-              });
-            } catch(_) {}
-          }
+          // Either way the browser ends up signed in, so "Open Dashboard" works.
+          try {
+            await fetch(pw && pw.length >= 8 ? '/auth/set-password' : '/auth/login-key', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(pw && pw.length >= 8 ? { api_key: data.api_key, password: pw } : { api_key: data.api_key })
+            });
+          } catch(_) {}
           showSuccess(data.api_key, data.credits || 250);
           btn.style.display = 'none';
           document.getElementById('email').style.display = 'none';
