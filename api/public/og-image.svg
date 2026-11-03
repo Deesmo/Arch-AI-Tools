@@ -70,7 +70,7 @@
   <rect x="360" y="328" width="480" height="3" fill="url(#accentGrad)" rx="2" opacity="0.8" />
 
   <!-- Subtitle -->
-  <text x="600" y="395" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="34" font-weight="300" letter-spacing="1" text-anchor="middle" fill="#a0aec0">45 AI Tools. One API.</text>
+  <text x="600" y="395" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="34" font-weight="300" letter-spacing="1" text-anchor="middle" fill="#a0aec0">63 AI Tools. One API.</text>
 
   <!-- Feature badges -->
   <!-- Badge 1 -->

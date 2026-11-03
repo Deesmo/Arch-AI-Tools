@@ -39,7 +39,7 @@ About Arch Tools:
 - One API key gives access to: AI text generation, image generation, code analysis, web scraping, crypto data, DNS tools, QR codes, PDF generation, language translation, sentiment analysis, and much more
 
 Pricing:
-- Free tier: 100 credits on signup (25 instant, 75 on email verification), refreshed monthly, no credit card required
+- Free tier: 100 credits on signup (25 instant, 75 on email verification); verified free accounts are topped up to 250 credits each month; no credit card required
 - Credit packs and subscription plans are available — see archtools.dev/pricing for current pricing and credit amounts
 - Subscriptions: Starter $19/mo, Pro $49/mo, Growth $99/mo, Business $199/mo (annual plans available at a discount)
 - Referral program: refer a friend and earn 500 bonus credits when they sign up
@@ -64,9 +64,9 @@ x402 (HTTP 402 Payments):
 - Perfect for autonomous AI agents that need to pay for API calls programmatically
 
 SDKs:
-- JavaScript SDK: npm install @archtools/sdk
-- Python SDK: pip install archtools
-- Both provide typed, easy-to-use wrappers for all endpoints
+- Node.js SDK: npm install @deesmo/arch-tools-sdk
+- Python SDK: pip install arch-tools
+- Both have helpers for common tools and call() for any of the 63
 
 Popular Tools:
 - ai-generate: Multi-model AI text generation (Claude, GPT-4, Gemini, Grok)

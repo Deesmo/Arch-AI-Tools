@@ -8,7 +8,7 @@ import { logger } from "../lib/logger.js";
 export async function runCostMonitor(): Promise<void> {
   // Health self-check
   try {
-    const healthUrl = process.env.PUBLIC_SITE_URL ?? "https://arch-ai-tools.onrender.com";
+    const healthUrl = process.env.PUBLIC_SITE_URL ?? "https://archtools.dev";
     const r = await fetch(`${healthUrl}/health`, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) {
       await sendAdminAlert("🚨 ARCH TOOLS DOWN", `Health check failed: HTTP ${r.status}. Check Render dashboard immediately.`);

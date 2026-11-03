@@ -50,6 +50,7 @@ import referralRouter from "./routes/referral.js";
 import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 import mcpRouter from "./routes/mcp.js";
+import enterpriseRouter from "./routes/enterprise.js";
 import unsubscribeRouter from "./routes/unsubscribe.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
@@ -76,11 +77,15 @@ const corsOrigins = config.corsOrigin
 app.set("trust proxy", 1);
 
 // ─── Canonical-host redirect: *.onrender.com → archtools.dev ─────────────────
-// Keeps the Render origin from being indexed/used directly. /health stays
-// exempt so Render health checks keep passing.
+// Keeps the Render origin's PAGES from being indexed. API calls are served in
+// place: the published SDKs (arch-tools 0.1.0, @deesmo/arch-tools-sdk 0.1.1)
+// default to https://arch-ai-tools.onrender.com/v1, and an HTTP client drops
+// the Authorization header when it follows a redirect to another host, so
+// redirecting them turned every SDK call into an unauthenticated 402.
+const API_PATH = /^\/(v1|api|mcp|oauth|auth|health|\.well-known)(\/|$)/;
 app.use((req: Request, res: Response, next: NextFunction) => {
   const host = (req.headers.host ?? "").toLowerCase();
-  if (host.endsWith(".onrender.com") && req.path !== "/health") {
+  if (host.endsWith(".onrender.com") && (req.method === "GET" || req.method === "HEAD") && !API_PATH.test(req.path)) {
     return res.redirect(301, `https://archtools.dev${req.originalUrl}`);
   }
   next();
@@ -96,7 +101,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://archtools.dev", "https://arch-ai-tools.onrender.com", "https://pay.coinbase.com", "https://*.sentry.io", "https://*.ingest.sentry.io", "https://www.clarity.ms", "https://*.clarity.ms", "https://assets.apollo.io", "https://*.apollo.io", "https://aplo-evnt.com", "https://*.aplo-evnt.com", "https://cloudflareinsights.com"],
+      connectSrc: ["'self'", "https://archtools.dev", "https://pay.coinbase.com", "https://*.sentry.io", "https://*.ingest.sentry.io", "https://www.clarity.ms", "https://*.clarity.ms", "https://assets.apollo.io", "https://*.apollo.io", "https://aplo-evnt.com", "https://*.aplo-evnt.com", "https://cloudflareinsights.com"],
     },
   },
   crossOriginEmbedderPolicy: false,  // needed for fonts/CDN
@@ -395,6 +400,9 @@ app.use("/unsubscribe", unsubscribeRouter);
 
 // Chat widget (public, rate-limited server-side proxy)
 app.use("/api/chat", chatRouter);
+
+// /enterprise "Talk to Sales" form (leads → email + Discord)
+app.use("/api/enterprise", enterpriseRouter);
 
 // ─── Frontend pages ───────────────────────────────────────────────────────────
 app.get("/signup", (req: Request, res: Response) => {

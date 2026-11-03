@@ -131,6 +131,17 @@
     .fund-toast-error{color:#f87171;}
     .fund-toast-info{color:var(--cyan);}
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
 

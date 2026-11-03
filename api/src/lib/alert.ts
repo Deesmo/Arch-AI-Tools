@@ -23,6 +23,7 @@ export type SecurityAlertType =
   | "credit_drain_spike"
   | "provider_exhausted"
   | "provider_recovered"
+  | "enterprise_lead"
   | "test";
 
 export interface SecurityAlertPayload {

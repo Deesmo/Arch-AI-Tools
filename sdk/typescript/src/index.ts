@@ -28,7 +28,7 @@ export class ArchTools {
 
   constructor(options: ArchToolsOptions) {
     this.apiKey = options.apiKey;
-    this.baseUrl = options.baseUrl ?? "https://arch-ai-tools.onrender.com/v1";
+    this.baseUrl = options.baseUrl ?? "https://archtools.dev/v1";
   }
 
   private async _call(tool: string, params: Record<string, unknown> = {}): Promise<Record<string, unknown>> {

@@ -122,14 +122,14 @@
       <h3>Remote connector (Claude, ChatGPT, any streamable-HTTP client)</h3>
       <p>Add this URL as a custom connector — OAuth sign-in handles the rest:</p>
       <div class="code-block"><pre>https://archtools.dev/mcp</pre></div>
-      <p>SSE clients can use <code>https://archtools.dev/mcp/sse</code>.</p>
+      <p>SSE clients can use <code>https://arch-tools-mcp.onrender.com/sse</code>.</p>
       <h3>Local via npx (Claude Desktop, Cursor, Windsurf)</h3>
       <div class="code-block"><pre>{
   "mcpServers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["arch-tools-mcp"],
-      "env": { "ARCH_TOOLS_API_KEY": "your-api-key-here" }
+      "args": ["-y", "@deesmo/arch-tools-mcp"],
+      "env": { "ARCH_API_KEY": "your-api-key-here" }
     }
   }
 }</pre></div>

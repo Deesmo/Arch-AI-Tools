@@ -2,5 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin.html
+Disallow: /preview-
+Disallow: /landing-b
+Disallow: /changelog-tonight
 
 Sitemap: https://archtools.dev/sitemap.xml

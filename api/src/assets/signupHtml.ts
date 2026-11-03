@@ -267,7 +267,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
         '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
-        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Once your email is verified, the free plan tops you up to 250 credits every month. No subscription required.</div>' +
         verifyNote +
         refNote +
         resumeCta +
@@ -428,7 +428,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
               body: JSON.stringify(pw && pw.length >= 8 ? { api_key: data.api_key, password: pw } : { api_key: data.api_key })
             });
           } catch(_) {}
-          showSuccess(data.api_key, data.credits || 250);
+          showSuccess(data.api_key, data.credits ?? 25);
           btn.style.display = 'none';
           document.getElementById('email').style.display = 'none';
           document.getElementById('password').style.display = 'none';

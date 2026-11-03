@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="canonical" href="https://archtools.dev/webhooks">
   <title>Webhooks — Arch Tools</title>
   <meta name="description" content="Receive real-time event notifications from Arch Tools via webhooks.">
   <link rel="icon" href="/favicon.ico">
@@ -61,6 +62,17 @@
 
     /* Footer */
     .footer{text-align:center;padding:48px 24px;border-top:1px solid rgba(255,255,255,.06);color:#8b8ba6;font-size:13px;margin-top:64px}
+  </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
   </style>
 </head>
 <body>

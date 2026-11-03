@@ -189,6 +189,17 @@
       .container { padding: 32px 16px 64px; }
     }
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
   <!-- NAV -->
@@ -334,7 +345,7 @@ func main() {
         <h3>🔑 Your API Key</h3>
         <p>Sign in to view, rotate, or regenerate your API key. Keys are scoped per account and can be revoked instantly.</p>
         <a href="/signup" class="btn-grad">Get Your API Key</a>
-        <a href="/auth/login" class="btn-outline">Sign In</a>
+        <a href="/login" class="btn-outline">Sign In</a>
       </div>
     </div>
 

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="canonical" href="https://archtools.dev/facilitator">
   <title>Facilitator-as-a-Service — Arch Tools</title>
   <meta name="description" content="Use Arch Tools as your x402 facilitator. Accept crypto payments in your API without running blockchain infrastructure.">
   <link rel="icon" href="/favicon.ico">
@@ -83,6 +84,17 @@
     @media (max-width:600px) {
       .container { padding:24px 16px 60px; }
       pre { padding:14px; font-size:12px; }
+    }
+  </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
     }
   </style>
 </head>

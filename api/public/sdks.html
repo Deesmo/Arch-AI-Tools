@@ -187,7 +187,7 @@
     <!-- HERO -->
     <div class="hero">
       <h1>Official <span>SDKs</span></h1>
-      <p>Type-safe clients for Python and TypeScript. Install in one command, access all 63 tools.</p>
+      <p>Small clients for Python and Node.js. Named helpers cover the most-used tools, and <code>call()</code> reaches all 63.</p>
     </div>
 
     <!-- PYTHON SDK -->
@@ -197,11 +197,11 @@
         <span class="sdk-badge stable">Stable</span>
       </div>
       <div class="sdk-meta">
-        <span>Version: <code>1.4.0</code></span>
+        <span>Version: <code>0.1.0</code></span>
         <span>Python 3.8+</span>
         <span>License: MIT</span>
       </div>
-      <p class="sdk-desc">Full-featured Python client with sync and async support, automatic retries, x402 payment handling, and comprehensive type hints.</p>
+      <p class="sdk-desc">A thin client over the REST API, built on <code>requests</code>. It sends your API key, returns each tool&#39;s JSON as a dict, and raises a clear error for 402 (out of credits) and 429 (rate limited).</p>
 
       <div class="install-box">
         <code>pip install arch-tools</code>
@@ -210,57 +210,43 @@
 
       <div class="code-wrap">
         <button class="code-copy" onclick="copyCode(this)">Copy</button>
-        <pre><code class="language-python">from arch_tools import ArchTools
+        <pre><code class="language-python">from arch_tools import ArchTools, PaymentRequiredError
 
 client = ArchTools(api_key="YOUR_API_KEY")
 
-# Web search
-results = client.tools.web_search(query="AI agent frameworks", max_results=5)
-for r in results:
-    print(f"{r.title}: {r.url}")
+# Named helpers for common tools
+print(client.search_web("AI agent frameworks", limit=5))
+print(client.generate_hash("hello world"))
 
-# Image generation
-image = client.tools.image_generate(prompt="A futuristic cityscape at dawn")
-print(f"Image URL: {image.url}")
+# Any of the 63 tools, by name
+print(client.call("timezone-convert", datetime="2026-11-03T09:00", from_tz="UTC", to_tz="America/New_York"))
 
-# Async support
-import asyncio
+# Your credit balance
+print(client.balance())
 
-async def main():
-    async with ArchTools(api_key="YOUR_API_KEY") as client:
-        result = await client.tools.summarize(url="https://example.com/article")
-        print(result.summary)
-
-asyncio.run(main())</code></pre>
+try:
+    client.call("ai-generate", prompt="Hello")
+except PaymentRequiredError:
+    print("Out of credits: https://archtools.dev/pricing")</code></pre>
       </div>
 
       <div class="features">
-        <div class="feature"><span class="check">✓</span> Sync &amp; async (asyncio) support</div>
-        <div class="feature"><span class="check">✓</span> Automatic retry with exponential backoff</div>
-        <div class="feature"><span class="check">✓</span> Full type hints (mypy compatible)</div>
-        <div class="feature"><span class="check">✓</span> x402 USDC payment handling</div>
-        <div class="feature"><span class="check">✓</span> Streaming responses for AI tools</div>
-        <div class="feature"><span class="check">✓</span> Request/response logging</div>
+        <div class="feature"><span class="check">✓</span> One dependency (requests)</div>
+        <div class="feature"><span class="check">✓</span> Helpers: search, scrape, AI, crypto, hash, UUID, OCR</div>
+        <div class="feature"><span class="check">✓</span> <code>call()</code> for every other tool</div>
+        <div class="feature"><span class="check">✓</span> Typed errors for 402 and 429</div>
       </div>
 
       <div class="sdk-links">
         <a href="https://pypi.org/project/arch-tools/" class="sdk-link">📦 PyPI</a>
-        <a href="https://github.com/AiArchTools/arch-tools-python" class="sdk-link">⚙️ GitHub</a>
-        <a href="/docs#python-sdk" class="sdk-link">📖 Docs</a>
+        <a href="https://github.com/Deesmo/Arch-AI-Tools/tree/main/sdk/python" class="sdk-link">⚙️ Source</a>
+        <a href="/docs" class="sdk-link">📖 API docs</a>
       </div>
 
       <div class="changelog-mini">
         <div class="changelog-entry">
-          <span class="changelog-ver">v1.4.0</span><span class="changelog-date">March 17, 2026</span>
-          <div class="changelog-note">Added x402 payment support, new tools: video-generate, semantic-search</div>
-        </div>
-        <div class="changelog-entry">
-          <span class="changelog-ver">v1.3.0</span><span class="changelog-date">March 15, 2026</span>
-          <div class="changelog-note">Async client, streaming responses, retry improvements</div>
-        </div>
-        <div class="changelog-entry">
-          <span class="changelog-ver">v1.2.0</span><span class="changelog-date">March 10, 2026</span>
-          <div class="changelog-note">Added 12 new tool methods, improved error handling</div>
+          <span class="changelog-ver">v0.1.0</span><span class="changelog-date">March 18, 2026</span>
+          <div class="changelog-note">First release</div>
         </div>
       </div>
     </div>
@@ -268,100 +254,84 @@ asyncio.run(main())</code></pre>
     <!-- TYPESCRIPT SDK -->
     <div class="sdk-card typescript">
       <div class="sdk-header">
-        <h2>🟦 TypeScript Client</h2>
+        <h2>🟦 Node.js / TypeScript SDK</h2>
         <span class="sdk-badge stable">Stable</span>
       </div>
       <div class="sdk-meta">
-        <span>Version: <code>1.4.0</code></span>
-        <span>Node 18+ / Bun / Deno</span>
+        <span>Version: <code>0.1.1</code></span>
+        <span>Node 18+ (native fetch)</span>
         <span>License: MIT</span>
       </div>
-      <p class="sdk-desc">Zero-dependency TypeScript client with full type inference, tree-shakeable exports, and native fetch. Works everywhere — Node.js, Bun, Deno, and browsers.</p>
+      <p class="sdk-desc">The same small client for Node.js, with TypeScript types. No dependencies.</p>
 
       <div class="install-box">
-        <code>npm install @arch-tools/client</code>
-        <button class="copy-btn" onclick="copyText(this, 'npm install @arch-tools/client')">Copy</button>
+        <code>npm install @deesmo/arch-tools-sdk</code>
+        <button class="copy-btn" onclick="copyText(this, 'npm install @deesmo/arch-tools-sdk')">Copy</button>
       </div>
 
       <div class="code-wrap">
         <button class="code-copy" onclick="copyCode(this)">Copy</button>
-        <pre><code class="language-typescript">import { ArchTools } from "@arch-tools/client";
+        <pre><code class="language-typescript">import { ArchTools } from "@deesmo/arch-tools-sdk";
 
-const client = new ArchTools({ apiKey: "YOUR_API_KEY" });
+const client = new ArchTools({ apiKey: process.env.ARCH_API_KEY ?? "" });
 
-// Web search
-const results = await client.tools.webSearch({
-  query: "AI agent frameworks",
-  maxResults: 5,
-});
-results.forEach((r) =&gt; console.log(`${r.title}: ${r.url}`));
+// Named helpers for common tools
+console.log(await client.searchWeb("AI agent frameworks", 5));
+console.log(await client.cryptoPrice("BTC"));
 
-// Image generation
-const image = await client.tools.imageGenerate({
-  prompt: "A futuristic cityscape at dawn",
-});
-console.log(`Image URL: ${image.url}`);
+// Any of the 63 tools, by name
+console.log(await client.call("timezone-convert", {
+  datetime: "2026-11-03T09:00", from_tz: "UTC", to_tz: "America/New_York",
+}));
 
-// With x402 payments (no API key needed)
-const x402Client = new ArchTools({ x402: { walletKey: "YOUR_PRIVATE_KEY" } });
-const data = await x402Client.tools.cryptoPrice({ symbol: "BTC" });</code></pre>
+// Your credit balance
+console.log(await client.balance());</code></pre>
       </div>
 
       <div class="features">
-        <div class="feature"><span class="check">✓</span> Full TypeScript type inference</div>
         <div class="feature"><span class="check">✓</span> Zero dependencies (native fetch)</div>
-        <div class="feature"><span class="check">✓</span> Tree-shakeable ESM exports</div>
-        <div class="feature"><span class="check">✓</span> x402 USDC wallet integration</div>
-        <div class="feature"><span class="check">✓</span> Node.js, Bun, Deno, Browser</div>
-        <div class="feature"><span class="check">✓</span> Automatic retry &amp; rate limit handling</div>
+        <div class="feature"><span class="check">✓</span> TypeScript types included</div>
+        <div class="feature"><span class="check">✓</span> <code>call()</code> for every tool</div>
+        <div class="feature"><span class="check">✓</span> Typed errors for 402 and 429</div>
       </div>
 
       <div class="sdk-links">
-        <a href="https://www.npmjs.com/package/@arch-tools/client" class="sdk-link">📦 npm</a>
-        <a href="https://github.com/AiArchTools/arch-tools-ts" class="sdk-link">⚙️ GitHub</a>
-        <a href="/docs#typescript-sdk" class="sdk-link">📖 Docs</a>
+        <a href="https://www.npmjs.com/package/@deesmo/arch-tools-sdk" class="sdk-link">📦 npm</a>
+        <a href="https://github.com/Deesmo/Arch-AI-Tools/tree/main/sdk/typescript" class="sdk-link">⚙️ Source</a>
+        <a href="/docs" class="sdk-link">📖 API docs</a>
       </div>
 
       <div class="changelog-mini">
         <div class="changelog-entry">
-          <span class="changelog-ver">v1.4.0</span><span class="changelog-date">March 17, 2026</span>
-          <div class="changelog-note">x402 wallet support, new tool types, Bun/Deno compat</div>
+          <span class="changelog-ver">v0.1.1</span><span class="changelog-date">March 21, 2026</span>
+          <div class="changelog-note">Packaging fix</div>
         </div>
         <div class="changelog-entry">
-          <span class="changelog-ver">v1.3.0</span><span class="changelog-date">March 15, 2026</span>
-          <div class="changelog-note">Tree-shakeable ESM, streaming, improved error types</div>
-        </div>
-        <div class="changelog-entry">
-          <span class="changelog-ver">v1.2.0</span><span class="changelog-date">March 10, 2026</span>
-          <div class="changelog-note">Added all 63 tool methods, request interceptors</div>
+          <span class="changelog-ver">v0.1.0</span><span class="changelog-date">March 18, 2026</span>
+          <div class="changelog-note">First release</div>
         </div>
       </div>
     </div>
 
-    <!-- FRAMEWORK INTEGRATIONS -->
+    <!-- OTHER WAYS TO CONNECT -->
     <div class="section">
-      <h2>Framework Quick-Starts</h2>
-      <p>Drop Arch Tools into your existing AI framework in minutes.</p>
+      <h2>Other ways to connect</h2>
+      <p>No SDK needed for these.</p>
       <div class="fw-grid">
         <div class="fw-card">
-          <h3>🦜 LangChain</h3>
-          <p>Use Arch Tools as a LangChain tool provider. All 63 tools available as LangChain <code>Tool</code> objects.</p>
-          <code>pip install arch-tools[langchain]</code>
+          <h3>⚡ MCP, hosted</h3>
+          <p>For Claude, ChatGPT, Cursor and other MCP clients. Add a custom connector with this URL and sign in.</p>
+          <code>https://archtools.dev/mcp</code>
         </div>
         <div class="fw-card">
-          <h3>🚢 CrewAI</h3>
-          <p>Equip CrewAI agents with Arch Tools. Pre-built tool wrappers for research, web scraping, and analysis.</p>
-          <code>pip install arch-tools[crewai]</code>
+          <h3>💻 MCP, local</h3>
+          <p>Runs on your machine. Set <code>ARCH_API_KEY</code> to your key first.</p>
+          <code>npx -y @deesmo/arch-tools-mcp</code>
         </div>
         <div class="fw-card">
-          <h3>🤖 AutoGen</h3>
-          <p>Register Arch Tools with AutoGen agents for autonomous multi-step workflows.</p>
-          <code>pip install arch-tools[autogen]</code>
-        </div>
-        <div class="fw-card">
-          <h3>⚡ MCP Server</h3>
-          <p>Use Arch Tools as an MCP (Model Context Protocol) tool server for Claude, Cursor, and other MCP clients.</p>
-          <code>npx @arch-tools/mcp-server</code>
+          <h3>🦜 LangChain, CrewAI, AutoGen</h3>
+          <p>Connect through the MCP server with your framework&#39;s MCP adapter, or wrap <code>client.call()</code> as a tool. <a href="/langchain-guide">LangChain guide</a></p>
+          <code>pip install arch-tools</code>
         </div>
         <div class="fw-card">
           <h3>🔌 REST / OpenAPI</h3>
@@ -369,9 +339,9 @@ const data = await x402Client.tools.cryptoPrice({ symbol: "BTC" });</code></pre>
           <code>GET /.well-known/openapi.json</code>
         </div>
         <div class="fw-card">
-          <h3>💰 x402 Protocol</h3>
-          <p>Pay per API call with USDC. No API key needed — just a wallet on any of 15 supported networks.</p>
-          <code>npm install x402-axios</code>
+          <h3>💰 x402 (pay per call)</h3>
+          <p>Pay each call in USDC on Base or Polygon, with no account or API key. Any x402 client works.</p>
+          <code>npm install x402-fetch</code>
         </div>
       </div>
     </div>

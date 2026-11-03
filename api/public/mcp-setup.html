@@ -112,6 +112,17 @@
       .hero h1 { font-size: 1.8rem; }
     }
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
   <div class="topline"></div>
@@ -193,9 +204,9 @@
   "mcpServers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["arch-tools-mcp"],
+      "args": ["-y", "@deesmo/arch-tools-mcp"],
       "env": {
-        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+        "ARCH_API_KEY": "your-api-key-here"
       }
     }
   }
@@ -210,7 +221,7 @@
 
         <div class="note">
           <strong>💡 Tip:</strong> Use the SSE transport for real-time streaming results:<br>
-          Replace <code>"command": "npx"</code> with <code>"url": "https://archtools.dev/mcp/sse"</code>
+          Replace <code>"command": "npx"</code> with <code>"url": "https://arch-tools-mcp.onrender.com/sse"</code>
         </div>
       </div>
     </div>
@@ -240,9 +251,9 @@
   "mcpServers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["arch-tools-mcp"],
+      "args": ["-y", "@deesmo/arch-tools-mcp"],
       "env": {
-        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+        "ARCH_API_KEY": "your-api-key-here"
       }
     }
   }
@@ -286,9 +297,9 @@
   "mcpServers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["arch-tools-mcp"],
+      "args": ["-y", "@deesmo/arch-tools-mcp"],
       "env": {
-        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+        "ARCH_API_KEY": "your-api-key-here"
       }
     }
   }
@@ -326,10 +337,10 @@
         "transport": {
           "type": "stdio",
           "command": "npx",
-          "args": ["arch-tools-mcp"]
+          "args": ["-y", "@deesmo/arch-tools-mcp"]
         },
         "env": {
-          "ARCH_TOOLS_API_KEY": "your-api-key-here"
+          "ARCH_API_KEY": "your-api-key-here"
         }
       }
     ]
@@ -347,9 +358,9 @@
   "github.copilot.chat.mcp.servers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["arch-tools-mcp"],
+      "args": ["-y", "@deesmo/arch-tools-mcp"],
       "env": {
-        "ARCH_TOOLS_API_KEY": "your-api-key-here"
+        "ARCH_API_KEY": "your-api-key-here"
       }
     }
   }
@@ -411,7 +422,7 @@
         <p>No global install needed — npx handles everything:</p>
         <div class="code-block">
           <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
-<pre>ARCH_TOOLS_API_KEY=your-key npx arch-tools-mcp</pre>
+<pre>ARCH_API_KEY=your-key npx -y @deesmo/arch-tools-mcp</pre>
         </div>
       </div>
 
@@ -420,14 +431,14 @@
         <p>For clients that support HTTP-based MCP connections:</p>
         <div class="code-block">
           <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
-<pre>Server URL: https://archtools.dev/mcp/sse
+<pre>Server URL: https://arch-tools-mcp.onrender.com/sse
 Headers:
   Authorization: Bearer your-api-key-here</pre>
         </div>
       </div>
 
       <div class="note">
-        <strong>📖 Need help?</strong> Check the <a href="/docs">full API docs</a>, browse the <a href="/mcp-marketplace">MCP Marketplace</a>, or reach out at <a href="https://x.com/AiArchTools">@AiArchTools</a>.
+        <strong>📖 Need help?</strong> Check the <a href="/docs">full API docs</a>, browse the <a href="/mcp-marketplace">MCP Marketplace</a>, or email <a href="mailto:support@archtools.dev">support@archtools.dev</a>.
       </div>
     </div>
 
@@ -469,7 +480,7 @@ Headers:
   </section>
 
   <footer class="footer">
-    <p>© 2026 <a href="/">Arch Tools</a> · <a href="/mcp-marketplace">MCP Marketplace</a> · <a href="/docs">API Docs</a> · <a href="/directory">x402 Directory</a> · <a href="https://x.com/AiArchTools" target="_blank">@AiArchTools</a></p>
+    <p>© 2026 <a href="/">Arch Tools</a> · <a href="/mcp-marketplace">MCP Marketplace</a> · <a href="/docs">API Docs</a> · <a href="/directory">x402 Directory</a></p>
   </footer>
 
   <script>

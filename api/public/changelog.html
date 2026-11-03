@@ -67,6 +67,17 @@
       .release { padding: 20px; }
     }
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
   <nav class="at-nav">
@@ -175,8 +186,8 @@
           <li>Getting Started guide at <code>/docs/getting-started</code></li>
           <li>This changelog page</li>
           <li>Social proof section on landing page</li>
-          <li>JavaScript SDK (<code>@archtools/sdk</code>) — full TypeScript client with retry logic</li>
-          <li>Python SDK (<code>archtools</code>) — complete client with type hints and exponential backoff</li>
+          <li>JavaScript SDK (<code>@deesmo/arch-tools-sdk</code>) — full TypeScript client with retry logic</li>
+          <li>Python SDK (<code>arch-tools</code>) — complete client with type hints and exponential backoff</li>
           <li>Admin credit-grant endpoint for internal account management</li>
         </ul>
       </div>

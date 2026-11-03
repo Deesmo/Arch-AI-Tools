@@ -3,7 +3,7 @@ Arch Tools Python SDK
 =====================
 
 A lightweight Python client for the Arch Tools API (archtools.dev).
-Supports API key auth and x402 USDC payments for all 58+ tools.
+Supports API key auth and x402 USDC payments for all 63 tools.
 
 Install dependencies:
     pip install httpx
