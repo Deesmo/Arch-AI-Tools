@@ -156,10 +156,11 @@ function walk(dir, exts, out = []) {
         }
       }
     }
-    // Baseline 2026-11-02: 1 — GHSA-mrhx-c7xc-m3w5 (zod <4.6.6; fixed only in zod 4, and
-    // @coinbase/cdp-sdk + @x402/* still require zod 3). Was 7 *packages* (2026-06-10).
-    // Ratchet this down as deps get upgraded — never raise it.
-    const MAX_HIGH = Number(process.env.SECURITY_GATE_MAX_HIGH ?? 1);
+    // Baseline 2026-11-03: 0. The last one, GHSA-mrhx-c7xc-m3w5 (zod <4.6.6), went
+    // when @coinbase/cdp-sdk, @coinbase/x402 and the unused @x402/* server packages
+    // were removed and zod pinned to 4 (was 1 on 2026-11-02, 7 packages on 2026-06-10).
+    // Never raise this — fix the new advisory instead.
+    const MAX_HIGH = Number(process.env.SECURITY_GATE_MAX_HIGH ?? 0);
     const list = [...ids].sort().join(", ");
     if (ids.size > MAX_HIGH) fail("npm-audit", `${ids.size} high/critical advisories in prod deps (max allowed: ${MAX_HIGH}): ${list}`);
     else pass("npm-audit", `prod high/critical advisories: ${ids.size} (max allowed: ${MAX_HIGH})${list ? ` — ${list}` : ""}`);

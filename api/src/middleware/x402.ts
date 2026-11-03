@@ -992,7 +992,7 @@ async function verifyPayment(paymentHeader: string, toolName: string, paymentReq
     if (isCdp) {
       // Generate CDP JWT for mainnet facilitator
       try {
-        const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+        const { generateJwt } = await import("../lib/cdpJwt.js");
         const jwt = await generateJwt({
           apiKeyId: process.env.CDP_API_KEY_ID ?? "",
           apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",
@@ -1121,7 +1121,7 @@ async function settlePayment(paymentHeader: string, toolName: string, paymentReq
     if (isCdpSettle && process.env.CDP_API_KEY_ID) {
       // CDP requires JWT auth for settle — same as verify
       try {
-        const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+        const { generateJwt } = await import("../lib/cdpJwt.js");
         const jwt = await generateJwt({
           apiKeyId: process.env.CDP_API_KEY_ID ?? "",
           apiKeySecret: process.env.CDP_API_KEY_SECRET ?? "",

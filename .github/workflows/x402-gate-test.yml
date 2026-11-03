@@ -50,7 +50,7 @@ jobs:
           elif [ "$STATUS" = "200" ]; then
             echo "🚨 CRITICAL: x402 gate is BROKEN — returning 200 instead of 402"
             echo "This means unauthenticated requests bypass payment and auth."
-            echo "Check X402_SDK_ENABLED env var and x402-sdk.ts middleware."
+            echo "Check the x402 middleware (api/src/middleware/x402.ts) and toolMiddleware."
             exit 1
           else
             echo "⚠️ Service not reachable (status $STATUS) after retries"

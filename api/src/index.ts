@@ -52,11 +52,11 @@ import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 import mcpRouter from "./routes/mcp.js";
 import enterpriseRouter from "./routes/enterprise.js";
+import { X402_PRICES } from "./middleware/x402.js";
 import { useRealClientIp } from "./lib/clientIp.js";
 import unsubscribeRouter from "./routes/unsubscribe.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
-import { initX402Sdk, x402SdkMiddleware, getX402SdkStatus, warmX402Sdk } from "./middleware/x402-sdk.js";
 import { SIGNUP_HTML } from "./assets/signupHtml.js";
 import { DASHBOARD_HTML } from "./assets/dashboardHtml.js";
 import { LOGIN_HTML } from "./assets/loginHtml.js";
@@ -340,10 +340,6 @@ app.use("/oauth", (req: Request, res: Response, next: NextFunction) => {
   return authLimiter(req, res, next);
 }, oauthRouter);
 
-// x402 SDK middleware (PRIMARY) — official Coinbase @x402/express protocol
-// SDK middleware DISABLED — causes infinite hangs on Render/Cloudflare setup.
-// Custom x402.ts middleware in toolMiddleware() handles all payments.
-// app.use("/v1/tools", x402SdkMiddleware);
 
 // Tool calls (tier-based rate limiting handled inside toolMiddleware, post-auth)
 app.use("/v1/tools", toolsRouter);
@@ -564,7 +560,9 @@ app.get("/success", (_req: Request, res: Response) => {
 
 // x402 SDK status endpoint
 app.get("/v1/x402/status", (_req: Request, res: Response) => {
-  res.json({ ok: true, x402_sdk: getX402SdkStatus() });
+  // Payments run through our own middleware (middleware/x402.ts); the official
+  // @x402/express path was never switched on in production and was removed.
+  res.json({ ok: true, x402_sdk: { enabled: false, error: null, routeCount: Object.keys(X402_PRICES).length }, middleware: "custom" });
 });
 
 app.get("/v1/health/x402", async (_req: Request, res: Response) => {
@@ -706,11 +704,6 @@ if (config.nodeEnv === "production" && (!process.env.ADMIN_KEY || process.env.AD
   process.exit(1);
 }
 
-// Initialize x402 SDK (official Coinbase protocol support)
-// Pre-warm BEFORE accepting connections: fetch CDP /supported so feePayer is ready.
-// Without this, the first payment request triggers a blocking CDP network call.
-// x402 SDK init disabled — SDK middleware is commented out above
-// initX402Sdk();
 
 app.listen(config.port, () => {
   console.log(`⚡ Arch Tools API v1.5.0 running on port ${config.port}`);
