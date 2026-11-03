@@ -1,0 +1,240 @@
+{
+  "ai-generate": {
+    "prompt": "Say hello world in exactly three words.",
+    "max_tokens": 200
+  },
+  "ai-oracle": {
+    "question": "What is 2 + 2? Answer briefly."
+  },
+  "barcode-generate": {
+    "value": "HELLO123",
+    "type": "code128"
+  },
+  "browser-task": {
+    "url": "https://example.com",
+    "steps": [
+      {
+        "action": "extract"
+      }
+    ]
+  },
+  "check-domain": {
+    "domain": "example.com"
+  },
+  "convert-format": {
+    "data": "{\"a\": 1, \"b\": [1, 2]}",
+    "from": "json",
+    "to": "yaml"
+  },
+  "crypto-fear-greed": {
+    "limit": 1
+  },
+  "crypto-market-cap": {
+    "limit": 3
+  },
+  "crypto-news": {
+    "symbol": "BTC",
+    "limit": 3
+  },
+  "crypto-ohlcv": {
+    "symbol": "bitcoin",
+    "days": 1
+  },
+  "crypto-price": {
+    "symbol": "bitcoin"
+  },
+  "crypto-sentiment": {
+    "symbol": "bitcoin"
+  },
+  "currency-convert": {
+    "amount": 100,
+    "from": "USD",
+    "to": "EUR"
+  },
+  "design-create": {
+    "prompt": "a simple flat icon of a blue square on white"
+  },
+  "diff-text": {
+    "original": "hello world",
+    "modified": "hello there world"
+  },
+  "domain-check": {
+    "domain": "example.com"
+  },
+  "email-find": {
+    "domain": "example.com"
+  },
+  "email-verify": {
+    "email": "hello@example.com"
+  },
+  "extract-entities": {
+    "text": "Tim Cook announced on Monday that Apple will open a new office in Austin, Texas."
+  },
+  "extract-metadata": {
+    "url": "https://example.com"
+  },
+  "extract-page": {
+    "url": "https://example.com"
+  },
+  "extract-pdf": {
+    "pdf_url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  "fact-check": {
+    "claim": "The Eiffel Tower is in Paris."
+  },
+  "generate-hash": {
+    "text": "hello world",
+    "algorithm": "sha256"
+  },
+  "generate-image": {
+    "prompt": "a simple flat icon of a green triangle on white"
+  },
+  "generate-uuid": {},
+  "html-to-markdown": {
+    "html": "<h1>Hello</h1><p>world <a href=\"https://example.com\">link</a></p>"
+  },
+  "image-generate": {
+    "prompt": "a simple red circle on a white background"
+  },
+  "image-remove-bg": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg"
+  },
+  "ip-lookup": {
+    "ip": "8.8.8.8"
+  },
+  "jsonpath-query": {
+    "data": {
+      "store": {
+        "book": [
+          {
+            "title": "A"
+          },
+          {
+            "title": "B"
+          }
+        ]
+      }
+    },
+    "path": "$.store.book[*].title"
+  },
+  "language-detect": {
+    "text": "Bonjour tout le monde, comment allez-vous aujourd'hui?"
+  },
+  "news-search": {
+    "query": "technology",
+    "limit": 3
+  },
+  "ocr-extract": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/f/f9/STOP_sign.jpg"
+  },
+  "phone-validate": {
+    "phone": "+14155552671"
+  },
+  "pii-detect": {
+    "text": "Contact John Smith at john.smith@example.com or 555-123-4567.",
+    "redact": true
+  },
+  "qr-code": {
+    "text": "https://example.com",
+    "format": "png"
+  },
+  "readability-score": {
+    "text": "The cat sat on the mat. It was a sunny day and the cat was happy."
+  },
+  "regex-generate": {
+    "description": "match a US ZIP code: 5 digits with an optional dash and 4 more digits"
+  },
+  "research-report": {
+    "query": "What is the HTTP 402 Payment Required status code?",
+    "depth": "brief"
+  },
+  "rss-parse": {
+    "url": "https://feeds.bbci.co.uk/news/rss.xml",
+    "limit": 3
+  },
+  "screenshot-capture": {
+    "url": "https://example.com"
+  },
+  "search-web": {
+    "query": "hello world program",
+    "limit": 3
+  },
+  "semantic-search": {
+    "query": "history of the hello world program",
+    "num_results": 3
+  },
+  "sentiment-analysis": {
+    "text": "I absolutely love this product, it works great!"
+  },
+  "session-create": {
+    "namespace": "audit"
+  },
+  "session-message": {
+    "session_id": "__FROM_SESSION_CREATE__",
+    "message": "hello world"
+  },
+  "summarize": {
+    "text": "This is a short test paragraph. Researchers published a study showing that regular exercise improves sleep quality and mood."
+  },
+  "text-to-speech": {
+    "text": "hello world"
+  },
+  "timezone-convert": {
+    "datetime": "2026-01-15 12:00:00",
+    "from_tz": "America/New_York",
+    "to_tz": "Europe/London"
+  },
+  "token-lookup": {
+    "query": "ethereum"
+  },
+  "transcribe-audio": {
+    "audio_url": "https://upload.wikimedia.org/wikipedia/commons/2/2e/En-us-Wikipedia.ogg"
+  },
+  "transform-text": {
+    "text": "hello world",
+    "mode": "uppercase"
+  },
+  "url-shorten": {
+    "url": "https://example.com"
+  },
+  "validate-data": {
+    "data": {
+      "name": "hello",
+      "age": 3
+    },
+    "schema": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "age": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "web-scrape": {
+    "url": "https://example.com"
+  },
+  "web-search": {
+    "query": "hello world program"
+  },
+  "webhook-send": {
+    "webhook_url": "https://httpbin.org/post",
+    "payload": {
+      "hello": "world",
+      "audit": "archtools"
+    }
+  },
+  "whois-lookup": {
+    "domain": "example.com"
+  },
+  "workflow-agent": {
+    "goal": "List the three primary colors of light.",
+    "steps": 2
+  }
+}
