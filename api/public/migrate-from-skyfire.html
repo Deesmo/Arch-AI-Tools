@@ -235,7 +235,7 @@
         <tr>
           <td class="feature">Pricing Model</td>
           <td>Per-transaction + platform fees</td>
-          <td><span class="check">Per-call credits ($0.001/credit) — no platform fees</span></td>
+          <td><span class="check">Per-call credits (from $0.0016/credit) — no platform fees</span></td>
         </tr>
         <tr>
           <td class="feature">Status</td>
@@ -399,7 +399,7 @@ const data = await response.json();
     "arch-tools": {
       "command": "npx",
       "args": ["-y", "mcp-remote",
-        "https://archtools.dev/mcp/sse"],
+        "https://arch-tools-mcp.onrender.com/sse"],
       "env": { "ARCH_API_KEY": "arch_your_key" }
     }
   }

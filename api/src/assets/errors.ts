@@ -16,7 +16,7 @@ export const ERROR_REGISTRY: ErrorDoc[] = [
     code: "insufficient_credits",
     title: "Not enough credits",
     whatItMeans: "Your account balance is lower than the tool cost. The response includes credits_remaining and credits_needed so you can plan a top-up.",
-    fastFix: "Top up at https://archtools.dev/pricing, or earn 500 bonus credits by referring a friend via /v1/referral/code. Free plans also refresh monthly.",
+    fastFix: "Top up at https://archtools.dev/pricing, or earn 500 bonus credits by referring a friend via /v1/referral/code. Verified free accounts are topped up to 250 credits each month.",
   },
   {
     code: "validation_failed",

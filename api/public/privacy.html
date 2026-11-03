@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="https://archtools.dev/privacy">
   <title>Privacy Policy — Arch Tools</title>
   <link rel="icon" type="image/svg+xml" href="/arch-icon.svg?v=2">
   <style>
@@ -64,7 +65,7 @@
     <div class="legal-body">
       <a class="back" href="/">← Back to Arch Tools</a>
       <h1>Privacy Policy</h1>
-      <p class="updated">Effective date: July 28, 2026</p>
+      <p class="updated">Effective date: November 3, 2026</p>
 
       <div class="tldr"><strong>In plain language:</strong> we store your email, a one-way hash of your API key, and usage metadata (which tool, when, how many credits). We never store card numbers — Stripe holds those. Tool inputs are processed transiently and sent only to the upstream provider that powers the tool; we don't store request or response content, and we don't sell your data. You can delete your account and its data yourself, instantly, via <code>DELETE /v1/agent</code>. Anonymized payment records are kept only because tax law requires it.</div>
 
@@ -141,7 +142,8 @@
       <p>Details: <a href="/retention">Data Retention Policy</a>.</p>
 
       <h2>6. Cookies &amp; Analytics</h2>
-      <p>We use browser localStorage solely to remember your API key for convenience on the dashboard. We do not use advertising cookies or cross-site tracking pixels. We may use basic analytics to understand aggregate traffic patterns (page views, referral sources) without personally identifying you.</p>
+      <p>We set one cookie of our own, <code>arch_session</code>, to keep you signed in to the dashboard. It expires after 7 days or when you sign out. The dashboard does not store your API key in your browser. We do not use advertising cookies.</p>
+      <p>Our home page loads two third-party visitor-analytics scripts: <strong>Microsoft Clarity</strong>, which shows us how visitors use the page (for example clicks and scrolling), and the <strong>Apollo.io</strong> website tracker, which tells us which companies visit so we can follow up on sales leads. Cloudflare also counts page views. Blocking these with a content blocker does not affect the API or your account.</p>
 
       <h2>7. Security</h2>
       <p>All traffic is encrypted in transit (HTTPS/TLS). API keys and passwords are stored only as one-way hashes. Authentication endpoints are rate-limited against brute force. We follow responsible disclosure practices — see our <a href="/security">Security Policy</a>.</p>

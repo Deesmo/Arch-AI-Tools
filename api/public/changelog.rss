@@ -88,7 +88,7 @@
           <li>Session API: /v1/tools/session-create and /v1/tools/session-message — managed conversation history</li>
           <li>Getting Started guide</li>
           <li>This changelog page</li>
-          <li>JavaScript SDK (@archtools/sdk) — full TypeScript client with retry logic</li>
+          <li>JavaScript SDK (@deesmo/arch-tools-sdk) — full TypeScript client with retry logic</li>
           <li>Python SDK (archtools) — complete client with type hints</li>
         </ul>
       ]]></description>

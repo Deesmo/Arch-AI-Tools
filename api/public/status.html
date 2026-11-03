@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="canonical" href="https://archtools.dev/status">
   <title>System Status — Arch Tools</title>
   <meta name="description" content="Live system status for Arch Tools — uptime, response times, and platform health.">
   <link rel="icon" href="/arch-icon.svg?v=2">
@@ -119,7 +120,7 @@
 <script>
 async function loadStatus() {
   try {
-    const res = await fetch('/health');
+    const res = await fetch('/api/status', { cache: 'no-store' });
     const data = await res.json();
     renderStatus(data);
     document.getElementById('lastChecked').textContent = 'Last checked: ' + new Date().toLocaleTimeString();
@@ -130,9 +131,8 @@ async function loadStatus() {
 
 function renderStatus(data) {
   const banner = document.getElementById('statusBanner');
-  const deps = data.dependencies || {};
-  const allOk = data.ok && deps.database?.status === 'connected';
-  const degraded = data.ok && (deps.redis?.status === 'error' || deps.x402_facilitator?.status === 'unreachable');
+  const c = data.components || {};
+  const unavailable = data.tools_unavailable || [];
 
   // Overall status
   if (!data.ok) {
@@ -140,11 +140,11 @@ function renderStatus(data) {
     document.getElementById('statusIcon').textContent = '🔴';
     document.getElementById('statusText').textContent = 'Service Disruption';
     document.getElementById('statusSub').textContent = 'Some systems are experiencing issues';
-  } else if (degraded) {
+  } else if (data.status === 'degraded') {
     banner.className = 'status-banner degraded';
     document.getElementById('statusIcon').textContent = '🟡';
     document.getElementById('statusText').textContent = 'Partial Degradation';
-    document.getElementById('statusSub').textContent = 'Core services operational, some dependencies degraded';
+    document.getElementById('statusSub').textContent = unavailable.length + ' tool' + (unavailable.length === 1 ? ' is' : 's are') + ' temporarily unavailable; everything else is running normally';
   } else {
     banner.className = 'status-banner operational';
     document.getElementById('statusIcon').textContent = '✅';
@@ -154,30 +154,28 @@ function renderStatus(data) {
 
   // Components
   const components = [
-    { name: 'API Server', sub: `v${data.version || '1.10.0'} · ${data.tools || 64} tools`, status: data.ok ? 'operational' : 'down', latency: data.performance?.health_check_ms },
-    { name: 'Database (PostgreSQL)', sub: `${data.agents || 0} agents registered`, status: deps.database?.status === 'connected' ? 'operational' : 'down', latency: deps.database?.latency_ms },
-    { name: 'Redis Cache', sub: 'Rate limiting & real-time counters', status: deps.redis?.status === 'connected' ? 'operational' : deps.redis?.status === 'not_configured' ? 'not_configured' : 'degraded', latency: deps.redis?.latency_ms },
-    { name: 'x402 Facilitator', sub: 'Coinbase USDC payment processing', status: deps.x402_facilitator?.status === 'reachable' ? 'operational' : deps.x402_facilitator?.status === 'not_configured' ? 'not_configured' : 'degraded', latency: deps.x402_facilitator?.latency_ms },
+    { name: 'API Server', sub: (data.tools_active ?? '—') + ' tools', status: c.api === 'operational' ? 'operational' : 'down' },
+    { name: 'Database', sub: 'Accounts, credits and usage', status: c.database === 'operational' ? 'operational' : 'down' },
+    { name: 'x402 Payments', sub: 'USDC on Base and Polygon', status: c.payments === 'operational' ? 'operational' : c.payments === 'not_configured' ? 'not_configured' : 'degraded' },
+    { name: 'Tools', sub: unavailable.length ? 'Temporarily unavailable: ' + unavailable.join(', ') : 'All tools available', status: c.tools === 'operational' ? 'operational' : 'degraded' },
   ];
 
   const compEl = document.getElementById('components');
-  compEl.innerHTML = components.map(c => {
-    const dotClass = c.status === 'operational' ? 'green' : c.status === 'degraded' ? 'yellow' : c.status === 'not_configured' ? 'gray' : 'red';
-    const statusLabel = c.status === 'operational' ? 'Operational' : c.status === 'degraded' ? 'Degraded' : c.status === 'not_configured' ? 'Not Configured' : 'Down';
-    const latencyStr = c.latency != null ? `${c.latency}ms` : '';
-    return `
-      <div class="component">
-        <div class="component-name">${c.name}<span class="sub">${c.sub}</span></div>
-        <div class="component-status">
-          <span class="latency">${latencyStr}</span>
-          <span class="dot ${dotClass}"></span>
-          ${statusLabel}
-        </div>
-      </div>`;
-  }).join('');
+  compEl.textContent = '';
+  components.forEach(function (comp) {
+    const dotClass = comp.status === 'operational' ? 'green' : comp.status === 'degraded' ? 'yellow' : comp.status === 'not_configured' ? 'gray' : 'red';
+    const statusLabel = comp.status === 'operational' ? 'Operational' : comp.status === 'degraded' ? 'Degraded' : comp.status === 'not_configured' ? 'Not Configured' : 'Down';
+    const row = document.createElement('div'); row.className = 'component';
+    const name = document.createElement('div'); name.className = 'component-name'; name.textContent = comp.name;
+    const sub = document.createElement('span'); sub.className = 'sub'; sub.textContent = comp.sub; name.appendChild(sub);
+    const st = document.createElement('div'); st.className = 'component-status';
+    const dot = document.createElement('span'); dot.className = 'dot ' + dotClass;
+    st.appendChild(dot); st.appendChild(document.createTextNode(' ' + statusLabel));
+    row.appendChild(name); row.appendChild(st); compEl.appendChild(row);
+  });
 
   // Stats
-  const perf = data.performance || {};
+  const perf = data.response_ms || {};
   const upSec = data.uptime_seconds || 0;
   const days = Math.floor(upSec / 86400);
   const hours = Math.floor((upSec % 86400) / 3600);
@@ -188,15 +186,15 @@ function renderStatus(data) {
     if (stats.ok) {
       document.getElementById('statCalls24h').textContent = fmt(stats.stats.total_api_calls);
       document.getElementById('statAgents').textContent = fmt(stats.stats.total_agents);
-      document.getElementById('statEndpoints').textContent = stats.stats.total_tools || '64';
+      document.getElementById('statEndpoints').textContent = stats.stats.total_tools || '—';
     }
   }).catch(() => {});
 
   // Performance
-  document.getElementById('perfAvg').textContent = perf.avg_response_ms ?? '—';
-  document.getElementById('perfP50').textContent = perf.p50_response_ms ?? '—';
-  document.getElementById('perfP95').textContent = perf.p95_response_ms ?? '—';
-  document.getElementById('perfP99').textContent = perf.p99_response_ms ?? '—';
+  document.getElementById('perfAvg').textContent = perf.avg ?? '—';
+  document.getElementById('perfP50').textContent = perf.p50 ?? '—';
+  document.getElementById('perfP95').textContent = perf.p95 ?? '—';
+  document.getElementById('perfP99').textContent = perf.p99 ?? '—';
 }
 
 function renderDown() {

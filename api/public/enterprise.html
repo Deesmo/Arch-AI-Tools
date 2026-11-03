@@ -259,10 +259,10 @@
   <div class="contact-section" id="contact">
     <h2>Talk to Sales</h2>
     <p>Tell us about your organization and we'll put together a custom proposal.</p>
-    <form action="https://formsubmit.co/support@archtools.dev" method="POST">
-      <input type="hidden" name="_subject" value="Enterprise Inquiry — Arch Tools">
-      <input type="hidden" name="_captcha" value="false">
-      <input type="hidden" name="_next" value="https://archtools.dev/enterprise?sent=1">
+    <form id="enterprise-form" action="/api/enterprise/inquiry" method="POST">
+      <div style="position:absolute;left:-9999px" aria-hidden="true">
+        <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+      </div>
       <div class="form-group">
         <label>Your Name</label>
         <input type="text" name="name" placeholder="Jane Smith" required>
@@ -290,14 +290,39 @@
         <textarea name="message" placeholder="Tell us about your use case, team size, and what you need from an x402 infrastructure partner..." required></textarea>
       </div>
       <button type="submit" class="submit-btn">Send Inquiry →</button>
+      <p id="enterprise-status" role="status" style="margin-top:14px;font-size:14px;min-height:20px;"></p>
     </form>
+    <script>
+    (function () {
+      var form = document.getElementById("enterprise-form");
+      var status = document.getElementById("enterprise-status");
+      var q = new URLSearchParams(location.search);
+      if (q.get("sent") === "1") { status.style.color = "#34d399"; status.textContent = "Thanks — we got your inquiry and will reply within one business day."; }
+      if (q.get("error") === "1") { status.style.color = "#f87171"; status.textContent = "Please fill in every field (message at least 10 characters)."; }
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var btn = form.querySelector("button[type=submit]");
+        var data = {};
+        new FormData(form).forEach(function (v, k) { data[k] = v; });
+        btn.disabled = true; status.style.color = ""; status.textContent = "Sending…";
+        fetch("/api/enterprise/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (x) {
+            if (x.ok && x.d.ok) { form.reset(); status.style.color = "#34d399"; status.textContent = x.d.message || "Thanks — we'll be in touch."; }
+            else { status.style.color = "#f87171"; status.textContent = (x.d && x.d.message) || "Something went wrong. Email support@archtools.dev."; }
+          })
+          .catch(function () { status.style.color = "#f87171"; status.textContent = "Connection error. Email support@archtools.dev instead."; })
+          .finally(function () { btn.disabled = false; });
+      });
+    })();
+    </script>
   </div>
 </div>
 
 <!-- FOOTER -->
 <footer>
   <div class="wrap">
-    <p>© 2026 Arch Tools · <a href="/">Home</a> · <a href="/white-label">White Label</a> · <a href="/investor">Investors</a> · <a href="/docs">Docs</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://x.com/AiArchTools">@AiArchTools</a></p>
+    <p>© 2026 Arch Tools · <a href="/">Home</a> · <a href="/white-label">White Label</a> · <a href="/investor">Investors</a> · <a href="/docs">Docs</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
   </div>
 </footer>
 

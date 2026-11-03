@@ -13,7 +13,7 @@
     "language": "typescript",
     "transport": ["stdio", "sse"],
     "frameworks": ["claude-desktop", "cursor", "windsurf", "vscode", "chatgpt"],
-    "installCommand": "npx arch-tools-mcp",
+    "installCommand": "npx -y @deesmo/arch-tools-mcp",
     "featured": true,
     "verified": true,
     "stars": 245,

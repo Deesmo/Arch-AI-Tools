@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="canonical" href="https://archtools.dev/docs">
   <title>API Docs — Arch Tools</title>
   <meta name="description" content="Comprehensive API documentation for Arch Tools. REST, MCP, x402, and SDK guides for the full platform." />
   <link rel="icon" href="/arch-icon.svg?v=2" type="image/svg+xml" />
@@ -202,6 +203,17 @@
       .at-nav-links a:not(.at-nav-cta) { display: none; }
     }
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
 
@@ -341,9 +353,9 @@
     <p class="subtitle">63 production tools. One API key. Every endpoint documented with examples, parameters, and pricing.</p>
 
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-value grad">64</div><div class="stat-label">Tools</div></div>
-      <div class="stat-card"><div class="stat-value" style="color:var(--green)">$0.001</div><div class="stat-label">Cheapest call (x402)</div></div>
-      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">250</div><div class="stat-label">Free credits on signup</div></div>
+      <div class="stat-card"><div class="stat-value grad">63</div><div class="stat-label">Tools</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">$0.01</div><div class="stat-label">Cheapest call (x402)</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">100</div><div class="stat-label">Free credits on signup</div></div>
       <div class="stat-card"><div class="stat-value" style="color:var(--orange)">REST + MCP</div><div class="stat-label">Protocols</div></div>
     </div>
 
@@ -497,7 +509,7 @@ curl -X POST https://archtools.dev/v1/referral/apply \
   "mcpServers": {
     "arch-tools": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://archtools.dev/mcp/sse"],
+      "args": ["-y", "mcp-remote", "https://arch-tools-mcp.onrender.com/sse"],
       "env": { "ARCH_API_KEY": "arch_your_key_here" }
     }
   }

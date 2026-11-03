@@ -105,6 +105,17 @@
 
     @media (max-width: 768px) { .sidebar { display: none; } .content { padding: 24px 20px; } .fw-grid { grid-template-columns: 1fr; } }
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
 
@@ -212,9 +223,9 @@ pip install httpx pyautogen</code></pre>
     </div>
     <div class="tab-content" id="install-npm">
       <pre><code><span class="c-muted"># TypeScript / Node.js client</span>
-npm install @archtools/sdk
+curl -O https://archtools.dev/integrations/arch-tools-client.ts
 
-<span class="c-muted"># Or just copy arch-tools-client.ts into your project</span></code></pre>
+<span class="c-muted"># Or use the npm package (smaller API): npm install @deesmo/arch-tools-sdk</span></code></pre>
     </div>
     <div class="tab-content" id="install-copy">
       <pre><code><span class="c-muted"># Download integration files directly</span>
@@ -446,7 +457,7 @@ register_arch_tools(user, assistant,
 
     <h3 id="ts-node">Node.js / Bun Example</h3>
     <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code><span class="c-muted">// Works in Node.js 18+, Bun, Deno</span>
-<span class="c-kw">import</span> { ArchTools } <span class="c-kw">from</span> <span class="c-str">'@archtools/sdk'</span>;
+<span class="c-kw">import</span> { ArchTools } <span class="c-kw">from</span> <span class="c-str">'./arch-tools-client'</span>;
 
 <span class="c-kw">const</span> arch = <span class="c-kw">new</span> <span class="c-cls">ArchTools</span>({
   apiKey: process.env.ARCHTOOLS_API_KEY,

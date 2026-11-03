@@ -13,7 +13,7 @@ import { logger } from "../lib/logger.js";
 
 const TOOL_ENDPOINT = process.env.PUBLIC_SITE_URL 
   ? `${process.env.PUBLIC_SITE_URL}/v1/tools/generate-hash`
-  : "https://arch-ai-tools.onrender.com/v1/tools/generate-hash";
+  : "https://archtools.dev/v1/tools/generate-hash";
 
 export async function runX402Monitor(): Promise<void> {
   try {

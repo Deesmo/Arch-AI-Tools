@@ -36,7 +36,7 @@
     "url": "https://archtools.dev",
     "logo": "https://archtools.dev/og-image.png",
     "description": "The first API platform AI agents can pay autonomously. AI-powered tools in a single API.",
-    "sameAs": ["https://x.com/AiArchTools"]
+    "sameAs": ["https://github.com/Deesmo/Arch-AI-Tools"]
   }
   </script>
   <script type="application/ld+json">
@@ -805,7 +805,7 @@
         <div class="hero-trust-bar">
           <div class="trust-item"><div class="trust-val g-am">63</div><div class="trust-lbl">Tools</div></div>
           <div class="trust-item"><div class="trust-val g-cy">&lt;200ms</div><div class="trust-lbl">Response</div></div>
-          <div class="trust-item"><div class="trust-val g-bl">9</div><div class="trust-lbl">Chains</div></div>
+          <div class="trust-item"><div class="trust-val g-bl">2</div><div class="trust-lbl">Chains</div></div>
           <div class="trust-item"><div class="trust-val g-am">FREE</div><div class="trust-lbl">To Start</div></div>
         </div>
       </div>
@@ -853,7 +853,7 @@
           <div class="xstep" id="xs2">
             <div class="xshd"><div class="xsnum">2</div><span class="xsnm">HTTP 402 — PRICE RETURNED</span></div>
             <div class="xscode"><span class="tpr">402 Payment Required</span>
-{<span class="tkw">"price"</span>:<span class="tst">"0.000005"</span>,<span class="tkw">"currency"</span>:<span class="tst">"USDC"</span>,
+{<span class="tkw">"price"</span>:<span class="tst">"0.015"</span>,<span class="tkw">"currency"</span>:<span class="tst">"USDC"</span>,
  <span class="tkw">"network"</span>:<span class="tst">"base"</span>}</div>
             <span class="xtag xtag-pk">402 Payment Required</span>
           </div>
@@ -862,9 +862,9 @@
           <div class="xfhdr">Payment + response</div>
           <div class="xstep" id="xs3">
             <div class="xshd"><div class="xsnum">3</div><span class="xsnm">AGENT PAYS IN USDC</span></div>
-            <div class="xscode"><span class="tot">0.000005 USDC → 0xArch... (Base · 2s)</span>
+            <div class="xscode"><span class="tot">0.015 USDC → 0xArch... (Base · 2s)</span>
 <span class="tcm">tx: 0xabc123...def789</span></div>
-            <span class="xtag xtag-usd">💳 0.000005 USDC</span>
+            <span class="xtag xtag-usd">💳 0.015 USDC</span>
           </div>
           <div class="xstep" id="xs4">
             <div class="xshd"><div class="xsnum">4</div><span class="xsnm">TOOL EXECUTES</span></div>
@@ -912,7 +912,7 @@
     <span class="tkw">"arch-tools"</span>: {
       <span class="tkw">"command"</span>: <span class="tst">"npx"</span>,
       <span class="tkw">"args"</span>: [<span class="tst">"-y"</span>,<span class="tst">"mcp-remote"</span>,
-        <span class="tst">"https://archtools.dev/mcp/sse"</span>],
+        <span class="tst">"https://arch-tools-mcp.onrender.com/sse"</span>],
       <span class="tkw">"env"</span>:{<span class="tkw">"ARCH_API_KEY"</span>:<span class="tst">"arch_your_key"</span>}
     }
   }
@@ -969,7 +969,7 @@
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">x402 Payments Settled</div>
       </div>
       <div>
-        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statChains" class="counter" data-target="9">9</span></div>
+        <div style="font-family:var(--display);font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;" class="g-am"><span id="statChains" class="counter" data-target="2">2</span></div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Chains Supported</div>
       </div>
     </div>
@@ -1091,7 +1091,7 @@
           <span style="font-family:var(--mono);font-size:10px;color:var(--green);background:rgba(52,211,153,0.1);padding:3px 8px;border-radius:100px;border:1px solid rgba(52,211,153,0.2);">x402</span>
         </div>
         <p style="font-size:13px;color:var(--muted);line-height:1.55;">Live spot prices for 10,000+ coins. BTC, ETH, SOL, and every altcoin.</p>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:10px;">2 credits · Arch Tools</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:10px;">1 credits · Arch Tools</div>
       </div>
       <!-- Card 4 -->
       <div style="background:rgba(12,11,34,0.72);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px;transition:transform 0.2s,border-color 0.2s;" onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(255,40,150,0.35)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,255,255,0.07)'">
@@ -1101,16 +1101,16 @@
           <span style="font-family:var(--mono);font-size:10px;color:var(--green);background:rgba(52,211,153,0.1);padding:3px 8px;border-radius:100px;border:1px solid rgba(52,211,153,0.2);">x402</span>
         </div>
         <p style="font-size:13px;color:var(--muted);line-height:1.55;">Natural-sounding audio via ElevenLabs. 50+ voices. Returns base64 MP3.</p>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:10px;">5 credits · Arch Tools</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:10px;">25 credits · Arch Tools</div>
       </div>
       <!-- Card 5 -->
       <div style="background:rgba(12,11,34,0.72);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px;transition:transform 0.2s,border-color 0.2s;" onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(167,139,250,0.35)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,255,255,0.07)'">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:34px;height:34px;border-radius:9px;background:rgba(167,139,250,0.1);color:#a78bfa;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;">VEC</div>
-          <div style="font-family:var(--display);font-size:14px;font-weight:700;color:var(--text);flex:1;">Vector Store</div>
+          <div style="width:34px;height:34px;border-radius:9px;background:rgba(167,139,250,0.1);color:#a78bfa;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;">WEB</div>
+          <div style="font-family:var(--display);font-size:14px;font-weight:700;color:var(--text);flex:1;">Search Web</div>
           <span style="font-family:var(--mono);font-size:10px;color:var(--green);background:rgba(52,211,153,0.1);padding:3px 8px;border-radius:100px;border:1px solid rgba(52,211,153,0.2);">x402</span>
         </div>
-        <p style="font-size:13px;color:var(--muted);line-height:1.55;">Embed and store text in a managed vector DB. Retrieval-ready in seconds.</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.55;">Live web results with titles, links and snippets for any query.</p>
         <div style="font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:10px;">5 credits · Arch Tools</div>
       </div>
       <!-- Card 6 -->
@@ -1306,7 +1306,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">IMG</div>
           <div class="tool-name">Image Generate</div>
-          <span class="tool-credits">15 cr</span>
+          <span class="tool-credits">30 cr</span>
         </div>
         <div class="tool-desc">Generate images from text prompts without spinning up a separate image API. Returns URL or base64. Your agent gets visuals in one call - no pipeline to build.</div>
         <div class="tool-endpoint">POST /v1/tools/image-generate</div>
@@ -1315,7 +1315,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(136,68,255,0.12);color:#8844FF;">OCR</div>
           <div class="tool-name">OCR Extract</div>
-          <span class="tool-credits">10 cr</span>
+          <span class="tool-credits">12 cr</span>
         </div>
         <div class="tool-desc">Receipts, invoices, screenshots, handwriting - send the image URL, get back clean text. Agents that process documents skip building a vision pipeline entirely.</div>
         <div class="tool-endpoint">POST /v1/tools/ocr-extract</div>
@@ -1351,7 +1351,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">SRH</div>
           <div class="tool-name">Web Search (AI)</div>
-          <span class="tool-credits">10 cr</span>
+          <span class="tool-credits">14 cr</span>
         </div>
         <div class="tool-desc">Real-time web search with AI-synthesized answer. Pass a query, get a clean summary backed by live results.</div>
         <div class="tool-endpoint">POST /v1/tools/web-search</div>
@@ -1630,7 +1630,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">TTS</div>
           <div class="tool-name">Text to Speech</div>
-          <span class="tool-credits">5 cr</span>
+          <span class="tool-credits">25 cr</span>
         </div>
         <div class="tool-desc">Convert text to natural-sounding audio via ElevenLabs. Returns base64 MP3. 50+ voices available.</div>
         <div class="tool-endpoint">POST /v1/tools/text-to-speech</div>
@@ -1639,7 +1639,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(255,40,150,0.10);color:#FF2896;">STT</div>
           <div class="tool-name">Transcribe Audio</div>
-          <span class="tool-credits">8 cr</span>
+          <span class="tool-credits">25 cr</span>
         </div>
         <div class="tool-desc">Transcribe audio files to text via OpenAI Whisper. Pass a URL - 100+ languages, timestamps optional.</div>
         <div class="tool-endpoint">POST /v1/tools/transcribe-audio</div>
@@ -1653,38 +1653,11 @@
         <div class="tool-desc">Send transactional emails via Resend. Plain text or HTML. From, to, subject, body - done.</div>
         <div class="tool-endpoint">POST /v1/tools/email-send</div>
       </div>
-      <div class="tool-card" data-cat="Memory">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">VEC</div>
-          <div class="tool-name">Vector Store</div>
-          <span class="tool-credits">5 cr</span>
-        </div>
-        <div class="tool-desc">Embed and store text chunks in a managed vector database. Pass content and a namespace - retrieval-ready in seconds. The foundation of any agent with long-term memory or a knowledge base.</div>
-        <div class="tool-endpoint">POST /v1/tools/vector-store</div>
-      </div>
-      <div class="tool-card" data-cat="Memory">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(34,211,238,0.10);color:#22d3ee;">VSR</div>
-          <div class="tool-name">Vector Search</div>
-          <span class="tool-credits">5 cr</span>
-        </div>
-        <div class="tool-desc">Semantic similarity search over your stored vectors. Pass a query, get back the top-k most relevant chunks with scores. Powers RAG pipelines, knowledge retrieval, and context injection.</div>
-        <div class="tool-endpoint">POST /v1/tools/vector-search</div>
-      </div>
-      <div class="tool-card" data-cat="Utils">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">NTN</div>
-          <div class="tool-name">Notion Write</div>
-          <span class="tool-credits">3 cr</span>
-        </div>
-        <div class="tool-desc">Create or update Notion pages and databases from your agent. Research agents, content generators, and workflow automations that need to store structured output somewhere permanent.</div>
-        <div class="tool-endpoint">POST /v1/tools/notion-write</div>
-      </div>
       <div class="tool-card" data-cat="Finance">
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(255,215,0,0.08);color:#FFD700;">BTC</div>
           <div class="tool-name">Crypto Price</div>
-          <span class="tool-credits">2 cr</span>
+          <span class="tool-credits">1 cr</span>
         </div>
         <div class="tool-desc">Live spot prices, tickers, and order book snapshots for any trading pair. Real-time market data for trading agents, portfolio trackers, and DeFi automations - no exchange account needed.</div>
         <div class="tool-endpoint">POST /v1/tools/crypto-price</div>
@@ -1702,26 +1675,17 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(167,139,250,0.10);color:#a78bfa;">DSN</div>
           <div class="tool-name">Design Create</div>
-          <span class="tool-credits">15 cr</span>
+          <span class="tool-credits">50 cr</span>
         </div>
         <div class="tool-desc">Generate images from text prompts via DALL-E 3. Three sizes. Vivid or natural style. Returns image URL.</div>
         <div class="tool-endpoint">POST /v1/tools/design-create</div>
-      </div>
-      <div class="tool-card" data-cat="Infra">
-        <div class="tool-header">
-          <div class="tool-icon-badge" style="background:rgba(96,165,250,0.10);color:#60a5fa;">ERR</div>
-          <div class="tool-name">Error Monitor</div>
-          <span class="tool-credits">3 cr</span>
-        </div>
-        <div class="tool-desc">Search, retrieve, and analyze production errors via Sentry. DevOps agents that triage issues, on-call automations, and CI pipelines that catch regressions before humans do.</div>
-        <div class="tool-endpoint">POST /v1/tools/error-monitor</div>
       </div>
 
       <div class="tool-card" data-cat="Research">
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(251,191,36,0.10);color:#fbbf24;">NEWS</div>
           <div class="tool-name">News Search</div>
-          <span class="tool-credits">3 cr</span>
+          <span class="tool-credits">12 cr</span>
         </div>
         <div class="tool-desc">Search real-time news articles by keyword or topic. Returns headlines, sources, and publication dates from top news outlets.</div>
         <div class="tool-endpoint">POST /v1/tools/news-search</div>
@@ -1731,7 +1695,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(52,211,153,0.10);color:#34d399;">RPT</div>
           <div class="tool-name">Research Report</div>
-          <span class="tool-credits">10 cr</span>
+          <span class="tool-credits">40 cr</span>
         </div>
         <div class="tool-desc">Generate a structured research report on any topic. Searches the web, synthesizes findings, and returns a formatted markdown report with sources.</div>
         <div class="tool-endpoint">POST /v1/tools/research-report</div>
@@ -1741,7 +1705,7 @@
         <div class="tool-header">
           <div class="tool-icon-badge" style="background:rgba(239,68,68,0.10);color:#ef4444;">FCK</div>
           <div class="tool-name">Fact Check</div>
-          <span class="tool-credits">5 cr</span>
+          <span class="tool-credits">14 cr</span>
         </div>
         <div class="tool-desc">Verify claims against real-time web sources. Returns a verdict (true/false/unverified), confidence score, and supporting evidence with citations.</div>
         <div class="tool-endpoint">POST /v1/tools/fact-check</div>
@@ -1763,31 +1727,31 @@
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">BTC</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Crypto Price</div>
         <div style="color:var(--muted);font-size:13px;">Live spot price for any coin - BTC, ETH, SOL, and 10,000+ more</div>
-        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /crypto-price</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">1 credits · /crypto-price</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">CAP</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Market Cap</div>
         <div style="color:var(--muted);font-size:13px;">Market cap, volume, rank, and supply data for any token</div>
-        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">3 credits · /crypto-market-cap</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">1 credits · /crypto-market-cap</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">NEWS</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Crypto News</div>
         <div style="color:var(--muted);font-size:13px;">Latest headlines from CoinDesk, CoinTelegraph, and Bitcoin Magazine</div>
-        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">3 credits · /crypto-news</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /crypto-news</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">HIST</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Price History</div>
         <div style="color:var(--muted);font-size:13px;">OHLCV historical data - daily, hourly, or minute-level charts</div>
-        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">4 credits · /crypto-history</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /crypto-ohlcv</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:8px;">TKN</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--fg);">Token Lookup</div>
         <div style="color:var(--muted);font-size:13px;">Find any token by name or contract address - full metadata</div>
-        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">2 credits · /token-lookup</div>
+        <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.3);margin-top:12px;">1 credits · /token-lookup</div>
       </div>
     </div>
     <p style="color:var(--muted);font-size:13px;margin-top:24px;">Powered by CoinGecko · No exchange account required · Works for any trading agent, portfolio tracker, or DeFi automation</p>
@@ -1824,7 +1788,7 @@
         <span class="t-line">&nbsp;</span>
         <span class="t-line"><span class="code-comment"># Response: HTTP 402</span></span>
         <span class="t-line">&#123;</span>
-        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"price"</span>: <span class="code-val">"0.000005"</span>,</span>
+        <span class="t-line">&nbsp;&nbsp;<span class="code-key">"price"</span>: <span class="code-val">"0.015"</span>,</span>
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"currency"</span>: <span class="code-val">"USDC"</span>,</span>
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"network"</span>: <span class="code-val">"base"</span>,</span>
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"wallet"</span>: <span class="code-val">"0xArch..."</span></span>
@@ -1863,7 +1827,7 @@
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://archtools.dev/mcp/sse"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://arch-tools-mcp.onrender.com/sse"</span>],</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123; <span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"arch_your_key"</span> &#125;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
@@ -1881,7 +1845,7 @@
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://archtools.dev/mcp/sse"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://arch-tools-mcp.onrender.com/sse"</span>],</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123; <span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"arch_your_key"</span> &#125;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
@@ -1897,7 +1861,7 @@
         <span class="t-line">&nbsp;&nbsp;<span class="code-key">"mcpServers"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"arch-tools"</span>: &#123;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"command"</span>: <span class="code-val">"npx"</span>,</span>
-        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://archtools.dev/mcp/sse"</span>],</span>
+        <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"args"</span>: [<span class="code-val">"-y"</span>, <span class="code-val">"mcp-remote"</span>, <span class="code-val">"https://arch-tools-mcp.onrender.com/sse"</span>],</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-key">"env"</span>: &#123; <span class="code-key">"ARCH_API_KEY"</span>: <span class="code-val">"arch_your_key"</span> &#125;</span>
         <span class="t-line">&nbsp;&nbsp;&nbsp;&nbsp;&#125;</span>
         <span class="t-line">&nbsp;&nbsp;&#125;</span>
@@ -2377,7 +2341,7 @@ function showLangTab(lang) {
   <div class="wrap">
     <div class="section-tag">Why Arch</div>
     <h2 class="section-title">The math doesn't lie.</h2>
-    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get a broad tool platform, 15 payment networks, and MCP support from $9. No other platform comes close.</p>
+    <p class="section-sub">Every competitor charges per tool, per call, or per seat. You get a broad tool platform, USDC payments on Base and Polygon, and MCP support from $9. No other platform comes close.</p>
     <div class="section-line"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
     <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin-top:32px;">

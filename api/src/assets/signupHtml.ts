@@ -143,10 +143,12 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
 
         <div class="input-row">
           <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
-          <button id="btn" class="btn-primary">Get API Key</button>
         </div>
         <div style="margin-top:10px;">
           <input id="password" type="password" placeholder="Set a password (optional — enables login later)" autocomplete="new-password" style="width:100%;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.92);padding:0 14px;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+        </div>
+        <div style="margin-top:10px;">
+          <button id="btn" class="btn-primary" style="width:100%">Get API Key</button>
         </div>
 
         <div id="status" class="status"></div>
@@ -267,7 +269,7 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
         '<div style="margin-bottom:8px;font-size:12px;color:rgba(255,255,255,0.5)">Your API key — copy it now, it won&#39;t be shown again:</div>' +
         '<div id="api-key-box" class="mono" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,176,0.35);padding:10px 14px;border-radius:10px;word-break:break-all;font-size:13px;margin-bottom:12px;user-select:all;color:#e0ffe0">' + apiKey + '</div>' +
         '<button id="copy-btn" class="copy-btn-full">Copy API Key</button>' +
-        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Refreshed monthly on the free plan. No subscription required.</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px">You have <strong style="color:#f0f0f6">' + credits + ' credits</strong> to get started. Once your email is verified, the free plan tops you up to 250 credits every month. No subscription required.</div>' +
         verifyNote +
         refNote +
         resumeCta +
@@ -404,6 +406,8 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
     async function sendLink() {
       const email = (document.getElementById('email').value || '').trim();
       if (!email) { showStatus('<span style="color:#f87171">Enter your email to continue.</span>'); return; }
+      const pwEntered = (document.getElementById('password').value || '').trim();
+      if (pwEntered && pwEntered.length < 8) { showStatus('<span style="color:#f87171">Passwords need at least 8 characters (or leave it empty and set one later from the dashboard).</span>'); return; }
       btn.disabled = true;
       btn.textContent = 'Creating account...';
       try {
@@ -420,15 +424,23 @@ export const SIGNUP_HTML = `<!DOCTYPE html>
           // If password provided, set it and log in via session cookie
           const pw = (document.getElementById('password').value || '').trim();
           // Either way the browser ends up signed in, so "Open Dashboard" works.
+          let pwSaved = !pw;
           try {
-            await fetch(pw && pw.length >= 8 ? '/auth/set-password' : '/auth/login-key', {
+            const r2 = await fetch(pw ? '/auth/set-password' : '/auth/login-key', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify(pw && pw.length >= 8 ? { api_key: data.api_key, password: pw } : { api_key: data.api_key })
+              body: JSON.stringify(pw ? { api_key: data.api_key, password: pw } : { api_key: data.api_key })
             });
+            if (pw) pwSaved = r2.ok;
           } catch(_) {}
-          showSuccess(data.api_key, data.credits || 250);
+          showSuccess(data.api_key, data.credits ?? 25);
+          if (!pwSaved) {
+            const warn = document.createElement('div');
+            warn.style.cssText = 'font-size:13px;color:#fbbf24;margin-top:12px';
+            warn.textContent = "Your account is ready, but we couldn't save the password. Set one from the dashboard.";
+            document.getElementById('status').appendChild(warn);
+          }
           btn.style.display = 'none';
           document.getElementById('email').style.display = 'none';
           document.getElementById('password').style.display = 'none';

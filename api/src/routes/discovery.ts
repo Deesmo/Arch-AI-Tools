@@ -5,6 +5,7 @@ import { X402_PRICES } from "../middleware/x402.js";
 import { getStatusPageData } from "../middleware/analytics.js";
 import { config } from "../config.js";
 import { isValidAdminKey } from "../middleware/auth.js";
+import { TOOL_PROVIDERS, unavailableProviders } from "../lib/providerHealth.js";
 
 const router = Router();
 
@@ -41,6 +42,17 @@ router.get("/.well-known/oauth-protected-resource", (_req: Request, res: Respons
 // GET /health — Enhanced health endpoint with dependency status + response time percentiles
 router.get("/health", async (_req: Request, res: Response): Promise<void> => {
   const startMs = Date.now();
+
+  // Anonymous callers (Render's health check, uptime monitors, anyone) get the
+  // public contract from one trivial query. The counts and the facilitator
+  // round-trip below are admin-only, so they can't be used to load the server.
+  const adminKeyHeader = _req.headers["x-admin-key"];
+  if (!isValidAdminKey(typeof adminKeyHeader === "string" ? adminKeyHeader : undefined)) {
+    let up = false;
+    try { await prisma.$queryRaw`SELECT 1`; up = true; } catch { /* reported as down */ }
+    res.status(up ? 200 : 503).json({ ok: up });
+    return;
+  }
 
   // Check DB connection
   let dbStatus: "connected" | "error" = "error";
@@ -116,7 +128,7 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
     service: "arch-tools-api",
     version: "1.10.0",
     uptime_seconds: statusData.uptime_seconds,
-    tools: toolCount || 64,
+    tools: toolCount || 63,
     agents: agentCount,
     dependencies: {
       database: { status: dbStatus, latency_ms: dbLatencyMs },
@@ -131,6 +143,50 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
       avg_response_ms: statusData.avg_response_ms,
     },
   });
+});
+
+// GET /api/status — what /status shows: each part up or down, no internals.
+// Cached for 30 s, so however many people watch the page it costs one cheap
+// query every 30 s.
+let statusCache: { at: number; code: number; body: Record<string, unknown> } | null = null;
+router.get("/api/status", async (_req: Request, res: Response): Promise<void> => {
+  if (!statusCache || Date.now() - statusCache.at > 30_000) {
+    let database: "operational" | "down" = "operational";
+    let toolsActive: number | null = null;
+    try {
+      toolsActive = await prisma.tool.count({ where: { active: true } });
+    } catch {
+      database = "down";
+    }
+    const toolsUnavailable = Object.keys(TOOL_PROVIDERS).filter((t) => unavailableProviders(t));
+    const statusData = getStatusPageData();
+    const ok = database === "operational";
+    statusCache = {
+      at: Date.now(),
+      code: ok ? 200 : 503,
+      body: {
+        ok,
+        status: !ok ? "down" : toolsUnavailable.length ? "degraded" : "operational",
+        components: {
+          api: "operational",
+          database,
+          payments: process.env.WALLET_ADDRESS ? "operational" : "not_configured",
+          tools: toolsUnavailable.length ? "degraded" : "operational",
+        },
+        tools_active: toolsActive,
+        tools_unavailable: toolsUnavailable,
+        uptime_seconds: statusData.uptime_seconds,
+        response_ms: {
+          p50: statusData.p50_response_ms,
+          p95: statusData.p95_response_ms,
+          p99: statusData.p99_response_ms,
+          avg: statusData.avg_response_ms,
+        },
+        checked_at: new Date().toISOString(),
+      },
+    };
+  }
+  res.status(statusCache.code).set("Cache-Control", "public, max-age=30").json(statusCache.body);
 });
 
 // GET /.well-known/x402 — x402 discovery (all supported chains)
@@ -567,8 +623,8 @@ router.get("/v1/discover", async (_req: Request, res: Response): Promise<void> =
         },
       },
       mcp: {
-        sse: "https://archtools.dev/mcp/sse",
-        http: "https://archtools.dev/mcp/mcp",
+        sse: "https://arch-tools-mcp.onrender.com/sse",
+        http: "https://archtools.dev/mcp",
         registry: "io.github.Deesmo/arch-tools-mcp",
       },
     });
@@ -665,7 +721,7 @@ const LLMS_TXT = `# Arch Tools
 > Base URL: ${API_BASE}
 > Docs: ${BASE_URL}
 > OpenAPI: ${API_BASE}/openapi.json
-> MCP SSE: https://archtools.dev/mcp/sse
+> MCP SSE: https://arch-tools-mcp.onrender.com/sse
 
 ## Authentication
 All tool endpoints require an API key:
@@ -783,7 +839,7 @@ GET  /health          — Service health + tool count
 GET  /v1/agent/usage  — Credit balance for your key
 
 ## MCP Integration
-SSE endpoint: https://archtools.dev/mcp/sse
+SSE endpoint: https://arch-tools-mcp.onrender.com/sse
 Registry: io.github.Deesmo/arch-tools-mcp
 Compatible with: Claude Desktop, Cursor, Windsurf, any MCP client
 

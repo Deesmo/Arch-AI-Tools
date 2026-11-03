@@ -14,7 +14,7 @@ class ArchTools:
         result = client.ai_generate(prompt="Summarize this article")
     """
     
-    BASE_URL = "https://arch-ai-tools.onrender.com/v1"
+    BASE_URL = "https://archtools.dev/v1"
     
     def __init__(self, api_key: str, base_url: Optional[str] = None):
         self.api_key = api_key

@@ -201,6 +201,17 @@
       .hero h1 { font-size: 1.8rem; }
     }
   </style>
+  <style id="mobile-fit">
+    /* Phones: wide tables and code scroll inside their box, so the page itself never scrolls sideways. */
+    @media (max-width: 640px) {
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      pre { max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+      :not(pre) > code { overflow-wrap: anywhere; }
+      .nav-links, .at-nav-links { flex-wrap: wrap; }
+      h1, h2, h3 { overflow-wrap: break-word; }
+      .lang-card, .info-box, .file-path { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    }
+  </style>
 </head>
 <body>
   <div class="topline"></div>
@@ -368,7 +379,7 @@
   </section>
 
   <footer class="footer">
-    <p>© 2026 <a href="/">Arch Tools</a> · <a href="/docs">API Docs</a> · <a href="/mcp-setup">MCP Setup Guide</a> · <a href="/directory">x402 Directory</a> · <a href="https://x.com/AiArchTools" target="_blank">@AiArchTools</a></p>
+    <p>© 2026 <a href="/">Arch Tools</a> · <a href="/docs">API Docs</a> · <a href="/mcp-setup">MCP Setup Guide</a> · <a href="/directory">x402 Directory</a></p>
   </footer>
 
   <script>

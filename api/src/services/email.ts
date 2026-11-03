@@ -356,6 +356,24 @@ export async function sendAdminAlert(subject: string, body: string): Promise<voi
   await sendEmail(adminEmail, subject, html);
 }
 
+// ─── Enterprise inquiry (the /enterprise "Talk to Sales" form) ───
+export async function sendEnterpriseInquiry(lead: { name: string; email: string; company: string; volume: string; message: string }): Promise<boolean> {
+  const to = process.env.ENTERPRISE_LEAD_EMAIL || "support@archtools.dev";
+  const esc = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+  const subject = `Enterprise inquiry — ${lead.company.replace(/[\r\n]+/g, " ")}`;
+  const html = layout(esc(subject), `
+    <table class="info-table">
+      <tr><td>Name</td><td>${esc(lead.name)}</td></tr>
+      <tr><td>Email</td><td><a href="mailto:${esc(lead.email)}">${esc(lead.email)}</a></td></tr>
+      <tr><td>Company</td><td>${esc(lead.company)}</td></tr>
+      <tr><td>Monthly volume</td><td>${esc(lead.volume)}</td></tr>
+    </table>
+    <p style="white-space:pre-wrap;margin-top:16px;">${esc(lead.message)}</p>
+  `);
+  const text = `Name: ${lead.name}\nEmail: ${lead.email}\nCompany: ${lead.company}\nMonthly volume: ${lead.volume}\n\n${lead.message}`;
+  return sendEmail(to, subject, html, text);
+}
+
 // ─── 6. Monthly Refresh ───
 export async function sendMonthlyRefreshEmail(to: string, credits: number, newBalance: number): Promise<void> {
   const month = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
