@@ -128,7 +128,7 @@ router.get("/health", async (_req: Request, res: Response): Promise<void> => {
     service: "arch-tools-api",
     version: "1.10.0",
     uptime_seconds: statusData.uptime_seconds,
-    tools: toolCount || 64,
+    tools: toolCount || 63,
     agents: agentCount,
     dependencies: {
       database: { status: dbStatus, latency_ms: dbLatencyMs },

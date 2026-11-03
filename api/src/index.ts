@@ -456,12 +456,22 @@ app.get("/changelog", (_req: Request, res: Response) => res.sendFile(path.join(_
 app.get("/directory", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/directory.html')));
 app.get("/docs", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
 app.get("/docs/getting-started", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/getting-started.html')));
-app.get("/docs/:slug", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/docs.html')));
+// /docs/<slug> and /blog/<slug> serve the matching docs-<slug>.html / blog-<slug>.html
+// article (the URLs their canonical tags use). Anything else is a real 404 —
+// these used to answer 200 with the index page for any slug.
+const articlePage = (prefix: "docs" | "blog") => (req: Request, res: Response, next: NextFunction) => {
+  const slug = String(req.params.slug);
+  if (!/^[a-z0-9-]+$/.test(slug)) return next();
+  const file = path.join(__dirname, `../public/${prefix}-${slug}.html`);
+  if (!fs.existsSync(file)) return next();
+  return res.sendFile(file);
+};
+app.get("/docs/:slug", articlePage("docs"));
 app.get("/blog-x402-vs-stripe", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog-x402-vs-stripe.html')));
 app.get("/blog-mcp-guide", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog-mcp-guide.html')));
 app.get("/blog-agents-need-crypto", (_req, res) => res.sendFile(path.join(__dirname, '../public/blog-agents-need-crypto.html')));
 app.get("/blog", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/blog.html')));
-app.get("/blog/:slug", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/blog.html')));
+app.get("/blog/:slug", articlePage("blog"));
 app.get("/sdk", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/sdk.html')));
 app.get("/fund", (_req: Request, res: Response) => res.sendFile(path.join(__dirname, '../public/fund.html')));
 // /wallet → 302 redirect to /fund (302 not 301 — keeps it reversible if /wallet becomes its own page)
@@ -491,7 +501,7 @@ app.get("/get-api-key", (_req: Request, res: Response) => res.redirect(301, "/si
 // /get-started → /signup redirect (docs/marketing links use this path)
 app.get("/get-started", (_req: Request, res: Response) => res.redirect(301, "/signup"));
 // /signin → /signup redirect (the blog/byok acquisition CTAs link /signin, which 404'd; sign-in flows like refer link /login directly)
-app.get("/signin", (_req: Request, res: Response) => res.redirect(301, "/signup"));
+app.get("/signin", (_req: Request, res: Response) => res.redirect(301, "/login"));
 // /tools (human URL guess; /v1/tools and /tools.json are the APIs) → docs
 app.get("/tools", (_req: Request, res: Response) => res.redirect(301, "/docs"));
 
