@@ -9,8 +9,9 @@
  * - A tool is gated BEFORE payment/charging (toolMiddleware runs providerGate
  *   first), answering 503 tool_temporarily_unavailable + Retry-After.
  * - A provider is marked exhausted only on a definite "no credit" answer —
- *   402, or an explicit quota/credit message — never on a plain rate limit,
- *   a network error or a guessed balance threshold.
+ *   402, an explicit quota/credit message, or a balance below the published
+ *   price of one call (MIN_BALANCE) — never on a plain rate limit, a network
+ *   error or a guessed balance threshold.
  * - Recovery: an active probe every 30 minutes while exhausted (6 hours while
  *   healthy). OpenAI: a 1-token chat call. Balance providers: the balance rose
  *   above what it was when the provider ran dry (a top-up happened).
@@ -33,6 +34,14 @@ export const TOOL_PROVIDERS: Record<string, ProviderName[]> = {
   "image-remove-bg": ["removebg"],
   "email-find": ["hunter"],
 };
+
+/**
+ * Smallest balance that can pay for ONE call, from the provider's published price
+ * (not a guess). A probe reading below it counts as out of credit; providers not
+ * listed are out only at 0. Runway: video-generate runs gen4.5 at 12 credits per
+ * second with a 5 s minimum = 60 credits (docs.dev.runwayml.com/guides/pricing).
+ */
+export const MIN_BALANCE: Partial<Record<ProviderName, number>> = { runway: 60 };
 
 const PROVIDER_LABEL: Record<ProviderName, string> = {
   openai: "OpenAI", runway: "Runway", elevenlabs: "ElevenLabs", removebg: "remove.bg", hunter: "Hunter", stability: "Stability AI",
@@ -220,7 +229,7 @@ async function probeProvider(p: ProviderName): Promise<void> {
       // first fresh reading is the baseline, so this probe cannot recover on it.
       if (s.exhausted && s.balanceAtExhaustion === undefined) s.balanceAtExhaustion = r.balance;
     }
-    if (isCreditExhaustion(r.status, r.body) || (r.balance !== undefined && r.balance <= 0)) {
+    if (isCreditExhaustion(r.status, r.body) || (r.balance !== undefined && r.balance < (MIN_BALANCE[p] ?? 1))) {
       markExhausted(p, `${PROVIDER_LABEL[p]} probe: ${r.balance !== undefined ? `balance ${r.balance}` : `${r.status} ${r.body.slice(0, 160)}`}`, r.balance);
     } else if (s.exhausted && s.lastCheckOk) {
       // Balance providers recover only when the balance rose (a top-up);

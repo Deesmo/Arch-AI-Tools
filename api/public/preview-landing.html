@@ -2455,7 +2455,7 @@ function showLangTab(lang) {
         <span class="t-line"><span class="code-comment"># Register - 25 instant credits, 75 more on email verify</span></span>
         <span class="t-line"><span class="t-prompt">$</span> curl -X POST https://archtools.dev/v1/agent/register \</span>
         <span class="t-line">&nbsp;&nbsp;-H <span class="code-str">"Content-Type: application/json"</span> \</span>
-        <span class="t-line">&nbsp;&nbsp;-d <span class="code-str">'{"email":"you@example.com"}'</span></span>
+        <span class="t-line">&nbsp;&nbsp;-d <span class="code-str">'{"email":"<!--email_off-->you@example.com<!--/email_off-->"}'</span></span>
         <span class="t-line" style="margin-top:8px;"><span class="code-comment"># → returns your api_key</span></span>
       </div>
       <div class="code-block" style="margin:0;">
@@ -2558,7 +2558,7 @@ function showLangTab(lang) {
           How do I get an API key?
           <span style="font-family:var(--mono);font-size:20px;color:var(--muted);user-select:none;">+</span>
         </summary>
-        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address - no credit card, no verification email, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"you@example.com"}</code>. Your API key is returned instantly in the response and displayed on screen. Store it safely - it's the only authentication you need for all 63 tools.</p>
+        <p style="margin-top:14px;font-size:15px;color:var(--muted);line-height:1.75;">Register with just your email address - no credit card, no waiting. Visit <a href="/signup" style="color:var(--purple);">archtools.dev/signup</a> or POST to <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">/v1/agent/register</code> with <code style="background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;font-size:13px;">{"email":"<!--email_off-->you@example.com<!--/email_off-->"}</code>. Your API key and starter credits are returned instantly in the response and displayed on screen; confirm the verification email to unlock the rest of your free credits. Store it safely - it's the only authentication you need for all 63 tools.</p>
       </details>
 
     </div>

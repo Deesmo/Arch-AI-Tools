@@ -143,7 +143,7 @@
       <div class="code-block"><pre># 1. Get a key (25 credits usable instantly, 100 total on verify)
 curl -X POST https://archtools.dev/v1/agent/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"my-agent","email":"you@example.com"}'
+  -d '{"name":"my-agent","email":"<!--email_off-->you@example.com<!--/email_off-->"}'
 
 # 2. Call any tool
 curl -X POST https://archtools.dev/v1/tools/web-search \
