@@ -43,8 +43,17 @@ export function isCloudflareIp(ip: string | undefined): boolean {
   return kind === 4 ? cloudflare.check(v, "ipv4") : kind === 6 ? cloudflare.check(v, "ipv6") : false;
 }
 
-export function realClientIp(hop: string | undefined, cfConnectingIp: string | undefined): string | undefined {
-  if (hop && isCloudflareIp(hop)) {
+// Our Cloudflare zone's hostnames. A request whose Host is one of these and
+// whose hop is a Cloudflare address came through our zone, where Cloudflare
+// overwrites CF-Connecting-IP. Something else on Cloudflare (a Worker, another
+// zone) calling the Render origin directly uses the *.onrender.com host, so its
+// CF-Connecting-IP is not trusted. Full origin lock (Authenticated Origin Pulls)
+// is a Cloudflare-side setting.
+const ZONE_HOSTS = new Set(["archtools.dev", "www.archtools.dev"]);
+
+export function realClientIp(hop: string | undefined, cfConnectingIp: string | undefined, host?: string): string | undefined {
+  const viaOurZone = host === undefined || ZONE_HOSTS.has(host.toLowerCase().replace(/:\d+$/, ""));
+  if (hop && viaOurZone && isCloudflareIp(hop)) {
     const visitor = cfConnectingIp?.trim();
     if (visitor && net.isIP(visitor)) return bare(visitor);
   }
@@ -53,7 +62,7 @@ export function realClientIp(hop: string | undefined, cfConnectingIp: string | u
 
 /** Mount right after `trust proxy`: every later req.ip (rate limits, signup checks, logs) is the visitor. */
 export function useRealClientIp(req: Request, _res: Response, next: NextFunction): void {
-  const ip = realClientIp(req.ip, req.get("cf-connecting-ip"));
+  const ip = realClientIp(req.ip, req.get("cf-connecting-ip"), req.get("host") ?? "");
   if (ip && ip !== req.ip) Object.defineProperty(req, "ip", { value: ip, configurable: true, enumerable: true });
   next();
 }

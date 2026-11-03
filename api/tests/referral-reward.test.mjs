@@ -181,5 +181,18 @@ r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
 assert(r.ok === false && r.error === "referral_lifetime_cap", `referrer at ${REFERRAL_LIFETIME_CAP} lifetime rewards → referral_lifetime_cap`);
 assert(agentUpdates.length === 0, "no credits past the lifetime cap");
 
+// Case 15: race — the lock-free pre-check sees room, but by the time the
+// referrer row is locked another apply has filled the domain cap.
+reset();
+agents["referred-9"] = { emailVerified: true, email: "late@farm.example" };
+for (let i = 0; i < REFERRAL_DOMAIN_CAP; i++) agents[`won-${i}`] = { email: `w${i}@farm.example` };
+let findManyCalls = 0;
+const realFindMany = prisma.referral.findMany;
+prisma.referral.findMany = async () => (++findManyCalls === 1 ? [] : Array.from({ length: REFERRAL_DOMAIN_CAP }, (_, i) => ({ referredId: `won-${i}` })));
+r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
+prisma.referral.findMany = realFindMany;
+assert(r.ok === false && r.error === "referral_domain_cap", "domain cap is re-checked under the referrer lock (concurrent applies can't race past it)");
+assert(createdRows.length === 0, "no completion row when the in-transaction cap check fails");
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

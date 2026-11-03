@@ -32,6 +32,8 @@ assert.equal(realClientIp("172.71.146.207", "75.189.50.1"), "75.189.50.1", "Clou
 assert.equal(realClientIp("::ffff:172.71.146.207", "75.189.50.1"), "75.189.50.1", "IPv4-mapped hop");
 assert.equal(realClientIp("203.0.113.9", "1.2.3.4"), "203.0.113.9", "direct-to-Render can't spoof the header");
 assert.equal(realClientIp("172.71.146.207", "not-an-ip"), "172.71.146.207", "garbage header ignored");
+assert.equal(realClientIp("172.71.146.207", "75.189.50.1", "archtools.dev"), "75.189.50.1", "our zone's host → header trusted");
+assert.equal(realClientIp("172.71.146.207", "6.6.6.6", "arch-ai-tools.onrender.com"), "172.71.146.207", "a Cloudflare IP calling the Render origin directly can't spoof the header");
 assert.ok(src("src/index.ts").includes("app.use(useRealClientIp);"));
 for (const f of ["src/middleware/analytics.ts", "src/routes/affiliate.ts"]) {
   assert.ok(!src(f).includes('headers["x-forwarded-for"]'), `${f}: no client-settable X-Forwarded-For reads`);
@@ -65,6 +67,8 @@ assert.ok(page.includes("evil.example"), "consent shows the real destination hos
 assert.ok(page.includes("Arch Tools has not verified this app"), "unknown host warns");
 assert.ok(page.includes('href="https://evil.example/cb?error=access_denied&amp;state=s1"'), "Cancel is a link (CSP blocks cross-site form posts)");
 assert.ok(page.includes('placeholder="arch_..."'), "real key prefix");
+const oauthSrc = src("src/routes/oauth.ts");
+assert.equal((oauthSrc.match(/redirectUris\.includes\(redirect_uri\) \|\| !isAllowedRedirectUri\(redirect_uri\)/g) ?? []).length, 2, "GET and POST /authorize re-check stored redirect URIs");
 page = CONSENT_PAGE("Claude", "tools:execute", "arch_x", "https://claude.ai/api/mcp/auth_callback", "", "", "", undefined, "me@example.com");
 assert.ok(!page.includes("has not verified"), "known host: no warning");
 assert.ok(page.includes('name="use_session" value="1"') && page.includes("Signed in as <strong>me@example.com</strong>"), "one-click consent when signed in");
