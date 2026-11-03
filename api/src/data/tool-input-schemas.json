@@ -591,10 +591,10 @@
       "max_tokens": "Maximum output tokens (default 1000, served value capped at 4096). Credit cost is 20 plus 20 per 1,000 requested tokens above 1,000."
     },
     "barcode-generate": {
-      "width": "Target SVG width in pixels (default 250); bar width is derived from it, and the SVG grows wider if the data needs more room.",
-      "format": "Alias for type: the barcode type, code128 (default) or qr; any other value returns 400.",
-      "height": "SVG height in pixels including the text line (default 100).",
-      "include_text": null
+      "width": "Output width in pixels (default 250, 50-2000); the barcode is scaled to fit.",
+      "format": "Alias for type: code128 (default, up to 80 characters) or qr (a real QR code, up to 1,000 characters). Other values return 400.",
+      "height": "Output height in pixels for code128 (default 100, 30-1000); a QR code is always square.",
+      "include_text": "Print the encoded value under a code128 barcode (default true)."
     },
     "convert-format": {
       "to": "Target format: json, yaml, csv or xml when from is a structured format; base64 or hex when from is text; text (or string) or hex when from is base64. Unsupported targets return 400.",
