@@ -433,7 +433,7 @@ curl https://archtools.dev/api/v1/x402/pricing/web-scrape
       <pre><code class="language-bash"># 1. Register (key delivered instantly; verify email to activate credits)
 curl -X POST https://archtools.dev/v1/agent/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","plan":"free"}'
+  -d '{"email":"<!--email_off-->you@example.com<!--/email_off-->","plan":"free"}'
 
 # 2. Call any tool
 curl -X POST https://archtools.dev/v1/tools/ai-generate \
@@ -1013,7 +1013,7 @@ print(res.json())</code></pre>
       <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
         <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/pii-detect \
   -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"text":"Contact john@example.com or call 555-0123","redact":true}'</code></pre>
+  -d '{"text":"Contact <!--email_off-->john@example.com<!--/email_off--> or call 555-0123","redact":true}'</code></pre>
       </div>
       <div class="tool-actions">
         <a class="try-btn" href="/playground?tool=pii-detect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it live — no key</a>
@@ -1845,7 +1845,7 @@ print(res.json())</code></pre>
       <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button>
         <pre><code class="language-bash">curl -X POST https://archtools.dev/v1/tools/email-send \
   -H "x-api-key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"to":"user@example.com","subject":"Hello","body":"Message body"}'</code></pre>
+  -d '{"to":"<!--email_off-->user@example.com<!--/email_off-->","subject":"Hello","body":"Message body"}'</code></pre>
       </div>
       <div class="tool-actions">
         <a class="try-btn" href="/playground?tool=email-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Try it live — no key</a>
