@@ -68,8 +68,10 @@ function loadAccount() {
 
 const toolOf = (url) => new URL(url).pathname.replace(/^\/v1\/tools\//, "");
 
-// Price from the tool's own 402 challenge (for catalog aliases the manifest omits).
-async function challengePrice(tool) {
+// Price and paid-for resource from the tool's own 402 challenge (for tools the
+// manifest omits). A catalog alias settles as its canonical tool (check-domain's
+// challenge names domain-check), so it is listed under that name, never its own.
+async function challengeInfo(tool) {
   const r = await fetch(`${BASE}/v1/tools/${tool}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -78,9 +80,11 @@ async function challengePrice(tool) {
   });
   const hdr = r.headers.get("payment-required");
   if (r.status !== 402 || !hdr) return null;
-  const accepts = JSON.parse(Buffer.from(hdr, "base64").toString()).accepts ?? [];
-  const usdc = accepts.find((a) => a.network === "eip155:8453" && a.asset.toLowerCase() === BASE_USDC.toLowerCase());
-  return usdc ? Number(usdc.amount ?? usdc.maxAmountRequired) / 1e6 : null;
+  const challenge = JSON.parse(Buffer.from(hdr, "base64").toString());
+  const usdc = (challenge.accepts ?? []).find((a) => a.network === "eip155:8453" && a.asset.toLowerCase() === BASE_USDC.toLowerCase());
+  if (!usdc) return null;
+  const resource = challenge.resource?.url ?? usdc.resource;
+  return { usd: Number(usdc.amount ?? usdc.maxAmountRequired) / 1e6, paysFor: resource ? toolOf(resource) : tool };
 }
 
 async function main() {
@@ -105,25 +109,49 @@ async function main() {
     if (!page.pagination || offset + 100 >= page.pagination.total) break;
   }
 
+  // The Bazaar recomputes lastCalledAt only every six hours, so also trust our own
+  // record of what this script paid (carried forward in the report file).
+  const report = path.join(process.cwd(), "x402-bazaar-refresh-result.json");
+  const paidByUs = {};
+  try {
+    const prev = JSON.parse(fs.readFileSync(report, "utf8"));
+    if (prev.base !== BASE || prev.payTo !== rail.payTo) throw new Error("report is for another server");
+    Object.assign(paidByUs, prev.lastPaid ?? {});
+    for (const r of prev.results ?? []) {
+      if (r.tx && !paidByUs[r.tool]) paidByUs[r.tool] = prev.at;
+      if (r.sessionCreate?.tx && !paidByUs["session-create"]) paidByUs["session-create"] = prev.at;
+    }
+  } catch { /* no earlier run here */ }
+
   const cutoff = Date.now() - DAYS * 86_400_000;
   const plan = [];
   const skipped = [];
   for (const tool of catalog) {
     if (ONLY && !ONLY.has(tool)) continue;
-    const last = listed.get(tool);
-    const due = ONLY || flag("--all") || !listed.has(tool) || !last || Date.parse(last) < cutoff;
+    const bazaarLast = listed.get(tool);
+    const last = [bazaarLast, paidByUs[tool]].filter(Boolean).sort().pop();
+    const due = ONLY || flag("--all") || !last || Date.parse(last) < cutoff;
     if (!due) continue;
     if (ACCOUNT_ONLY.has(tool)) { skipped.push(`${tool} (account-only)`); continue; }
     if (unavailable.has(tool)) { skipped.push(`${tool} (unavailable now)`); continue; }
     if (!INPUTS[tool]) { skipped.push(`${tool} (no sample input in x402-bazaar-inputs.json)`); continue; }
     if (!price.has(tool)) {
-      const p = await challengePrice(tool).catch(() => null);
-      if (p === null) { skipped.push(`${tool} (no USDC-on-Base price)`); continue; }
-      price.set(tool, p);
+      const info = await challengeInfo(tool).catch(() => null);
+      if (!info) { skipped.push(`${tool} (no USDC-on-Base price)`); continue; }
+      if (info.paysFor !== tool) { skipped.push(`${tool} (alias: paid and listed as ${info.paysFor})`); continue; }
+      price.set(tool, info.usd);
     }
     // session-message needs a session: one extra session-create call, same wallet.
-    const usd = price.get(tool) + (tool === "session-message" ? price.get("session-create") ?? 0 : 0);
-    plan.push({ tool, usd, reason: !listed.has(tool) ? "not listed" : last ? `last paid ${last.slice(0, 10)}` : "never paid" });
+    const parts = tool === "session-message"
+      ? { "session-create": price.get("session-create") ?? 0, "session-message": price.get(tool) }
+      : { [tool]: price.get(tool) };
+    const usd = Object.values(parts).reduce((s, v) => s + v, 0);
+    plan.push({ tool, usd, parts, reason: !listed.has(tool) ? "not listed" : last ? `last paid ${last.slice(0, 10)}` : "never paid" });
+  }
+  // session-message's own session-create call already refreshes session-create.
+  if (plan.some((p) => p.tool === "session-message")) {
+    const i = plan.findIndex((p) => p.tool === "session-create");
+    if (i >= 0) { plan.splice(i, 1); skipped.push("session-create (paid inside the session-message call)"); }
   }
 
   const total = plan.reduce((s, p) => s + p.usd, 0);
@@ -161,18 +189,20 @@ async function main() {
   console.log("");
   const results = [];
   for (const p of plan) {
-    const row = { tool: p.tool, usd: p.usd };
+    const row = { tool: p.tool, usd: p.usd, spentUsd: 0 };
     try {
       let body = INPUTS[p.tool];
       if (p.tool === "session-message") {
         const s = await call("session-create", INPUTS["session-create"]);
         row.sessionCreate = { status: s.status, tx: s.tx };
+        if (s.tx) row.spentUsd += p.parts["session-create"];
         if (!s.json?.session_id) throw new Error(`session-create returned HTTP ${s.status}`);
         body = { ...body, session_id: s.json.session_id };
       }
       const r = await call(p.tool, body);
       Object.assign(row, { status: r.status, tx: r.tx });
-      if (!r.tx) row.error = r.json?.error ?? "no settlement";
+      if (r.tx) row.spentUsd += p.parts[p.tool];
+      else row.error = r.json?.error ?? "no settlement";
     } catch (e) {
       row.error = String(e?.message ?? e);
     }
@@ -183,11 +213,16 @@ async function main() {
 
   // A settled payment is what gets a tool listed, even if the call itself failed.
   const settled = results.filter((r) => r.tx);
-  const spent = settled.reduce((s, r) => s + r.usd, 0);
+  // Every settled payment counts, including a session-create whose message then failed.
+  const spent = results.reduce((s, r) => s + r.spentUsd, 0);
   const toolFailed = settled.filter((r) => r.status >= 400).map((r) => r.tool);
   if (toolFailed.length) console.log(`\nPaid but the tool returned an error: ${toolFailed.join(", ")}`);
-  const report = path.join(process.cwd(), "x402-bazaar-refresh-result.json");
-  fs.writeFileSync(report, JSON.stringify({ at: new Date().toISOString(), base: BASE, payer: account.address, payTo: rail.payTo, spentUsd: spent, results }, null, 2));
+  const at = new Date().toISOString();
+  for (const r of results) {
+    if (r.tx) paidByUs[r.tool] = at;
+    if (r.sessionCreate?.tx) paidByUs["session-create"] = at;
+  }
+  fs.writeFileSync(report, JSON.stringify({ at, base: BASE, payer: account.address, payTo: rail.payTo, spentUsd: spent, lastPaid: paidByUs, results }, null, 2));
   console.log(`\nSettled ${settled.length}/${plan.length}, spent about $${spent.toFixed(3)} USDC. Report: ${report}`);
   const failed = results.filter((r) => !r.tx).map((r) => r.tool);
   if (failed.length) console.log(`Retry the failures with: --only ${failed.join(",")}`);
