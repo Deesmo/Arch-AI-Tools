@@ -1,4 +1,7 @@
 import { Router, Request, Response } from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { prisma } from "../lib/prisma.js";
 import { redis } from "../lib/redis.js";
 import { X402_PRICES } from "../middleware/x402.js";
@@ -6,6 +9,10 @@ import { getStatusPageData } from "../middleware/analytics.js";
 import { config } from "../config.js";
 import { isValidAdminKey } from "../middleware/auth.js";
 import { TOOL_PROVIDERS, unavailableProviders } from "../lib/providerHealth.js";
+
+// ESM has no require/__dirname: these .well-known handlers used require("fs")
+// and 500'd whenever no static file answered first (agent-card.json).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
 
@@ -482,8 +489,6 @@ router.get("/openapi.json", (_req: Request, res: Response): void => {
 
 // GET /llms-full.txt — complete documentation for AI
 router.get("/llms-full.txt", (_req: Request, res: Response): void => {
-  const fs = require("fs");
-  const path = require("path");
   try {
     const content = fs.readFileSync(path.join(__dirname, "../../public/llms-full.txt"), "utf8");
     res.type("text/plain").send(content);
@@ -494,8 +499,6 @@ router.get("/llms-full.txt", (_req: Request, res: Response): void => {
 
 // GET /.well-known/agent.json — A2A Agent Card (Google Agent2Agent protocol)
 router.get("/.well-known/agent.json", (_req: Request, res: Response): void => {
-  const fs = require("fs");
-  const path = require("path");
   try {
     const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/agent.json"), "utf8"));
     res.setHeader("Cache-Control", "public, max-age=3600");
@@ -507,8 +510,6 @@ router.get("/.well-known/agent.json", (_req: Request, res: Response): void => {
 
 // GET /.well-known/agent-card.json — alias for A2A Agent Card
 router.get("/.well-known/agent-card.json", (_req: Request, res: Response): void => {
-  const fs = require("fs");
-  const path = require("path");
   try {
     const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/agent.json"), "utf8"));
     res.setHeader("Cache-Control", "public, max-age=3600");
@@ -520,8 +521,6 @@ router.get("/.well-known/agent-card.json", (_req: Request, res: Response): void 
 
 // GET /.well-known/agents.json — Wildcard AI agents.json spec
 router.get("/.well-known/agents.json", (_req: Request, res: Response): void => {
-  const fs = require("fs");
-  const path = require("path");
   try {
     const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/agents.json"), "utf8"));
     res.setHeader("Cache-Control", "public, max-age=3600");
@@ -533,8 +532,6 @@ router.get("/.well-known/agents.json", (_req: Request, res: Response): void => {
 
 // GET /.well-known/mcp/server-card.json — Smithery MCP server card
 router.get("/.well-known/mcp/server-card.json", (_req: Request, res: Response): void => {
-  const fs = require("fs");
-  const path = require("path");
   try {
     const content = JSON.parse(fs.readFileSync(path.join(__dirname, "../../public/.well-known/mcp/server-card.json"), "utf8"));
     res.setHeader("Cache-Control", "public, max-age=3600");
@@ -547,8 +544,6 @@ router.get("/.well-known/mcp/server-card.json", (_req: Request, res: Response): 
 // GET /.well-known/mcp.json — MCP server discovery
 router.get("/.well-known/mcp.json", (_req: Request, res: Response): void => {
   try {
-    const fs = require("fs");
-    const path = require("path");
     const filePath = path.join(__dirname, "../../public/.well-known/mcp.json");
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: "mcp.json not found" });

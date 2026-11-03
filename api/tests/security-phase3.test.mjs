@@ -90,6 +90,9 @@ if (/^http:\/\/(localhost|127\.0\.0\.1)/.test(BASE)) {
   assert.ok([400, 401].includes(r.status), `object client_secret answered (${r.status}), not hung`);
   r = await post("/v1/agent/register", JSON.stringify({ email: "a@example.com", pad: "x".repeat(300_000) }), true);
   assert.equal(r.status, 413, "256 KB cap outside tool routes");
+  r = await fetch(BASE + "/.well-known/agent-card.json");
+  assert.equal(r.status, 200, "A2A agent card is served (handlers used require() in ESM and 500'd)");
+  assert.ok((await r.json()).name, "agent card has a name");
   r = await post("/api/v1/mcp/servers/submit", { name: "n", description: "d".repeat(5000), repository: "javascript:x", contactEmail: "a@b.co", category: "x" });
   assert.equal(r.status, 400, "non-http repository refused");
 }
