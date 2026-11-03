@@ -685,6 +685,10 @@ app.get("/v1/health/x402", async (_req: Request, res: Response) => {
 
 app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
   console.error("Unhandled error:", err);
+  // Sentry.init runs after express is imported (ESM hoisting), so its automatic
+  // Express capture never attaches; report 5xx errors here explicitly.
+  // https://docs.sentry.io/platforms/javascript/guides/express/
+  if (process.env.SENTRY_DSN) Sentry.captureException(err);
   // The response already started: let Express close the connection.
   if (res.headersSent) return next(err);
   res.status(500).json({
