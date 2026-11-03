@@ -43,6 +43,9 @@ for (const f of files) {
   for (const d of DEAD) assert.ok(!s.includes(d), `${f} still mentions ${d}`);
 }
 
+// "/signin" means sign in (→ /login); signup CTAs must link /signup directly.
+for (const f of files) assert.ok(!read(f).includes('href="/signin'), `${f}: signup CTAs link /signup, not /signin`);
+
 const enterprise = read("public/enterprise.html");
 assert.ok(enterprise.includes('action="/api/enterprise/inquiry"'), "enterprise form posts to our own server");
 assert.ok(read("public/status.html").includes("fetch('/api/status'"), "status page reads /api/status");
