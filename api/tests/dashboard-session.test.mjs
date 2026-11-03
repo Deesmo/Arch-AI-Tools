@@ -27,18 +27,20 @@ assert.ok(dash.includes('fetch("/v1/agent/keys/rotate"'), "dashboard can replace
 const login = src("src/assets/loginHtml.ts");
 assert.ok(login.includes("var next = safeNext(params.get('next'));"), "login must sanitise ?next=");
 assert.ok(!login.includes("sessionStorage.setItem('arch_api_key'"), "login must not keep the key in browser storage");
-assert.ok(login.includes(String.raw`/^\\/(?![\\/\\\\])[^\\s\\u0000-\\u001f\\u007f]*$/`), "safeNext must only allow same-site paths");
-const safeNext = (n) => (typeof n === "string" && /^\/(?![\/\\])[^\s\u0000-\u001f\u007f]*$/.test(n)) ? n : "/dashboard";
+assert.ok(login.includes("u.origin === window.location.origin ? u.pathname + u.search + u.hash : '/dashboard'"), "safeNext must compare origins with the URL parser");
+const ORIGIN = "https://archtools.dev";
+const safeNext = (n) => {
+  if (typeof n !== "string" || !n) return "/dashboard";
+  try { const u = new URL(n, ORIGIN); return u.origin === ORIGIN ? u.pathname + u.search + u.hash : "/dashboard"; } catch { return "/dashboard"; }
+};
 assert.equal(safeNext("/pricing"), "/pricing");
-assert.equal(safeNext("/pricing?plan=pro"), "/pricing?plan=pro");
-assert.equal(safeNext("https://evil.example"), "/dashboard");
-assert.equal(safeNext("//evil.example"), "/dashboard");
-assert.equal(safeNext("/\\evil.example"), "/dashboard");
-// The URL parser strips tab/CR/LF, so these would resolve to //evil.example.
-for (const c of ["\t", "\n", "\r"]) {
-  assert.equal(safeNext(`/${c}/evil.example`), "/dashboard");
-  assert.equal(safeNext(new URLSearchParams(`next=/${encodeURIComponent(c)}/evil.example`).get("next")), "/dashboard");
+assert.equal(safeNext("/pricing?pack=starter#x"), "/pricing?pack=starter#x");
+for (const evil of ["https://evil.example", "//evil.example", "/\\evil.example", "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "\t//evil.example", "javascript:alert(1)", "https:evil.example"]) {
+  const out = safeNext(evil);
+  assert.ok(out.startsWith("/") && new URL(out, ORIGIN).origin === ORIGIN, `${JSON.stringify(evil)} must stay on our site, got ${out}`);
 }
+assert.equal(safeNext("https://evil.example"), "/dashboard");
+assert.equal(safeNext("/\t/evil.example"), "/dashboard");
 assert.equal(safeNext(null), "/dashboard");
 
 const index = src("src/index.ts");
