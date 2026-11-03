@@ -140,25 +140,27 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     // ─── Embedded Wallet Auto-Creation (best-effort, non-fatal) ─────────
     let walletAddress: string | null = null;
     try {
-      if (config.cdp.apiKeyId && config.cdp.apiKeySecret) {
-        const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
-        const axios = (await import("axios")).default;
-
-        const axiosClient = axios.create({
-          baseURL: "https://api.cdp.coinbase.com",
+      // Account creation also needs the wallet secret (X-Wallet-Auth). Without
+      // it every signup used to make a doomed CDP call before answering.
+      if (config.cdp.apiKeyId && config.cdp.apiKeySecret && config.cdp.walletSecret) {
+        const { cdpAuthHeaders } = await import("../lib/cdpJwt.js");
+        const path = "/platform/v2/evm/accounts";
+        const body = { name: `user-${agent.id.slice(0, 8)}` };
+        const walletResp = await fetch(`https://api.cdp.coinbase.com${path}`, {
+          method: "POST",
+          headers: await cdpAuthHeaders({
+            apiKeyId: config.cdp.apiKeyId,
+            apiKeySecret: config.cdp.apiKeySecret,
+            walletSecret: config.cdp.walletSecret,
+            method: "POST",
+            path,
+            body,
+          }),
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(10000),
         });
-
-        axiosHooks.withAuth(axiosClient, {
-          apiKeyId: config.cdp.apiKeyId,
-          apiKeySecret: config.cdp.apiKeySecret,
-          walletSecret: config.cdp.walletSecret,
-        });
-
-        const walletResp = await axiosClient.post("/platform/v2/evm/accounts", {
-          name: `user-${agent.id.slice(0, 8)}`,
-        });
-
-        const address = walletResp.data?.address;
+        if (!walletResp.ok) throw new Error(`CDP returned ${walletResp.status}`);
+        const address = ((await walletResp.json()) as { address?: string }).address;
         if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
           walletAddress = address;
           await prisma.agent.update({
@@ -168,7 +170,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
           logger.info({ agentId: agent.id, walletAddress: address }, "Embedded wallet created on signup");
         }
       } else {
-        logger.debug("CDP keys not configured — skipping auto wallet creation");
+        logger.debug("CDP keys or wallet secret not configured — skipping auto wallet creation");
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Unknown error";

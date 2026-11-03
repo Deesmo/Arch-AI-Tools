@@ -1,7 +1,7 @@
 {
   "name": "arch-ai-tools",
   "version": "1.6.0",
-  "description": "Arch Tools — 30 production-ready API tools for developers and AI agents",
+  "description": "Arch Tools \u2014 30 production-ready API tools for developers and AI agents",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,7 @@
     "db:cleanup": "node dist/cron/dbCleanup.js",
     "funnel-report": "node dist/scripts/funnelReport.js",
     "npm:audit": "npm audit --json > /tmp/audit.json && echo \"Audit complete\"",
-    "test": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm tests/wallet-provisioning.test.js && node --loader ts-node/esm tests/ssrf.test.js && node tests/integration.test.js && node tests/pages.test.js && node tests/x402-v1-passthrough.test.mjs && node tests/model-cost.test.mjs && node tests/session-pricing.test.mjs && node tests/prompt-moderation.test.mjs && node tests/critical-regressions.test.mjs && node tests/unsubscribe.test.mjs && node tests/reactivation-render.test.mjs && node tests/outreach-active-devs.test.mjs && node tests/credit-alert-dedup.test.mjs && node tests/verify-activation.test.mjs && node tests/signup-firstcall.test.mjs && node tests/oauth-signup-cta.test.mjs && node tests/x402-sell-copy.test.mjs && node tests/verify-resend.test.mjs && node tests/intent-funnel.test.mjs && node tests/credit-email-buylinks.test.mjs && node tests/resend-errors.test.mjs && node tests/credit-refresh-verified.test.mjs && node tests/security-p0.test.mjs && node tests/phase1-tools.test.mjs && node tests/provider-health.test.mjs && node tests/x402-settle-after.test.mjs && node tests/dashboard-session.test.mjs && node tests/site-front-door.test.mjs && node tests/security-phase3.test.mjs && node tests/referral-reward.test.mjs",
+    "test": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm tests/wallet-provisioning.test.js && node --loader ts-node/esm tests/ssrf.test.js && node tests/integration.test.js && node tests/pages.test.js && node tests/x402-v1-passthrough.test.mjs && node tests/model-cost.test.mjs && node tests/session-pricing.test.mjs && node tests/prompt-moderation.test.mjs && node tests/critical-regressions.test.mjs && node tests/unsubscribe.test.mjs && node tests/reactivation-render.test.mjs && node tests/outreach-active-devs.test.mjs && node tests/credit-alert-dedup.test.mjs && node tests/verify-activation.test.mjs && node tests/signup-firstcall.test.mjs && node tests/oauth-signup-cta.test.mjs && node tests/x402-sell-copy.test.mjs && node tests/verify-resend.test.mjs && node tests/intent-funnel.test.mjs && node tests/credit-email-buylinks.test.mjs && node tests/resend-errors.test.mjs && node tests/credit-refresh-verified.test.mjs && node tests/security-p0.test.mjs && node tests/phase1-tools.test.mjs && node tests/provider-health.test.mjs && node tests/x402-settle-after.test.mjs && node tests/dashboard-session.test.mjs && node tests/site-front-door.test.mjs && node tests/security-phase3.test.mjs && node tests/referral-reward.test.mjs && node tests/cdp-jwt.test.mjs",
     "test:integration": "node tests/integration.test.js",
     "test:verify-activation": "node tests/verify-activation.test.mjs",
     "test:verify-resend": "node tests/verify-resend.test.mjs",
@@ -24,14 +24,10 @@
     "test:pages": "node tests/pages.test.js",
     "test:rate-limit": "node tests/global-rate-limit.test.js",
     "test:session-ownership": "node tests/session-ownership.test.js",
-    "test:tier": "node tests/tier.test.js",
-    "postinstall": "node -e \"const fs=require('fs'); const p='node_modules/@coinbase/cdp-sdk/node_modules/jose'; try{ fs.rmSync(p,{recursive:true,force:true}); } catch(e){}\""
+    "test:tier": "node tests/tier.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@coinbase/cdp-sdk": "^1.45.0",
-    "@coinbase/x402": "^2.1.0",
-    "@mendable/firecrawl-js": "^4.15.4",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^10.78.0",
@@ -39,11 +35,6 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/ioredis": "^4.28.10",
     "@types/jsonwebtoken": "^9.0.10",
-    "@x402/core": "^2.7.0",
-    "@x402/evm": "^2.7.0",
-    "@x402/express": "^2.7.0",
-    "@x402/extensions": "^2.7.0",
-    "@x402/svm": "^2.9.0",
     "ajv": "^8.18.0",
     "axios": "~1.20.0",
     "bcryptjs": "^3.0.3",
@@ -79,8 +70,7 @@
     "uuid": "^11.1.1",
     "viem": "^2.47.10",
     "xml2js": "^0.6.2",
-    "xmlbuilder2": "^4.0.3",
-    "zod": "^3.24.1"
+    "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -96,7 +86,8 @@
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
     "@types/xml2js": "^0.4.14",
-    "@x402/fetch": "~2.7.0",
+    "@x402/evm": "~2.29.0",
+    "@x402/fetch": "~2.29.0",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
@@ -105,10 +96,6 @@
     "node": ">=20.0.0"
   },
   "overrides": {
-    "@coinbase/cdp-sdk": {
-      "jose": "5.10.0",
-      "axios": "$axios"
-    },
     "ws": "8.21.0",
     "@opentelemetry/core": "2.8.0",
     "ethjs-unit": {
@@ -117,6 +104,7 @@
     "number-to-bn": {
       "bn.js": "4.12.3"
     },
-    "uuid": "$uuid"
+    "uuid": "$uuid",
+    "zod": "^4.6.7"
   }
 }

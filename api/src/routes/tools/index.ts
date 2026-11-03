@@ -3542,7 +3542,7 @@ router.post("/wallet-balance", ...toolMiddleware("wallet-balance"), async (req: 
   }
   try {
     const requestPath = `/platform/v2/evm/token-balances/base/${address}`;
-    const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+    const { generateJwt } = await import("../../lib/cdpJwt.js");
     const jwt = await generateJwt({
       apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
       apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
@@ -3582,7 +3582,7 @@ router.post("/address-history", ...toolMiddleware("address-history"), async (req
   const n = Math.min(Math.max(1, limit), 100);
   try {
     const requestPath = `/platform/v2/evm/transaction-history/base/${address}`;
-    const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+    const { generateJwt } = await import("../../lib/cdpJwt.js");
     const jwt = await generateJwt({
       apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
       apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",
@@ -3655,7 +3655,7 @@ router.post("/base-nft-metadata", ...toolMiddleware("base-nft-metadata"), async 
   }
   try {
     const requestPath = `/platform/v2/evm/nfts/base/${contractAddress}/${encodeURIComponent(tokenIdClean)}`;
-    const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+    const { generateJwt } = await import("../../lib/cdpJwt.js");
     const jwt = await generateJwt({
       apiKeyId: process.env.CDP_API_KEY_ID ?? process.env.CDP_API_KEY ?? "",
       apiKeySecret: process.env.CDP_API_KEY_SECRET ?? process.env.CDP_API_SECRET ?? "",

@@ -90,7 +90,6 @@ router.get(
 
 // ─── POST /v1/wallet/provision ────────────────────────────────────────────────
 // Creates a new CDP wallet for an authenticated agent.
-// @coinbase/cdp-sdk v1.45 installed. @coinbase/agentkit requires separate install.
 router.post(
   "/provision",
   requireAuth,
@@ -197,26 +196,26 @@ router.post(
     }
 
     try {
-      // Use axiosHooks from cdp-sdk/auth subpath (proven working — same import as x402.ts)
-      // axiosHooks.withAuth handles Bearer JWT + Wallet Auth JWT internally — no manual headers
-      const axios = (await import("axios")).default;
-      const { axiosHooks } = await import("@coinbase/cdp-sdk/auth");
-
-      const axiosClient = axios.create({
-        baseURL: "https://api.cdp.coinbase.com",
+      // CDP needs a Bearer JWT plus an X-Wallet-Auth JWT for account creation
+      // (lib/cdpJwt.ts mirrors what @coinbase/cdp-sdk's axios hook sent).
+      const { cdpAuthHeaders } = await import("../lib/cdpJwt.js");
+      const path = "/platform/v2/evm/accounts";
+      const body = { name: label };
+      const r = await fetch(`https://api.cdp.coinbase.com${path}`, {
+        method: "POST",
+        headers: await cdpAuthHeaders({
+          apiKeyId: config.cdp.apiKeyId,
+          apiKeySecret: config.cdp.apiKeySecret,
+          walletSecret: config.cdp.walletSecret,
+          method: "POST",
+          path,
+          body,
+        }),
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
       });
-
-      axiosHooks.withAuth(axiosClient, {
-        apiKeyId: config.cdp.apiKeyId,
-        apiKeySecret: config.cdp.apiKeySecret,
-        walletSecret: config.cdp.walletSecret,
-      });
-
-      const response = await axiosClient.post("/platform/v2/evm/accounts", {
-        name: label,
-      });
-
-      const address = response.data?.address;
+      if (!r.ok) throw new Error(`CDP returned ${r.status}`);
+      const address = ((await r.json()) as { address?: string }).address;
       if (!address) {
         throw new Error("CDP API returned no wallet address");
       }
@@ -260,16 +259,6 @@ router.post(
         where: { id: agentId, walletAddress: provisioningSentinel },
         data: { walletAddress: null },
       }).catch(() => {});
-
-      // Distinguish "module not installed" from actual CDP errors
-      if (message.includes("Cannot find module") || message.includes("ERR_MODULE_NOT_FOUND")) {
-        res.status(503).json({
-          ok: false,
-          error: "dependency_missing",
-          message: "Wallet provisioning requires @coinbase/agentkit. Run npm install first.",
-        });
-        return;
-      }
 
       res.status(500).json({
         ok: false,
@@ -319,14 +308,18 @@ router.get(
     }
 
     try {
-      // Try to fetch on-chain USDC balance via CDP SDK
-      const { CdpClient } = await import("@coinbase/cdp-sdk");
-
-      const cdp = new CdpClient({
-        apiKeyId: config.cdp.apiKeyId,
-        apiKeySecret: config.cdp.apiKeySecret,
-        walletSecret: config.cdp.walletSecret,
-      });
+      // On-chain USDC balance from CDP's REST API (the call the SDK's
+      // cdp.evm.listTokenBalances made: GET /platform/v2/evm/token-balances/base/{address}).
+      const { cdpAuthHeaders } = await import("../lib/cdpJwt.js");
+      const listTokenBalances = async (address: string) => {
+        const path = `/platform/v2/evm/token-balances/base/${address}`;
+        const r = await fetch(`https://api.cdp.coinbase.com${path}`, {
+          headers: await cdpAuthHeaders({ apiKeyId: config.cdp.apiKeyId, apiKeySecret: config.cdp.apiKeySecret, method: "GET", path }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!r.ok) throw new Error(`CDP returned ${r.status}`);
+        return (await r.json()) as { balances?: Array<{ token: { contractAddress: string }; amount: { amount: string | number; decimals: number } }> };
+      };
 
       // USDC on Base contract address
       const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -335,19 +328,14 @@ router.get(
       // fall back to returning wallet info without balance
       let usdcBalance = "unknown";
       try {
-        const result = await cdp.evm.listTokenBalances({
-          address: wallet.address as `0x${string}`,
-          network: "base",
-        });
+        const result = await listTokenBalances(wallet.address);
+        const balances = result.balances ?? [];
 
         // Find USDC entry by contract address
-        const usdcEntry = result.balances.find(
-          (b: { token: { contractAddress: string }; amount: { amount: bigint; decimals: number } }) =>
-            b.token.contractAddress.toLowerCase() === USDC_BASE.toLowerCase()
-        );
+        const usdcEntry = balances.find((b) => b.token?.contractAddress?.toLowerCase() === USDC_BASE.toLowerCase());
 
         if (usdcEntry) {
-          // amount.amount is bigint in atomic units; decimals is 6 for USDC
+          // amount.amount is a string of atomic units; decimals is 6 for USDC
           const raw = BigInt(String(usdcEntry.amount.amount));
           const decimals = usdcEntry.amount.decimals;
           const divisor = BigInt(10 ** decimals);
@@ -359,7 +347,7 @@ router.get(
           usdcBalance = "0.000000";
         }
 
-        console.log("[wallet/status] USDC balance:", usdcBalance, "tokens found:", result.balances.length);
+        console.log("[wallet/status] USDC balance:", usdcBalance, "tokens found:", balances.length);
       } catch (e) {
         console.error("[wallet/status] Balance lookup failed:", e);
         usdcBalance = "unavailable";

@@ -37,7 +37,7 @@ Response: ${JSON.stringify(body).slice(0, 200)}
 
 IMMEDIATE ACTION REQUIRED:
 1. Check X402_SDK_ENABLED env var (should be "false")
-2. Check api/src/middleware/x402-sdk.ts for next() calls on unauthenticated requests
+2. Check api/src/middleware/x402.ts for next() calls on unauthenticated requests
 3. Check api/src/middleware/x402.ts for any bypass logic
 4. Deploy a fix immediately
 
