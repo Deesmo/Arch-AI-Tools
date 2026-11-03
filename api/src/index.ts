@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import "./lib/asyncErrors.js";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -51,6 +52,7 @@ import trialRouter from "./routes/trial.js";
 import affiliateRouter from "./routes/affiliate.js";
 import mcpRouter from "./routes/mcp.js";
 import enterpriseRouter from "./routes/enterprise.js";
+import { useRealClientIp } from "./lib/clientIp.js";
 import unsubscribeRouter from "./routes/unsubscribe.js";
 
 // x402 SDK (official Coinbase @x402/express integration)
@@ -75,6 +77,8 @@ const corsOrigins = config.corsOrigin
 
 // ─── Trust proxy (Render sits behind one) ────────────────────────────────────
 app.set("trust proxy", 1);
+// req.ip = the visitor, not the Cloudflare edge Render saw (see lib/clientIp.ts).
+app.use(useRealClientIp);
 
 // ─── Canonical-host redirect: *.onrender.com → archtools.dev ─────────────────
 // Keeps the Render origin's PAGES from being indexed. API calls are served in
@@ -167,7 +171,13 @@ app.use(globalLimiter);
 // Stripe webhook needs raw body — must come before express.json()
 app.use("/webhooks/stripe", express.raw({ type: "application/json" }));
 
-app.use(express.json({ limit: "10mb" }));
+// Tools (and MCP, which calls them) accept base64 images/PDFs, so they keep a
+// 10 MB body. Everything else — signup, auth, public forms — is small JSON,
+// and a 10 MB allowance there only helps someone trying to exhaust memory.
+const jsonLarge = express.json({ limit: "10mb" });
+const jsonSmall = express.json({ limit: "256kb" });
+app.use((req: Request, res: Response, next: NextFunction) =>
+  (/^\/(v1\/tools|mcp)(\/|$)/.test(req.path) ? jsonLarge : jsonSmall)(req, res, next));
 
 // ─── Malformed JSON body → 400 (not the generic 500) ─────────────────────────
 // express.json() (body-parser) reports an unparseable body by forwarding a
@@ -183,6 +193,10 @@ app.use((err: Error & { type?: string; status?: number }, _req: Request, res: Re
       message: "Requests from this website are not allowed. Call the API from your server or agent instead.",
       request_id: reqId(),
     });
+    return;
+  }
+  if (err?.type === "entity.too.large") {
+    res.status(413).json({ ok: false, error: "payload_too_large", message: "Request body is too large", request_id: reqId() });
     return;
   }
   if (err?.type === "entity.parse.failed" || (err instanceof SyntaxError && err.status === 400)) {
@@ -669,8 +683,10 @@ app.get("/v1/health/x402", async (_req: Request, res: Response) => {
 });
 
 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
   console.error("Unhandled error:", err);
+  // The response already started: let Express close the connection.
+  if (res.headersSent) return next(err);
   res.status(500).json({
     ok: false,
     error: "internal_error",

@@ -133,7 +133,7 @@ router.post("/track", trackLimiter, async (req: Request, res: Response): Promise
     // `aff:*:${referral.code}`, so writes must use the same casing.
     const normalizedCode = referral.code;
 
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
+    const ip = req.ip ?? "unknown";
 
     // Track click in Redis (preferred) or memory
     if (redis) {

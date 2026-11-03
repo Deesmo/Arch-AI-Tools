@@ -105,8 +105,9 @@ const metered = {
     "design-create",
     /safeQuality === "high" \? \d+ : safeQuality === "low" \? \d+ : (\d+)/
   ),
-  // const researchReportCost = paid ? 0 : byokAdjustedCost(req, 40, ...) — BYOK only lowers
-  "research-report": anchored("research-report", /const researchReportCost = paid \? 0 : byokAdjustedCost\(req, (\d+)/),
+  // const researchReportCost = paid ? 0 : rrFullByok ? Math.max(1, Math.ceil(40 * 0.2)) : 40
+  // — full-BYOK only lowers; the advertised base is the non-BYOK price
+  "research-report": anchored("research-report", /const researchReportCost = paid \? 0 : rrFullByok \? Math\.max\(1, Math\.ceil\(\d+ \* 0\.2\)\) : (\d+);/),
   // const videoCost = Math.max(700, duration * 140) → advertised base = the minimum
   "video-generate": anchored("video-generate", /const videoCost = Math\.max\((\d+), duration \* \d+\)/),
   // const sessionCreateCost = paid ? 0 : 5 (PR #98 moved sessions off literal deductCredits)

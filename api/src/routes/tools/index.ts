@@ -281,7 +281,34 @@ function sanitizeOutboundEmailHtml(html: string | undefined, body: string | unde
     ? rawHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/\son\w+="[^"]*"/gi, "")
     : `<p>${escapedBody}</p>`;
   const textBody = rawBody || rawHtml.replace(/<[^>]+>/g, "").slice(0, 10_000);
-  return { htmlBody, textBody };
+  // Every message says it came through an API, so it can't pass as our own mail.
+  return {
+    htmlBody: `${htmlBody}<hr style="border:none;border-top:1px solid #ddd;margin:24px 0 8px"><p style="font-size:11px;color:#888">${OUTBOUND_EMAIL_FOOTER}</p>`,
+    textBody: `${textBody}\n\n--\n${OUTBOUND_EMAIL_FOOTER}`,
+  };
+}
+
+const OUTBOUND_EMAIL_FOOTER = "Sent by an Arch Tools API user, not by Arch Tools. Report abuse: abuse@archtools.dev";
+
+// Tools that share one daily allowance: email-send and send-email are the same
+// action under two names, so a 5 + 5 split doubled the free sending limit.
+const SHARED_DAILY_LIMIT: Record<string, string[]> = {
+  "email-send": ["email-send", "send-email"],
+  "send-email": ["email-send", "send-email"],
+};
+
+/**
+ * Sending from our domain needs an account with a verified email (credit
+ * callers). Unverified signups are free and unlimited in number, so they could
+ * otherwise send phishing as no-reply@archtools.dev. Runs before any charge.
+ */
+async function requireVerifiedSender(req: AuthedRequest, res: Response): Promise<boolean> {
+  const agent = req.agent;
+  if (!agent) { res.status(401).json({ ok: false, error: "unauthorized", request_id: reqId() }); return false; }
+  const row = await prisma.agent.findUnique({ where: { id: agent.id }, select: { emailVerified: true } }).catch(() => null);
+  if (row?.emailVerified) return true;
+  res.status(403).json({ ok: false, error: "email_not_verified", message: "Verify your account email before sending email through Arch Tools (use the link we sent at signup, or POST /v1/agent/verify-email/resend).", request_id: reqId() });
+  return false;
 }
 
 const SIDE_EFFECT_DAILY_LIMITS: Record<string, { free: number; pro: number; starter: number; business: number }> = {
@@ -313,7 +340,7 @@ async function enforceDailyToolLimit(req: AuthedRequest, res: Response, toolName
     count = await prisma.apiRequest.count({
       where: {
         agentId: agent.id,
-        toolName,
+        toolName: { in: SHARED_DAILY_LIMIT[toolName] ?? [toolName] },
         createdAt: { gte: since },
         status: "SUCCESS",
       },
@@ -2467,6 +2494,7 @@ router.post("/transcribe-audio", ...toolMiddleware("transcribe-audio"), async (r
 router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
+    if (!(await requireVerifiedSender(req, res))) return;
     const withinLimit = await enforceDailyToolLimit(req, res, "email-send");
     if (!withinLimit) return;
     const ok = await deductCredits(req, res, "email-send", 3);
@@ -2516,6 +2544,7 @@ router.post("/email-send", ...toolMiddleware("email-send"), async (req: AuthedRe
 router.post("/send-email", ...toolMiddleware("send-email"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
   if (!paid) {
+    if (!(await requireVerifiedSender(req, res))) return;
     const withinLimit = await enforceDailyToolLimit(req, res, "send-email");
     if (!withinLimit) return;
     const ok = await deductCredits(req, res, "send-email", 3);
@@ -2814,21 +2843,23 @@ router.post("/news-search", ...toolMiddleware("news-search"), async (req: Authed
 // ─── 52. RESEARCH-REPORT ─────────────────────────────────────────────────────
 router.post("/research-report", ...toolMiddleware("research-report"), async (req: AuthedRequest, res: Response): Promise<void> => {
   const paid = isX402Paid(req);
-  // Report exactly what was deducted (0 for x402-paid, BYOK-discounted otherwise) —
-  // the flat 15 this used to advertise predates the 2026-07-27 pricing audit (40 base).
-  const researchReportCost = paid ? 0 : byokAdjustedCost(req, 40, ["x-brave-key", "x-tavily-key", "x-anthropic-key"]);
+  // BYOK: user-provided keys for the two paid steps (search, then synthesis).
+  const byokBraveKeyRR = req.headers["x-brave-key"] as string | undefined;
+  const byokTavilyKeyRR = req.headers["x-tavily-key"] as string | undefined;
+  const byokAnthropicKeyRR = req.headers["x-anthropic-key"] as string | undefined;
+  // The 80% BYOK discount applies only when the caller's keys do ALL the paid
+  // work (a search key AND an Anthropic key), with no fallback to ours. Any one
+  // junk header used to unlock it while our own Tavily key did the work.
+  const rrFullByok = !!(byokTavilyKeyRR || byokBraveKeyRR) && !!byokAnthropicKeyRR;
+  // Report exactly what was deducted (0 for x402-paid, BYOK-discounted otherwise).
+  const researchReportCost = paid ? 0 : rrFullByok ? Math.max(1, Math.ceil(40 * 0.2)) : 40;
   if (!paid) { const ok = await deductCredits(req, res, "research-report", researchReportCost); if (!ok) return; }
   const query = String(req.body.query ?? req.body.topic ?? req.query.query ?? req.query.topic ?? "").trim();
   const depth = String(req.body.depth ?? req.query.depth ?? "standard").toLowerCase();
   if (!query) return void res.status(400).json({ ok: false, error: "missing_param", message: "query is required" });
 
-  // BYOK: check for user-provided search keys
-  const byokBraveKeyRR = req.headers["x-brave-key"] as string | undefined;
-  const byokTavilyKeyRR = req.headers["x-tavily-key"] as string | undefined;
-  const byokAnthropicKeyRR = req.headers["x-anthropic-key"] as string | undefined;
-
-  const braveKey = byokBraveKeyRR || process.env.BRAVE_SEARCH_API_KEY;
-  const tavilyKey = byokTavilyKeyRR || process.env.TAVILY_API_KEY;
+  const braveKey = byokBraveKeyRR || (rrFullByok ? undefined : process.env.BRAVE_SEARCH_API_KEY);
+  const tavilyKey = byokTavilyKeyRR || (rrFullByok ? undefined : process.env.TAVILY_API_KEY);
   const anthropicKey = byokAnthropicKeyRR || process.env.ANTHROPIC_API_KEY;
   const numResults = depth === "deep" ? 10 : 5;
   const rrHasByok = !!(byokBraveKeyRR || byokTavilyKeyRR || byokAnthropicKeyRR);
@@ -2866,6 +2897,9 @@ router.post("/research-report", ...toolMiddleware("research-report"), async (req
   }
 
   if (searchResults.length === 0) {
+    if (rrFullByok) {
+      return void res.status(400).json({ ok: false, error: "byok_api_error", message: "Your search key (x-tavily-key / x-brave-key) returned no results. Check the key, or omit the BYOK headers to use ours at the standard price.", request_id: reqId() });
+    }
     return void res.status(503).json({ ok: false, error: "search_failed", message: "No search results available", request_id: reqId() });
   }
 

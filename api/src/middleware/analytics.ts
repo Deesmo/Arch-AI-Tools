@@ -52,7 +52,7 @@ function securityAnomalyCheck(
   chargeWaived: boolean,
 ): void {
   try {
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+    const ip = req.ip ?? "unknown";
 
     // (a) Burst of auth failures from one IP
     if (statusCode === 401) {

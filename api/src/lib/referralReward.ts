@@ -27,6 +27,14 @@
  *                         schema migration needed). Re-checked inside the
  *                         reward transaction under the referrer's row lock so
  *                         concurrent applies cannot race past the cap.
+ *   - same_domain         referrer and referred on the same private email
+ *                         domain (not a public mailbox provider). One catch-all
+ *                         domain otherwise yields unlimited "verified" people.
+ *   - referral_domain_cap at most REFERRAL_DOMAIN_CAP rewarded referrals per
+ *                         referrer from any one private domain.
+ *   - referral_lifetime_cap at most REFERRAL_LIFETIME_CAP rewarded referrals
+ *                         per referrer, ever (the daily cap alone allowed 3,650
+ *                         a year from one referrer).
  */
 import { prisma } from "./prisma.js";
 import { normalizeEmailIdentity } from "./verification.js";
@@ -37,12 +45,33 @@ export const REFERRAL_DAILY_CAP = Math.max(
   parseInt(process.env.REFERRAL_DAILY_CAP ?? "10", 10) || 10
 );
 
+export const REFERRAL_DOMAIN_CAP = Math.max(1, parseInt(process.env.REFERRAL_DOMAIN_CAP ?? "3", 10) || 3);
+export const REFERRAL_LIFETIME_CAP = Math.max(1, parseInt(process.env.REFERRAL_LIFETIME_CAP ?? "50", 10) || 50);
+
+// Mailbox providers where one domain holds millions of unrelated people, so a
+// shared domain says nothing about who owns the accounts.
+const PUBLIC_MAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com", "msn.com",
+  "yahoo.com", "ymail.com", "icloud.com", "me.com", "mac.com", "aol.com",
+  "proton.me", "protonmail.com", "pm.me", "gmx.com", "gmx.net", "mail.com",
+  "zoho.com", "yandex.com", "yandex.ru", "fastmail.com", "hey.com", "qq.com", "163.com",
+]);
+
+/** The email's domain when it is a private (non-public-provider) domain, else null. */
+export function privateEmailDomain(email: string | null | undefined): string | null {
+  const d = (email ?? "").toLowerCase().trim().split("@")[1];
+  return d && !PUBLIC_MAIL_DOMAINS.has(d) ? d : null;
+}
+
 export type ApplyReferralError =
   | "invalid_code"
   | "self_referral"
   | "email_not_verified"
   | "already_referred"
-  | "referral_daily_cap";
+  | "referral_daily_cap"
+  | "same_domain"
+  | "referral_domain_cap"
+  | "referral_lifetime_cap";
 
 export type ApplyReferralResult =
   | { ok: true; reward: number; referrerId: string }
@@ -91,6 +120,26 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
     normalizeEmailIdentity(referred.email) === normalizeEmailIdentity(referrer.email)
   ) {
     return { ok: false, status: 400, error: "self_referral", message: "The referrer and referred accounts must belong to different people." };
+  }
+
+  const referredDomain = privateEmailDomain(referred.email);
+  if (referredDomain && referredDomain === privateEmailDomain(referrer?.email)) {
+    return { ok: false, status: 400, error: "same_domain", message: "Referral bonuses are for people outside your own email domain." };
+  }
+
+  const rewarded = await prisma.referral.findMany({
+    where: { referrerId: referral.referrerId, status: "completed" },
+    select: { referredId: true },
+  });
+  if (rewarded.length >= REFERRAL_LIFETIME_CAP) {
+    return { ok: false, status: 429, error: "referral_lifetime_cap", message: "This referral code has reached its lifetime reward limit." };
+  }
+  if (referredDomain && rewarded.length) {
+    const ids = rewarded.map((r) => r.referredId).filter((id): id is string => !!id);
+    const others = await prisma.agent.findMany({ where: { id: { in: ids } }, select: { email: true } });
+    if (others.filter((o) => privateEmailDomain(o.email) === referredDomain).length >= REFERRAL_DOMAIN_CAP) {
+      return { ok: false, status: 429, error: "referral_domain_cap", message: "This referral code has reached its limit for your email domain." };
+    }
   }
 
   const alreadyReferred = await prisma.referral.findFirst({

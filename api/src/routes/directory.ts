@@ -12,6 +12,7 @@
  *   GET  /api/v1/x402/directory/:id      — Single service detail
  */
 
+import rateLimit from "express-rate-limit";
 import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
@@ -346,8 +347,24 @@ router.get("/sitemap", async (_req: Request, res: Response) => {
 });
 
 // ─── POST /api/v1/x402/directory/submit — Submit a new service ───────────────
-router.post("/submit", async (req: Request, res: Response): Promise<void> => {
-  const { name, url, description, contact_email, endpoints } = req.body;
+// Public form: 5 per hour per visitor, bounded fields, and a cap on the pending
+// queue (it lives in one row that every directory request reads).
+const MAX_PENDING_SUBMISSIONS = 200;
+const directorySubmitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many submissions. Try again in an hour." },
+});
+
+router.post("/submit", directorySubmitLimiter, async (req: Request, res: Response): Promise<void> => {
+  const { name, url, description, contact_email, endpoints } = req.body ?? {};
+  if ([name, url, description, contact_email].some((v) => typeof v === "string" && v.length > 2000)) {
+    res.status(400).json({ ok: false, error: "validation_error", message: "Fields are limited to 2,000 characters" });
+    return;
+  }
 
   // Validate required fields
   if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -368,6 +385,10 @@ router.post("/submit", async (req: Request, res: Response): Promise<void> => {
   }
 
   const data = await loadDirectory();
+  if (data.pending_submissions.filter((p) => p.status === "pending").length >= MAX_PENDING_SUBMISSIONS) {
+    res.status(503).json({ ok: false, error: "queue_full", message: "The review queue is full right now. Please email support@archtools.dev." });
+    return;
+  }
 
   // Check for duplicate URL
   const existing = data.services.find(s => s.base_url === url || s.website_url === url);
@@ -389,7 +410,7 @@ router.post("/submit", async (req: Request, res: Response): Promise<void> => {
     url: url.trim(),
     description: description.trim(),
     contact_email: contact_email.trim().toLowerCase(),
-    endpoints: Array.isArray(endpoints) ? endpoints.filter((e: unknown) => typeof e === "string") : undefined,
+    endpoints: Array.isArray(endpoints) ? endpoints.filter((e: unknown): e is string => typeof e === "string").slice(0, 50).map((e: string) => e.slice(0, 300)) : undefined,
     submitted_at: new Date().toISOString(),
     status: "pending",
   };
