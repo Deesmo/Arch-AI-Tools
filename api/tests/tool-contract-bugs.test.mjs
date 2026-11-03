@@ -19,6 +19,8 @@ assert.ok(!route("barcode-generate").includes("Simple encoding: alternate bars")
 assert.ok(route("crypto-sentiment").includes("const id = normalizeCoinId(symbol);"), "crypto-sentiment maps tickers");
 assert.ok(route("ai-generate").includes("const requestedTokens = Math.min(4096,"), "ai-generate charges up to the served 4096");
 assert.ok(route("design-create").includes("img.b64_json ? `data:image/png;base64,${img.b64_json}`"), "design-create reads b64_json");
+assert.ok(!/model: "gpt-image-1"/.test(tools), "gpt-image-1 is retired for generation; use OPENAI_IMAGE_MODEL");
+assert.ok(tools.includes('const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";'));
 
 const { toSVG } = await import("bwip-js");
 assert.match(toSVG({ bcid: "code128", text: "ARCH-1", scale: 3, height: 12 }), /^<svg viewBox="0 0 \d+ \d+"/, "bwip-js SVG has a viewBox and no fixed size (the handler sets it)");

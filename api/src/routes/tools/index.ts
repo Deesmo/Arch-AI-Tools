@@ -142,6 +142,13 @@ function requireExecuteScope(req: AuthedRequest, res: Response, next: NextFuncti
  * for our platform keys it can carry quota/billing/project details, so it is
  * logged server-side and the caller gets a generic message.
  */
+// OpenAI image model for design-create / generate-image. gpt-image-1 was retired
+// for generation (API: "The model 'gpt-image-1' does not exist", 2026-11-03)
+// though it still lists in /v1/models; gpt-image-2 takes the same size/quality
+// values at similar prices (low ≈ $0.006, medium ≈ $0.053, high ≈ $0.21 @1024²).
+// A setting, so the next retirement is an env change, not a deploy.
+const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
+
 function upstreamFailure(res: Response, provider: string, status: number, detail: string | undefined, byok: boolean): void {
   const callerFault = byok && status >= 400 && status < 500;
   if (!byok) console.error(`[ai-generate] ${provider} failed:`, status, detail ?? "(no text)");
@@ -2639,7 +2646,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
     const r = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-image-1", prompt, size: safeSize, quality: safeQuality, n: Math.min(n, 1) })
+      body: JSON.stringify({ model: OPENAI_IMAGE_MODEL, prompt, size: safeSize, quality: safeQuality, n: Math.min(n, 1) })
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({})) as { error?: { message?: string } };
@@ -2649,7 +2656,7 @@ router.post("/design-create", ...toolMiddleware("design-create"), async (req: Au
       if (fallback) { res.json({ ok: true, images: [{ url: fallback, revised_prompt: null }], count: 1, size: "1024x1024", quality: safeQuality, source: "stability", request_id: reqId() }); return; }
       res.status(503).json({ ok: false, error: "generation_error", message: `Image generation is temporarily unavailable (provider returned ${r.status}). Please retry later.`, request_id: reqId() }); return;
     }
-    // gpt-image-1 always returns base64 (b64_json), never a url (OpenAI API
+    // GPT image models always return base64 (b64_json), never a url (OpenAI API
     // reference); reading only .url returned images with no picture.
     const data = await r.json() as { data?: { url?: string; b64_json?: string; revised_prompt?: string }[] };
     const images = (data.data ?? [])
@@ -2736,7 +2743,7 @@ router.post("/generate-image", ...toolMiddleware("design-create"), async (req: A
   if (!paid) { const ok = await deductCredits(req, res, "design-create", designCredits); if (!ok) return; }
   try {
     const r = await axios.post("https://api.openai.com/v1/images/generations",
-      { model: "gpt-image-1", prompt, n: 1, size: safeSize, quality: safeQuality },
+      { model: OPENAI_IMAGE_MODEL, prompt, n: 1, size: safeSize, quality: safeQuality },
       { headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" }, timeout: 60000 }
     );
     const img = (r.data as { data: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }).data[0];
