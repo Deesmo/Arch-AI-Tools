@@ -65,6 +65,35 @@ try {
   console.error("[startup] social-post cleanup skipped:", err.message);
 }
 
+// Paid x402 calls are logged to ApiRequest under agentId "x402_anonymous"
+// (middleware/x402.ts), but ApiRequest.agentId is a foreign key to Agent and no
+// such row existed, so every one of those inserts failed silently — paid calls
+// were missing from usage stats. Ensure the system row exists. It has no key,
+// no password and an .invalid address, so it can't sign in or receive mail, and
+// it is unverified + hidden, so credit refreshes and the leaderboard skip it.
+try {
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  const r = await prisma.agent.upsert({
+    where: { id: "x402_anonymous" },
+    update: {},
+    create: {
+      id: "x402_anonymous",
+      email: "x402-anonymous@system.archtools.invalid",
+      name: "x402 paid calls (no account)",
+      credits: 0,
+      emailVerified: false,
+      isPublic: false,
+      emailOptOut: true,
+    },
+    select: { createdAt: true },
+  });
+  if (Date.now() - r.createdAt.getTime() < 60_000) console.log("[startup] Created system agent 'x402_anonymous' for paid-call logging.");
+  await prisma.$disconnect();
+} catch (err) {
+  console.error("[startup] x402_anonymous system agent skipped:", err.message);
+}
+
 // Catalog truth (2026-11-02 audit): the DB catalog — served by GET /v1/tools and
 // the MCP tools/list — promised features two tools do not have (Playwright
 // click/type; a rendered screenshot), and listed generate-image at 30 credits
