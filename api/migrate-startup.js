@@ -40,7 +40,15 @@ try {
   execSync("npx prisma migrate deploy", { stdio: "inherit", timeout: 30000 });
   console.log("[startup] Migrations complete.");
 } catch (err) {
-  console.error("[startup] Migration failed — starting server anyway:", err.message);
+  // Fail loud: a server on a half-migrated schema serves 500s. Exiting makes
+  // Render keep the previous (healthy) instance and mark the deploy failed.
+  // Emergency override: ALLOW_START_ON_MIGRATION_FAILURE=1.
+  if (process.env.ALLOW_START_ON_MIGRATION_FAILURE === "1") {
+    console.error("[startup] Migration failed — starting anyway (ALLOW_START_ON_MIGRATION_FAILURE=1):", err.message);
+  } else {
+    console.error("[startup] Migration failed — refusing to start:", err.message);
+    process.exit(1);
+  }
 }
 
 // One-time cleanup (2026-07-26): the social-post tool was removed (owner decision —
