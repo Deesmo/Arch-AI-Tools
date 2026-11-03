@@ -288,7 +288,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     });
 
     document.getElementById("key-rotate").addEventListener("click", async function() {
-      if (!confirm("Make a new API key? Your current key stops working right away, so update any app or agent that uses it.")) return;
+      if (!confirm("Make a new API key? Your current key stops working right away and connected apps (like a Claude or ChatGPT connector) are signed out, so update anything that uses it.")) return;
       var btn = this;
       var note = document.getElementById("key-note");
       btn.disabled = true;

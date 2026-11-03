@@ -210,7 +210,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       is_public?: boolean;
     };
 
-    const email = rawEmail?.toLowerCase().trim();
+    const email = typeof rawEmail === "string" ? rawEmail.toLowerCase().trim() : "";
     if (!email) {
       res.status(400).json({
         ok: false,

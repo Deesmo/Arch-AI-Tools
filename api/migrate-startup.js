@@ -40,7 +40,15 @@ try {
   execSync("npx prisma migrate deploy", { stdio: "inherit", timeout: 30000 });
   console.log("[startup] Migrations complete.");
 } catch (err) {
-  console.error("[startup] Migration failed — starting server anyway:", err.message);
+  // Fail loud: a server on a half-migrated schema serves 500s. Exiting makes
+  // Render keep the previous (healthy) instance and mark the deploy failed.
+  // Emergency override: ALLOW_START_ON_MIGRATION_FAILURE=1.
+  if (process.env.ALLOW_START_ON_MIGRATION_FAILURE === "1") {
+    console.error("[startup] Migration failed — starting anyway (ALLOW_START_ON_MIGRATION_FAILURE=1):", err.message);
+  } else {
+    console.error("[startup] Migration failed — refusing to start:", err.message);
+    process.exit(1);
+  }
 }
 
 // One-time cleanup (2026-07-26): the social-post tool was removed (owner decision —
@@ -55,6 +63,35 @@ try {
   await prisma.$disconnect();
 } catch (err) {
   console.error("[startup] social-post cleanup skipped:", err.message);
+}
+
+// Paid x402 calls are logged to ApiRequest under agentId "x402_anonymous"
+// (middleware/x402.ts), but ApiRequest.agentId is a foreign key to Agent and no
+// such row existed, so every one of those inserts failed silently — paid calls
+// were missing from usage stats. Ensure the system row exists. It has no key,
+// no password and an .invalid address, so it can't sign in or receive mail, and
+// it is unverified + hidden, so credit refreshes and the leaderboard skip it.
+try {
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  const r = await prisma.agent.upsert({
+    where: { id: "x402_anonymous" },
+    update: {},
+    create: {
+      id: "x402_anonymous",
+      email: "x402-anonymous@system.archtools.invalid",
+      name: "x402 paid calls (no account)",
+      credits: 0,
+      emailVerified: false,
+      isPublic: false,
+      emailOptOut: true,
+    },
+    select: { createdAt: true },
+  });
+  if (Date.now() - r.createdAt.getTime() < 60_000) console.log("[startup] Created system agent 'x402_anonymous' for paid-call logging.");
+  await prisma.$disconnect();
+} catch (err) {
+  console.error("[startup] x402_anonymous system agent skipped:", err.message);
 }
 
 // Catalog truth (2026-11-02 audit): the DB catalog — served by GET /v1/tools and

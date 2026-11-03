@@ -8,6 +8,8 @@ const OAUTH_ACCESS_TOKEN_TTL_SECONDS = Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 10
 import crypto, { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 import { buildOAuthAuthorizeNext } from "../utils/oauthNext.js";
+import { verifySession } from "../lib/session.js";
+import { isSameOrigin } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -24,9 +26,53 @@ export function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#x27;");
 }
 
+// Anyone can register a client and name it anything ("Claude"), so the page
+// must show where the code is really going. Known app callback hosts get a
+// plain label; everything else gets an "unverified app" warning.
+const KNOWN_REDIRECT_HOSTS = new Set(["claude.ai", "claude.com", "chatgpt.com", "chat.openai.com", "localhost", "127.0.0.1", "[::1]"]);
+
+/** Only https anywhere, or http on loopback. Blocks javascript:/data: and look-alike schemes. */
+export function isAllowedRedirectUri(uri: string): boolean {
+  try {
+    const u = new URL(uri);
+    if (u.protocol === "https:") return true;
+    return u.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function redirectHost(uri: string): string {
+  try { return new URL(uri).host; } catch { return ""; }
+}
+
+/** The signed-in browser's agent, for one-click consent. Writes need our own Origin. */
+async function sessionAgentFor(req: Request, write: boolean) {
+  const token = req.cookies?.arch_session;
+  if (!token || (write && !isSameOrigin(req))) return null;
+  const payload = verifySession(token);
+  return payload ? prisma.agent.findUnique({ where: { id: payload.sub } }).catch(() => null) : null;
+}
+
 // Exported for tests (tests/oauth-signup-cta.test.mjs renders it directly).
-export const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, codeChallenge: string, codeChallengeMethod: string, error?: string) => {
+export const CONSENT_PAGE = (clientName: string, scope: string, clientId: string, redirectUri: string, state: string, codeChallenge: string, codeChallengeMethod: string, error?: string, signedInEmail?: string) => {
 const safeClient = esc(clientName), safeScope = esc(scope), safeClientId = esc(clientId), safeRedirect = esc(redirectUri), safeState = esc(state);
+const host = redirectHost(redirectUri);
+const hostName = host.replace(/:\d+$/, "");
+const knownHost = KNOWN_REDIRECT_HOSTS.has(hostName) || [...KNOWN_REDIRECT_HOSTS].some((h) => hostName.endsWith(`.${h}`));
+const safeHost = esc(host);
+// Cancel is a link, not a form: our CSP (form-action 'self') blocks a form
+// posting to another site, and the URI is already restricted to http(s).
+const cancelHref = (() => {
+  try {
+    if (!isAllowedRedirectUri(redirectUri)) return "/";
+    const u = new URL(redirectUri);
+    u.searchParams.set("error", "access_denied");
+    if (state) u.searchParams.set("state", state);
+    return esc(u.toString());
+  } catch { return "/"; }
+})();
+const loginHref = esc(`/login?next=${encodeURIComponent(buildOAuthAuthorizeNext({ clientId, redirectUri, scope, state, codeChallenge, codeChallengeMethod }))}`);
 const safeCodeChallenge = esc(codeChallenge), safeCodeChallengeMethod = esc(codeChallengeMethod);
 const safeError = error != null ? esc(error) : "";
 // New-user path: round-trip the FULL authorize request through /signup?next=…
@@ -81,6 +127,11 @@ return `<!DOCTYPE html>
     </div>
     <h1>Connect your account</h1>
     <p class="subtitle">${safeClient} is requesting access to your Arch Tools account.</p>
+    <div class="scope-box" style="${knownHost ? "" : "border-color:rgba(251,191,36,0.45);"}">
+      <div class="scope-title">After you approve, you go to</div>
+      <div class="scope-item" style="font-family:monospace;word-break:break-all;">${safeHost || "an unknown address"}</div>
+      ${knownHost ? "" : '<div style="font-size:12px;color:#fbbf24;margin-top:8px;">Arch Tools has not verified this app. Only continue if you started this connection yourself and you recognise this address.</div>'}
+    </div>
     <div class="scope-box">
       <div class="scope-title">Permissions requested</div>
       ${safeScope.includes("tools:read") ? '<div class="scope-item"><span class="scope-dot"></span>View available tools and your usage</div>' : ""}
@@ -94,17 +145,17 @@ return `<!DOCTYPE html>
       <input type="hidden" name="state" value="${safeState}">
       <input type="hidden" name="code_challenge" value="${safeCodeChallenge}">
       <input type="hidden" name="code_challenge_method" value="${safeCodeChallengeMethod}">
+      ${signedInEmail ? `
+      <input type="hidden" name="use_session" value="1">
+      <p class="subtitle" style="margin-bottom:16px;">Signed in as <strong>${esc(signedInEmail)}</strong></p>` : `
       <label for="email">Your Arch Tools email</label>
       <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
       <label for="apiKey">Your API key</label>
-      <input type="password" id="apiKey" name="apiKey" placeholder="at_..." required autocomplete="current-password">
+      <input type="password" id="apiKey" name="apiKey" placeholder="arch_..." required autocomplete="current-password">`}
       <button type="submit" class="btn-approve">Authorize → Connect to ${safeClient}</button>
     </form>
-    <form method="GET" action="${safeRedirect}">
-      <input type="hidden" name="error" value="access_denied">
-      <input type="hidden" name="state" value="${safeState}">
-      <button type="submit" class="btn-deny">Cancel</button>
-    </form>
+    <a href="${cancelHref}" class="btn-deny" style="display:block;text-align:center;text-decoration:none;">Cancel</a>
+    ${signedInEmail ? "" : `<p class="footer-note">Have a password? <a href="${loginHref}">Sign in instead</a> and come back here.</p>`}
     <div class="signup-cta">
       New here? <a href="${signupCtaHref}">Create a free account — 25 instant credits</a>
       <p class="signup-cta-note">After signup you&#39;ll return here to finish connecting ${safeClient}.</p>
@@ -140,12 +191,15 @@ router.get("/authorize", async (req: Request, res: Response): Promise<void> => {
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
   if (!client) { res.status(400).json({ ok: false, error: "invalid_client", message: "Unknown client_id" }); return; }
-  if (!client.redirectUris.includes(redirect_uri)) {
+  // Registered AND http(s)-only: clients stored before the scheme check (or via
+  // another insert path) must not receive a code on javascript:/data: URIs.
+  if (!client.redirectUris.includes(redirect_uri) || !isAllowedRedirectUri(redirect_uri)) {
     res.status(400).json({ ok: false, error: "invalid_redirect_uri", message: "redirect_uri not registered for this client" });
     return;
   }
 
-  res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method));
+  const signedIn = await sessionAgentFor(req, false);
+  res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method, undefined, signedIn?.email));
 });
 
 // ─── POST /oauth/authorize (consent form submit) ──────────────────────────────
@@ -162,17 +216,25 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
   } = req.body as Record<string, string>;
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
-  if (!client || !client.redirectUris.includes(redirect_uri)) {
+  if (!client || !client.redirectUris.includes(redirect_uri) || !isAllowedRedirectUri(redirect_uri)) {
     res.status(400).json({ ok: false, error: "invalid_client" });
     return;
   }
 
-  // Verify agent credentials — plaintext keys are no longer stored, bcrypt only.
-  const normalizedEmail = String(email ?? "").toLowerCase().trim();
-  const agent = await prisma.agent.findUnique({ where: { email: normalizedEmail } }).catch(() => null);
-  const validAgent = agent?.apiKeyHash
-    ? await bcrypt.compare(apiKey, agent.apiKeyHash).catch(() => false)
-    : false;
+  // Signed-in browser: one-click consent from our own page. Otherwise verify the
+  // pasted credentials — plaintext keys are no longer stored, bcrypt only.
+  let agent;
+  let validAgent = false;
+  if (req.body?.use_session === "1") {
+    agent = await sessionAgentFor(req, true);
+    validAgent = !!agent;
+  } else {
+    const normalizedEmail = String(email ?? "").toLowerCase().trim();
+    agent = await prisma.agent.findUnique({ where: { email: normalizedEmail } }).catch(() => null);
+    validAgent = agent?.apiKeyHash && typeof apiKey === "string"
+      ? await bcrypt.compare(apiKey, agent.apiKeyHash).catch(() => false)
+      : false;
+  }
   if (!agent || !validAgent) {
     res.type("text/html").send(CONSENT_PAGE(client.name, scope, client_id, redirect_uri, state, code_challenge, code_challenge_method, "Invalid email or API key. Check your credentials at archtools.dev."));
     return;
@@ -227,7 +289,7 @@ router.post("/token", async (req: Request, res: Response): Promise<void> => {
 
   if (!isPublicClient) {
     // Confidential client — require and validate client_secret
-    if (!client_secret || !client.clientSecret) {
+    if (typeof client_secret !== "string" || !client_secret || !client.clientSecret) {
       res.status(401).json({ error: "invalid_client", error_description: "client_secret required for confidential clients" }); return;
     }
     const secretBuf = Buffer.from(client.clientSecret);
@@ -339,7 +401,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
   };
 
   // Validate required fields
-  if (!client_name || !redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
+  if (typeof client_name !== "string" || !client_name.trim() || client_name.length > 100 || !Array.isArray(redirect_uris) || redirect_uris.length === 0 || redirect_uris.length > 10 || redirect_uris.some((u) => typeof u !== "string")) {
     res.status(400).json({ error: "invalid_client_metadata", error_description: "client_name and redirect_uris are required" });
     return;
   }
@@ -353,8 +415,10 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ error: "invalid_redirect_uri", error_description: `Invalid URI: ${uri}` });
       return;
     }
-    if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
-      res.status(400).json({ error: "invalid_redirect_uri", error_description: "redirect_uris must use https (or localhost for development)" });
+    // https anywhere, or http on loopback only. The old check looked at the
+    // hostname alone, so javascript://localhost/… passed.
+    if (!isAllowedRedirectUri(parsed.toString())) {
+      res.status(400).json({ error: "invalid_redirect_uri", error_description: "redirect_uris must use https (or http on localhost for development)" });
       return;
     }
   }

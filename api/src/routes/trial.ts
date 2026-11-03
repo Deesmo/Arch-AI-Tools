@@ -31,7 +31,7 @@ const TRIAL_CREDITS = parseInt(process.env.TRIAL_CREDITS ?? "", 10) || SIGNUP_FR
 // Requires only an email. Returns API key + trial info.
 router.post("/activate", async (req: Request, res: Response): Promise<void> => {
   const { email: rawEmail, name } = req.body ?? {};
-  const email = rawEmail?.toLowerCase().trim();
+  const email = typeof rawEmail === "string" ? rawEmail.toLowerCase().trim() : "";
 
   if (!email || typeof email !== "string") {
     res.status(400).json({

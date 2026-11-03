@@ -59,7 +59,7 @@ async function cancelStripeSubscriptionsForDeletedAgent(agentId: string, email: 
 // POST /v1/agent/register
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
   const { name, email: rawEmail, password } = req.body as { name?: string; email?: string; password?: string };
-  const email = rawEmail?.toLowerCase().trim();
+  const email = typeof rawEmail === "string" ? rawEmail.toLowerCase().trim() : "";
   if (!email) {
     res.status(400).json({ ok: false, error: "invalid_request", message: "email is required", request_id: reqId() });
     return;
@@ -462,14 +462,19 @@ router.post("/keys/rotate", requireAuth, requireApiKeyAuth, async (req: AuthedRe
     const newHash = await bcrypt.default.hash(newKey, 10);
 
     // Only prefix + hash are persisted — the raw key is returned ONCE below.
-    await prisma.agent.update({
-      where: { id: agent.id },
-      data: { apiKeyPrefix: newPrefix, apiKeyHash: newHash },
-    });
+    // A new key means the old one may have leaked, so app connections (OAuth
+    // access + refresh tokens) granted until now are revoked with it.
+    await prisma.$transaction([
+      prisma.agent.update({
+        where: { id: agent.id },
+        data: { apiKeyPrefix: newPrefix, apiKeyHash: newHash },
+      }),
+      prisma.oAuthToken.deleteMany({ where: { agentId: agent.id } }),
+    ]);
 
     res.json({
       ok: true,
-      message: "API key rotated successfully. Save this key — it won't be shown again.",
+      message: "API key rotated successfully. Save this key — it won't be shown again. Connected apps (OAuth) were signed out and need to reconnect.",
       api_key: newKey,
       prefix: newPrefix,
       request_id: reqId(),

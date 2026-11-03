@@ -4,14 +4,15 @@
  * Verifies applyReferralCode against the built dist with a stubbed prisma
  * layer: case-insensitive code lookup, every abuse guard (self-referral by id
  * and by normalized email identity, unverified email, one-bonus-per-account,
- * per-referrer daily cap, P2002 race), and the atomic both-sides credit grant.
+ * per-referrer daily cap, P2002 race, same private domain, per-domain and
+ * lifetime caps), and the atomic both-sides credit grant.
  *
  * Run: node api/tests/referral-reward.test.mjs   (after npm run build)
  */
 process.env.DATABASE_URL ??= "postgresql://stub:stub@127.0.0.1:5432/stub";
 
 const { prisma } = await import("../dist/lib/prisma.js");
-const { applyReferralCode, REFERRAL_REWARD, REFERRAL_DAILY_CAP } = await import("../dist/lib/referralReward.js");
+const { applyReferralCode, REFERRAL_REWARD, REFERRAL_DAILY_CAP, REFERRAL_DOMAIN_CAP, REFERRAL_LIFETIME_CAP } = await import("../dist/lib/referralReward.js");
 
 let passed = 0;
 let failed = 0;
@@ -26,7 +27,8 @@ function assert(cond, msg) {
 // agents           → id → row returned by agent.findUnique
 // completedCount   → returned by referral.count (daily-cap check)
 // createThrows     → make referral.create reject (P2002 race simulation)
-let codeRow, alreadyRow, agents, completedCount, createThrows;
+// rewardedIds      → referral.findMany (all of the referrer's rewarded referrals)
+let codeRow, alreadyRow, agents, completedCount, createThrows, rewardedIds;
 let capturedCodeWhere, createdRows, agentUpdates;
 
 function reset() {
@@ -34,10 +36,12 @@ function reset() {
   alreadyRow = null;
   agents = {
     "referrer-1": { email: "alice@example.com" },
-    "referred-9": { emailVerified: true, email: "bob@example.com" },
+    // Different private domains: one shared private domain is the same_domain guard (case 11).
+    "referred-9": { emailVerified: true, email: "bob@example.org" },
   };
   completedCount = 0;
   createThrows = null;
+  rewardedIds = [];
   capturedCodeWhere = null;
   createdRows = [];
   agentUpdates = [];
@@ -55,7 +59,9 @@ prisma.referral.create = async (args) => {
   createdRows.push(args.data);
   return args.data;
 };
+prisma.referral.findMany = async () => rewardedIds.map((referredId) => ({ referredId }));
 prisma.agent.findUnique = async (args) => agents[args.where.id] ?? null;
+prisma.agent.findMany = async (args) => (args?.where?.id?.in ?? []).map((id) => agents[id]).filter(Boolean);
 prisma.agent.update = async (args) => { agentUpdates.push(args); return {}; };
 prisma.$transaction = async (arg) => (typeof arg === "function" ? arg(prisma) : Promise.all(arg));
 
@@ -145,6 +151,48 @@ createThrows = new Error("connection lost");
 let threw = false;
 try { await applyReferralCode("referred-9", "ARCH-a1b2c3d4"); } catch { threw = true; }
 assert(threw, "unexpected transaction errors propagate (no silent success)");
+
+// Case 11: same private domain (catch-all farm) → same_domain
+reset();
+agents["referrer-1"] = { email: "boss@farm.example" };
+agents["referred-9"] = { emailVerified: true, email: "worker1@farm.example" };
+r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
+assert(r.ok === false && r.error === "same_domain", "referrer and referee on one private domain → same_domain");
+assert(agentUpdates.length === 0, "no credits on same_domain");
+
+// Case 12: public mailbox providers are never treated as one owner
+reset();
+agents["referrer-1"] = { email: "alice@gmail.com" };
+agents["referred-9"] = { emailVerified: true, email: "bob@gmail.com" };
+r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
+assert(r.ok === true, "two different gmail users still earn the referral");
+
+// Case 13: per-domain cap for one referrer
+reset();
+for (let i = 0; i < REFERRAL_DOMAIN_CAP; i++) { agents[`prev-${i}`] = { email: `p${i}@farm.example` }; rewardedIds.push(`prev-${i}`); }
+agents["referred-9"] = { emailVerified: true, email: "next@farm.example" };
+r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
+assert(r.ok === false && r.error === "referral_domain_cap" && r.status === 429, `referrer already rewarded ${REFERRAL_DOMAIN_CAP} times from one domain → referral_domain_cap`);
+
+// Case 14: lifetime cap
+reset();
+rewardedIds = Array.from({ length: REFERRAL_LIFETIME_CAP }, (_, i) => `old-${i}`);
+r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
+assert(r.ok === false && r.error === "referral_lifetime_cap", `referrer at ${REFERRAL_LIFETIME_CAP} lifetime rewards → referral_lifetime_cap`);
+assert(agentUpdates.length === 0, "no credits past the lifetime cap");
+
+// Case 15: race — the lock-free pre-check sees room, but by the time the
+// referrer row is locked another apply has filled the domain cap.
+reset();
+agents["referred-9"] = { emailVerified: true, email: "late@farm.example" };
+for (let i = 0; i < REFERRAL_DOMAIN_CAP; i++) agents[`won-${i}`] = { email: `w${i}@farm.example` };
+let findManyCalls = 0;
+const realFindMany = prisma.referral.findMany;
+prisma.referral.findMany = async () => (++findManyCalls === 1 ? [] : Array.from({ length: REFERRAL_DOMAIN_CAP }, (_, i) => ({ referredId: `won-${i}` })));
+r = await applyReferralCode("referred-9", "ARCH-a1b2c3d4");
+prisma.referral.findMany = realFindMany;
+assert(r.ok === false && r.error === "referral_domain_cap", "domain cap is re-checked under the referrer lock (concurrent applies can't race past it)");
+assert(createdRows.length === 0, "no completion row when the in-transaction cap check fails");
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

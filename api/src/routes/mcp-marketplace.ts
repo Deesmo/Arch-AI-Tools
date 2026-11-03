@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -162,14 +163,37 @@ router.get("/servers/search", (req: Request, res: Response): void => {
 });
 
 // ─── POST /api/v1/mcp/servers/submit — Submit a new MCP server ──────────────
-router.post("/servers/submit", (req: Request, res: Response): void => {
-  const { name, description, repository, packageName, category, capabilities, contactEmail } = req.body;
+// Anyone can submit, so bound everything: 5 per hour per visitor, short typed
+// fields, and at most MAX_PENDING queued (oldest dropped). The queue used to grow
+// without limit from 10 MB bodies until the process ran out of memory.
+const MAX_PENDING = 200;
+const submitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip ?? "unknown",
+  message: { ok: false, error: "rate_limited", message: "Too many submissions. Try again in an hour." },
+});
+const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
-  if (!name || !description || !repository || !contactEmail) {
+router.post("/servers/submit", submitLimiter, (req: Request, res: Response): void => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const name = str(body.name, 100);
+  const description = str(body.description, 2000);
+  const repository = str(body.repository, 300);
+  const packageName = str(body.packageName, 200);
+  const category = str(body.category, 50);
+  const contactEmail = str(body.contactEmail, 200);
+  const capabilities = Array.isArray(body.capabilities)
+    ? body.capabilities.filter((c): c is string => typeof c === "string").slice(0, 20).map((c) => c.slice(0, 50))
+    : [];
+
+  if (!name || !description || !/^https?:\/\//.test(repository) || !/^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/.test(contactEmail)) {
     res.status(400).json({
       ok: false,
       error: "missing_fields",
-      message: "Required: name, description, repository, contactEmail",
+      message: "Required: name, description, repository (http/https URL), contactEmail",
     });
     return;
   }
@@ -188,15 +212,17 @@ router.post("/servers/submit", (req: Request, res: Response): void => {
     name,
     description,
     repository,
-    package: packageName || "",
+    package: packageName,
     category,
-    capabilities: Array.isArray(capabilities) ? capabilities : [],
+    capabilities,
     contactEmail,
     submittedAt: new Date().toISOString(),
     status: "pending" as const,
   };
 
   submissions.push(submission);
+  if (submissions.length > MAX_PENDING) submissions.splice(0, submissions.length - MAX_PENDING);
+  console.log(`[mcp-marketplace] submission ${submission.id}: ${name} (${repository}) from ${contactEmail}`);
 
   res.status(201).json({
     ok: true,
