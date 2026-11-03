@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 import { DISCOVERY_LINKS } from "../utils/discoveryLinks.js";
+import { verifySession } from "../lib/session.js";
 
 export interface AuthedRequest extends Request {
   agent?: {
@@ -18,6 +19,43 @@ export interface AuthedRequest extends Request {
   };
 }
 
+interface SessionOptInRequest extends Request {
+  allowSessionAuth?: boolean;
+}
+
+/**
+ * Opt-in for the signed-in dashboard: lets the routes it is mounted on accept
+ * the arch_session cookie when no API key is sent. Keys are stored only as a
+ * hash, so after sign-in the browser never holds the full key. Mount it on the
+ * specific account routes the dashboard calls — never on tool routes.
+ */
+export function allowSessionAuth(req: Request, _res: Response, next: NextFunction): void {
+  (req as SessionOptInRequest).allowSessionAuth = true;
+  next();
+}
+
+/** The request's Origin is this site (blocks cross-site form posts riding the cookie). */
+export function isSameOrigin(req: Request): boolean {
+  const origin = req.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host === req.get("host");
+  } catch {
+    return false;
+  }
+}
+
+async function agentFromSession(req: Request) {
+  const token = (req as Request & { cookies?: Record<string, string> }).cookies?.arch_session;
+  if (!token) return null;
+  // Reads ride SameSite=lax (no cookie on cross-site fetches); anything that
+  // changes state must also come from our own pages.
+  if (req.method !== "GET" && req.method !== "HEAD" && !isSameOrigin(req)) return null;
+  const payload = verifySession(token);
+  if (!payload) return null;
+  return prisma.agent.findUnique({ where: { id: payload.sub } });
+}
+
 export async function requireAuth(
   req: AuthedRequest,
   res: Response,
@@ -31,8 +69,26 @@ export async function requireAuth(
 
   const authHeader = req.headers.authorization;
   const xApiKey = req.headers["x-api-key"] as string | undefined;
-  
+
   if (!authHeader?.startsWith("Bearer ") && !xApiKey) {
+    if ((req as SessionOptInRequest).allowSessionAuth) {
+      const sessionAgent = await agentFromSession(req).catch(() => null);
+      if (sessionAgent) {
+        // A signed-in browser has no API key (only its hash is stored), so
+        // apiKey stays empty; scope stays undefined = full account access.
+        req.agent = {
+          id: sessionAgent.id,
+          apiKey: "",
+          email: sessionAgent.email,
+          credits: sessionAgent.credits,
+          tier: sessionAgent.tier,
+          totalCalls: sessionAgent.totalCalls,
+        };
+        next();
+        return;
+      }
+    }
+
     res.status(401).json({
       ok: false,
       error: "unauthorized",
