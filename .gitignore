@@ -11,6 +11,8 @@ sdk/typescript/dist/
 
 # Local report written by api/scripts/x402-first-payment.cjs
 api/x402-first-payment-result.md
+# Local report written by api/scripts/x402-refresh-bazaar.cjs
+api/x402-bazaar-refresh-result.json
 
 # Build output — every Render service compiles it (npm run build)
 api/dist/
