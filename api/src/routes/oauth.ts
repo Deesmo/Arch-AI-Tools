@@ -191,7 +191,9 @@ router.get("/authorize", async (req: Request, res: Response): Promise<void> => {
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
   if (!client) { res.status(400).json({ ok: false, error: "invalid_client", message: "Unknown client_id" }); return; }
-  if (!client.redirectUris.includes(redirect_uri)) {
+  // Registered AND http(s)-only: clients stored before the scheme check (or via
+  // another insert path) must not receive a code on javascript:/data: URIs.
+  if (!client.redirectUris.includes(redirect_uri) || !isAllowedRedirectUri(redirect_uri)) {
     res.status(400).json({ ok: false, error: "invalid_redirect_uri", message: "redirect_uri not registered for this client" });
     return;
   }
@@ -214,7 +216,7 @@ router.post("/authorize", async (req: Request, res: Response): Promise<void> => 
   } = req.body as Record<string, string>;
 
   const client = await prisma.oAuthClient.findUnique({ where: { clientId: client_id } }).catch(() => null);
-  if (!client || !client.redirectUris.includes(redirect_uri)) {
+  if (!client || !client.redirectUris.includes(redirect_uri) || !isAllowedRedirectUri(redirect_uri)) {
     res.status(400).json({ ok: false, error: "invalid_client" });
     return;
   }

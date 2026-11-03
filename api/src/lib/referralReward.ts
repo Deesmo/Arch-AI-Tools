@@ -24,9 +24,7 @@
  *   - referral_daily_cap  at most REFERRAL_DAILY_CAP rewarded referrals per
  *                         referrer per rolling 24h. Counted from the existing
  *                         Referral table (persisted — survives restarts, no
- *                         schema migration needed). Re-checked inside the
- *                         reward transaction under the referrer's row lock so
- *                         concurrent applies cannot race past the cap.
+ *                         schema migration needed).
  *   - same_domain         referrer and referred on the same private email
  *                         domain (not a public mailbox provider). One catch-all
  *                         domain otherwise yields unlimited "verified" people.
@@ -35,6 +33,9 @@
  *   - referral_lifetime_cap at most REFERRAL_LIFETIME_CAP rewarded referrals
  *                         per referrer, ever (the daily cap alone allowed 3,650
  *                         a year from one referrer).
+ *
+ * All three caps are re-checked inside the reward transaction under the
+ * referrer's row lock so concurrent applies cannot race past them.
  */
 import { prisma } from "./prisma.js";
 import { normalizeEmailIdentity } from "./verification.js";
@@ -86,7 +87,45 @@ const DAILY_CAP_RESULT: ApplyReferralResult = {
 
 // Internal sentinel: thrown inside the reward transaction to roll it back when
 // the in-transaction cap re-check fails under concurrency.
-class DailyCapExceeded extends Error {}
+class CapExceeded extends Error {
+  constructor(public readonly result: ApplyReferralResult) { super(); }
+}
+
+type CapDb = Pick<typeof prisma, "referral" | "agent">;
+
+/**
+ * Lifetime, per-domain and daily caps for one referrer, in that order. Returns
+ * the failing result or null. Runs lock-free as a fast pre-check and again
+ * inside the reward transaction, where it is authoritative.
+ */
+async function checkRewardCaps(
+  db: CapDb,
+  referrerId: string,
+  referredDomain: string | null,
+  windowStart: Date
+): Promise<ApplyReferralResult | null> {
+  const rewarded = await db.referral.findMany({
+    where: { referrerId, status: "completed" },
+    select: { referredId: true },
+  });
+  if (rewarded.length >= REFERRAL_LIFETIME_CAP) {
+    return { ok: false, status: 429, error: "referral_lifetime_cap", message: "This referral code has reached its lifetime reward limit." };
+  }
+  if (referredDomain && rewarded.length) {
+    const ids = rewarded.map((r) => r.referredId).filter((id): id is string => !!id);
+    const others = await db.agent.findMany({ where: { id: { in: ids } }, select: { email: true } });
+    if (others.filter((o) => privateEmailDomain(o.email) === referredDomain).length >= REFERRAL_DOMAIN_CAP) {
+      return { ok: false, status: 429, error: "referral_domain_cap", message: "This referral code has reached its limit for your email domain." };
+    }
+  }
+  const rewardedInWindow = await db.referral.count({
+    where: { referrerId, status: "completed", completedAt: { gte: windowStart } },
+  });
+  if (rewardedInWindow >= REFERRAL_DAILY_CAP) {
+    return DAILY_CAP_RESULT;
+  }
+  return null;
+}
 
 export async function applyReferralCode(agentId: string, rawCode: string): Promise<ApplyReferralResult> {
   const code = rawCode.trim();
@@ -127,36 +166,18 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
     return { ok: false, status: 400, error: "same_domain", message: "Referral bonuses are for people outside your own email domain." };
   }
 
-  const rewarded = await prisma.referral.findMany({
-    where: { referrerId: referral.referrerId, status: "completed" },
-    select: { referredId: true },
-  });
-  if (rewarded.length >= REFERRAL_LIFETIME_CAP) {
-    return { ok: false, status: 429, error: "referral_lifetime_cap", message: "This referral code has reached its lifetime reward limit." };
-  }
-  if (referredDomain && rewarded.length) {
-    const ids = rewarded.map((r) => r.referredId).filter((id): id is string => !!id);
-    const others = await prisma.agent.findMany({ where: { id: { in: ids } }, select: { email: true } });
-    if (others.filter((o) => privateEmailDomain(o.email) === referredDomain).length >= REFERRAL_DOMAIN_CAP) {
-      return { ok: false, status: 429, error: "referral_domain_cap", message: "This referral code has reached its limit for your email domain." };
-    }
-  }
+  // Per-referrer caps (lifetime, per-domain, rolling-24h). This pre-check
+  // fails fast without taking locks; the authoritative re-check runs inside
+  // the transaction below.
+  const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const capHit = await checkRewardCaps(prisma, referral.referrerId, referredDomain, windowStart);
+  if (capHit) return capHit;
 
   const alreadyReferred = await prisma.referral.findFirst({
     where: { referredId: agentId, status: "completed" },
   });
   if (alreadyReferred) {
     return { ok: false, status: 400, error: "already_referred", message: "You have already used a referral code." };
-  }
-
-  // Per-referrer rolling-24h reward cap. This pre-check fails fast without
-  // taking locks; the authoritative re-check runs inside the transaction below.
-  const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const rewardedToday = await prisma.referral.count({
-    where: { referrerId: referral.referrerId, status: "completed", completedAt: { gte: windowStart } },
-  });
-  if (rewardedToday >= REFERRAL_DAILY_CAP) {
-    return DAILY_CAP_RESULT;
   }
 
   // Atomic single-use guard: the completion record's `code` is deterministic on
@@ -167,17 +188,15 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
     await prisma.$transaction(async (tx) => {
       // Cap re-check under the referrer's row lock: crediting the referrer
       // first locks their Agent row, serializing concurrent applies for the
-      // same referrer, so this count always sees prior committed rewards —
-      // the lock-free pre-check alone could race past REFERRAL_DAILY_CAP.
+      // same referrer, so these counts always see prior committed rewards —
+      // the lock-free pre-check alone could race past any of the caps.
       await tx.agent.update({
         where: { id: referral.referrerId },
         data: { credits: { increment: REFERRAL_REWARD } },
       });
-      const rewardedInWindow = await tx.referral.count({
-        where: { referrerId: referral.referrerId, status: "completed", completedAt: { gte: windowStart } },
-      });
-      if (rewardedInWindow >= REFERRAL_DAILY_CAP) {
-        throw new DailyCapExceeded();
+      const lockedCapHit = await checkRewardCaps(tx, referral.referrerId, referredDomain, windowStart);
+      if (lockedCapHit) {
+        throw new CapExceeded(lockedCapHit);
       }
       await tx.referral.create({
         data: {
@@ -195,8 +214,8 @@ export async function applyReferralCode(agentId: string, rawCode: string): Promi
       });
     });
   } catch (txErr) {
-    if (txErr instanceof DailyCapExceeded) {
-      return DAILY_CAP_RESULT;
+    if (txErr instanceof CapExceeded) {
+      return txErr.result;
     }
     if (txErr && typeof txErr === "object" && (txErr as { code?: string }).code === "P2002") {
       return { ok: false, status: 400, error: "already_referred", message: "You have already used a referral code." };
