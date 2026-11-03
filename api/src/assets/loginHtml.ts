@@ -179,9 +179,11 @@ export const LOGIN_HTML = `<!DOCTYPE html>
   }
 
   // Only same-site paths: "/login?next=https://evil.example" must not
-  // bounce a freshly signed-in user to another site.
+  // bounce a freshly signed-in user to another site. Whitespace and control
+  // chars are rejected anywhere: the URL parser strips tab/CR/LF, so
+  // "/%09/evil.example" would otherwise become "//evil.example".
   function safeNext(n) {
-    return (typeof n === 'string' && /^\\/(?![\\/\\\\])/.test(n)) ? n : '/dashboard';
+    return (typeof n === 'string' && /^\\/(?![\\/\\\\])[^\\s\\u0000-\\u001f\\u007f]*$/.test(n)) ? n : '/dashboard';
   }
 
   async function doLogin() {
