@@ -16,6 +16,7 @@ const route = (name) => { const a = tools.indexOf(`router.post("/${name}"`); ret
 
 assert.ok(route("barcode-generate").includes('await import("bwip-js")'), "barcode uses bwip-js");
 assert.ok(!route("barcode-generate").includes("Simple encoding: alternate bars"), "fake encoder removed");
+assert.ok(route("barcode-generate").includes('typeof barcodeData !== "string"'), "barcode validates payload type before slicing");
 assert.ok(route("crypto-sentiment").includes("const id = normalizeCoinId(symbol);"), "crypto-sentiment maps tickers");
 assert.ok(route("ai-generate").includes("const requestedTokens = Math.min(4096,"), "ai-generate charges up to the served 4096");
 assert.ok(route("design-create").includes("img.b64_json ? `data:image/png;base64,${img.b64_json}`"), "design-create reads b64_json");
@@ -36,6 +37,9 @@ if (process.env.TEST_ALLOW_SIGNUP === "1" && /^http:\/\/(localhost|127\.0\.0\.1)
   assert.ok(d.ok && d.type === "qr" && d.width === d.height, "QR is square");
   d = await call({ value: "x", format: "ean13" });
   assert.equal(d.ok, false);
+  d = await call({ text: { nested: "not a string" } });
+  assert.equal(d.ok, false);
+  assert.equal(d.error, "invalid_request");
 }
 
 console.log("All tool-contract-bugs tests passed.");

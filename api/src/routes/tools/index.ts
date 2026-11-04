@@ -1894,11 +1894,11 @@ router.post("/barcode-generate", ...toolMiddleware("barcode-generate"), async (r
     const ok = await deductCredits(req, res, "barcode-generate", 2);
     if (!ok) return;
   }
-  const barcodeData = (req.body.value ?? req.body.data ?? req.body.text ?? req.body.content) as string | undefined; // accept documented alias `content`
+  const barcodeData = req.body.value ?? req.body.data ?? req.body.text ?? req.body.content; // accept documented alias `content`
   const requestedType = String(req.body.type ?? req.body.format ?? "code128").toLowerCase();
   const type = requestedType === "code128" ? "code128" : requestedType;
   const { width = 250, height = 100 } = req.body as { width?: number; height?: number };
-  if (!barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) is required", request_id: reqId() }); return; }
+  if (typeof barcodeData !== "string" || !barcodeData) { res.status(400).json({ ok: false, error: "invalid_request", message: "data (or value) must be a non-empty string", request_id: reqId() }); return; }
   const validTypes = ["code128", "qr"];
   if (!validTypes.includes(type)) { res.status(400).json({ ok: false, error: "invalid_request", message: `type must be one of: ${validTypes.join(", ")}`, request_id: reqId() }); return; }
   // Real symbologies via bwip-js (a port of Barcode Writer in Pure PostScript).
