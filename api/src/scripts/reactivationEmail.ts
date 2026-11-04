@@ -113,6 +113,13 @@ export function emailDomain(email: string): string {
   return at >= 0 ? email.slice(at + 1).trim().toLowerCase() : "";
 }
 
+export function isStillMarketableRecipient<T extends { email: string; emailVerified: boolean; emailOptOut: boolean }>(
+  snapshot: { email: string },
+  fresh: T | null | undefined,
+): fresh is T {
+  return Boolean(fresh && fresh.email === snapshot.email && fresh.emailVerified && !fresh.emailOptOut);
+}
+
 const EXCLUDE_DOMAINS = parseExcludeDomains(process.env.EXCLUDE_EMAIL_DOMAINS);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -356,11 +363,11 @@ async function main(): Promise<void> {
     // /unsubscribe) must be excluded, not emailed from the stale snapshot.
     const fresh = await prisma.agent.findUnique({
       where: { id: agent.id },
-      select: { credits: true, emailOptOut: true },
+      select: { credits: true, email: true, emailVerified: true, emailOptOut: true },
     });
-    if (!fresh || fresh.emailOptOut) {
+    if (!isStillMarketableRecipient(agent, fresh)) {
       skipped++;
-      console.log(JSON.stringify({ at: new Date().toISOString(), agentId: agent.id, email: maskEmail(agent.email), skipped: "opted_out" }));
+      console.log(JSON.stringify({ at: new Date().toISOString(), agentId: agent.id, email: maskEmail(agent.email), skipped: "not_marketable" }));
       continue;
     }
     // Top up BEFORE sending so the copy is true when the email lands.
