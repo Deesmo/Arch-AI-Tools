@@ -175,7 +175,7 @@ function providerGate(toolName: string) {
     res.status(503).json({
       ok: false,
       error: "tool_temporarily_unavailable",
-      message: `${toolName} is temporarily unavailable because its provider is out of credit. You have not been charged. Retry later.`,
+      message: `${toolName} is temporarily unavailable because its provider is not ready. You have not been charged. Retry later.`,
       retry_after_seconds: 1800,
       request_id: reqId(),
     });
