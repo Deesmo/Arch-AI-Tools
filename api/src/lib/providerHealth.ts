@@ -47,6 +47,19 @@ const PROVIDER_LABEL: Record<ProviderName, string> = {
   openai: "OpenAI", runway: "Runway", elevenlabs: "ElevenLabs", removebg: "remove.bg", hunter: "Hunter", stability: "Stability AI",
 };
 
+const PROVIDER_ENV_KEY: Record<ProviderName, string> = {
+  openai: "OPENAI_API_KEY",
+  runway: "RUNWAY_API_KEY",
+  elevenlabs: "ELEVENLABS_API_KEY",
+  removebg: "REMOVEBG_API_KEY",
+  hunter: "HUNTER_API_KEY",
+  stability: "STABILITY_API_KEY",
+};
+
+function isProviderConfigured(p: ProviderName): boolean {
+  return Boolean(process.env[PROVIDER_ENV_KEY[p]]);
+}
+
 interface ProviderState {
   exhausted: boolean;
   since?: string;
@@ -130,11 +143,12 @@ export function noteProviderResponse(p: ProviderName, status: number, body: stri
   if (tripped) void probeProvider(p);
 }
 
-/** The exhausted providers that make this tool unavailable (all of its providers), or null if usable. */
+/** The unusable providers that make this tool unavailable (all of its providers), or null if usable. */
 export function unavailableProviders(tool: string): ProviderName[] | null {
   const ps = TOOL_PROVIDERS[tool];
   if (!ps) return null;
-  return ps.every((p) => get(p).exhausted) ? ps : null;
+  const unavailable = ps.filter((p) => !isProviderConfigured(p) || get(p).exhausted);
+  return unavailable.length === ps.length ? unavailable : null;
 }
 
 export function providerHealthSnapshot(): Record<string, ProviderState & { tools: string[] }> {

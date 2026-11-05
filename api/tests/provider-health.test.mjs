@@ -22,13 +22,29 @@ assert.equal(isCreditExhaustion(500, "insufficient_quota"), false, "5xx is not a
 
 // One definite failure switches the tool off; fallbacks keep it on until both are out.
 __resetProviderHealth();
-assert.equal(unavailableProviders("transcribe-audio"), null);
-noteProviderResponse("openai", 429, "insufficient_quota");
-assert.deepEqual(unavailableProviders("transcribe-audio"), ["openai"]);
-assert.equal(unavailableProviders("design-create"), null, "design-create still has Stability");
-noteProviderResponse("stability", 402, "");
-assert.deepEqual(unavailableProviders("design-create"), ["openai", "stability"]);
-assert.equal(unavailableProviders("web-scrape"), null, "untracked tools are never gated");
+const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalStabilityKey = process.env.STABILITY_API_KEY;
+try {
+  process.env.OPENAI_API_KEY = "test";
+  delete process.env.STABILITY_API_KEY;
+  assert.equal(unavailableProviders("transcribe-audio"), null);
+  noteProviderResponse("openai", 429, "insufficient_quota");
+  assert.deepEqual(unavailableProviders("transcribe-audio"), ["openai"]);
+  assert.deepEqual(unavailableProviders("design-create"), ["openai", "stability"], "an unconfigured fallback cannot keep payable image tools open");
+
+  __resetProviderHealth();
+  process.env.STABILITY_API_KEY = "test";
+  noteProviderResponse("openai", 429, "insufficient_quota");
+  assert.equal(unavailableProviders("design-create"), null, "configured Stability keeps design-create open");
+  noteProviderResponse("stability", 402, "");
+  assert.deepEqual(unavailableProviders("design-create"), ["openai", "stability"]);
+  assert.equal(unavailableProviders("web-scrape"), null, "untracked tools are never gated");
+} finally {
+  if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = originalOpenAiKey;
+  if (originalStabilityKey === undefined) delete process.env.STABILITY_API_KEY;
+  else process.env.STABILITY_API_KEY = originalStabilityKey;
+}
 
 // Recovery through the probes (fetch stubbed): OpenAI recovers when a test call succeeds;
 // a balance provider recovers only when its balance ROSE (a top-up), not on a still-low balance.
