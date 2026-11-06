@@ -67,6 +67,26 @@ async function main() {
     const attacker = await createVerifiedAgent("attacker", suffix);
     created.push(attacker);
 
+    const creditsBeforeInvalid = (await prisma.agent.findUnique({ where: { id: owner.agentId }, select: { credits: true } }))?.credits;
+    assert.strictEqual(typeof creditsBeforeInvalid, "number", "owner credits missing before invalid request");
+    const invalidCreate = await fetchJSON("/v1/tools/session-create", {
+      method: "POST",
+      headers: { "x-api-key": owner.apiKey },
+      body: JSON.stringify({ namespace: 42, model: "claude" }),
+    });
+    assert.strictEqual(invalidCreate.res.status, 400, `invalid session-create status ${invalidCreate.res.status}: ${JSON.stringify(invalidCreate.body)}`);
+    const creditsAfterInvalid = (await prisma.agent.findUnique({ where: { id: owner.agentId }, select: { credits: true } }))?.credits;
+    assert.strictEqual(creditsAfterInvalid, creditsBeforeInvalid, "invalid session-create must not deduct credits");
+
+    const documentedCreate = await fetchJSON("/v1/tools/session-create", {
+      method: "POST",
+      headers: { "x-api-key": owner.apiKey },
+      body: JSON.stringify({ system: "You are a helpful coding assistant", model: "claude" }),
+    });
+    assert.strictEqual(documentedCreate.res.status, 200, `documented session-create status ${documentedCreate.res.status}: ${JSON.stringify(documentedCreate.body)}`);
+    assert.strictEqual(documentedCreate.body?.namespace, "default", "documented session-create should use the default namespace");
+    console.log("  ✓ session-create accepts the documented no-namespace request without prior rejection");
+
     const create = await fetchJSON("/v1/tools/session-create", {
       method: "POST",
       headers: { "x-api-key": owner.apiKey },

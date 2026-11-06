@@ -108,6 +108,23 @@ test("x402-paid session-create cannot store a premium model", () => {
   assert.match(sessionCreateRoute, /paid && modelCostMultiplier\(resolvedModel\) > 1\.0/);
 });
 
+test("session-create matches the documented no-namespace contract", () => {
+  assert.match(sessionCreateRoute, /namespaceValue = namespace === undefined \? "default" : namespace/);
+  assert.match(sessionCreateRoute, /namespace: normalizedNamespace/);
+  assert.ok(!/namespace is required/.test(sessionCreateRoute), "missing namespace must no longer reject documented requests");
+});
+
+test("session-create validates request shape before deducting credits", () => {
+  const namespaceValidation = sessionCreateRoute.indexOf("namespace must be a non-empty string");
+  const modelValidation = sessionCreateRoute.indexOf("invalid_model");
+  const charge = sessionCreateRoute.indexOf('deductCredits(req, res, "session-create", sessionCreateCost)');
+  assert.ok(namespaceValidation >= 0, "namespace validation guard missing");
+  assert.ok(modelValidation >= 0, "model validation guard missing");
+  assert.ok(charge >= 0, "session-create deduction missing");
+  assert.ok(namespaceValidation < charge, "namespace validation must run before deduction");
+  assert.ok(modelValidation < charge, "model validation must run before deduction");
+});
+
 test("upstream calls send the trimmed window, not the raw stored history", () => {
   assert.match(sessionMessageRoute, /trimSessionContext\(session\.messages, SESSION_CONTEXT_MAX_CHARS\)/);
   assert.match(sessionMessageRoute, /SESSION_CONTEXT_MAX_CHARS = parseInt\(process\.env\.SESSION_CONTEXT_MAX_CHARS \?\? "40000", 10\)/);
