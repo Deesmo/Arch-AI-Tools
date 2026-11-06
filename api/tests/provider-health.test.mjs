@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  isCreditExhaustion, noteProviderResponse, unavailableProviders, runProviderProbes,
+  isCreditExhaustion, MIN_BALANCE, noteProviderResponse, unavailableProviders, runProviderProbes,
   providerHealthSnapshot, __resetProviderHealth,
 } from "../dist/lib/providerHealth.js";
 
@@ -42,14 +42,15 @@ globalThis.fetch = async (url) => {
 process.env.OPENAI_API_KEY = "test"; process.env.RUNWAY_API_KEY = "test";
 try {
   __resetProviderHealth();
+  assert.equal(MIN_BALANCE.runway, 120, "Runway health gate covers accepted 10s video requests");
   replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 1 })]);
   replies.set("api.openai.com", [429, '{"error":{"type":"insufficient_quota"}}']);
   await runProviderProbes(true);
   assert.equal(providerHealthSnapshot().openai.exhausted, true, "OpenAI probe 429 quota -> exhausted");
-  assert.equal(providerHealthSnapshot().runway.exhausted, true, "balance 1 is below one gen4.5 video (MIN_BALANCE 60) -> off");
+  assert.equal(providerHealthSnapshot().runway.exhausted, true, "balance 1 is below an accepted gen4.5 video (MIN_BALANCE 120) -> off");
   replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 30 })]);
   await runProviderProbes(true);
-  assert.equal(providerHealthSnapshot().runway.exhausted, true, "a top-up still below one call's price stays off");
+  assert.equal(providerHealthSnapshot().runway.exhausted, true, "a top-up still below the max accepted call price stays off");
   // A live failure trips the breaker while the last (healthy) probe reading is stale and
   // high: 1000 read hours ago, real balance now 1. The baseline a top-up must beat is the
   // fresh reading, otherwise a normal top-up below 1000 would never clear the breaker.
