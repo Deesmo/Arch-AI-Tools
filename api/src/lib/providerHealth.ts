@@ -36,12 +36,13 @@ export const TOOL_PROVIDERS: Record<string, ProviderName[]> = {
 };
 
 /**
- * Smallest balance that can pay for ONE call, from the provider's published price
- * (not a guess). A probe reading below it counts as out of credit; providers not
- * listed are out only at 0. Runway: video-generate runs gen4.5 at 12 credits per
- * second with a 5 s minimum = 60 credits (docs.dev.runwayml.com/guides/pricing).
+ * Smallest balance that can pay for every accepted request shape, from the
+ * provider's published price (not a guess). A probe reading below it counts as
+ * out of credit; providers not listed are out only at 0. Runway: video-generate
+ * accepts up to 10 s and gen4.5 costs 12 credits per second = 120 credits
+ * (docs.dev.runwayml.com/guides/pricing).
  */
-export const MIN_BALANCE: Partial<Record<ProviderName, number>> = { runway: 60 };
+export const MIN_BALANCE: Partial<Record<ProviderName, number>> = { runway: 120 };
 
 const PROVIDER_LABEL: Record<ProviderName, string> = {
   openai: "OpenAI", runway: "Runway", elevenlabs: "ElevenLabs", removebg: "remove.bg", hunter: "Hunter", stability: "Stability AI",
