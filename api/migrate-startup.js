@@ -3,9 +3,92 @@
  * 1. Run Prisma migrations (safe — skips if already applied)
  * 2. Start the API server
  */
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
+
+const BROKEN_BOOTSTRAP_MIGRATION = "20260313_add_api_key_hash";
+
+function runPrisma(args, timeout = 30000) {
+  execFileSync("npx", ["prisma", ...args], { stdio: "inherit", timeout });
+}
+
+async function publicTablesAreEmpty(prisma) {
+  const tables = await prisma.$queryRaw`
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename <> '_prisma_migrations'
+    ORDER BY tablename
+  `;
+
+  for (const { tablename } of tables) {
+    const safe = String(tablename).replace(/"/g, '""');
+    const rows = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "${safe}"`);
+    if (Number(rows[0]?.count ?? 0) > 0) return false;
+  }
+  return true;
+}
+
+async function hasKnownFreshBootstrapFailure(prisma) {
+  const failed = await prisma.$queryRaw`
+    SELECT 1
+    FROM _prisma_migrations
+    WHERE migration_name = ${BROKEN_BOOTSTRAP_MIGRATION}
+      AND finished_at IS NULL
+      AND rolled_back_at IS NULL
+    LIMIT 1
+  `;
+  return failed.length > 0 && await publicTablesAreEmpty(prisma);
+}
+
+function migrationDirs() {
+  const root = path.join(process.cwd(), "prisma", "migrations");
+  return fs.readdirSync(root)
+    .filter((name) => /^[0-9A-Za-z_]+$/.test(name) && fs.existsSync(path.join(root, name, "migration.sql")))
+    .sort();
+}
+
+async function markUnfinishedMigrationsApplied() {
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT migration_name
+      FROM _prisma_migrations
+      WHERE finished_at IS NOT NULL
+        AND rolled_back_at IS NULL
+    `;
+    const applied = new Set(rows.map((r) => r.migration_name));
+    for (const name of migrationDirs()) {
+      if (applied.has(name)) continue;
+      runPrisma(["migrate", "resolve", "--applied", name], 30000);
+      applied.add(name);
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function recoverKnownFreshBootstrapFailure() {
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  try {
+    if (!await hasKnownFreshBootstrapFailure(prisma)) return false;
+  } catch (err) {
+    console.error("[startup] Could not inspect failed migration state:", err.message);
+    return false;
+  } finally {
+    await prisma.$disconnect();
+  }
+
+  console.error(`[startup] Detected known empty-DB bootstrap failure in ${BROKEN_BOOTSTRAP_MIGRATION}; applying current schema and baselining migrations.`);
+  runPrisma(["migrate", "resolve", "--rolled-back", BROKEN_BOOTSTRAP_MIGRATION], 30000);
+  runPrisma(["db", "push", "--accept-data-loss", "--skip-generate"], 60000);
+  await markUnfinishedMigrationsApplied();
+  console.log("[startup] Fresh database schema bootstrapped and migration history baselined.");
+  return true;
+}
 
 // Report what the Render persistent disk holds (names, sizes, dates — never file
 // contents). No code reads or writes it, but having a disk attached disables
@@ -37,17 +120,21 @@ import path from "path";
 
 console.log("[startup] Running Prisma migrations...");
 try {
-  execSync("npx prisma migrate deploy", { stdio: "inherit", timeout: 30000 });
+  runPrisma(["migrate", "deploy"]);
   console.log("[startup] Migrations complete.");
 } catch (err) {
-  // Fail loud: a server on a half-migrated schema serves 500s. Exiting makes
-  // Render keep the previous (healthy) instance and mark the deploy failed.
-  // Emergency override: ALLOW_START_ON_MIGRATION_FAILURE=1.
-  if (process.env.ALLOW_START_ON_MIGRATION_FAILURE === "1") {
-    console.error("[startup] Migration failed — starting anyway (ALLOW_START_ON_MIGRATION_FAILURE=1):", err.message);
+  if (await recoverKnownFreshBootstrapFailure()) {
+    console.log("[startup] Migrations complete via fresh-database bootstrap.");
   } else {
-    console.error("[startup] Migration failed — refusing to start:", err.message);
-    process.exit(1);
+    // Fail loud: a server on a half-migrated schema serves 500s. Exiting makes
+    // Render keep the previous (healthy) instance and mark the deploy failed.
+    // Emergency override: ALLOW_START_ON_MIGRATION_FAILURE=1.
+    if (process.env.ALLOW_START_ON_MIGRATION_FAILURE === "1") {
+      console.error("[startup] Migration failed — starting anyway (ALLOW_START_ON_MIGRATION_FAILURE=1):", err.message);
+    } else {
+      console.error("[startup] Migration failed — refusing to start:", err.message);
+      process.exit(1);
+    }
   }
 }
 
