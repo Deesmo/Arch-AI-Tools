@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { prisma } from "../lib/prisma.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,7 +42,8 @@ try {
   console.error("Failed to load MCP servers catalog:", err);
 }
 
-// In-memory submissions (would be DB in production)
+// Process-local cache for lightweight stats/logging; the durable review queue is
+// McpMarketplaceSubmission in Postgres.
 const submissions: Array<{
   id: string;
   name: string;
@@ -164,8 +166,8 @@ router.get("/servers/search", (req: Request, res: Response): void => {
 
 // ─── POST /api/v1/mcp/servers/submit — Submit a new MCP server ──────────────
 // Anyone can submit, so bound everything: 5 per hour per visitor, short typed
-// fields, and at most MAX_PENDING queued (oldest dropped). The queue used to grow
-// without limit from 10 MB bodies until the process ran out of memory.
+// fields, and at most MAX_PENDING mirrored in memory for stats. The review queue
+// itself is persisted before 201 is returned.
 const MAX_PENDING = 200;
 const submitLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -177,7 +179,7 @@ const submitLimiter = rateLimit({
 });
 const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
-router.post("/servers/submit", submitLimiter, (req: Request, res: Response): void => {
+router.post("/servers/submit", submitLimiter, async (req: Request, res: Response): Promise<void> => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const name = str(body.name, 100);
   const description = str(body.description, 2000);
@@ -219,6 +221,31 @@ router.post("/servers/submit", submitLimiter, (req: Request, res: Response): voi
     submittedAt: new Date().toISOString(),
     status: "pending" as const,
   };
+
+  try {
+    await prisma.mcpMarketplaceSubmission.create({
+      data: {
+        id: submission.id,
+        name,
+        description,
+        repository,
+        packageName: packageName || null,
+        category,
+        capabilities,
+        contactEmail,
+        status: "pending",
+        submittedAt: new Date(submission.submittedAt),
+      },
+    });
+  } catch (err) {
+    console.error("[mcp-marketplace] submission persist failed:", err);
+    res.status(503).json({
+      ok: false,
+      error: "submission_unavailable",
+      message: "Submission queue is temporarily unavailable. Please retry later.",
+    });
+    return;
+  }
 
   submissions.push(submission);
   if (submissions.length > MAX_PENDING) submissions.splice(0, submissions.length - MAX_PENDING);
@@ -272,7 +299,13 @@ router.get("/categories", (_req: Request, res: Response): void => {
 });
 
 // ─── GET /api/v1/mcp/stats — Marketplace stats ──────────────────────────────
-router.get("/stats", (_req: Request, res: Response): void => {
+router.get("/stats", async (_req: Request, res: Response): Promise<void> => {
+  let pendingSubmissions = submissions.filter(s => s.status === "pending").length;
+  try {
+    pendingSubmissions = await prisma.mcpMarketplaceSubmission.count({ where: { status: "pending" } });
+  } catch (err) {
+    console.error("[mcp-marketplace] pending submission count skipped:", err);
+  }
   res.json({
     ok: true,
     totalServers: mcpServers.length,
@@ -280,7 +313,7 @@ router.get("/stats", (_req: Request, res: Response): void => {
     featuredServers: mcpServers.filter(s => s.featured).length,
     categories: CATEGORIES.length,
     languages: [...new Set(mcpServers.map(s => s.language))],
-    pendingSubmissions: submissions.filter(s => s.status === "pending").length,
+    pendingSubmissions,
   });
 });
 

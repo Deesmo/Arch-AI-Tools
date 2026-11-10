@@ -78,8 +78,15 @@ assert.ok(!page.includes('name="apiKey"'), "no key prompt when signed in");
 assert.ok(src("src/routes/agent.ts").includes("prisma.oAuthToken.deleteMany({ where: { agentId: agent.id } })"));
 
 // 4 — bounded submissions
-assert.ok(src("src/routes/mcp-marketplace.ts").includes('router.post("/servers/submit", submitLimiter,'));
+const mcpMarketplaceSrc = src("src/routes/mcp-marketplace.ts");
+assert.ok(mcpMarketplaceSrc.includes('router.post("/servers/submit", submitLimiter,'));
 assert.ok(src("src/routes/directory.ts").includes('router.post("/submit", directorySubmitLimiter,'));
+const persistSubmission = mcpMarketplaceSrc.indexOf("await prisma.mcpMarketplaceSubmission.create");
+const ackSubmission = mcpMarketplaceSrc.indexOf("res.status(201).json");
+assert.ok(persistSubmission > 0 && persistSubmission < ackSubmission, "MCP marketplace submissions are persisted before 201");
+assert.ok(mcpMarketplaceSrc.includes("prisma.mcpMarketplaceSubmission.count"), "MCP marketplace stats count the durable queue");
+assert.ok(src("prisma/schema.prisma").includes("model McpMarketplaceSubmission"), "MCP marketplace submissions have a Prisma model");
+assert.ok(src("prisma/migrations/20261110_mcp_marketplace_submissions/migration.sql").includes('CREATE TABLE IF NOT EXISTS "McpMarketplaceSubmission"'), "MCP marketplace submission table migration exists");
 
 // ── Live (local server only; creates nothing it can't, and resets on restart) ─
 const BASE = (process.env.TEST_BASE_URL || "").replace(/\/$/, "");

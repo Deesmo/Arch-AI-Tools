@@ -382,6 +382,23 @@ model DirectoryState {
   updatedAt DateTime @default(now()) @updatedAt
 }
 
+model McpMarketplaceSubmission {
+  id           String   @id
+  name         String
+  description  String   @db.Text
+  repository   String
+  packageName  String?  @map("package")
+  category     String
+  capabilities String[] @default([])
+  contactEmail String   @map("contact_email")
+  status       String   @default("pending")
+  submittedAt  DateTime @default(now()) @map("submitted_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([submittedAt])
+}
+
 model DirectoryListing {
   id              String   @id @default(cuid())
   serviceId       String   @map("service_id")              // References x402-directory.json service ID
