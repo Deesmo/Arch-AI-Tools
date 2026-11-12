@@ -80,5 +80,7 @@ const failBranch = deferred.slice(deferred.indexOf("statusCode >= 400"), deferre
 assert.ok(!failBranch.includes("releaseStoredNonce"), "a failed call keeps its nonce consumed (no replay of one signature)");
 assert.ok(deferred.indexOf("settleAndRecord(false)") > deferred.indexOf("statusCode >= 400"), "settle only after the status check, without releasing the nonce");
 assert.ok(mw.includes("const paymentResponse = await settleAndRecord(true);"), "settle-first order may still release the nonce (tool not run yet)");
+assert.ok(mw.includes('X402_SETTLE_BEFORE_TOOLS = new Set([\n  "webhook-send",'), "webhook-send is a non-idempotent x402 tool that must settle before delivery");
+assert.ok(mw.includes('process.env.X402_SETTLE_AFTER_RESPONSE === "1" && !requiresX402SettleBefore(toolName)'), "deferred settlement is skipped for settle-before tools");
 
 console.log("All x402-settle-after tests passed.");

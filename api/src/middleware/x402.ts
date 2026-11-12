@@ -196,6 +196,17 @@ export function isX402AnonymousTool(toolName: string): boolean {
   return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
 }
 
+// Tools with externally visible side effects cannot safely run before funds are
+// captured: if settlement fails, deferResponse can replace our HTTP body but it
+// cannot undo a delivered webhook.
+export const X402_SETTLE_BEFORE_TOOLS = new Set([
+  "webhook-send",
+]);
+
+export function requiresX402SettleBefore(toolName: string): boolean {
+  return X402_SETTLE_BEFORE_TOOLS.has(toolName);
+}
+
 /**
  * INTERNAL v1-shaped payment-requirements builder. This remains the single source of
  * truth for wallets/chains/prices/CDP filtering and for the v1→v2 facilitator
@@ -1501,7 +1512,7 @@ export function x402Middleware(toolName: string) {
     // official x402 Express middleware uses: a failed call (status >= 400) is
     // never settled, so the payer is not charged for it. Off by default — the
     // legacy order (settle, then run) stays until this is proven with a live payment.
-    if (process.env.X402_SETTLE_AFTER_RESPONSE === "1") {
+    if (process.env.X402_SETTLE_AFTER_RESPONSE === "1" && !requiresX402SettleBefore(toolName)) {
       attachRequestLog();
       // The tool has already run here, so the nonce stays consumed whether or
       // not we settle: one signed payment = one attempt. Releasing it would let
