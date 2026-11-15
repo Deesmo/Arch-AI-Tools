@@ -7,7 +7,8 @@
  * What a facilitator does:
  *   1. VERIFY: Validate an x402 payment payload (signature, amount, nonce, expiry)
  *   2. SETTLE: Submit the validated payment to the blockchain
- *   3. COLLECT FEE: Take a small % fee from each transaction
+ *   3. RECORD ECONOMICS: direct provider-wallet settlement cannot collect a fee
+ *      until a split-settlement flow exists.
  *
  * Uses viem (already in dependency tree via @x402 packages).
  */
@@ -492,6 +493,16 @@ export async function settlePayment(
 /** Default fee from env (FACILITATOR_FEE_PERCENT), falls back to 2.5% */
 export function getDefaultFeePercent(): number {
   return parseFloat(process.env.FACILITATOR_FEE_PERCENT ?? "2.5");
+}
+
+/**
+ * Direct facilitator settlement consumes an EIP-3009 authorization whose
+ * recipient is the registered provider wallet. Because the whole signed amount
+ * moves straight from payer -> provider, Arch cannot deduct an on-chain fee in
+ * this flow. Keep accounting honest until a split-settlement flow exists.
+ */
+export function collectibleFeePercentForDirectSettlement(_configuredFeePercent: number): number {
+  return 0;
 }
 
 export function calculateFee(amountAtomic: string, feePercent: number): string {

@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import express from "express";
 import fs from "fs";
 import http from "http";
+import net from "net";
 import path from "path";
 import { fileURLToPath } from "url";
 import { privateKeyToAccount } from "viem/accounts";
@@ -78,14 +79,47 @@ test("persistence failure releases nonce and returns retryable 503", () => {
 });
 
 await test("POST /verify returns 503 when durable verification write fails", async () => {
-  // Set before importing dist/services/facilitator.js so best-effort on-chain
-  // prechecks fail fast locally and do not depend on public RPC/balances.
-  process.env.BASE_SEPOLIA_RPC = "http://127.0.0.1:9";
-  delete process.env.REDIS_URL;
+  // Local JSON-RPC stub lets collectability checks pass deterministically so
+  // this test reaches the durable-write failure path without public RPC access.
+  const rpcServer = await new Promise((resolve) => {
+    const s = http.createServer(async (req, res) => {
+      let raw = "";
+      req.on("data", (chunk) => { raw += chunk; });
+      req.on("end", () => {
+        const body = raw ? JSON.parse(raw) : {};
+        let result = "0x";
+        if (body.method === "eth_chainId") result = "0x14a34";
+        else if (body.method === "eth_call") {
+          const data = String(body.params?.[0]?.data ?? "").toLowerCase();
+          // balanceOf(address) -> enough USDC; authorizationState(...) -> false.
+          result = data.startsWith("0x70a08231")
+            ? `0x${BigInt(1_000_000).toString(16).padStart(64, "0")}`
+            : `0x${"0".repeat(64)}`;
+        }
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ jsonrpc: "2.0", id: body.id ?? 1, result }));
+      });
+    });
+    s.listen(0, "127.0.0.1", () => resolve(s));
+  });
+  const rpcAddress = rpcServer.address();
+  process.env.BASE_SEPOLIA_RPC = `http://127.0.0.1:${rpcAddress.port}`;
+  const redisServer = await new Promise((resolve) => {
+    const s = net.createServer((socket) => {
+      socket.on("data", (chunk) => {
+        const commands = chunk.toString("utf8").split("\r\n*").length;
+        socket.write("+OK\r\n".repeat(commands));
+      });
+    });
+    s.listen(0, "127.0.0.1", () => resolve(s));
+  });
+  const redisAddress = redisServer.address();
+  process.env.REDIS_URL = `redis://127.0.0.1:${redisAddress.port}`;
 
-  const [{ prisma }, { default: facilitatorRouter }] = await Promise.all([
+  const [{ prisma }, { default: facilitatorRouter }, { redis }] = await Promise.all([
     import(dist("lib", "prisma.js")),
     import(dist("routes", "facilitator.js")),
+    import(dist("lib", "redis.js")),
   ]);
 
   const facilitatorKey = "fac_test_verify_persistence";
@@ -182,7 +216,7 @@ await test("POST /verify returns 503 when durable verification write fails", asy
     });
     const body = await res.json();
 
-    assert.strictEqual(createAttempted, true, "verified payment create was not attempted");
+    assert.strictEqual(createAttempted, true, `verified payment create was not attempted; response=${JSON.stringify(body)}`);
     assert.strictEqual(res.status, 503);
     assert.strictEqual(body.ok, false);
     assert.strictEqual(body.error, "verification_persistence_error");
@@ -192,6 +226,10 @@ await test("POST /verify returns 503 when durable verification write fails", asy
     prisma.facilitatorProvider.findMany = originals.findMany;
     prisma.facilitatorProvider.findUnique = originals.findUnique;
     prisma.facilitatorPayment.create = originals.create;
+    await new Promise((resolve, reject) => rpcServer.close((err) => err ? reject(err) : resolve()));
+    redis?.disconnect();
+    await new Promise((resolve, reject) => redisServer.close((err) => err ? reject(err) : resolve()));
+    delete process.env.REDIS_URL;
   }
 });
 
