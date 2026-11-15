@@ -24,9 +24,9 @@ import {
   settlePayment,
   decodePayment,
   releaseNonce,
-  calculateFee,
   calculateProviderPayout,
   getDefaultFeePercent,
+  collectibleFeePercentForDirectSettlement,
   getSupportedNetworks,
   type VerifyRequest,
   type SettleRequest,
@@ -333,11 +333,13 @@ router.post("/settle", requireFacilitatorAuth, async (req: FacilitatorRequest, r
     // Settle on-chain
     const result = await settlePayment(payment, paymentDetails, provider.walletAddress);
 
-    // Calculate fee — use provider-specific fee or env default.
+    // Calculate fee — direct settlement pays the provider wallet, so no fee is
+    // collectible in this flow until split settlement is implemented.
     // SECURITY (F-07): the settlement amount is the value the payer actually
     // SIGNED (auth.value), NOT the client-supplied paymentDetails.maxAmountRequired,
     // so fee/revenue accounting reflects real funds moved.
-    const effectiveFeePercent = provider.feePercent > 0 ? provider.feePercent : getDefaultFeePercent();
+    const configuredFeePercent = provider.feePercent > 0 ? provider.feePercent : getDefaultFeePercent();
+    const effectiveFeePercent = collectibleFeePercentForDirectSettlement(configuredFeePercent);
     const settledAmount = decodePayment(payment)?.payload?.authorization?.value ?? paymentDetails.maxAmountRequired;
     const { fee: feeAmount, payout: providerPayout } = calculateProviderPayout(
       settledAmount,
@@ -547,7 +549,7 @@ router.post("/register", registerLimiter, async (req: Request, res: Response): P
         webhookUrl: webhookUrl || null,
         networks: requestedNetworks,
         endpoints: endpoints || null,
-        feePercent: getDefaultFeePercent(),  // Default from FACILITATOR_FEE_PERCENT env (2.5%)
+        feePercent: collectibleFeePercentForDirectSettlement(getDefaultFeePercent()),
         // SECURITY: settlements are paid for by our hot wallet's gas, so a
         // self-registered provider stays inactive until an admin approves it.
         active: false,
