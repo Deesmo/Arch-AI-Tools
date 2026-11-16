@@ -196,6 +196,39 @@ export function isX402AnonymousTool(toolName: string): boolean {
   return !X402_ACCOUNT_REQUIRED_TOOLS.has(toolName);
 }
 
+// Deferred settlement can only be safe for local, deterministic tools: once a
+// handler has spent provider credits or performed an external side effect, a
+// later settlement failure cannot roll that work back.
+export const X402_SETTLE_AFTER_SAFE_TOOLS = new Set([
+  "validate-data",
+  "generate-hash",
+  "qr-code",
+  "convert-format",
+  "transform-text",
+  "timezone-convert",
+  "generate-uuid",
+  "diff-text",
+  "readability-score",
+  "language-detect",
+  "jsonpath-query",
+  "barcode-generate",
+  "calculate-compound-interest",
+  "word-count-stats",
+  "text-similarity",
+  "base64-operations",
+  "color-convert",
+  "jwt-decode",
+  "css-minify",
+  "markdown-to-html",
+  "number-format",
+  "timezone-now",
+  "html-extract-text",
+]);
+
+export function canX402SettleAfter(toolName: string): boolean {
+  return X402_SETTLE_AFTER_SAFE_TOOLS.has(toolName);
+}
+
 /**
  * INTERNAL v1-shaped payment-requirements builder. This remains the single source of
  * truth for wallets/chains/prices/CDP filtering and for the v1→v2 facilitator
@@ -1501,7 +1534,7 @@ export function x402Middleware(toolName: string) {
     // official x402 Express middleware uses: a failed call (status >= 400) is
     // never settled, so the payer is not charged for it. Off by default — the
     // legacy order (settle, then run) stays until this is proven with a live payment.
-    if (process.env.X402_SETTLE_AFTER_RESPONSE === "1") {
+    if (process.env.X402_SETTLE_AFTER_RESPONSE === "1" && canX402SettleAfter(toolName)) {
       attachRequestLog();
       // The tool has already run here, so the nonce stays consumed whether or
       // not we settle: one signed payment = one attempt. Releasing it would let
