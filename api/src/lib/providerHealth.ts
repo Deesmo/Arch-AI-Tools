@@ -12,13 +12,15 @@
  *   402, an explicit quota/credit message, or a balance below the published
  *   price of one call (MIN_BALANCE) — never on a plain rate limit, a network
  *   error or a guessed balance threshold.
+ * - Startup: configured providers stay gated until their first probe completes,
+ *   so a restart cannot briefly charge users for a known-empty provider balance.
  * - Recovery: an active probe every 30 minutes while exhausted (6 hours while
  *   healthy). OpenAI: a 1-token chat call. Balance providers: the balance rose
  *   above what it was when the provider ran dry (a top-up happened).
  * - Every change of state posts one Discord alert (lib/alert.ts).
  *
- * In-memory per process; a restart starts optimistic and the next definite
- * failure or probe re-establishes the state.
+ * In-memory per process; a restart blocks configured providers until the first
+ * probe re-establishes the state.
  */
 import { sendSecurityAlert } from "./alert.js";
 
@@ -79,6 +81,15 @@ function toolsFor(p: ProviderName): string[] {
   return Object.entries(TOOL_PROVIDERS).filter(([, ps]) => ps.includes(p)).map(([t]) => t);
 }
 
+function hasConfiguredProbe(p: ProviderName): boolean {
+  const entry = PROBES[p];
+  return !!entry && !!process.env[entry.key];
+}
+
+function needsInitialProbe(p: ProviderName): boolean {
+  return hasConfiguredProbe(p) && !get(p).lastCheck;
+}
+
 function markExhausted(p: ProviderName, detail: string, balance?: number): void {
   const s = get(p);
   if (s.exhausted) return;
@@ -134,7 +145,9 @@ export function noteProviderResponse(p: ProviderName, status: number, body: stri
 export function unavailableProviders(tool: string): ProviderName[] | null {
   const ps = TOOL_PROVIDERS[tool];
   if (!ps) return null;
-  return ps.every((p) => get(p).exhausted) ? ps : null;
+  const configured = ps.filter((p) => hasConfiguredProbe(p));
+  const providersToCheck = configured.length > 0 ? configured : ps;
+  return providersToCheck.every((p) => get(p).exhausted || needsInitialProbe(p)) ? ps : null;
 }
 
 export function providerHealthSnapshot(): Record<string, ProviderState & { tools: string[] }> {
@@ -257,7 +270,7 @@ let started = false;
 export function startProviderHealth(): void {
   if (started) return;
   started = true;
-  setTimeout(() => { void runProviderProbes(); }, 60 * 1000).unref();
+  void runProviderProbes(true);
   setInterval(() => { void runProviderProbes(); }, EXHAUSTED_INTERVAL_MS).unref();
 }
 
