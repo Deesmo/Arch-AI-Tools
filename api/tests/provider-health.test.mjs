@@ -39,8 +39,17 @@ globalThis.fetch = async (url) => {
   const [status, body] = replies.get(host) ?? [200, "{}"];
   return new Response(body, { status, headers: { "Content-Type": "application/json" } });
 };
-process.env.OPENAI_API_KEY = "test"; process.env.RUNWAY_API_KEY = "test";
+process.env.OPENAI_API_KEY = "test"; process.env.RUNWAY_API_KEY = "test"; delete process.env.STABILITY_API_KEY;
 try {
+  __resetProviderHealth();
+  assert.deepEqual(unavailableProviders("video-generate"), ["runway"], "configured Runway stays gated until its first probe completes");
+  assert.deepEqual(unavailableProviders("design-create"), ["openai", "stability"], "an unconfigured fallback does not mask a configured provider awaiting its first probe");
+  replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 100 })]);
+  replies.set("api.openai.com", [200, '{"choices":[{"message":{"content":"o"}}]}']);
+  await runProviderProbes(true);
+  assert.equal(unavailableProviders("video-generate"), null, "successful first probe opens the Runway-backed tool");
+  assert.equal(unavailableProviders("design-create"), null, "successful configured-provider probe opens fallback-backed tools");
+
   __resetProviderHealth();
   replies.set("api.dev.runwayml.com", [200, JSON.stringify({ creditBalance: 1 })]);
   replies.set("api.openai.com", [429, '{"error":{"type":"insufficient_quota"}}']);
@@ -90,6 +99,8 @@ for (const p of ['"openai", r.status, err', '"openai", upstream.status', '"runwa
 assert.equal((tools.match(/await stabilityImageFallback\(prompt\)/g) ?? []).length, 2, "design-create and its generate-image alias both fall back to Stability");
 const index = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
 assert.ok(index.includes("startProviderHealth();"), "probes start with the server");
+const providerHealth = readFileSync(new URL("../src/lib/providerHealth.ts", import.meta.url), "utf8");
+assert.ok(providerHealth.includes("void runProviderProbes(true);"), "the first provider probe runs immediately at boot");
 assert.ok(index.includes('import("./lib/systemJobs.js")') && index.includes('import("./cron/demoTopoff.js")'), "background jobs import with .js (ESM)");
 
 console.log("All provider-health tests passed.");
