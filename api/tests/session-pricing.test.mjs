@@ -85,6 +85,7 @@ console.log("\nsession-message route shape:");
 
 const sessionMessageRoute = route("session-message");
 const sessionCreateRoute = route("session-create");
+const aiGenerateRoute = route("ai-generate");
 
 test("charges applyModelCost on the served model, never a flat 20", () => {
   assert.ok(!/deductCredits\(req, res, "session-message", 20\)/.test(sessionMessageRoute), "flat 20-credit deduction must be gone");
@@ -106,6 +107,27 @@ test("x402-paid messages are pinned to the non-premium tier at serve time", () =
 
 test("x402-paid session-create cannot store a premium model", () => {
   assert.match(sessionCreateRoute, /paid && modelCostMultiplier\(resolvedModel\) > 1\.0/);
+});
+
+test("ai-generate validates optional model type before alias lowercasing", () => {
+  assert.match(toolsSrc, /function optionalModelParam\(value: unknown\): string \| undefined \| null/);
+  const parseIdx = aiGenerateRoute.indexOf("const explicitModel = optionalModelParam(explicitModelRaw)");
+  const rejectIdx = aiGenerateRoute.indexOf('error: "invalid_model", message: "model must be a string"');
+  const aliasIdx = aiGenerateRoute.indexOf("MODEL_ALIASES[explicitModel.toLowerCase()]");
+  assert.ok(parseIdx >= 0, "ai-generate must parse model as an unknown optional string");
+  assert.ok(rejectIdx > parseIdx, "ai-generate must reject non-string model values");
+  assert.ok(aliasIdx > rejectIdx, "ai-generate must reject before calling toLowerCase");
+});
+
+test("session-create validates model type before charging", () => {
+  const parseIdx = sessionCreateRoute.indexOf("const model = optionalModelParam(rawModel)");
+  const rejectIdx = sessionCreateRoute.indexOf('error: "invalid_model", message: "model must be a string"');
+  const chargeIdx = sessionCreateRoute.indexOf('deductCredits(req, res, "session-create", sessionCreateCost)');
+  const aliasIdx = sessionCreateRoute.indexOf("SESSION_MODEL_ALIASES[model.toLowerCase()]");
+  assert.ok(parseIdx >= 0, "session-create must parse model as an unknown optional string");
+  assert.ok(rejectIdx > parseIdx, "session-create must reject non-string model values");
+  assert.ok(chargeIdx > rejectIdx, "session-create must reject non-string models before deducting credits");
+  assert.ok(aliasIdx > chargeIdx, "session-create must reject before calling toLowerCase");
 });
 
 test("upstream calls send the trimmed window, not the raw stored history", () => {
