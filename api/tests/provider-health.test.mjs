@@ -82,10 +82,18 @@ try {
 
 // Wiring: the gate runs before payment and charging; real failures feed it; probes start at boot.
 const tools = readFileSync(new URL("../src/routes/tools/index.ts", import.meta.url), "utf8");
-assert.ok(tools.includes("return [providerGate(toolName), x402Middleware(toolName),"), "gate runs before the x402 challenge and credit charge");
+assert.ok(tools.includes("return [anthropicPaymentGate(toolName), providerGate(toolName), x402Middleware(toolName), requireAuth, requireExecuteScope, anthropicConfigGate(toolName),"), "Anthropic gate blocks payment attempts before x402 settlement and API-key calls before credit charge");
 for (const p of ['"openai", r.status, err', '"openai", upstream.status', '"runway", attempt.status', '"elevenlabs", r.status', '"removebg", resp.status', '"hunter", resp.status', '"stability", sr.status']) {
   assert.ok(tools.includes(`noteProviderResponse(${p}`), `feeds ${p}`);
 }
+const anthropicSet = tools.match(/const ANTHROPIC_REQUIRED_TOOLS = new Set\(\[([\s\S]*?)\]\);/)?.[1] ?? "";
+for (const tool of ["web-search", "sentiment-analysis", "summarize", "extract-entities", "regex-generate", "pii-detect", "ocr-extract", "extract-pdf", "image-generate", "workflow-agent"]) {
+  assert.ok(anthropicSet.includes(`"${tool}"`), `${tool} is blocked before payment/credit deduction when Anthropic is unconfigured`);
+}
+const anthropicPaymentGate = tools.slice(tools.indexOf("function anthropicPaymentGate"), tools.indexOf("function toolMiddleware"));
+assert.ok(anthropicPaymentGate.includes('req.headers["payment-signature"] ?? req.headers["x-payment"]'), "payment-attempt gate checks signed x402 headers");
+assert.ok(anthropicPaymentGate.includes("if (!paymentHeader"), "plain no-payment probes pass through to the normal 402 challenge");
+assert.ok(tools.includes("You have not been charged."), "Anthropic config gate tells callers no charge happened");
 // /generate-image is gated as design-create (OpenAI or Stability), so it must have the same Stability fallback.
 assert.equal((tools.match(/await stabilityImageFallback\(prompt\)/g) ?? []).length, 2, "design-create and its generate-image alias both fall back to Stability");
 const index = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");

@@ -67,6 +67,19 @@ function getAnthropic(): Anthropic | null {
 }
 // Runtime-only access via getAnthropic(); do not capture the client at module load.
 
+const ANTHROPIC_REQUIRED_TOOLS = new Set([
+  "web-search",
+  "sentiment-analysis",
+  "summarize",
+  "extract-entities",
+  "regex-generate",
+  "pii-detect",
+  "ocr-extract",
+  "extract-pdf",
+  "image-generate",
+  "workflow-agent",
+]);
+
 // ─── Per-key rate limiter (runs AFTER auth so we know the tier) ───────────────
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
@@ -182,8 +195,33 @@ function providerGate(toolName: string) {
   };
 }
 
+function anthropicConfigGate(toolName: string) {
+  return (_req: Request, res: Response, next: NextFunction): void => {
+    if (!ANTHROPIC_REQUIRED_TOOLS.has(toolName) || getAnthropic()) { next(); return; }
+    res.status(503).json({
+      ok: false,
+      error: "service_unavailable",
+      message: "This tool requires an Anthropic API key that has not been configured. You have not been charged.",
+      request_id: reqId(),
+    });
+  };
+}
+
+function anthropicPaymentGate(toolName: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const paymentHeader = req.headers["payment-signature"] ?? req.headers["x-payment"];
+    if (!paymentHeader || !ANTHROPIC_REQUIRED_TOOLS.has(toolName) || getAnthropic()) { next(); return; }
+    res.status(503).json({
+      ok: false,
+      error: "service_unavailable",
+      message: "This tool requires an Anthropic API key that has not been configured. You have not been charged.",
+      request_id: reqId(),
+    });
+  };
+}
+
 function toolMiddleware(toolName: string) {
-  return [providerGate(toolName), x402Middleware(toolName), requireAuth, requireExecuteScope, tierRateLimiter];
+  return [anthropicPaymentGate(toolName), providerGate(toolName), x402Middleware(toolName), requireAuth, requireExecuteScope, anthropicConfigGate(toolName), tierRateLimiter];
 }
 
 function isX402Paid(req: Request): boolean {
