@@ -99,6 +99,20 @@ test("success body reports the deducted cost (advertised = charged)", () => {
   assert.ok(payloads.every((v) => v === "sessionMsgCost"), "every payload reports the deducted cost");
 });
 
+test("provider config failures happen before charging or mutating session history", () => {
+  const anthropicCheck = sessionMessageRoute.indexOf("Anthropic API key not configured");
+  const openaiCheck = sessionMessageRoute.indexOf("OpenAI API key not configured");
+  const charge = sessionMessageRoute.indexOf('deductCredits(req, res, "session-message", sessionMsgCost)');
+  const appendUser = sessionMessageRoute.indexOf('session.messages.push({ role: "user", content: message })');
+  assert.ok(anthropicCheck >= 0, "missing Anthropic provider preflight");
+  assert.ok(openaiCheck >= 0, "missing OpenAI provider preflight");
+  assert.ok(charge >= 0 && appendUser >= 0, "missing charge or history mutation");
+  assert.ok(anthropicCheck < charge, "Anthropic config failure must not charge credits");
+  assert.ok(openaiCheck < charge, "OpenAI config failure must not charge credits");
+  assert.ok(anthropicCheck < appendUser, "Anthropic config failure must not append a failed user turn");
+  assert.ok(openaiCheck < appendUser, "OpenAI config failure must not append a failed user turn");
+});
+
 test("x402-paid messages are pinned to the non-premium tier at serve time", () => {
   assert.match(sessionMessageRoute, /paid && modelCostMultiplier\(session\.model\) > 1\.0/);
   assert.match(sessionMessageRoute, /model_used: model/);
